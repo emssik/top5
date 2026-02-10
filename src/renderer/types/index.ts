@@ -22,6 +22,7 @@ export interface Project {
   timerStartedAt: string | null // ISO timestamp, null = paused
   launchers: ProjectLaunchers
   tasks: Task[]
+  archivedAt: string | null // ISO date = archived, null = active
 }
 
 export interface AppConfig {
@@ -29,6 +30,7 @@ export interface AppConfig {
   actionShortcuts: Record<string, string>
   focusTaskId: string | null
   focusProjectId: string | null
+  compactMode: boolean
 }
 
 export interface AppData {

@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-02-10
+
+### Added
+
+- Compact mode: always-on-top slim sidebar showing projects and launchers, toggled from dashboard
+- Project archiving: archive projects instead of deleting, with restore from archive view
+- Archive view in dashboard with restore functionality and active-project limit enforcement
+- CompactBar component with per-project quick launchers and expand button
+- `Cmd+1-5` shortcuts now exit compact mode and expand the selected project
+- IPC handlers for `enter-compact-mode`, `exit-compact-mode`, `archive-project`, `unarchive-project`
+
+### Changed
+
+- Dashboard now separates active and archived projects, with archive tab when archived projects exist
+- Project count limit (5) now applies only to active (non-archived) projects
+- Updated README with compact mode, archiving, and drag-and-drop documentation
+
 ## [1.1.0] - 2026-02-10
 
 ### Added

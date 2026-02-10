@@ -12,7 +12,9 @@ function showAndFocus(win: BrowserWindow): void {
 export function registerShortcuts(
   globalShortcutModule: GlobalShortcut,
   getMainWindow: () => BrowserWindow | null,
-  _screen: Screen
+  _screen: Screen,
+  getIsCompactMode: () => boolean = () => false,
+  exitCompactMode: () => void = () => {}
 ): void {
   const { config } = getAppData()
   const shortcuts = config?.actionShortcuts || {}
@@ -43,6 +45,9 @@ export function registerShortcuts(
         const win = getMainWindow()
         if (!win) return
         showAndFocus(win)
+        if (getIsCompactMode()) {
+          exitCompactMode()
+        }
         win.webContents.send('shortcut-action', { action: 'select-project', index: i - 1 })
       })
     }

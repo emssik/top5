@@ -27,6 +27,7 @@ interface Project {
     browser: string | null
   }
   tasks: Task[]
+  archivedAt: string | null
 }
 
 interface AppConfig {
@@ -34,6 +35,7 @@ interface AppConfig {
   actionShortcuts: Record<string, string>
   focusTaskId: string | null
   focusProjectId: string | null
+  compactMode: boolean
 }
 
 interface AppData {
@@ -58,7 +60,8 @@ const defaultData: AppData = {
       'quick-notes': 'CommandOrControl+Shift+N'
     },
     focusTaskId: null,
-    focusProjectId: null
+    focusProjectId: null,
+    compactMode: false
   }
 }
 
@@ -178,6 +181,43 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
       return projects
     }
   )
+
+  ipcMain.handle('archive-project', (_event, projectId: string) => {
+    const data = getData()
+    const projects = [...data.projects]
+    const project = projects.find((p) => p.id === projectId)
+    if (project) {
+      // Stop timer if running
+      if (project.timerStartedAt) {
+        const elapsed = Date.now() - new Date(project.timerStartedAt).getTime()
+        project.totalTimeMs += elapsed
+        project.timerStartedAt = null
+      }
+      project.archivedAt = new Date().toISOString()
+      setData('projects', projects)
+    }
+    return projects
+  })
+
+  ipcMain.handle('unarchive-project', (_event, projectId: string) => {
+    const data = getData()
+    const projects = [...data.projects]
+    const activeProjects = projects.filter((p) => !p.archivedAt)
+    if (activeProjects.length >= 5) {
+      return { error: 'Cannot restore: 5 active projects already. Archive one first.' }
+    }
+    const project = projects.find((p) => p.id === projectId)
+    if (project) {
+      project.archivedAt = null
+      // Assign next available order
+      const usedOrders = activeProjects.map((p) => p.order)
+      let nextOrder = 0
+      while (usedOrders.includes(nextOrder)) nextOrder++
+      project.order = nextOrder
+      setData('projects', projects)
+    }
+    return { projects }
+  })
 
   ipcMain.handle('pick-folder', async () => {
     const result = await dialog.showOpenDialog({

@@ -5,6 +5,8 @@ const api = {
   getAppData: () => ipcRenderer.invoke('get-app-data'),
   saveProject: (project: any) => ipcRenderer.invoke('save-project', project),
   deleteProject: (id: string) => ipcRenderer.invoke('delete-project', id),
+  archiveProject: (id: string) => ipcRenderer.invoke('archive-project', id),
+  unarchiveProject: (id: string) => ipcRenderer.invoke('unarchive-project', id),
   saveQuickNotes: (notes: string) => ipcRenderer.invoke('save-quick-notes', notes),
   saveConfig: (config: any) => ipcRenderer.invoke('save-config', config),
   updateProjectTimer: (projectId: string, totalTimeMs: number, timerStartedAt: string | null) =>
@@ -15,6 +17,8 @@ const api = {
   launchBrowser: (url: string) => ipcRenderer.invoke('launch-browser', url),
   enterFocusMode: () => ipcRenderer.invoke('enter-focus-mode'),
   exitFocusMode: () => ipcRenderer.invoke('exit-focus-mode'),
+  enterCompactMode: () => ipcRenderer.invoke('enter-compact-mode'),
+  exitCompactMode: () => ipcRenderer.invoke('exit-compact-mode'),
   pickFolder: () => ipcRenderer.invoke('pick-folder'),
   pickObsidianNote: () => ipcRenderer.invoke('pick-obsidian-note'),
   onReloadData: (callback: () => void) => {

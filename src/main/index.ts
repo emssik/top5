@@ -7,6 +7,21 @@ import { registerFocusHandlers, getFocusWindow } from './focus-window'
 import { registerShortcuts } from './shortcuts'
 
 let mainWindow: BrowserWindow | null = null
+let savedBounds: Electron.Rectangle | null = null
+let isCompactMode = false
+
+function exitCompactMode(): void {
+  if (!mainWindow || !isCompactMode) return
+  isCompactMode = false
+  mainWindow.setAlwaysOnTop(false)
+  mainWindow.setResizable(true)
+  mainWindow.setMinimumSize(600, 400)
+  if (savedBounds) {
+    mainWindow.setBounds(savedBounds)
+    savedBounds = null
+  }
+  mainWindow.webContents.send('shortcut-action', { action: 'exit-compact-mode' })
+}
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
@@ -58,7 +73,30 @@ app.whenReady().then(() => {
   registerStoreHandlers(ipcMain)
   registerLauncherHandlers(ipcMain)
   registerFocusHandlers(ipcMain, () => mainWindow)
-  registerShortcuts(globalShortcut, () => mainWindow, screen)
+  registerShortcuts(globalShortcut, () => mainWindow, screen, () => isCompactMode, exitCompactMode)
+
+  ipcMain.handle('enter-compact-mode', () => {
+    if (!mainWindow || isCompactMode) return
+    savedBounds = mainWindow.getBounds()
+    isCompactMode = true
+    const bounds = mainWindow.getBounds()
+    const display = screen.getDisplayNearestPoint({ x: bounds.x, y: bounds.y })
+    const workArea = display.workArea
+    const barWidth = 200
+    mainWindow.setMinimumSize(barWidth, 200)
+    mainWindow.setBounds({
+      x: workArea.x + workArea.width - barWidth,
+      y: workArea.y,
+      width: barWidth,
+      height: workArea.height
+    })
+    mainWindow.setResizable(false)
+    mainWindow.setAlwaysOnTop(true)
+  })
+
+  ipcMain.handle('exit-compact-mode', () => {
+    exitCompactMode()
+  })
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

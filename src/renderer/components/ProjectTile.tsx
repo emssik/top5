@@ -24,7 +24,7 @@ interface Props {
 
 export default function ProjectTile({ project, expanded, onToggleExpand, onDragStart, onDragOver, onDrop, isDragOver }: Props) {
   const [editing, setEditing] = useState(!project.name)
-  const { deleteProject, toggleTimer } = useProjects()
+  const { deleteProject, archiveProject, toggleTimer } = useProjects()
   const { formatted: timerFormatted } = useTimer(project.totalTimeMs, project.timerStartedAt)
 
   const activeLaunchers = Object.entries(project.launchers).filter(([, v]) => v)
@@ -85,6 +85,13 @@ export default function ProjectTile({ project, expanded, onToggleExpand, onDragS
             title="Edit"
           >
             ✎
+          </button>
+          <button
+            onClick={() => archiveProject(project.id)}
+            className="p-1.5 rounded-lg hover:bg-neutral-800 text-neutral-500 hover:text-amber-400 text-xs transition-colors"
+            title="Archive"
+          >
+            ▼
           </button>
           <button
             onClick={() => deleteProject(project.id)}

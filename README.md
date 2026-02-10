@@ -5,14 +5,15 @@ Desktop app for attention management. Forces a limit of 5 projects, minimizes co
 ## Features
 
 - **5 project limit** — forces prioritization, no infinite backlog
+- **Drag-and-drop reordering** — arrange projects by priority
 - **Quick launchers** — one-click open VS Code, iTerm, Obsidian (specific note), browser per project
 - **Native file pickers** — system dialogs for selecting folders and Obsidian notes
 - **Focus mode** — frameless always-on-top mini-widget showing current task, visible on all macOS Spaces
 - **Time tracking** — per-project timer with start/stop, survives app restart
 - **Tasks** — simple task list per project with focus-on-task support
 - **Quick notes** — global scratchpad
-- **Global shortcut** — `Cmd+Shift+Space` to toggle app visibility
-- **Persistent storage** — all data saved locally via electron-store
+- **Global shortcuts** — `Cmd+Shift+Space` to toggle app, `Cmd+1-5` to jump to project, all configurable
+- **Persistent storage** — YAML-based local storage at `~/.config/top5/data.yaml`
 
 ## Stack
 
@@ -20,7 +21,7 @@ Desktop app for attention management. Forces a limit of 5 projects, minimizes co
 - React 18 + TypeScript
 - Tailwind CSS v4
 - Zustand (state management)
-- electron-store (JSON persistence)
+- js-yaml (YAML file persistence)
 
 ## Getting started
 
@@ -52,7 +53,7 @@ Shortcuts are configurable in Settings.
 src/
   main/
     index.ts           # BrowserWindow, app lifecycle
-    store.ts           # electron-store, IPC handlers, native dialogs
+    store.ts           # YAML file storage, IPC handlers, native dialogs
     launchers.ts       # VS Code, iTerm, Obsidian, browser launchers
     focus-window.ts    # Frameless focus mode window
     shortcuts.ts       # Global keyboard shortcuts
@@ -77,7 +78,7 @@ src/
 
 ## Data storage
 
-Data is stored in `~/Library/Application Support/top5/config.json` (macOS).
+Data is stored in `~/.config/top5/data.yaml`. On first launch, legacy data from `~/Library/Application Support/top5/config.json` is migrated automatically.
 
 ## License
 
