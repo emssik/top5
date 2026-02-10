@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-02-10
+
+### Added
+
+- Focus check-in popup: periodic prompt (every 15 min) asking if you are still working on the focused task
+- Check-in responses (yes / no / a little) stored persistently in app data
+- Pause focus mode button on the focus bar that exits focus without revealing the main window
+- CheckInPopup component rendered in a separate frameless Electron window via hash routing
+- IPC handlers for `pause-focus-mode`, `dismiss-checkin`, `save-focus-checkin`, `get-focus-checkins`
+- `FocusCheckIn` type in renderer types and main store
+
+### Changed
+
+- Compact bar window height now dynamically sized based on active project count instead of full screen height
+- Launcher icons updated to text-based glyphs and emoji in CompactBar and ProjectTile
+
 ## [1.2.0] - 2026-02-10
 
 ### Added

@@ -6,10 +6,10 @@ import ProjectEditor from './ProjectEditor'
 import TaskList from './TaskList'
 
 const launcherIcons: Record<string, { label: string; icon: string }> = {
-  vscode: { label: 'VS Code', icon: '⌨' },
-  iterm: { label: 'Terminal', icon: '▶' },
-  obsidian: { label: 'Obsidian', icon: '◆' },
-  browser: { label: 'Browser', icon: '◎' }
+  vscode: { label: 'VS Code', icon: '</>' },
+  iterm: { label: 'Terminal', icon: '>_' },
+  obsidian: { label: 'Obsidian', icon: '📓' },
+  browser: { label: 'Browser', icon: '🌐' }
 }
 
 interface Props {

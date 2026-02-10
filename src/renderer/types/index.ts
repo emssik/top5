@@ -33,8 +33,17 @@ export interface AppConfig {
   compactMode: boolean
 }
 
+export interface FocusCheckIn {
+  id: string
+  projectId: string
+  taskId: string
+  timestamp: string
+  response: 'yes' | 'no' | 'a_little'
+}
+
 export interface AppData {
   projects: Project[]
   quickNotes: string
   config: AppConfig
+  focusCheckIns: FocusCheckIn[]
 }

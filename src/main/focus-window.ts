@@ -5,9 +5,84 @@ import type { IpcMain } from 'electron'
 import { getAppData, setAppDataKey } from './store'
 
 let focusWindow: BrowserWindow | null = null
+let checkInWindow: BrowserWindow | null = null
+let checkInTimer: ReturnType<typeof setInterval> | null = null
+
+const CHECK_IN_INTERVAL_MS = 30 * 1000 // TODO: zmień z powrotem na 15 * 60 * 1000
 
 export function getFocusWindow(): BrowserWindow | null {
   return focusWindow
+}
+
+function startCheckInTimer(): void {
+  clearCheckInTimer()
+  checkInTimer = setInterval(() => {
+    showCheckInPopup()
+  }, CHECK_IN_INTERVAL_MS)
+}
+
+function clearCheckInTimer(): void {
+  if (checkInTimer) {
+    clearInterval(checkInTimer)
+    checkInTimer = null
+  }
+}
+
+function showCheckInPopup(): void {
+  if (checkInWindow && !checkInWindow.isDestroyed()) return
+  if (!focusWindow || focusWindow.isDestroyed()) return
+
+  const focusBounds = focusWindow.getBounds()
+  const display = screen.getDisplayNearestPoint({ x: focusBounds.x, y: focusBounds.y })
+
+  const popupWidth = 340
+  const popupHeight = 140
+
+  // Position below the focus bar, right-aligned with it
+  const x = Math.min(
+    focusBounds.x + focusBounds.width - popupWidth,
+    display.workArea.x + display.workArea.width - popupWidth
+  )
+  const y = focusBounds.y + focusBounds.height + 8
+
+  checkInWindow = new BrowserWindow({
+    width: popupWidth,
+    height: popupHeight,
+    x,
+    y,
+    frame: false,
+    transparent: true,
+    resizable: false,
+    skipTaskbar: true,
+    alwaysOnTop: true,
+    visibleOnAllWorkspaces: true,
+    hasShadow: true,
+    roundedCorners: true,
+    webPreferences: {
+      preload: join(__dirname, '../preload/index.js'),
+      sandbox: false
+    }
+  })
+
+  checkInWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
+  checkInWindow.setAlwaysOnTop(true, 'screen-saver')
+
+  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
+    checkInWindow.loadURL(process.env['ELECTRON_RENDERER_URL'] + '#checkin')
+  } else {
+    checkInWindow.loadFile(join(__dirname, '../renderer/index.html'), { hash: 'checkin' })
+  }
+
+  checkInWindow.on('closed', () => {
+    checkInWindow = null
+  })
+}
+
+function closeCheckInPopup(): void {
+  if (checkInWindow && !checkInWindow.isDestroyed()) {
+    checkInWindow.close()
+    checkInWindow = null
+  }
 }
 
 export function registerFocusHandlers(
@@ -62,6 +137,8 @@ export function registerFocusHandlers(
     focusWindow.on('closed', () => {
       focusWindow = null
     })
+
+    startCheckInTimer()
   })
 
   ipcMain.handle('exit-focus-mode', () => {
@@ -70,6 +147,9 @@ export function registerFocusHandlers(
     // Clear focus state in store before showing main window
     const { config } = getAppData()
     setAppDataKey('config', { ...config, focusProjectId: null, focusTaskId: null })
+
+    clearCheckInTimer()
+    closeCheckInPopup()
 
     if (focusWindow && !focusWindow.isDestroyed()) {
       focusWindow.close()
@@ -82,5 +162,25 @@ export function registerFocusHandlers(
       mainWin.show()
       mainWin.focus()
     }
+  })
+
+  ipcMain.handle('pause-focus-mode', () => {
+    // Clear focus state
+    const { config } = getAppData()
+    setAppDataKey('config', { ...config, focusProjectId: null, focusTaskId: null })
+
+    clearCheckInTimer()
+    closeCheckInPopup()
+
+    if (focusWindow && !focusWindow.isDestroyed()) {
+      focusWindow.close()
+      focusWindow = null
+    }
+
+    // Do NOT show main window — that's the difference from exit
+  })
+
+  ipcMain.handle('dismiss-checkin', () => {
+    closeCheckInPopup()
   })
 }

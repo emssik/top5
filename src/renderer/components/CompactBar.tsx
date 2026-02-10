@@ -1,10 +1,10 @@
 import { useProjects } from '../hooks/useProjects'
 
 const launcherIcons: Record<string, string> = {
-  vscode: '⌨',
-  iterm: '▶',
-  obsidian: '◆',
-  browser: '◎'
+  vscode: '</>',
+  iterm: '>_',
+  obsidian: '📓',
+  browser: '🌐'
 }
 
 function handleLaunch(type: string, value: string) {

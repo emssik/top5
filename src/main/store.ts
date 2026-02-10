@@ -38,15 +38,25 @@ interface AppConfig {
   compactMode: boolean
 }
 
+interface FocusCheckIn {
+  id: string
+  projectId: string
+  taskId: string
+  timestamp: string
+  response: 'yes' | 'no' | 'a_little'
+}
+
 interface AppData {
   projects: Project[]
   quickNotes: string
   config: AppConfig
+  focusCheckIns: FocusCheckIn[]
 }
 
 const defaultData: AppData = {
   projects: [],
   quickNotes: '',
+  focusCheckIns: [],
   config: {
     globalShortcut: 'CommandOrControl+Shift+Space',
     actionShortcuts: {
@@ -82,6 +92,7 @@ function loadData(): AppData {
     return {
       projects: parsed?.projects ?? defaultData.projects,
       quickNotes: parsed?.quickNotes ?? defaultData.quickNotes,
+      focusCheckIns: parsed?.focusCheckIns ?? [],
       config: { ...defaultData.config, ...parsed?.config }
     }
   } catch {
@@ -103,6 +114,7 @@ function migrateFromElectronStore(): void {
     const data: AppData = {
       projects: parsed.projects ?? defaultData.projects,
       quickNotes: parsed.quickNotes ?? defaultData.quickNotes,
+      focusCheckIns: (parsed as any).focusCheckIns ?? [],
       config: { ...defaultData.config, ...parsed.config }
     }
     saveData(data)
@@ -225,6 +237,21 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
     })
     if (result.canceled) return null
     return result.filePaths[0]
+  })
+
+  ipcMain.handle('save-focus-checkin', (_event, checkIn: FocusCheckIn) => {
+    const data = getData()
+    const checkIns = [...data.focusCheckIns, checkIn]
+    setData('focusCheckIns', checkIns)
+    return checkIns
+  })
+
+  ipcMain.handle('get-focus-checkins', (_event, taskId?: string) => {
+    const data = getData()
+    if (taskId) {
+      return data.focusCheckIns.filter((c) => c.taskId === taskId)
+    }
+    return data.focusCheckIns
   })
 
   ipcMain.handle('pick-obsidian-note', async () => {

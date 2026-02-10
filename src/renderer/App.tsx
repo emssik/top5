@@ -3,9 +3,15 @@ import { useProjects } from './hooks/useProjects'
 import Dashboard from './components/Dashboard'
 import FocusMode from './components/FocusMode'
 import CompactBar from './components/CompactBar'
+import CheckInPopup from './components/CheckInPopup'
 
 export default function App() {
   const { loaded, loadData, config } = useProjects()
+
+  // Check-in popup is a separate window with #checkin hash
+  if (window.location.hash === '#checkin') {
+    return <CheckInPopup />
+  }
 
   useEffect(() => {
     loadData()

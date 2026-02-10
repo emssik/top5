@@ -1,7 +1,7 @@
 import { app, BrowserWindow, shell, ipcMain, globalShortcut, screen } from 'electron'
 import { join } from 'path'
 import { is, optimizer, electronApp } from '@electron-toolkit/utils'
-import { registerStoreHandlers } from './store'
+import { registerStoreHandlers, getAppData } from './store'
 import { registerLauncherHandlers } from './launchers'
 import { registerFocusHandlers, getFocusWindow } from './focus-window'
 import { registerShortcuts } from './shortcuts'
@@ -82,13 +82,17 @@ app.whenReady().then(() => {
     const bounds = mainWindow.getBounds()
     const display = screen.getDisplayNearestPoint({ x: bounds.x, y: bounds.y })
     const workArea = display.workArea
-    const barWidth = 200
-    mainWindow.setMinimumSize(barWidth, 200)
+    const barWidth = 260
+    // ~56px per project row + 60px for titlebar/expand button
+    const data = getAppData()
+    const activeCount = (data.projects || []).filter((p: any) => !p.archivedAt).length
+    const barHeight = Math.min(Math.max(activeCount * 56 + 60, 150), workArea.height)
+    mainWindow.setMinimumSize(barWidth, 100)
     mainWindow.setBounds({
       x: workArea.x + workArea.width - barWidth,
       y: workArea.y,
       width: barWidth,
-      height: workArea.height
+      height: barHeight
     })
     mainWindow.setResizable(false)
     mainWindow.setAlwaysOnTop(true)
