@@ -13,6 +13,10 @@ interface Api {
   launchBrowser: (url: string) => Promise<void>
   enterFocusMode: () => Promise<void>
   exitFocusMode: () => Promise<void>
+  pickFolder: () => Promise<string | null>
+  pickObsidianNote: () => Promise<{ path: string; uri: string | null } | null>
+  onReloadData: (callback: () => void) => () => void
+  onShortcutAction: (callback: (data: { action: string; index?: number }) => void) => () => void
 }
 
 declare global {

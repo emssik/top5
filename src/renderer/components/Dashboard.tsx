@@ -1,13 +1,37 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useProjects } from '../hooks/useProjects'
 import ProjectTile from './ProjectTile'
 import QuickNotes from './QuickNotes'
 import Settings from './Settings'
 
 export default function Dashboard() {
-  const { projects, addProject } = useProjects()
+  const { projects, addProject, reorderProjects } = useProjects()
   const [showNotes, setShowNotes] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+  const [expandedProjectId, setExpandedProjectId] = useState<string | null>(null)
+  const draggedId = useRef<string | null>(null)
+  const [dragOverId, setDragOverId] = useState<string | null>(null)
+
+  const toggleExpanded = useCallback((projectId: string) => {
+    setExpandedProjectId((prev) => (prev === projectId ? null : projectId))
+  }, [])
+
+  const handleShortcutAction = useCallback((data: { action: string; index?: number }) => {
+    if (data.action === 'select-project' && data.index !== undefined) {
+      const sorted = [...projects].sort((a, b) => a.order - b.order)
+      if (data.index < sorted.length) {
+        const targetId = sorted[data.index].id
+        setExpandedProjectId((prev) => (prev === targetId ? null : targetId))
+      }
+    } else if (data.action === 'toggle-quick-notes') {
+      setShowNotes((prev) => !prev)
+    }
+  }, [projects])
+
+  useEffect(() => {
+    const cleanup = window.api.onShortcutAction(handleShortcutAction)
+    return cleanup
+  }, [handleShortcutAction])
 
   return (
     <div className="h-screen bg-neutral-950 text-neutral-100 flex flex-col">
@@ -49,11 +73,34 @@ export default function Dashboard() {
             <p className="text-sm">Add up to 5 projects to focus on</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-3">
+          <div
+            className="grid grid-cols-1 gap-3"
+            onDragEnd={() => { draggedId.current = null; setDragOverId(null) }}
+          >
             {projects
               .sort((a, b) => a.order - b.order)
               .map((project) => (
-                <ProjectTile key={project.id} project={project} />
+                <ProjectTile
+                  key={project.id}
+                  project={project}
+                  expanded={expandedProjectId === project.id}
+                  onToggleExpand={() => toggleExpanded(project.id)}
+                  onDragStart={() => { draggedId.current = project.id }}
+                  onDragOver={(e) => { e.preventDefault(); setDragOverId(project.id) }}
+                  onDrop={() => {
+                    if (!draggedId.current || draggedId.current === project.id) return
+                    const sorted = [...projects].sort((a, b) => a.order - b.order)
+                    const ids = sorted.map((p) => p.id)
+                    const fromIdx = ids.indexOf(draggedId.current)
+                    const toIdx = ids.indexOf(project.id)
+                    ids.splice(fromIdx, 1)
+                    ids.splice(toIdx, 0, draggedId.current)
+                    reorderProjects(ids)
+                    draggedId.current = null
+                    setDragOverId(null)
+                  }}
+                  isDragOver={dragOverId === project.id && draggedId.current !== project.id}
+                />
               ))}
           </div>
         )}

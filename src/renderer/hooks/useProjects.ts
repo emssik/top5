@@ -14,6 +14,7 @@ interface ProjectsState {
   deleteProject: (id: string) => Promise<void>
   saveQuickNotes: (notes: string) => Promise<void>
   saveConfig: (config: AppConfig) => Promise<void>
+  reorderProjects: (orderedIds: string[]) => Promise<void>
   toggleTimer: (projectId: string) => Promise<void>
   setFocus: (projectId: string | null, taskId: string | null) => Promise<void>
 }
@@ -77,6 +78,18 @@ export const useProjects = create<ProjectsState>((set, get) => ({
   saveConfig: async (config: AppConfig) => {
     await window.api.saveConfig(config)
     set({ config })
+  },
+
+  reorderProjects: async (orderedIds: string[]) => {
+    const { projects } = get()
+    let updated = projects
+    for (let i = 0; i < orderedIds.length; i++) {
+      const project = projects.find((p) => p.id === orderedIds[i])
+      if (project && project.order !== i) {
+        updated = await window.api.saveProject({ ...project, order: i })
+      }
+    }
+    set({ projects: updated })
   },
 
   toggleTimer: async (projectId: string) => {

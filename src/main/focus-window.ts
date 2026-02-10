@@ -2,7 +2,7 @@ import { BrowserWindow, screen } from 'electron'
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
 import type { IpcMain } from 'electron'
-import { getStore } from './store'
+import { getAppData, setAppDataKey } from './store'
 
 let focusWindow: BrowserWindow | null = null
 
@@ -68,9 +68,8 @@ export function registerFocusHandlers(
     const mainWin = getMainWindow()
 
     // Clear focus state in store before showing main window
-    const store = getStore()
-    const config = store.get('config')
-    store.set('config', { ...config, focusProjectId: null, focusTaskId: null })
+    const { config } = getAppData()
+    setAppDataKey('config', { ...config, focusProjectId: null, focusTaskId: null })
 
     if (focusWindow && !focusWindow.isDestroyed()) {
       focusWindow.close()

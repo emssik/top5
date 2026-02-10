@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-02-10
+
+### Added
+
+- Drag-and-drop reordering for project tiles in the dashboard
+- Configurable action shortcuts for project selection (Cmd+1-5), quick notes, and focus toggle
+- IPC bridge for shortcut-driven UI actions (`onShortcutAction` preload API)
+- Expand/collapse state for project tiles lifted to Dashboard for external control
+
+### Changed
+
+- Replaced `electron-store` with YAML-based file storage at `~/.config/top5/data.yaml` using `js-yaml`
+- Automatic migration from legacy electron-store JSON format on first launch
+- Refactored store module to use in-memory cache with file-backed persistence
+- Extracted `showAndFocus` helper in shortcuts module for consistent window activation
+
 ## [1.0.0] - 2026-02-10
 
 ### Added

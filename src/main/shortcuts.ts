@@ -1,19 +1,25 @@
 import type { BrowserWindow, GlobalShortcut, Screen } from 'electron'
-import { getStore } from './store'
+import { getAppData } from './store'
 import { getFocusWindow } from './focus-window'
+
+function showAndFocus(win: BrowserWindow): void {
+  if (!win.isVisible()) {
+    win.show()
+  }
+  win.focus()
+}
 
 export function registerShortcuts(
   globalShortcutModule: GlobalShortcut,
   getMainWindow: () => BrowserWindow | null,
   _screen: Screen
 ): void {
-  const store = getStore()
-  const config = store.get('config')
+  const { config } = getAppData()
+  const shortcuts = config?.actionShortcuts || {}
 
-  const shortcut = config?.globalShortcut || 'CommandOrControl+Shift+Space'
-
-  globalShortcutModule.register(shortcut, () => {
-    // If focus window is open, ignore toggle (use Exit button in focus mode)
+  // Toggle app visibility
+  const toggleShortcut = shortcuts['toggle-app'] || config?.globalShortcut || 'CommandOrControl+Shift+Space'
+  globalShortcutModule.register(toggleShortcut, () => {
     const focusWin = getFocusWindow()
     if (focusWin && !focusWin.isDestroyed()) return
 
@@ -27,4 +33,40 @@ export function registerShortcuts(
       win.focus()
     }
   })
+
+  // Project shortcuts (Cmd+1 through Cmd+5)
+  for (let i = 1; i <= 5; i++) {
+    const key = `project-${i}`
+    const shortcut = shortcuts[key]
+    if (shortcut) {
+      globalShortcutModule.register(shortcut, () => {
+        const win = getMainWindow()
+        if (!win) return
+        showAndFocus(win)
+        win.webContents.send('shortcut-action', { action: 'select-project', index: i - 1 })
+      })
+    }
+  }
+
+  // Quick notes
+  const quickNotesShortcut = shortcuts['quick-notes']
+  if (quickNotesShortcut) {
+    globalShortcutModule.register(quickNotesShortcut, () => {
+      const win = getMainWindow()
+      if (!win) return
+      showAndFocus(win)
+      win.webContents.send('shortcut-action', { action: 'toggle-quick-notes' })
+    })
+  }
+
+  // Toggle focus
+  const focusShortcut = shortcuts['toggle-focus']
+  if (focusShortcut) {
+    globalShortcutModule.register(focusShortcut, () => {
+      const win = getMainWindow()
+      if (!win) return
+      showAndFocus(win)
+      win.webContents.send('shortcut-action', { action: 'toggle-focus' })
+    })
+  }
 }

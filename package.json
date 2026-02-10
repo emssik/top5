@@ -1,6 +1,6 @@
 {
   "name": "top5",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Focus management app - limit yourself to 5 projects",
   "main": "./out/main/index.js",
   "scripts": {
@@ -12,7 +12,7 @@
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.0",
     "@electron-toolkit/utils": "^3.0.0",
-    "electron-store": "^8.2.0",
+    "js-yaml": "^4.1.1",
     "nanoid": "^5.0.9",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -21,6 +21,7 @@
   "devDependencies": {
     "@electron-toolkit/tsconfig": "^1.0.1",
     "@tailwindcss/vite": "^4.0.0",
+    "@types/js-yaml": "^4.0.9",
     "@types/node": "^20.11.0",
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",

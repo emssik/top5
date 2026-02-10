@@ -1,8 +1,9 @@
-import Store from 'electron-store'
-import { dialog } from 'electron'
+import { dialog, app } from 'electron'
 import type { IpcMain } from 'electron'
-import { existsSync } from 'fs'
+import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs'
 import { dirname, basename, relative, join } from 'path'
+import { homedir } from 'os'
+import yaml from 'js-yaml'
 
 interface Task {
   id: string
@@ -61,53 +62,122 @@ const defaultData: AppData = {
   }
 }
 
-const store = new Store<AppData>({ defaults: defaultData })
+const CONFIG_DIR = join(homedir(), '.config', 'top5')
+const DATA_FILE = join(CONFIG_DIR, 'data.yaml')
 
-export function getStore(): Store<AppData> {
-  return store
+function loadData(): AppData {
+  if (!existsSync(DATA_FILE)) {
+    migrateFromElectronStore()
+    if (!existsSync(DATA_FILE)) {
+      saveData(defaultData)
+      return { ...defaultData }
+    }
+  }
+  try {
+    const raw = readFileSync(DATA_FILE, 'utf-8')
+    const parsed = yaml.load(raw) as Partial<AppData> | null
+    return {
+      projects: parsed?.projects ?? defaultData.projects,
+      quickNotes: parsed?.quickNotes ?? defaultData.quickNotes,
+      config: { ...defaultData.config, ...parsed?.config }
+    }
+  } catch {
+    return { ...defaultData }
+  }
+}
+
+function saveData(data: AppData): void {
+  mkdirSync(CONFIG_DIR, { recursive: true })
+  writeFileSync(DATA_FILE, yaml.dump(data, { lineWidth: 120, noRefs: true }), 'utf-8')
+}
+
+function migrateFromElectronStore(): void {
+  try {
+    const electronStoreFile = join(app.getPath('userData'), 'config.json')
+    if (!existsSync(electronStoreFile)) return
+    const raw = readFileSync(electronStoreFile, 'utf-8')
+    const parsed = JSON.parse(raw) as Partial<AppData>
+    const data: AppData = {
+      projects: parsed.projects ?? defaultData.projects,
+      quickNotes: parsed.quickNotes ?? defaultData.quickNotes,
+      config: { ...defaultData.config, ...parsed.config }
+    }
+    saveData(data)
+  } catch {
+    // Migration failed — start fresh
+  }
+}
+
+// In-memory cache
+let cachedData: AppData | null = null
+
+function getData(): AppData {
+  if (!cachedData) cachedData = loadData()
+  return cachedData
+}
+
+function setData(key: keyof AppData, value: AppData[keyof AppData]): void {
+  const data = getData()
+  ;(data as any)[key] = value
+  cachedData = data
+  saveData(data)
+}
+
+export function getAppData(): AppData {
+  return getData()
+}
+
+export function setAppDataKey(key: keyof AppData, value: AppData[keyof AppData]): void {
+  setData(key, value)
 }
 
 export function registerStoreHandlers(ipcMain: IpcMain): void {
   ipcMain.handle('get-app-data', () => {
-    return store.store
+    return getData()
   })
 
   ipcMain.handle('save-project', (_event, project: Project) => {
-    const projects = store.get('projects', [])
+    const data = getData()
+    const projects = [...data.projects]
     const index = projects.findIndex((p) => p.id === project.id)
     if (index >= 0) {
       projects[index] = project
     } else {
       projects.push(project)
     }
-    store.set('projects', projects)
+    setData('projects', projects)
     return projects
   })
 
   ipcMain.handle('delete-project', (_event, projectId: string) => {
-    const projects = store.get('projects', []).filter((p) => p.id !== projectId)
-    store.set('projects', projects)
+    const data = getData()
+    const projects = data.projects.filter((p) => p.id !== projectId)
+    setData('projects', projects)
     return projects
   })
 
   ipcMain.handle('save-quick-notes', (_event, notes: string) => {
-    store.set('quickNotes', notes)
+    setData('quickNotes', notes)
   })
 
   ipcMain.handle('save-config', (_event, config: AppConfig) => {
-    store.set('config', config)
+    setData('config', config)
   })
 
-  ipcMain.handle('update-project-timer', (_event, projectId: string, totalTimeMs: number, timerStartedAt: string | null) => {
-    const projects = store.get('projects', [])
-    const project = projects.find((p) => p.id === projectId)
-    if (project) {
-      project.totalTimeMs = totalTimeMs
-      project.timerStartedAt = timerStartedAt
-      store.set('projects', projects)
+  ipcMain.handle(
+    'update-project-timer',
+    (_event, projectId: string, totalTimeMs: number, timerStartedAt: string | null) => {
+      const data = getData()
+      const projects = [...data.projects]
+      const project = projects.find((p) => p.id === projectId)
+      if (project) {
+        project.totalTimeMs = totalTimeMs
+        project.timerStartedAt = timerStartedAt
+        setData('projects', projects)
+      }
+      return projects
     }
-    return projects
-  })
+  )
 
   ipcMain.handle('pick-folder', async () => {
     const result = await dialog.showOpenDialog({
@@ -138,7 +208,6 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
     }
 
     if (!vaultRoot) {
-      // No vault found - return just the path
       return { path: filePath, uri: null }
     }
 

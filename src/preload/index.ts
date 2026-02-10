@@ -20,6 +20,11 @@ const api = {
   onReloadData: (callback: () => void) => {
     ipcRenderer.on('reload-data', callback)
     return () => ipcRenderer.removeListener('reload-data', callback)
+  },
+  onShortcutAction: (callback: (data: { action: string; index?: number }) => void) => {
+    const handler = (_event: any, data: { action: string; index?: number }) => callback(data)
+    ipcRenderer.on('shortcut-action', handler)
+    return () => ipcRenderer.removeListener('shortcut-action', handler)
   }
 }
 

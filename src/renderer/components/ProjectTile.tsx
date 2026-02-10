@@ -12,9 +12,18 @@ const launcherIcons: Record<string, { label: string; icon: string }> = {
   browser: { label: 'Browser', icon: '◎' }
 }
 
-export default function ProjectTile({ project }: { project: Project }) {
+interface Props {
+  project: Project
+  expanded: boolean
+  onToggleExpand: () => void
+  onDragStart: () => void
+  onDragOver: (e: React.DragEvent) => void
+  onDrop: () => void
+  isDragOver: boolean
+}
+
+export default function ProjectTile({ project, expanded, onToggleExpand, onDragStart, onDragOver, onDrop, isDragOver }: Props) {
   const [editing, setEditing] = useState(!project.name)
-  const [expanded, setExpanded] = useState(false)
   const { deleteProject, toggleTimer } = useProjects()
   const { formatted: timerFormatted } = useTimer(project.totalTimeMs, project.timerStartedAt)
 
@@ -34,9 +43,21 @@ export default function ProjectTile({ project }: { project: Project }) {
   }
 
   return (
-    <div className="group rounded-xl bg-neutral-900 border border-neutral-800 p-4 hover:border-neutral-700 transition-colors">
+    <div
+      className={`group rounded-xl bg-neutral-900 border p-4 transition-colors ${isDragOver ? 'border-neutral-500' : 'border-neutral-800 hover:border-neutral-700'}`}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
+    >
       <div className="flex items-start justify-between">
-        <div className="flex-1 min-w-0 cursor-pointer" onClick={() => setExpanded(!expanded)}>
+        <div
+          className="flex-shrink-0 cursor-grab active:cursor-grabbing px-1 mr-2 text-neutral-600 hover:text-neutral-400 select-none"
+          draggable
+          onDragStart={onDragStart}
+          title="Drag to reorder"
+        >
+          ⠿
+        </div>
+        <div className="flex-1 min-w-0 cursor-pointer" onClick={onToggleExpand}>
           <div className="flex items-center gap-2">
             <h3 className="font-medium text-neutral-100 truncate">
               {project.name || 'Untitled Project'}
