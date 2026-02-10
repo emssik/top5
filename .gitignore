@@ -32,5 +32,6 @@ venv/
 # Build outputs
 dist/
 build/
+out/
 target/
 *.egg-info/
