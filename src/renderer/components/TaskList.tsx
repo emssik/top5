@@ -2,13 +2,14 @@ import { useState } from 'react'
 import { nanoid } from 'nanoid'
 import type { Project, Task } from '../types'
 import { useProjects } from '../hooks/useProjects'
+import { calcTaskTime, formatCheckInTime } from '../utils/checkInTime'
 
 interface Props {
   project: Project
 }
 
 export default function TaskList({ project }: Props) {
-  const { saveProject, setFocus } = useProjects()
+  const { saveProject, setFocus, focusCheckIns } = useProjects()
   const [newTaskTitle, setNewTaskTitle] = useState('')
 
   const addTask = async () => {
@@ -56,6 +57,12 @@ export default function TaskList({ project }: Props) {
             </button>
             <span className={`flex-1 text-sm truncate ${task.completed ? 'text-neutral-600 line-through' : 'text-neutral-300'}`}>
               {task.title}
+              {(() => {
+                const mins = calcTaskTime(focusCheckIns, task.id)
+                return mins > 0 ? (
+                  <span className="ml-2 text-[10px] font-mono text-neutral-600">{formatCheckInTime(mins)}</span>
+                ) : null
+              })()}
             </span>
             <div className="flex gap-1">
               {!task.completed && (

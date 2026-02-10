@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { Project } from '../types'
 import { useProjects } from '../hooks/useProjects'
-import { useTimer } from '../hooks/useTimer'
+import { calcProjectTime, formatCheckInTime } from '../utils/checkInTime'
 import ProjectEditor from './ProjectEditor'
 import TaskList from './TaskList'
 
@@ -24,8 +24,9 @@ interface Props {
 
 export default function ProjectTile({ project, expanded, onToggleExpand, onDragStart, onDragOver, onDrop, isDragOver }: Props) {
   const [editing, setEditing] = useState(!project.name)
-  const { deleteProject, archiveProject, toggleTimer } = useProjects()
-  const { formatted: timerFormatted } = useTimer(project.totalTimeMs, project.timerStartedAt)
+  const { deleteProject, archiveProject, focusCheckIns } = useProjects()
+  const projectMinutes = calcProjectTime(focusCheckIns, project.id)
+  const timeFormatted = formatCheckInTime(projectMinutes)
 
   const activeLaunchers = Object.entries(project.launchers).filter(([, v]) => v)
 
@@ -62,17 +63,11 @@ export default function ProjectTile({ project, expanded, onToggleExpand, onDragS
             <h3 className="font-medium text-neutral-100 truncate">
               {project.name || 'Untitled Project'}
             </h3>
-            <button
-              onClick={(e) => { e.stopPropagation(); toggleTimer(project.id) }}
-              className={`text-[10px] font-mono px-1.5 py-0.5 rounded transition-colors ${
-                project.timerStartedAt
-                  ? 'bg-emerald-900/50 text-emerald-400 hover:bg-emerald-900'
-                  : 'text-neutral-600 hover:text-neutral-400'
-              }`}
-              title={project.timerStartedAt ? 'Stop timer' : 'Start timer'}
-            >
-              {project.timerStartedAt ? '⏸' : '▶'} {timerFormatted}
-            </button>
+            {projectMinutes > 0 && (
+              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded text-neutral-500">
+                {timeFormatted}
+              </span>
+            )}
           </div>
           {project.description && (
             <p className="text-sm text-neutral-500 mt-0.5 truncate">{project.description}</p>

@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-02-10
+
+### Added
+
+- Work Stats window: heatmap-style grid showing focus time per project across selectable time ranges (today, 7 days, 14 days, month, previous month, 6 months, 12 months)
+- StatsView component rendered in a dedicated Electron window via `#stats` hash route
+- `openStatsWindow` IPC handler and preload bridge for launching the stats window from the dashboard
+- Shared `checkInTime` utility module with helpers to calculate and format time from focus check-in data
+- Per-task time display in TaskList derived from check-in responses
+
+### Changed
+
+- Project time tracking now derived from focus check-in responses instead of manual start/stop timers
+- Removed `toggleTimer` action and per-project timer UI (play/pause button) from ProjectTile
+- Check-in interval corrected from 30-second debug value to production 15-minute interval
+
+### Removed
+
+- Manual per-project timer (start/stop/accumulate) replaced by check-in-based time calculation
+
 ## [1.3.0] - 2026-02-10
 
 ### Added

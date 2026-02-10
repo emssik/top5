@@ -8,7 +8,7 @@ let focusWindow: BrowserWindow | null = null
 let checkInWindow: BrowserWindow | null = null
 let checkInTimer: ReturnType<typeof setInterval> | null = null
 
-const CHECK_IN_INTERVAL_MS = 30 * 1000 // TODO: zmień z powrotem na 15 * 60 * 1000
+const CHECK_IN_INTERVAL_MS = 15 * 60 * 1000
 
 export function getFocusWindow(): BrowserWindow | null {
   return focusWindow
@@ -182,5 +182,24 @@ export function registerFocusHandlers(
 
   ipcMain.handle('dismiss-checkin', () => {
     closeCheckInPopup()
+  })
+
+  ipcMain.handle('open-stats-window', () => {
+    const statsWindow = new BrowserWindow({
+      width: 600,
+      height: 500,
+      resizable: true,
+      title: 'Work Stats',
+      webPreferences: {
+        preload: join(__dirname, '../preload/index.js'),
+        sandbox: false
+      }
+    })
+
+    if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
+      statsWindow.loadURL(process.env['ELECTRON_RENDERER_URL'] + '#stats')
+    } else {
+      statsWindow.loadFile(join(__dirname, '../renderer/index.html'), { hash: 'stats' })
+    }
   })
 }

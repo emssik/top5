@@ -1,11 +1,12 @@
 import { create } from 'zustand'
-import type { Project, AppData, AppConfig } from '../types'
+import type { Project, AppData, AppConfig, FocusCheckIn } from '../types'
 import { nanoid } from 'nanoid'
 
 interface ProjectsState {
   projects: Project[]
   quickNotes: string
   config: AppConfig
+  focusCheckIns: FocusCheckIn[]
   loaded: boolean
 
   loadData: () => Promise<void>
@@ -17,7 +18,6 @@ interface ProjectsState {
   saveQuickNotes: (notes: string) => Promise<void>
   saveConfig: (config: AppConfig) => Promise<void>
   reorderProjects: (orderedIds: string[]) => Promise<void>
-  toggleTimer: (projectId: string) => Promise<void>
   setFocus: (projectId: string | null, taskId: string | null) => Promise<void>
   setCompactMode: (enabled: boolean) => Promise<void>
 }
@@ -32,6 +32,7 @@ export const useProjects = create<ProjectsState>((set, get) => ({
     focusProjectId: null,
     compactMode: false
   },
+  focusCheckIns: [],
   loaded: false,
 
   loadData: async () => {
@@ -40,6 +41,7 @@ export const useProjects = create<ProjectsState>((set, get) => ({
       projects: data.projects,
       quickNotes: data.quickNotes,
       config: data.config,
+      focusCheckIns: data.focusCheckIns,
       loaded: true
     })
   },
@@ -109,28 +111,6 @@ export const useProjects = create<ProjectsState>((set, get) => ({
         updated = await window.api.saveProject({ ...project, order: i })
       }
     }
-    set({ projects: updated })
-  },
-
-  toggleTimer: async (projectId: string) => {
-    const { projects } = get()
-    const project = projects.find((p) => p.id === projectId)
-    if (!project) return
-
-    let newTotalTimeMs = project.totalTimeMs
-    let newTimerStartedAt: string | null
-
-    if (project.timerStartedAt) {
-      // Stop: accumulate elapsed time
-      const elapsed = Date.now() - new Date(project.timerStartedAt).getTime()
-      newTotalTimeMs = project.totalTimeMs + elapsed
-      newTimerStartedAt = null
-    } else {
-      // Start
-      newTimerStartedAt = new Date().toISOString()
-    }
-
-    const updated = await window.api.updateProjectTimer(projectId, newTotalTimeMs, newTimerStartedAt)
     set({ projects: updated })
   },
 

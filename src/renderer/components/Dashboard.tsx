@@ -85,6 +85,13 @@ export default function Dashboard() {
           </div>
           <div className="flex items-center gap-2">
             <button
+              onClick={() => window.api.openStatsWindow()}
+              className="p-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-400 text-sm transition-colors"
+              title="Work stats"
+            >
+              Stats
+            </button>
+            <button
               onClick={() => setCompactMode(true)}
               className="p-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-400 text-sm transition-colors"
               title="Compact mode"

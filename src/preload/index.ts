@@ -21,6 +21,7 @@ const api = {
   saveFocusCheckIn: (checkIn: any) => ipcRenderer.invoke('save-focus-checkin', checkIn),
   getFocusCheckIns: (taskId?: string) => ipcRenderer.invoke('get-focus-checkins', taskId),
   dismissCheckIn: () => ipcRenderer.invoke('dismiss-checkin'),
+  openStatsWindow: () => ipcRenderer.invoke('open-stats-window'),
   enterCompactMode: () => ipcRenderer.invoke('enter-compact-mode'),
   exitCompactMode: () => ipcRenderer.invoke('exit-compact-mode'),
   pickFolder: () => ipcRenderer.invoke('pick-folder'),

@@ -19,6 +19,7 @@ interface Api {
   saveFocusCheckIn: (checkIn: import('../renderer/types').FocusCheckIn) => Promise<import('../renderer/types').FocusCheckIn[]>
   getFocusCheckIns: (taskId?: string) => Promise<import('../renderer/types').FocusCheckIn[]>
   dismissCheckIn: () => Promise<void>
+  openStatsWindow: () => Promise<void>
   enterCompactMode: () => Promise<void>
   exitCompactMode: () => Promise<void>
   pickFolder: () => Promise<string | null>
