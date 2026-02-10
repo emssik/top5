@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-02-11
+
+### Added
+
+- Light/dark theme toggle: button in the dashboard header switches between dark and light mode
+- CSS custom property theming system with semantic color tokens (`bg-base`, `bg-card`, `bg-surface`, `text-t-primary`, etc.)
+- Light theme palette defined via `[data-theme="light"]` CSS selector
+- Theme preference persisted in app config and applied to all windows (main, check-in, stats)
+- "Today" label shown next to the current date row in the stats heatmap
+- Stats window now displays rows in reverse chronological order (newest first)
+
+### Changed
+
+- All UI components migrated from hardcoded Tailwind `neutral-*` color classes to semantic theme tokens
+- Stats window now toggles on re-click (closes if already open) and properly cleans up on close
+- Heatmap cell colors use semantic tokens (`bg-cell-lo`, `bg-cell-mid`, `bg-cell-hi`) for theme awareness
+
 ## [1.4.0] - 2026-02-10
 
 ### Added

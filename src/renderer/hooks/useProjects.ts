@@ -30,7 +30,8 @@ export const useProjects = create<ProjectsState>((set, get) => ({
     actionShortcuts: {},
     focusTaskId: null,
     focusProjectId: null,
-    compactMode: false
+    compactMode: false,
+    theme: 'dark'
   },
   focusCheckIns: [],
   loaded: false,

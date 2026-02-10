@@ -5,7 +5,7 @@ import QuickNotes from './QuickNotes'
 import Settings from './Settings'
 
 export default function Dashboard() {
-  const { projects, addProject, reorderProjects, unarchiveProject, setCompactMode } = useProjects()
+  const { projects, config, saveConfig, addProject, reorderProjects, unarchiveProject, setCompactMode } = useProjects()
   const [showNotes, setShowNotes] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [expandedProjectId, setExpandedProjectId] = useState<string | null>(null)
@@ -28,6 +28,11 @@ export default function Dashboard() {
       setRestoreError(error)
       setTimeout(() => setRestoreError(null), 3000)
     }
+  }
+
+  const toggleTheme = () => {
+    const newTheme = config.theme === 'light' ? 'dark' : 'light'
+    saveConfig({ ...config, theme: newTheme })
   }
 
   // Auto-switch back to active view when archive becomes empty
@@ -55,7 +60,7 @@ export default function Dashboard() {
   }, [handleShortcutAction])
 
   return (
-    <div className="h-screen bg-neutral-950 text-neutral-100 flex flex-col">
+    <div className="h-screen bg-base text-t-primary flex flex-col">
       {/* Draggable titlebar area */}
       <div className="h-8 flex-shrink-0" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties} />
 
@@ -65,7 +70,7 @@ export default function Dashboard() {
             {showArchived && (
               <button
                 onClick={() => setShowArchived(false)}
-                className="px-3 py-1 rounded-lg text-sm font-medium text-neutral-500 hover:text-neutral-300 transition-colors"
+                className="px-3 py-1 rounded-lg text-sm font-medium text-t-secondary hover:text-t-primary transition-colors"
               >
                 Active
               </button>
@@ -75,8 +80,8 @@ export default function Dashboard() {
                 onClick={() => setShowArchived(true)}
                 className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
                   showArchived
-                    ? 'bg-neutral-800 text-neutral-100'
-                    : 'text-neutral-500 hover:text-neutral-300'
+                    ? 'bg-surface text-t-primary'
+                    : 'text-t-secondary hover:text-t-primary'
                 }`}
               >
                 Archive ({archivedProjects.length})
@@ -85,29 +90,36 @@ export default function Dashboard() {
           </div>
           <div className="flex items-center gap-2">
             <button
+              onClick={toggleTheme}
+              className="p-1.5 rounded-lg bg-surface hover:bg-hover text-t-secondary text-sm transition-colors"
+              title={config.theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+            >
+              {config.theme === 'light' ? '🌙' : '☀️'}
+            </button>
+            <button
               onClick={() => window.api.openStatsWindow()}
-              className="p-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-400 text-sm transition-colors"
+              className="p-1.5 rounded-lg bg-surface hover:bg-hover text-t-secondary text-sm transition-colors"
               title="Work stats"
             >
               Stats
             </button>
             <button
               onClick={() => setCompactMode(true)}
-              className="p-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-400 text-sm transition-colors"
+              className="p-1.5 rounded-lg bg-surface hover:bg-hover text-t-secondary text-sm transition-colors"
               title="Compact mode"
             >
               ⤡
             </button>
             <button
               onClick={() => setShowNotes(true)}
-              className="px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-400 text-sm transition-colors"
+              className="px-3 py-1.5 rounded-lg bg-surface hover:bg-hover text-t-secondary text-sm transition-colors"
               title="Quick Notes"
             >
               Notes
             </button>
             <button
               onClick={() => setShowSettings(true)}
-              className="p-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-400 text-sm transition-colors"
+              className="p-1.5 rounded-lg bg-surface hover:bg-hover text-t-secondary text-sm transition-colors"
               title="Settings"
             >
               ⚙
@@ -115,7 +127,7 @@ export default function Dashboard() {
             {!showArchived && activeProjects.length < 5 && (
               <button
                 onClick={addProject}
-                className="px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-sm transition-colors"
+                className="px-3 py-1.5 rounded-lg bg-surface hover:bg-hover text-t-primary text-sm transition-colors"
               >
                 + Add Project
               </button>
@@ -131,7 +143,7 @@ export default function Dashboard() {
 
         {showArchived ? (
           archivedProjects.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-64 text-neutral-500">
+            <div className="flex flex-col items-center justify-center h-64 text-t-secondary">
               <p className="text-lg mb-2">No archived projects</p>
             </div>
           ) : (
@@ -141,22 +153,22 @@ export default function Dashboard() {
                 .map((project) => (
                   <div
                     key={project.id}
-                    className="rounded-xl bg-neutral-900 border border-neutral-800 p-4 flex items-center justify-between"
+                    className="rounded-xl bg-card border border-border-subtle p-4 flex items-center justify-between"
                   >
                     <div className="min-w-0">
-                      <h3 className="font-medium text-neutral-400 truncate">
+                      <h3 className="font-medium text-t-secondary truncate">
                         {project.name || 'Untitled Project'}
                       </h3>
                       {project.description && (
-                        <p className="text-sm text-neutral-600 mt-0.5 truncate">{project.description}</p>
+                        <p className="text-sm text-t-muted mt-0.5 truncate">{project.description}</p>
                       )}
-                      <p className="text-xs text-neutral-600 mt-1">
+                      <p className="text-xs text-t-muted mt-1">
                         Archived {new Date(project.archivedAt!).toLocaleDateString()}
                       </p>
                     </div>
                     <button
                       onClick={() => handleRestore(project.id)}
-                      className="ml-4 px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-sm transition-colors shrink-0"
+                      className="ml-4 px-3 py-1.5 rounded-lg bg-surface hover:bg-hover text-t-primary text-sm transition-colors shrink-0"
                     >
                       Restore
                     </button>
@@ -165,7 +177,7 @@ export default function Dashboard() {
             </div>
           )
         ) : activeProjects.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-64 text-neutral-500">
+          <div className="flex flex-col items-center justify-center h-64 text-t-secondary">
             <p className="text-lg mb-2">No projects yet</p>
             <p className="text-sm">Add up to 5 projects to focus on</p>
           </div>

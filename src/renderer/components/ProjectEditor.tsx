@@ -52,31 +52,31 @@ export default function ProjectEditor({ project, onClose }: Props) {
 
   const textField = (label: string, key: keyof typeof form, placeholder: string) => (
     <div>
-      <label className="block text-xs text-neutral-500 mb-1">{label}</label>
+      <label className="block text-xs text-t-secondary mb-1">{label}</label>
       <input
         type={key === 'deadline' ? 'date' : 'text'}
         value={form[key]}
         onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
         placeholder={placeholder}
-        className="w-full px-3 py-1.5 rounded-lg bg-neutral-800 border border-neutral-700 text-neutral-200 text-sm placeholder:text-neutral-600 focus:outline-none focus:border-neutral-500"
+        className="w-full px-3 py-1.5 rounded-lg bg-surface border border-border text-t-heading text-sm placeholder:text-t-muted focus:outline-none focus:border-t-secondary"
       />
     </div>
   )
 
   const pathField = (label: string, key: keyof typeof form, placeholder: string, onBrowse: () => void) => (
     <div>
-      <label className="block text-xs text-neutral-500 mb-1">{label}</label>
+      <label className="block text-xs text-t-secondary mb-1">{label}</label>
       <div className="flex gap-1.5">
         <input
           type="text"
           value={form[key]}
           onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
           placeholder={placeholder}
-          className="flex-1 min-w-0 px-3 py-1.5 rounded-lg bg-neutral-800 border border-neutral-700 text-neutral-200 text-sm placeholder:text-neutral-600 focus:outline-none focus:border-neutral-500"
+          className="flex-1 min-w-0 px-3 py-1.5 rounded-lg bg-surface border border-border text-t-heading text-sm placeholder:text-t-muted focus:outline-none focus:border-t-secondary"
         />
         <button
           onClick={onBrowse}
-          className="px-2.5 py-1.5 rounded-lg bg-neutral-700 hover:bg-neutral-600 text-neutral-300 text-xs transition-colors flex-shrink-0"
+          className="px-2.5 py-1.5 rounded-lg bg-hover hover:bg-border text-t-primary text-xs transition-colors flex-shrink-0"
         >
           Browse
         </button>
@@ -85,14 +85,14 @@ export default function ProjectEditor({ project, onClose }: Props) {
   )
 
   return (
-    <div className="rounded-xl bg-neutral-900 border border-neutral-700 p-4">
+    <div className="rounded-xl bg-card border border-border p-4">
       <div className="space-y-3">
         {textField('Project Name', 'name', 'My Project')}
         {textField('Description', 'description', 'Brief description...')}
         {textField('Deadline', 'deadline', '')}
 
-        <div className="pt-2 border-t border-neutral-800">
-          <p className="text-xs text-neutral-500 mb-2">Launchers</p>
+        <div className="pt-2 border-t border-border-subtle">
+          <p className="text-xs text-t-secondary mb-2">Launchers</p>
           <div className="grid grid-cols-2 gap-2">
             {pathField('VS Code Path', 'vscode', '/path/to/project', () => pickFolder('vscode'))}
             {pathField('Terminal Path', 'iterm', '/path/to/project', () => pickFolder('iterm'))}
@@ -105,7 +105,7 @@ export default function ProjectEditor({ project, onClose }: Props) {
       <div className="flex justify-end gap-2 mt-4">
         <button
           onClick={onClose}
-          className="px-3 py-1.5 rounded-lg text-neutral-400 hover:text-neutral-200 text-sm transition-colors"
+          className="px-3 py-1.5 rounded-lg text-t-secondary hover:text-t-heading text-sm transition-colors"
         >
           Cancel
         </button>

@@ -105,6 +105,8 @@ export default function StatsView() {
   const activeProjects = projects.filter((p) => !p.archivedAt)
 
   const { keys, label, bucketFor } = useMemo(() => buildBuckets(range), [range])
+  const todayKey = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` })()
+  const displayKeys = useMemo(() => [...keys].reverse(), [keys])
 
   const { grid, projectTotals, maxTime } = useMemo(() => {
     const g: Record<string, Record<string, number>> = {}
@@ -132,30 +134,30 @@ export default function StatsView() {
 
   if (!loaded) {
     return (
-      <div className="h-screen flex items-center justify-center bg-neutral-950 text-neutral-400">
+      <div className="h-screen flex items-center justify-center bg-base text-t-secondary">
         Loading...
       </div>
     )
   }
 
   const cellColor = (minutes: number): string => {
-    if (minutes === 0) return 'bg-neutral-900'
+    if (minutes === 0) return 'bg-card'
     const intensity = Math.min(minutes / maxTime, 1)
-    if (intensity < 0.33) return 'bg-emerald-900/40'
-    if (intensity < 0.66) return 'bg-emerald-800/60'
-    return 'bg-emerald-700/80'
+    if (intensity < 0.33) return 'bg-cell-lo'
+    if (intensity < 0.66) return 'bg-cell-mid'
+    return 'bg-cell-hi'
   }
 
   const isSummaryOnly = range === '1d'
 
   return (
-    <div className="h-screen bg-neutral-950 text-neutral-100 flex flex-col">
+    <div className="h-screen bg-base text-t-primary flex flex-col">
       <div className="px-6 pt-6 pb-4">
         <h1 className="text-lg font-semibold">Work Stats</h1>
         <select
           value={range}
           onChange={(e) => setRange(e.target.value as Range)}
-          className="mt-3 px-2.5 py-1.5 rounded-md text-xs bg-neutral-800 border border-neutral-700 text-neutral-200 focus:outline-none focus:border-neutral-500 cursor-pointer"
+          className="mt-3 px-2.5 py-1.5 rounded-md text-xs bg-surface border border-border text-t-heading focus:outline-none focus:border-t-secondary cursor-pointer"
         >
           {rangeLabels.map((r) => (
             <option key={r.key} value={r.key}>{r.label}</option>
@@ -165,29 +167,29 @@ export default function StatsView() {
 
       <div className="flex-1 overflow-auto px-6 pb-6">
         {activeProjects.length === 0 ? (
-          <p className="text-neutral-500">No active projects</p>
+          <p className="text-t-secondary">No active projects</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-xs border-collapse">
               <thead>
                 <tr>
                   {!isSummaryOnly && (
-                    <th className="text-left py-2 pr-3 text-neutral-500 font-medium sticky left-0 bg-neutral-950">
+                    <th className="text-left py-2 pr-3 text-t-secondary font-medium sticky left-0 bg-base">
                       {range === '6m' || range === '12m' ? 'Month' : 'Date'}
                     </th>
                   )}
                   {activeProjects.map((p) => (
-                    <th key={p.id} className="py-2 px-2 text-neutral-500 font-medium text-center truncate max-w-[100px]">
+                    <th key={p.id} className="py-2 px-2 text-t-secondary font-medium text-center truncate max-w-[100px]">
                       {p.name || 'Untitled'}
                     </th>
                   ))}
                 </tr>
-                <tr className="bg-emerald-950/40">
-                  <td className="py-2.5 pr-3 text-emerald-400 font-semibold sticky left-0 bg-emerald-950/40">
+                <tr className="bg-accent-row">
+                  <td className="py-2.5 pr-3 text-accent-row-heading font-semibold sticky left-0 bg-accent-row">
                     {isSummaryOnly ? 'Today' : 'Total'}
                   </td>
                   {activeProjects.map((p) => (
-                    <td key={p.id} className="py-2.5 px-2 text-center text-emerald-300 font-semibold">
+                    <td key={p.id} className="py-2.5 px-2 text-center text-accent-row-text font-semibold">
                       {formatCheckInTime(projectTotals[p.id])}
                     </td>
                   ))}
@@ -195,16 +197,17 @@ export default function StatsView() {
               </thead>
               {!isSummaryOnly && (
                 <tbody>
-                  {keys.map((k) => (
-                    <tr key={k} className="border-t border-neutral-800/50">
-                      <td className="py-1.5 pr-3 text-neutral-400 whitespace-nowrap sticky left-0 bg-neutral-950">
+                  {displayKeys.map((k) => (
+                    <tr key={k} className="border-t border-border-subtle/50">
+                      <td className="py-1.5 pr-3 text-t-secondary whitespace-nowrap sticky left-0 bg-base">
                         {label(k)}
+                        {k === todayKey && <span className="ml-1.5 text-[10px] font-medium text-accent-row-heading">today</span>}
                       </td>
                       {activeProjects.map((p) => {
                         const mins = grid[k][p.id]
                         return (
                           <td key={p.id} className="py-1.5 px-2 text-center">
-                            <span className={`inline-block px-2 py-0.5 rounded ${cellColor(mins)} ${mins > 0 ? 'text-emerald-300' : 'text-neutral-700'}`}>
+                            <span className={`inline-block px-2 py-0.5 rounded ${cellColor(mins)} ${mins > 0 ? 'text-cell-text' : 'text-t-muted'}`}>
                               {mins > 0 ? formatCheckInTime(mins) : '-'}
                             </span>
                           </td>

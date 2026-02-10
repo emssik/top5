@@ -31,6 +31,7 @@ export interface AppConfig {
   focusTaskId: string | null
   focusProjectId: string | null
   compactMode: boolean
+  theme: 'light' | 'dark'
 }
 
 export interface FocusCheckIn {

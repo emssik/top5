@@ -45,13 +45,13 @@ export default function ProjectTile({ project, expanded, onToggleExpand, onDragS
 
   return (
     <div
-      className={`group rounded-xl bg-neutral-900 border p-4 transition-colors ${isDragOver ? 'border-neutral-500' : 'border-neutral-800 hover:border-neutral-700'}`}
+      className={`group rounded-xl bg-card border p-4 transition-colors ${isDragOver ? 'border-border' : 'border-border-subtle hover:border-border'}`}
       onDragOver={onDragOver}
       onDrop={onDrop}
     >
       <div className="flex items-start justify-between">
         <div
-          className="flex-shrink-0 cursor-grab active:cursor-grabbing px-1 mr-2 text-neutral-600 hover:text-neutral-400 select-none"
+          className="flex-shrink-0 cursor-grab active:cursor-grabbing px-1 mr-2 text-t-muted hover:text-t-secondary select-none"
           draggable
           onDragStart={onDragStart}
           title="Drag to reorder"
@@ -60,37 +60,37 @@ export default function ProjectTile({ project, expanded, onToggleExpand, onDragS
         </div>
         <div className="flex-1 min-w-0 cursor-pointer" onClick={onToggleExpand}>
           <div className="flex items-center gap-2">
-            <h3 className="font-medium text-neutral-100 truncate">
+            <h3 className="font-medium text-t-primary truncate">
               {project.name || 'Untitled Project'}
             </h3>
             {projectMinutes > 0 && (
-              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded text-neutral-500">
+              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded text-t-secondary">
                 {timeFormatted}
               </span>
             )}
           </div>
           {project.description && (
-            <p className="text-sm text-neutral-500 mt-0.5 truncate">{project.description}</p>
+            <p className="text-sm text-t-secondary mt-0.5 truncate">{project.description}</p>
           )}
         </div>
         <div className="flex items-center gap-1 ml-3 opacity-0 group-hover:opacity-100 transition-opacity">
           <button
             onClick={() => setEditing(true)}
-            className="p-1.5 rounded-lg hover:bg-neutral-800 text-neutral-500 hover:text-neutral-300 text-xs transition-colors"
+            className="p-1.5 rounded-lg hover:bg-surface text-t-secondary hover:text-t-primary text-xs transition-colors"
             title="Edit"
           >
             ✎
           </button>
           <button
             onClick={() => archiveProject(project.id)}
-            className="p-1.5 rounded-lg hover:bg-neutral-800 text-neutral-500 hover:text-amber-400 text-xs transition-colors"
+            className="p-1.5 rounded-lg hover:bg-surface text-t-secondary hover:text-amber-400 text-xs transition-colors"
             title="Archive"
           >
             ▼
           </button>
           <button
             onClick={() => deleteProject(project.id)}
-            className="p-1.5 rounded-lg hover:bg-neutral-800 text-neutral-500 hover:text-red-400 text-xs transition-colors"
+            className="p-1.5 rounded-lg hover:bg-surface text-t-secondary hover:text-red-400 text-xs transition-colors"
             title="Delete"
           >
             ✕
@@ -104,7 +104,7 @@ export default function ProjectTile({ project, expanded, onToggleExpand, onDragS
             <button
               key={type}
               onClick={() => handleLaunch(type, value!)}
-              className="px-2 py-1 rounded-md bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-neutral-200 text-xs transition-colors"
+              className="px-2 py-1 rounded-md bg-surface hover:bg-hover text-t-secondary hover:text-t-heading text-xs transition-colors"
               title={launcherIcons[type]?.label}
             >
               {launcherIcons[type]?.icon} {launcherIcons[type]?.label}
@@ -114,7 +114,7 @@ export default function ProjectTile({ project, expanded, onToggleExpand, onDragS
       )}
 
       {project.deadline && (
-        <div className="mt-2 text-xs text-neutral-600">
+        <div className="mt-2 text-xs text-t-muted">
           Due: {new Date(project.deadline).toLocaleDateString()}
         </div>
       )}

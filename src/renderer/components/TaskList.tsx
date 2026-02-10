@@ -41,7 +41,7 @@ export default function TaskList({ project }: Props) {
   }
 
   return (
-    <div className="mt-3 pt-3 border-t border-neutral-800">
+    <div className="mt-3 pt-3 border-t border-border-subtle">
       <div className="space-y-1">
         {project.tasks.map((task) => (
           <div key={task.id} className="group flex items-center gap-2 py-1">
@@ -49,18 +49,18 @@ export default function TaskList({ project }: Props) {
               onClick={() => toggleTask(task.id)}
               className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center text-[10px] transition-colors ${
                 task.completed
-                  ? 'bg-neutral-700 border-neutral-600 text-neutral-400'
-                  : 'border-neutral-600 hover:border-neutral-400'
+                  ? 'bg-hover border-border text-t-secondary'
+                  : 'border-border hover:border-t-secondary'
               }`}
             >
               {task.completed && '✓'}
             </button>
-            <span className={`flex-1 text-sm truncate ${task.completed ? 'text-neutral-600 line-through' : 'text-neutral-300'}`}>
+            <span className={`flex-1 text-sm truncate ${task.completed ? 'text-t-muted line-through' : 'text-t-primary'}`}>
               {task.title}
               {(() => {
                 const mins = calcTaskTime(focusCheckIns, task.id)
                 return mins > 0 ? (
-                  <span className="ml-2 text-[10px] font-mono text-neutral-600">{formatCheckInTime(mins)}</span>
+                  <span className="ml-2 text-[10px] font-mono text-t-muted">{formatCheckInTime(mins)}</span>
                 ) : null
               })()}
             </span>
@@ -76,7 +76,7 @@ export default function TaskList({ project }: Props) {
               )}
               <button
                 onClick={() => deleteTask(task.id)}
-                className="text-[10px] px-1.5 py-0.5 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                className="text-[10px] px-1.5 py-0.5 rounded bg-surface hover:bg-hover text-t-secondary hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
               >
                 ✕
               </button>
@@ -92,11 +92,11 @@ export default function TaskList({ project }: Props) {
           onChange={(e) => setNewTaskTitle(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && addTask()}
           placeholder="Add a task..."
-          className="flex-1 px-2 py-1 rounded-md bg-neutral-800 border border-neutral-700 text-neutral-300 text-xs placeholder:text-neutral-600 focus:outline-none focus:border-neutral-500"
+          className="flex-1 px-2 py-1 rounded-md bg-surface border border-border text-t-primary text-xs placeholder:text-t-muted focus:outline-none focus:border-t-secondary"
         />
         <button
           onClick={addTask}
-          className="px-2 py-1 rounded-md bg-neutral-800 hover:bg-neutral-700 text-neutral-400 text-xs"
+          className="px-2 py-1 rounded-md bg-surface hover:bg-hover text-t-secondary text-xs"
         >
           Add
         </button>

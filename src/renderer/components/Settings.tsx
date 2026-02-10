@@ -31,11 +31,11 @@ export default function Settings({ open, onClose }: Props) {
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={onClose}>
       <div
-        className="bg-neutral-900 border border-neutral-700 rounded-xl w-[480px] flex flex-col"
+        className="bg-card border border-border rounded-xl w-[480px] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-800">
-          <h2 className="text-sm font-medium text-neutral-200">Keyboard Shortcuts</h2>
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border-subtle">
+          <h2 className="text-sm font-medium text-t-heading">Keyboard Shortcuts</h2>
           <button
             onClick={handleSave}
             className="px-2 py-1 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs"
@@ -46,11 +46,11 @@ export default function Settings({ open, onClose }: Props) {
         <div className="p-4 space-y-2">
           {Object.entries(defaultShortcuts).map(([key, { label, default: def }]) => (
             <div key={key} className="flex items-center justify-between">
-              <span className="text-sm text-neutral-400">{label}</span>
+              <span className="text-sm text-t-secondary">{label}</span>
               <input
                 value={shortcuts[key] || def}
                 onChange={(e) => setShortcuts((s) => ({ ...s, [key]: e.target.value }))}
-                className="w-56 px-2 py-1 rounded-md bg-neutral-800 border border-neutral-700 text-neutral-300 text-xs font-mono focus:outline-none focus:border-neutral-500"
+                className="w-56 px-2 py-1 rounded-md bg-surface border border-border text-t-primary text-xs font-mono focus:outline-none focus:border-t-secondary"
               />
             </div>
           ))}

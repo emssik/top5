@@ -6,6 +6,7 @@ import { getAppData, setAppDataKey } from './store'
 
 let focusWindow: BrowserWindow | null = null
 let checkInWindow: BrowserWindow | null = null
+let statsWindow: BrowserWindow | null = null
 let checkInTimer: ReturnType<typeof setInterval> | null = null
 
 const CHECK_IN_INTERVAL_MS = 15 * 60 * 1000
@@ -185,7 +186,13 @@ export function registerFocusHandlers(
   })
 
   ipcMain.handle('open-stats-window', () => {
-    const statsWindow = new BrowserWindow({
+    if (statsWindow && !statsWindow.isDestroyed()) {
+      statsWindow.close()
+      statsWindow = null
+      return
+    }
+
+    statsWindow = new BrowserWindow({
       width: 600,
       height: 500,
       resizable: true,
@@ -201,5 +208,9 @@ export function registerFocusHandlers(
     } else {
       statsWindow.loadFile(join(__dirname, '../renderer/index.html'), { hash: 'stats' })
     }
+
+    statsWindow.on('closed', () => {
+      statsWindow = null
+    })
   })
 }
