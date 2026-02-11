@@ -37,17 +37,22 @@ export const useProjects = create<ProjectsState>((set, get) => ({
   loaded: false,
 
   loadData: async () => {
-    const [data, checkIns] = await Promise.all([
-      window.api.getAppData(),
-      window.api.getFocusCheckIns()
-    ])
-    set({
-      projects: data.projects,
-      quickNotes: data.quickNotes,
-      config: data.config,
-      focusCheckIns: checkIns,
-      loaded: true
-    })
+    try {
+      const [data, checkIns] = await Promise.all([
+        window.api.getAppData(),
+        window.api.getFocusCheckIns()
+      ])
+      set({
+        projects: data.projects,
+        quickNotes: data.quickNotes,
+        config: data.config,
+        focusCheckIns: checkIns,
+        loaded: true
+      })
+    } catch (error) {
+      console.error('Failed to load app data', error)
+      set({ loaded: true })
+    }
   },
 
   addProject: async () => {

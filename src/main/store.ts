@@ -50,6 +50,7 @@ interface AppConfig {
   focusTaskId: string | null
   focusProjectId: string | null
   compactMode: boolean
+  theme: 'light' | 'dark'
 }
 
 interface FocusCheckIn {
@@ -83,7 +84,8 @@ const defaultData: AppData = {
     },
     focusTaskId: null,
     focusProjectId: null,
-    compactMode: false
+    compactMode: false,
+    theme: 'dark'
   }
 }
 
@@ -132,6 +134,29 @@ const CHECKINS_FILE = join(CONFIG_DIR, 'checkins.jsonl')
 
 const BACKUP_DIR = join(CONFIG_DIR, 'backups')
 const MAX_BACKUPS = 7
+const VALID_CHECK_IN_RESPONSES = new Set<FocusCheckIn['response']>(['yes', 'no', 'a_little'])
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
+function toFocusCheckIn(value: unknown): FocusCheckIn | null {
+  if (!isRecord(value)) return null
+
+  const { id, projectId, taskId, timestamp, response } = value
+  if (
+    typeof id !== 'string' ||
+    typeof projectId !== 'string' ||
+    typeof taskId !== 'string' ||
+    typeof timestamp !== 'string' ||
+    typeof response !== 'string' ||
+    !VALID_CHECK_IN_RESPONSES.has(response as FocusCheckIn['response'])
+  ) {
+    return null
+  }
+
+  return { id, projectId, taskId, timestamp, response: response as FocusCheckIn['response'] }
+}
 
 function dailyBackup(): void {
   const today = new Date().toISOString().slice(0, 10) // YYYY-MM-DD
@@ -186,10 +211,17 @@ function loadCheckIns(): FocusCheckIn[] {
   if (!existsSync(CHECKINS_FILE)) return []
   try {
     const raw = readFileSync(CHECKINS_FILE, 'utf-8')
-    return raw
-      .split('\n')
-      .filter((line) => line.trim())
-      .map((line) => JSON.parse(line))
+    const parsed: FocusCheckIn[] = []
+    for (const line of raw.split('\n')) {
+      if (!line.trim()) continue
+      try {
+        const checkIn = toFocusCheckIn(JSON.parse(line))
+        if (checkIn) parsed.push(checkIn)
+      } catch {
+        // Ignore malformed lines and continue loading valid entries.
+      }
+    }
+    return parsed
   } catch {
     return []
   }
@@ -380,8 +412,10 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
     return result.filePaths[0]
   })
 
-  ipcMain.handle('save-focus-checkin', (_event, checkIn: FocusCheckIn) => {
-    appendCheckIn(checkIn)
+  ipcMain.handle('save-focus-checkin', (_event, checkIn: unknown) => {
+    const normalized = toFocusCheckIn(checkIn)
+    if (!normalized) return loadCheckIns()
+    appendCheckIn(normalized)
     return loadCheckIns()
   })
 

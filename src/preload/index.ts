@@ -1,14 +1,21 @@
 import { contextBridge, ipcRenderer } from 'electron'
+import type { IpcRendererEvent } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
+import type { AppConfig, FocusCheckIn, Project } from '../renderer/types'
+
+interface ShortcutActionPayload {
+  action: string
+  index?: number
+}
 
 const api = {
   getAppData: () => ipcRenderer.invoke('get-app-data'),
-  saveProject: (project: any) => ipcRenderer.invoke('save-project', project),
+  saveProject: (project: Project) => ipcRenderer.invoke('save-project', project),
   deleteProject: (id: string) => ipcRenderer.invoke('delete-project', id),
   archiveProject: (id: string) => ipcRenderer.invoke('archive-project', id),
   unarchiveProject: (id: string) => ipcRenderer.invoke('unarchive-project', id),
   saveQuickNotes: (notes: string) => ipcRenderer.invoke('save-quick-notes', notes),
-  saveConfig: (config: any) => ipcRenderer.invoke('save-config', config),
+  saveConfig: (config: AppConfig) => ipcRenderer.invoke('save-config', config),
   updateProjectTimer: (projectId: string, totalTimeMs: number, timerStartedAt: string | null) =>
     ipcRenderer.invoke('update-project-timer', projectId, totalTimeMs, timerStartedAt),
   launchVscode: (path: string) => ipcRenderer.invoke('launch-vscode', path),
@@ -18,7 +25,7 @@ const api = {
   enterFocusMode: () => ipcRenderer.invoke('enter-focus-mode'),
   exitFocusMode: () => ipcRenderer.invoke('exit-focus-mode'),
   pauseFocusMode: () => ipcRenderer.invoke('pause-focus-mode'),
-  saveFocusCheckIn: (checkIn: any) => ipcRenderer.invoke('save-focus-checkin', checkIn),
+  saveFocusCheckIn: (checkIn: FocusCheckIn) => ipcRenderer.invoke('save-focus-checkin', checkIn),
   getFocusCheckIns: (taskId?: string) => ipcRenderer.invoke('get-focus-checkins', taskId),
   dismissCheckIn: () => ipcRenderer.invoke('dismiss-checkin'),
   openStatsWindow: () => ipcRenderer.invoke('open-stats-window'),
@@ -30,13 +37,13 @@ const api = {
     ipcRenderer.on('reload-data', callback)
     return () => ipcRenderer.removeListener('reload-data', callback)
   },
-  onShortcutAction: (callback: (data: { action: string; index?: number }) => void) => {
-    const handler = (_event: any, data: { action: string; index?: number }) => callback(data)
+  onShortcutAction: (callback: (data: ShortcutActionPayload) => void) => {
+    const handler = (_event: IpcRendererEvent, data: ShortcutActionPayload) => callback(data)
     ipcRenderer.on('shortcut-action', handler)
     return () => ipcRenderer.removeListener('shortcut-action', handler)
   },
   onCheckInCountdown: (callback: (remainingMs: number) => void) => {
-    const handler = (_event: any, remainingMs: number) => callback(remainingMs)
+    const handler = (_event: IpcRendererEvent, remainingMs: number) => callback(remainingMs)
     ipcRenderer.on('checkin-countdown', handler)
     return () => ipcRenderer.removeListener('checkin-countdown', handler)
   }
@@ -50,8 +57,7 @@ if (process.contextIsolated) {
     console.error(error)
   }
 } else {
-  // @ts-ignore
-  window.electron = electronAPI
-  // @ts-ignore
-  window.api = api
+  const windowWithApi = window as Window & { electron: typeof electronAPI; api: typeof api }
+  windowWithApi.electron = electronAPI
+  windowWithApi.api = api
 }

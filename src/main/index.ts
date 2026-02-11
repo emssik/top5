@@ -10,6 +10,15 @@ let mainWindow: BrowserWindow | null = null
 let savedBounds: Electron.Rectangle | null = null
 let isCompactMode = false
 
+function isAllowedExternalUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url)
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:' || parsed.protocol === 'mailto:'
+  } catch {
+    return false
+  }
+}
+
 function exitCompactMode(): void {
   if (!mainWindow || !isCompactMode) return
   isCompactMode = false
@@ -51,7 +60,9 @@ function createWindow(): void {
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
-    shell.openExternal(details.url)
+    if (isAllowedExternalUrl(details.url)) {
+      shell.openExternal(details.url)
+    }
     return { action: 'deny' }
   })
 
@@ -69,11 +80,11 @@ app.whenReady().then(() => {
     optimizer.watchWindowShortcuts(window)
   })
 
-  createWindow()
   registerStoreHandlers(ipcMain)
   registerLauncherHandlers(ipcMain)
   registerFocusHandlers(ipcMain, () => mainWindow)
   registerShortcuts(globalShortcut, () => mainWindow, screen, () => isCompactMode, exitCompactMode)
+  createWindow()
 
   ipcMain.handle('enter-compact-mode', () => {
     if (!mainWindow || isCompactMode) return
@@ -85,7 +96,7 @@ app.whenReady().then(() => {
     const barWidth = 260
     // ~56px per project row + 60px for titlebar/expand button
     const data = getAppData()
-    const activeCount = (data.projects || []).filter((p: any) => !p.archivedAt).length
+    const activeCount = data.projects.filter((project) => !project.archivedAt).length
     const barHeight = Math.min(Math.max(activeCount * 56 + 60, 150), workArea.height)
     mainWindow.setMinimumSize(barWidth, 100)
     mainWindow.setBounds({

@@ -2,15 +2,9 @@ import { useState } from 'react'
 import type { Project } from '../types'
 import { useProjects } from '../hooks/useProjects'
 import { calcProjectTime, formatCheckInTime } from '../utils/checkInTime'
+import { getActiveLaunchers, launcherMeta, launchByType } from '../utils/launchers'
 import ProjectEditor from './ProjectEditor'
 import TaskList from './TaskList'
-
-const launcherIcons: Record<string, { label: string; icon: string }> = {
-  vscode: { label: 'VS Code', icon: '</>' },
-  iterm: { label: 'Terminal', icon: '>_' },
-  obsidian: { label: 'Obsidian', icon: '📓' },
-  browser: { label: 'Browser', icon: '🌐' }
-}
 
 interface Props {
   project: Project
@@ -28,16 +22,7 @@ export default function ProjectTile({ project, expanded, onToggleExpand, onDragS
   const projectMinutes = calcProjectTime(focusCheckIns, project.id)
   const timeFormatted = formatCheckInTime(projectMinutes)
 
-  const activeLaunchers = Object.entries(project.launchers).filter(([, v]) => v)
-
-  const handleLaunch = (type: string, value: string) => {
-    switch (type) {
-      case 'vscode': window.api.launchVscode(value); break
-      case 'iterm': window.api.launchIterm(value); break
-      case 'obsidian': window.api.launchObsidian(value); break
-      case 'browser': window.api.launchBrowser(value); break
-    }
-  }
+  const activeLaunchers = getActiveLaunchers(project.launchers)
 
   if (editing) {
     return <ProjectEditor project={project} onClose={() => setEditing(false)} />
@@ -103,11 +88,11 @@ export default function ProjectTile({ project, expanded, onToggleExpand, onDragS
           {activeLaunchers.map(([type, value]) => (
             <button
               key={type}
-              onClick={() => handleLaunch(type, value!)}
+              onClick={() => launchByType(type, value)}
               className="px-2 py-1 rounded-md bg-surface hover:bg-hover text-t-secondary hover:text-t-heading text-xs transition-colors"
-              title={launcherIcons[type]?.label}
+              title={launcherMeta[type].label}
             >
-              {launcherIcons[type]?.icon} {launcherIcons[type]?.label}
+              {launcherMeta[type].icon} {launcherMeta[type].label}
             </button>
           ))}
         </div>

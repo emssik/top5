@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-02-11
+
+### Added
+
+- IPC payload validation for focus check-ins (`toFocusCheckIn` guard in store)
+- URL allowlist for `openExternal` calls (only `http:`, `https:`, `mailto:` protocols)
+- Browser launcher URL normalization with protocol validation
+- Input validation helpers (`isNonEmptyString`, `normalizeLocalPath`, `normalizeBrowserUrl`) in launcher handlers
+- Error handling in `useProjects` `loadData` to prevent silent failures
+- Shared launcher utility module (`src/renderer/utils/launchers.ts`) for DRY launcher logic
+- Coding guide (`docs/CODING_GUIDE.md`) and project instructions (`CLAUDE.MD`)
+
+### Changed
+
+- Launcher handlers use `spawn` with argument arrays instead of `exec` with string interpolation (security hardening)
+- iTerm launcher uses AppleScript arguments via `osascript` flags instead of shell-escaped string embedding
+- Preload bridge typed with explicit interfaces instead of `any` (`Project`, `AppConfig`, `FocusCheckIn`, `IpcRendererEvent`)
+- Non-isolated window fallback uses typed window assignment instead of `@ts-ignore` comments
+- React hooks in `App.tsx` moved to top-level to fix conditional hooks violation
+- Check-in JSONL loader now skips malformed lines gracefully instead of failing on first parse error
+- Compact mode height calculation uses typed project access instead of `any` cast
+
+### Fixed
+
+- Conditional React hooks call in `App.tsx` for auxiliary windows (check-in, stats) now compliant with Rules of Hooks
+
 ## [1.6.1] - 2026-02-11
 
 ### Fixed

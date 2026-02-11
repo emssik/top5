@@ -1,20 +1,5 @@
 import { useProjects } from '../hooks/useProjects'
-
-const launcherIcons: Record<string, string> = {
-  vscode: '</>',
-  iterm: '>_',
-  obsidian: '📓',
-  browser: '🌐'
-}
-
-function handleLaunch(type: string, value: string) {
-  switch (type) {
-    case 'vscode': window.api.launchVscode(value); break
-    case 'iterm': window.api.launchIterm(value); break
-    case 'obsidian': window.api.launchObsidian(value); break
-    case 'browser': window.api.launchBrowser(value); break
-  }
-}
+import { getActiveLaunchers, launcherMeta, launchByType } from '../utils/launchers'
 
 export default function CompactBar() {
   const { projects, setCompactMode } = useProjects()
@@ -33,7 +18,7 @@ export default function CompactBar() {
 
       <div className="flex-1 flex flex-col gap-1 px-2 overflow-auto">
         {activeProjects.map((project) => {
-          const activeLaunchers = Object.entries(project.launchers).filter(([, v]) => v)
+          const activeLaunchers = getActiveLaunchers(project.launchers)
           return (
             <div key={project.id} className="flex flex-col gap-1 py-1.5 border-b border-border-subtle last:border-0">
               <span className="text-xs font-medium text-t-primary truncate px-1">
@@ -44,11 +29,11 @@ export default function CompactBar() {
                   {activeLaunchers.map(([type, value]) => (
                     <button
                       key={type}
-                      onClick={() => handleLaunch(type, value!)}
+                      onClick={() => launchByType(type, value)}
                       className="p-1 rounded hover:bg-surface text-t-secondary hover:text-t-heading text-[10px] transition-colors"
-                      title={type}
+                      title={launcherMeta[type].label}
                     >
-                      {launcherIcons[type]}
+                      {launcherMeta[type].icon}
                     </button>
                   ))}
                 </div>

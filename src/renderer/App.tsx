@@ -8,31 +8,44 @@ import StatsView from './components/StatsView'
 
 export default function App() {
   const { loaded, loadData, config } = useProjects()
+  const windowHash = window.location.hash
+  const isCheckInWindow = windowHash === '#checkin'
+  const isStatsWindow = windowHash === '#stats'
+  const isAuxWindow = isCheckInWindow || isStatsWindow
 
-  // Separate windows with hash routing — apply theme from stored config
-  if (window.location.hash === '#checkin' || window.location.hash === '#stats') {
-    useEffect(() => {
-      window.api.getAppData().then((data) => {
-        if (data.config.theme === 'light') {
-          document.documentElement.setAttribute('data-theme', 'light')
-        }
-      })
-    }, [])
+  // Separate windows with hash routing — apply theme from stored config.
+  useEffect(() => {
+    if (!isAuxWindow) return
 
-    if (window.location.hash === '#checkin') return <CheckInPopup />
-    return <StatsView />
-  }
+    let cancelled = false
+    window.api.getAppData().then((data) => {
+      if (cancelled) return
+      if (data.config.theme === 'light') {
+        document.documentElement.setAttribute('data-theme', 'light')
+      } else {
+        document.documentElement.removeAttribute('data-theme')
+      }
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [isAuxWindow])
 
   useEffect(() => {
+    if (isAuxWindow) return
+
     loadData()
 
     const cleanup = window.api.onReloadData(() => {
       loadData()
     })
     return cleanup
-  }, [])
+  }, [isAuxWindow, loadData])
 
   useEffect(() => {
+    if (isAuxWindow) return
+
     const cleanup = window.api.onShortcutAction((data) => {
       if (data.action === 'exit-compact-mode') {
         const { config, saveConfig } = useProjects.getState()
@@ -40,16 +53,21 @@ export default function App() {
       }
     })
     return cleanup
-  }, [])
+  }, [isAuxWindow])
 
-  // Apply theme to <html>
+  // Apply theme to <html> in the main app window.
   useEffect(() => {
+    if (isAuxWindow) return
+
     if (config.theme === 'light') {
       document.documentElement.setAttribute('data-theme', 'light')
     } else {
       document.documentElement.removeAttribute('data-theme')
     }
-  }, [config.theme])
+  }, [isAuxWindow, config.theme])
+
+  if (isCheckInWindow) return <CheckInPopup />
+  if (isStatsWindow) return <StatsView />
 
   if (!loaded) {
     return (

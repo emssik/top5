@@ -40,6 +40,12 @@ npm run dev
 npm run build
 ```
 
+## Coding guide
+
+Krótki przewodnik zasad kodowania znajdziesz w:
+
+- `docs/CODING_GUIDE.md`
+
 ## Keyboard shortcuts
 
 | Shortcut | Action |
