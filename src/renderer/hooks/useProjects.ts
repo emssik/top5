@@ -37,6 +37,7 @@ export const useProjects = create<ProjectsState>((set, get) => ({
     focusTaskId: null,
     focusProjectId: null,
     compactMode: false,
+    cleanView: false,
     theme: 'dark',
     quickTasksLimit: 5
   },

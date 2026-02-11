@@ -113,6 +113,46 @@ app.whenReady().then(() => {
     exitCompactMode()
   })
 
+  ipcMain.handle('enter-clean-view', () => {
+    if (!mainWindow || isCompactMode) return
+    savedBounds = mainWindow.getBounds()
+    const bounds = mainWindow.getBounds()
+    const display = screen.getDisplayNearestPoint({ x: bounds.x, y: bounds.y })
+    const workArea = display.workArea
+    const data = getAppData()
+    const limit = data.config.quickTasksLimit ?? 5
+    const width = 320
+    const height = Math.min(Math.max(limit * 44 + 60, 180), workArea.height)
+    mainWindow.setMinimumSize(width, 100)
+    mainWindow.setBounds({
+      x: bounds.x + Math.round((bounds.width - width) / 2),
+      y: bounds.y,
+      width,
+      height
+    })
+    mainWindow.setResizable(true)
+    if (process.platform === 'darwin') {
+      mainWindow.setWindowButtonVisibility(false)
+    }
+  })
+
+  ipcMain.handle('exit-clean-view', () => {
+    if (!mainWindow) return
+    mainWindow.setMinimumSize(600, 400)
+    if (savedBounds) {
+      mainWindow.setBounds(savedBounds)
+      savedBounds = null
+    }
+    if (process.platform === 'darwin') {
+      mainWindow.setWindowButtonVisibility(true)
+    }
+  })
+
+  ipcMain.handle('set-traffic-lights-visible', (_event, visible: boolean) => {
+    if (!mainWindow || process.platform !== 'darwin') return
+    mainWindow.setWindowButtonVisibility(visible)
+  })
+
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow()

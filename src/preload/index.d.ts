@@ -24,6 +24,9 @@ interface Api {
   closeNewProjectWindow: () => Promise<void>
   enterCompactMode: () => Promise<void>
   exitCompactMode: () => Promise<void>
+  enterCleanView: () => Promise<void>
+  exitCleanView: () => Promise<void>
+  setTrafficLightsVisible: (visible: boolean) => Promise<void>
   pickFolder: () => Promise<string | null>
   pickObsidianNote: () => Promise<{ path: string; uri: string | null } | null>
   saveQuickTask: (task: import('../renderer/types').QuickTask) => Promise<import('../renderer/types').QuickTask[]>

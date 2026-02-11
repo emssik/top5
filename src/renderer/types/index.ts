@@ -42,6 +42,7 @@ export interface AppConfig {
   focusTaskId: string | null
   focusProjectId: string | null
   compactMode: boolean
+  cleanView: boolean
   theme: 'light' | 'dark'
   quickTasksLimit: number
 }

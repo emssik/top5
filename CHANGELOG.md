@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.10.0] - 2026-02-11
+
+### Added
+
+- Clean View mode: minimal, distraction-free window for Quick Tasks toggled via dashboard toolbar button
+- `enter-clean-view` and `exit-clean-view` IPC handlers that resize and reposition the window to a narrow panel
+- `set-traffic-lights-visible` IPC handler to show/hide macOS traffic lights on window hover
+- `cleanView` config option persisted in AppData (both main and renderer types)
+- Clean view renders a streamlined task list with hover-reveal controls (focus, complete, uncomplete) and inline editing
+- Draggable titlebar with hover-visible exit button in clean view
+
+### Changed
+
+- Dashboard conditionally renders clean view layout when `cleanView` config is active
+- QuickTasksView accepts new `cleanView` prop for compact rendering without add-task input or spacing
+
 ## [1.9.0] - 2026-02-11
 
 ### Added

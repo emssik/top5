@@ -61,6 +61,7 @@ interface AppConfig {
   focusTaskId: string | null
   focusProjectId: string | null
   compactMode: boolean
+  cleanView: boolean
   theme: 'light' | 'dark'
   quickTasksLimit: number
 }
@@ -99,6 +100,7 @@ const defaultData: AppData = {
     focusTaskId: null,
     focusProjectId: null,
     compactMode: false,
+    cleanView: false,
     theme: 'dark',
     quickTasksLimit: 5
   }

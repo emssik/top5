@@ -18,9 +18,10 @@ interface MergedTask {
 
 interface Props {
   showAll?: boolean
+  cleanView?: boolean
 }
 
-export default function QuickTasksView({ showAll }: Props) {
+export default function QuickTasksView({ showAll, cleanView }: Props) {
   const {
     quickTasks,
     projects,
@@ -237,6 +238,78 @@ export default function QuickTasksView({ showAll }: Props) {
     const isCompleted = task.completed
     const isDragOver = dragOverId === task.id && draggedId.current !== task.id
 
+    // --- Clean view ---
+    if (cleanView) {
+      if (isCompleted) {
+        return (
+          <div key={task.id} className="group flex items-center gap-2 py-2.5 px-1 border-b border-border-subtle/50">
+            <div className="w-5 flex-shrink-0 flex justify-center">
+              <button
+                onClick={() => handleUncomplete(task)}
+                className="w-3.5 h-3.5 rounded-full border border-border-subtle bg-hover flex-shrink-0 flex items-center justify-center text-[9px] text-t-muted hover:border-t-secondary transition-colors"
+                title="Mark as not done"
+              >
+                ✓
+              </button>
+            </div>
+            <span className="text-[15px] text-t-muted/60 line-through truncate">{task.title}</span>
+          </div>
+        )
+      }
+
+      return (
+        <div
+          key={task.id}
+          className={`group flex items-center gap-2 py-2.5 px-1 border-b border-border-subtle/50 transition-colors cursor-grab active:cursor-grabbing ${isDragOver ? 'bg-hover/50' : ''}`}
+          draggable
+          onDragStart={() => handleDragStart(task.id)}
+          onDragOver={(e) => handleDragOver(e, task.id)}
+          onDrop={() => handleDrop(task.id)}
+        >
+          {/* Left controls: visible on hover */}
+          <div className="w-5 flex-shrink-0 flex justify-center">
+            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button
+                onClick={() => handleFocus(task)}
+                className="text-t-muted/50 hover:text-blue-400 transition-colors"
+                title="Focus"
+              >
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
+              </button>
+              <button
+                onClick={() => handleComplete(task)}
+                className="w-3 h-3 rounded-full border border-border-subtle hover:border-t-secondary transition-colors"
+                title="Complete"
+              />
+            </div>
+          </div>
+          <div className="flex-1 min-w-0">
+            {editingId === task.id ? (
+              <input
+                autoFocus
+                value={editingTitle}
+                onChange={(e) => setEditingTitle(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') saveEdit()
+                  if (e.key === 'Escape') setEditingId(null)
+                }}
+                onBlur={saveEdit}
+                className="w-full text-[15px] bg-transparent text-t-primary focus:outline-none py-0"
+              />
+            ) : (
+              <span
+                onDoubleClick={() => startEditing(task)}
+                className="text-[15px] text-t-primary truncate block cursor-default"
+              >
+                {task.title}
+              </span>
+            )}
+          </div>
+        </div>
+      )
+    }
+
+    // --- Normal view ---
     if (isCompleted) {
       return (
         <div
@@ -326,36 +399,40 @@ export default function QuickTasksView({ showAll }: Props) {
   }
 
   return (
-    <div className="space-y-1">
+    <div className={cleanView ? '' : 'space-y-1'}>
       {visibleActive.length === 0 && visibleCompleted.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-40 text-t-secondary">
-          <p className="text-sm">No quick tasks yet</p>
-          <p className="text-xs text-t-muted mt-1">Add tasks below or pin project tasks</p>
+        <div className={`flex flex-col items-center justify-center text-t-secondary ${cleanView ? 'h-24' : 'h-40'}`}>
+          <p className={cleanView ? 'text-[15px] text-t-muted' : 'text-sm'}>
+            {cleanView ? 'No tasks' : 'No quick tasks yet'}
+          </p>
+          {!cleanView && <p className="text-xs text-t-muted mt-1">Add tasks below or pin project tasks</p>}
         </div>
       ) : (
-        <div className="space-y-1" onDragEnd={handleDragEnd}>
+        <div className={cleanView ? '' : 'space-y-1'} onDragEnd={handleDragEnd}>
           {visibleActive.map(renderTask)}
           {visibleCompleted.map(renderTask)}
         </div>
       )}
 
       {/* Add task input */}
-      <div className="flex gap-2 pt-2">
-        <input
-          type="text"
-          value={newTitle}
-          onChange={(e) => setNewTitle(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && addTask()}
-          placeholder="Add a quick task..."
-          className="flex-1 px-3 py-1.5 rounded-lg bg-surface border border-border text-t-primary text-sm placeholder:text-t-muted focus:outline-none focus:border-t-secondary"
-        />
-        <button
-          onClick={addTask}
-          className="px-3 py-1.5 rounded-lg bg-surface hover:bg-hover text-t-secondary text-sm transition-colors"
-        >
-          Add
-        </button>
-      </div>
+      {!cleanView && (
+        <div className="flex gap-2 pt-2">
+          <input
+            type="text"
+            value={newTitle}
+            onChange={(e) => setNewTitle(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && addTask()}
+            placeholder="Add a quick task..."
+            className="flex-1 px-3 py-1.5 rounded-lg bg-surface border border-border text-t-primary text-sm placeholder:text-t-muted focus:outline-none focus:border-t-secondary"
+          />
+          <button
+            onClick={addTask}
+            className="px-3 py-1.5 rounded-lg bg-surface hover:bg-hover text-t-secondary text-sm transition-colors"
+          >
+            Add
+          </button>
+        </div>
+      )}
     </div>
   )
 }

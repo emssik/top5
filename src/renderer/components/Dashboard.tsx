@@ -9,6 +9,7 @@ type Tab = 'tasks' | 'all-tasks' | 'projects' | 'archive'
 
 export default function Dashboard() {
   const { projects, quickTasks, config, saveConfig, reorderProjects, unarchiveProject, setCompactMode } = useProjects()
+  const cleanView = config.cleanView ?? false
   const [showNotes, setShowNotes] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [expandedProjectId, setExpandedProjectId] = useState<string | null>(null)
@@ -45,6 +46,16 @@ export default function Dashboard() {
     saveConfig({ ...config, theme: newTheme })
   }
 
+  const toggleCleanView = async () => {
+    const entering = !cleanView
+    saveConfig({ ...config, cleanView: entering })
+    if (entering) {
+      await window.api.enterCleanView()
+    } else {
+      await window.api.exitCleanView()
+    }
+  }
+
   // Auto-switch away from archive when it becomes empty
   useEffect(() => {
     if (activeTab === 'archive' && archivedProjects.length === 0) {
@@ -69,6 +80,32 @@ export default function Dashboard() {
     const cleanup = window.api.onShortcutAction(handleShortcutAction)
     return cleanup
   }, [handleShortcutAction])
+
+  if (cleanView) {
+    return (
+      <div
+        className="group/window h-screen bg-base text-t-primary flex flex-col"
+        onMouseEnter={() => window.api.setTrafficLightsVisible(true)}
+        onMouseLeave={() => window.api.setTrafficLightsVisible(false)}
+      >
+        {/* Draggable titlebar + exit button (visible only on window hover) */}
+        <div className="h-7 flex-shrink-0 flex items-center justify-end px-3" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}>
+          <button
+            onClick={toggleCleanView}
+            className="opacity-0 group-hover/window:opacity-100 transition-opacity p-1 rounded hover:bg-hover text-t-muted hover:text-t-primary"
+            title="Exit clean view"
+            style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-auto px-4 pb-3">
+          <QuickTasksView cleanView />
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="h-screen bg-base text-t-primary flex flex-col">
@@ -151,6 +188,13 @@ export default function Dashboard() {
               title="Compact mode"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+            </button>
+            <button
+              onClick={toggleCleanView}
+              className="p-2 rounded-lg hover:bg-hover text-t-muted hover:text-t-primary transition-colors"
+              title="Clean view"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
             </button>
             <button
               onClick={() => setShowNotes(true)}
