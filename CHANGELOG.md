@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.12.1] - 2026-02-11
+
+### Added
+
+- Confirmation dialog when deleting a project to prevent accidental deletion
+- Enter key handler in ProjectEditor to save changes without clicking the save button
+
 ## [1.12.0] - 2026-02-11
 
 ### Added
