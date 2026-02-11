@@ -20,6 +20,12 @@ export function calcProjectTime(checkIns: FocusCheckIn[], projectId: string): nu
     .reduce((sum, c) => sum + checkInMinutes(c.response), 0)
 }
 
+export function calcQuickTaskTime(checkIns: FocusCheckIn[], quickTaskId: string): number {
+  return checkIns
+    .filter((c) => c.projectId === '__standalone__' && c.taskId === quickTaskId)
+    .reduce((sum, c) => sum + checkInMinutes(c.response), 0)
+}
+
 export function formatCheckInTime(minutes: number): string {
   if (minutes === 0) return '0m'
   const hours = Math.floor(minutes / 60)

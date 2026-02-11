@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { IpcRendererEvent } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
-import type { AppConfig, FocusCheckIn, Project } from '../renderer/types'
+import type { AppConfig, FocusCheckIn, Project, QuickTask } from '../renderer/types'
 
 interface ShortcutActionPayload {
   action: string
@@ -35,6 +35,12 @@ const api = {
   exitCompactMode: () => ipcRenderer.invoke('exit-compact-mode'),
   pickFolder: () => ipcRenderer.invoke('pick-folder'),
   pickObsidianNote: () => ipcRenderer.invoke('pick-obsidian-note'),
+  saveQuickTask: (task: QuickTask) => ipcRenderer.invoke('save-quick-task', task),
+  removeQuickTask: (id: string) => ipcRenderer.invoke('remove-quick-task', id),
+  completeQuickTask: (id: string) => ipcRenderer.invoke('complete-quick-task', id),
+  uncompleteQuickTask: (id: string) => ipcRenderer.invoke('uncomplete-quick-task', id),
+  reorderQuickTasks: (orderedIds: string[]) => ipcRenderer.invoke('reorder-quick-tasks', orderedIds),
+  toggleTaskToDoNext: (projectId: string, taskId: string) => ipcRenderer.invoke('toggle-task-to-do-next', projectId, taskId),
   onReloadData: (callback: () => void) => {
     ipcRenderer.on('reload-data', callback)
     return () => ipcRenderer.removeListener('reload-data', callback)

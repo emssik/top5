@@ -9,12 +9,21 @@ export default function CheckInPopup() {
 
   useEffect(() => {
     window.api.getAppData().then((data: AppData) => {
-      const project = data.projects.find((p) => p.id === data.config.focusProjectId)
-      const task = project?.tasks.find((t) => t.id === data.config.focusTaskId)
-      setProjectName(project?.name ?? '')
-      setTaskTitle(task?.title ?? '')
-      setProjectId(data.config.focusProjectId ?? '')
-      setTaskId(data.config.focusTaskId ?? '')
+      const focusPid = data.config.focusProjectId ?? ''
+      const focusTid = data.config.focusTaskId ?? ''
+      setProjectId(focusPid)
+      setTaskId(focusTid)
+
+      if (focusPid === '__standalone__') {
+        const qt = (data.quickTasks ?? []).find((t) => t.id === focusTid)
+        setProjectName('Quick Task')
+        setTaskTitle(qt?.title ?? '')
+      } else {
+        const project = data.projects.find((p) => p.id === focusPid)
+        const task = project?.tasks.find((t) => t.id === focusTid)
+        setProjectName(project?.name ?? '')
+        setTaskTitle(task?.title ?? '')
+      }
     })
   }, [])
 

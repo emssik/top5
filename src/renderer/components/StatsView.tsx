@@ -94,6 +94,8 @@ function buildBuckets(range: Range): { keys: string[]; label: (k: string) => str
   }
 }
 
+const STANDALONE_PROJECT_ID = '__standalone__'
+
 export default function StatsView() {
   const { projects, focusCheckIns, loaded, loadData } = useProjects()
   const [range, setRange] = useState<Range>('7d')
@@ -103,6 +105,10 @@ export default function StatsView() {
   }, [])
 
   const activeProjects = projects.filter((p) => !p.archivedAt)
+  const hasStandaloneCheckIns = focusCheckIns.some((c) => c.projectId === STANDALONE_PROJECT_ID)
+  // Virtual "project" for standalone quick tasks in the stats table
+  const standaloneEntry = hasStandaloneCheckIns ? { id: STANDALONE_PROJECT_ID, name: 'Quick Tasks' } : null
+  const allEntries = [...activeProjects.map((p) => ({ id: p.id, name: p.name })), ...(standaloneEntry ? [standaloneEntry] : [])]
 
   const { keys, label, bucketFor } = useMemo(() => buildBuckets(range), [range])
   const todayKey = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` })()
@@ -112,7 +118,7 @@ export default function StatsView() {
     const g: Record<string, Record<string, number>> = {}
     for (const k of keys) {
       g[k] = {}
-      for (const p of activeProjects) g[k][p.id] = 0
+      for (const e of allEntries) g[k][e.id] = 0
     }
 
     for (const c of focusCheckIns) {
@@ -123,14 +129,14 @@ export default function StatsView() {
     }
 
     const totals: Record<string, number> = {}
-    for (const p of activeProjects) {
-      totals[p.id] = 0
-      for (const k of keys) totals[p.id] += g[k][p.id]
+    for (const e of allEntries) {
+      totals[e.id] = 0
+      for (const k of keys) totals[e.id] += g[k][e.id]
     }
 
-    const allVals = keys.flatMap((k) => activeProjects.map((p) => g[k][p.id]))
+    const allVals = keys.flatMap((k) => allEntries.map((e) => g[k][e.id]))
     return { grid: g, projectTotals: totals, maxTime: Math.max(...allVals, 1) }
-  }, [keys, activeProjects, focusCheckIns])
+  }, [keys, allEntries, focusCheckIns])
 
   if (!loaded) {
     return (
@@ -166,7 +172,7 @@ export default function StatsView() {
       </div>
 
       <div className="flex-1 overflow-auto px-6 pb-6">
-        {activeProjects.length === 0 ? (
+        {allEntries.length === 0 ? (
           <p className="text-t-secondary">No active projects</p>
         ) : (
           <div className="overflow-x-auto">
@@ -178,9 +184,9 @@ export default function StatsView() {
                       {range === '6m' || range === '12m' ? 'Month' : 'Date'}
                     </th>
                   )}
-                  {activeProjects.map((p) => (
-                    <th key={p.id} className="py-2 px-2 text-t-secondary font-medium text-center truncate max-w-[100px]">
-                      {p.name || 'Untitled'}
+                  {allEntries.map((e) => (
+                    <th key={e.id} className="py-2 px-2 text-t-secondary font-medium text-center truncate max-w-[100px]">
+                      {e.name || 'Untitled'}
                     </th>
                   ))}
                 </tr>
@@ -188,9 +194,9 @@ export default function StatsView() {
                   <td className="py-2.5 pr-3 text-accent-row-heading font-semibold sticky left-0 bg-accent-row">
                     {isSummaryOnly ? 'Today' : 'Total'}
                   </td>
-                  {activeProjects.map((p) => (
-                    <td key={p.id} className="py-2.5 px-2 text-center text-accent-row-text font-semibold">
-                      {formatCheckInTime(projectTotals[p.id])}
+                  {allEntries.map((e) => (
+                    <td key={e.id} className="py-2.5 px-2 text-center text-accent-row-text font-semibold">
+                      {formatCheckInTime(projectTotals[e.id])}
                     </td>
                   ))}
                 </tr>
@@ -203,10 +209,10 @@ export default function StatsView() {
                         {label(k)}
                         {k === todayKey && <span className="ml-1.5 text-[10px] font-medium text-accent-row-heading">today</span>}
                       </td>
-                      {activeProjects.map((p) => {
-                        const mins = grid[k][p.id]
+                      {allEntries.map((e) => {
+                        const mins = grid[k][e.id]
                         return (
-                          <td key={p.id} className="py-1.5 px-2 text-center">
+                          <td key={e.id} className="py-1.5 px-2 text-center">
                             <span className={`inline-block px-2 py-0.5 rounded ${cellColor(mins)} ${mins > 0 ? 'text-cell-text' : 'text-t-muted'}`}>
                               {mins > 0 ? formatCheckInTime(mins) : '-'}
                             </span>

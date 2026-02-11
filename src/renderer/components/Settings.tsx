@@ -20,11 +20,17 @@ const defaultShortcuts: Record<string, { label: string; default: string }> = {
 export default function Settings({ open, onClose }: Props) {
   const { config, saveConfig } = useProjects()
   const [shortcuts, setShortcuts] = useState(config.actionShortcuts)
+  const [quickTasksLimit, setQuickTasksLimit] = useState(config.quickTasksLimit ?? 5)
 
   if (!open) return null
 
   const handleSave = () => {
-    saveConfig({ ...config, actionShortcuts: shortcuts, globalShortcut: shortcuts['toggle-app'] || config.globalShortcut })
+    saveConfig({
+      ...config,
+      actionShortcuts: shortcuts,
+      globalShortcut: shortcuts['toggle-app'] || config.globalShortcut,
+      quickTasksLimit
+    })
     onClose()
   }
 
@@ -35,7 +41,7 @@ export default function Settings({ open, onClose }: Props) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-4 py-3 border-b border-border-subtle">
-          <h2 className="text-sm font-medium text-t-heading">Keyboard Shortcuts</h2>
+          <h2 className="text-sm font-medium text-t-heading">Settings</h2>
           <button
             onClick={handleSave}
             className="px-2 py-1 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs"
@@ -43,7 +49,27 @@ export default function Settings({ open, onClose }: Props) {
             Save
           </button>
         </div>
-        <div className="p-4 space-y-2">
+        <div className="p-4 space-y-4">
+          {/* Quick Tasks limit */}
+          <div>
+            <h3 className="text-xs font-medium text-t-secondary mb-2">Quick Tasks</h3>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-t-secondary">Tasks on main screen</span>
+              <input
+                type="number"
+                min={1}
+                max={20}
+                value={quickTasksLimit}
+                onChange={(e) => setQuickTasksLimit(Math.max(1, Math.min(20, Number(e.target.value) || 5)))}
+                className="w-16 px-2 py-1 rounded-md bg-surface border border-border text-t-primary text-xs text-center font-mono focus:outline-none focus:border-t-secondary"
+              />
+            </div>
+          </div>
+
+          {/* Shortcuts */}
+          <div>
+            <h3 className="text-xs font-medium text-t-secondary mb-2">Keyboard Shortcuts</h3>
+          </div>
           {Object.entries(defaultShortcuts).map(([key, { label, default: def }]) => (
             <div key={key} className="flex items-center justify-between">
               <span className="text-sm text-t-secondary">{label}</span>

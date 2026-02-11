@@ -1,8 +1,9 @@
 import { create } from 'zustand'
-import type { Project, AppData, AppConfig, FocusCheckIn } from '../types'
+import type { Project, QuickTask, AppData, AppConfig, FocusCheckIn } from '../types'
 
 interface ProjectsState {
   projects: Project[]
+  quickTasks: QuickTask[]
   quickNotes: string
   config: AppConfig
   focusCheckIns: FocusCheckIn[]
@@ -18,10 +19,17 @@ interface ProjectsState {
   reorderProjects: (orderedIds: string[]) => Promise<void>
   setFocus: (projectId: string | null, taskId: string | null) => Promise<void>
   setCompactMode: (enabled: boolean) => Promise<void>
+  saveQuickTask: (task: QuickTask) => Promise<void>
+  removeQuickTask: (id: string) => Promise<void>
+  completeQuickTask: (id: string) => Promise<void>
+  uncompleteQuickTask: (id: string) => Promise<void>
+  reorderQuickTasks: (orderedIds: string[]) => Promise<void>
+  toggleTaskToDoNext: (projectId: string, taskId: string) => Promise<void>
 }
 
 export const useProjects = create<ProjectsState>((set, get) => ({
   projects: [],
+  quickTasks: [],
   quickNotes: '',
   config: {
     globalShortcut: 'CommandOrControl+Shift+Space',
@@ -29,7 +37,8 @@ export const useProjects = create<ProjectsState>((set, get) => ({
     focusTaskId: null,
     focusProjectId: null,
     compactMode: false,
-    theme: 'dark'
+    theme: 'dark',
+    quickTasksLimit: 5
   },
   focusCheckIns: [],
   loaded: false,
@@ -42,6 +51,7 @@ export const useProjects = create<ProjectsState>((set, get) => ({
       ])
       set({
         projects: data.projects,
+        quickTasks: data.quickTasks ?? [],
         quickNotes: data.quickNotes,
         config: data.config,
         focusCheckIns: checkIns,
@@ -123,5 +133,35 @@ export const useProjects = create<ProjectsState>((set, get) => ({
     } else {
       await window.api.exitCompactMode()
     }
+  },
+
+  saveQuickTask: async (task: QuickTask) => {
+    const updated = await window.api.saveQuickTask(task)
+    set({ quickTasks: updated })
+  },
+
+  removeQuickTask: async (id: string) => {
+    const updated = await window.api.removeQuickTask(id)
+    set({ quickTasks: updated })
+  },
+
+  completeQuickTask: async (id: string) => {
+    const updated = await window.api.completeQuickTask(id)
+    set({ quickTasks: updated })
+  },
+
+  uncompleteQuickTask: async (id: string) => {
+    const updated = await window.api.uncompleteQuickTask(id)
+    set({ quickTasks: updated })
+  },
+
+  reorderQuickTasks: async (orderedIds: string[]) => {
+    const updated = await window.api.reorderQuickTasks(orderedIds)
+    set({ quickTasks: updated })
+  },
+
+  toggleTaskToDoNext: async (projectId: string, taskId: string) => {
+    const updated = await window.api.toggleTaskToDoNext(projectId, taskId)
+    set({ projects: updated })
   }
 }))

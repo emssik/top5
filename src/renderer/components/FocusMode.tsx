@@ -8,16 +8,22 @@ function formatCountdown(ms: number): string {
   return `${min}:${sec.toString().padStart(2, '0')}`
 }
 
+const STANDALONE_PROJECT_ID = '__standalone__'
+
 export default function FocusMode() {
-  const { projects, config, setFocus } = useProjects()
+  const { projects, quickTasks, config, setFocus } = useProjects()
   const [remainingMs, setRemainingMs] = useState<number | null>(null)
 
   useEffect(() => {
     return window.api.onCheckInCountdown((ms) => setRemainingMs(ms))
   }, [])
 
-  const project = projects.find((p) => p.id === config.focusProjectId)
-  const task = project?.tasks.find((t) => t.id === config.focusTaskId)
+  const isStandalone = config.focusProjectId === STANDALONE_PROJECT_ID
+  const project = isStandalone ? null : projects.find((p) => p.id === config.focusProjectId)
+  const task = isStandalone
+    ? quickTasks.find((t) => t.id === config.focusTaskId)
+    : project?.tasks.find((t) => t.id === config.focusTaskId)
+  const contextLabel = isStandalone ? 'Quick Task' : project?.name
 
   const handleExit = () => {
     setFocus(null, null)
@@ -34,7 +40,7 @@ export default function FocusMode() {
     >
       <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse flex-shrink-0" />
       <div className="flex-1 min-w-0 flex items-center gap-1.5" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
-        <span className="text-[11px] text-blue-400/70 flex-shrink-0">{project?.name}</span>
+        <span className="text-[11px] text-blue-400/70 flex-shrink-0">{contextLabel}</span>
         <span className="text-[10px] text-t-muted flex-shrink-0">/</span>
         <span className="text-[13px] font-semibold truncate text-t-primary">{task?.title || 'No task'}</span>
       </div>

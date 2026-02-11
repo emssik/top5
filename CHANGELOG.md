@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.9.0] - 2026-02-11
+
+### Added
+
+- Quick Tasks system: standalone task list on the main dashboard with configurable slot limit (default 5)
+- New `QuickTasksView` component with add, complete, uncomplete, remove, drag-and-drop reorder, and inline edit (double-click)
+- Pin project tasks to Quick Tasks via "To Do Next" toggle (📌 button in TaskList)
+- Merged view combining standalone quick tasks and pinned project tasks, sorted by unified order
+- "All Tasks" tab shown when task count exceeds the configured limit (overflow indicator)
+- Dashboard tab navigation: Tasks, All Tasks, Projects, Archive (replaces previous active/archive toggle)
+- Focus mode support for standalone quick tasks (`__standalone__` project sentinel)
+- Quick Tasks section in CompactBar showing active tasks with focus-on-click
+- Quick Tasks time tracking in StatsView (virtual "Quick Tasks" row in heatmap)
+- `calcQuickTaskTime` utility for standalone task time calculation
+- Configurable quick tasks limit in Settings (1–20)
+- Inline editing for project tasks in TaskList (double-click to edit)
+- Pinned task count badge on ProjectTile
+- IPC handlers: `save-quick-task`, `remove-quick-task`, `complete-quick-task`, `uncomplete-quick-task`, `reorder-quick-tasks`, `toggle-task-to-do-next`
+- `QuickTask` type and `quickTasks` field in AppData (both main and renderer)
+- `quickTasksLimit` config option persisted in YAML
+
+### Changed
+
+- Dashboard layout restructured from single project grid to tabbed interface (Tasks as default tab)
+- Settings panel title changed from "Keyboard Shortcuts" to "Settings" with new Quick Tasks limit section
+- "Add Project" button now only visible on the Projects tab
+- CheckInPopup resolves standalone quick tasks when focusProjectId is `__standalone__`
+- FocusMode widget shows "Quick Task" label for standalone tasks instead of project name
+- Extracted `notifyAllWindows` helper in store to DRY up window broadcast calls
+- Shortcut action `select-project` now switches to Projects tab before expanding
+
 ## [1.8.0] - 2026-02-11
 
 ### Added

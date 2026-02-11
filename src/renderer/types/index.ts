@@ -3,6 +3,17 @@ export interface Task {
   title: string
   completed: boolean
   createdAt: string
+  isToDoNext?: boolean
+  toDoNextOrder?: number
+}
+
+export interface QuickTask {
+  id: string
+  title: string
+  completed: boolean
+  createdAt: string
+  completedAt: string | null
+  order: number
 }
 
 export interface ProjectLaunchers {
@@ -32,6 +43,7 @@ export interface AppConfig {
   focusProjectId: string | null
   compactMode: boolean
   theme: 'light' | 'dark'
+  quickTasksLimit: number
 }
 
 export interface FocusCheckIn {
@@ -44,6 +56,7 @@ export interface FocusCheckIn {
 
 export interface AppData {
   projects: Project[]
+  quickTasks: QuickTask[]
   quickNotes: string
   config: AppConfig
 }

@@ -26,6 +26,12 @@ interface Api {
   exitCompactMode: () => Promise<void>
   pickFolder: () => Promise<string | null>
   pickObsidianNote: () => Promise<{ path: string; uri: string | null } | null>
+  saveQuickTask: (task: import('../renderer/types').QuickTask) => Promise<import('../renderer/types').QuickTask[]>
+  removeQuickTask: (id: string) => Promise<import('../renderer/types').QuickTask[]>
+  completeQuickTask: (id: string) => Promise<import('../renderer/types').QuickTask[]>
+  uncompleteQuickTask: (id: string) => Promise<import('../renderer/types').QuickTask[]>
+  reorderQuickTasks: (orderedIds: string[]) => Promise<import('../renderer/types').QuickTask[]>
+  toggleTaskToDoNext: (projectId: string, taskId: string) => Promise<import('../renderer/types').Project[]>
   onReloadData: (callback: () => void) => () => void
   onShortcutAction: (callback: (data: { action: string; index?: number }) => void) => () => void
   onCheckInCountdown: (callback: (remainingMs: number) => void) => () => void

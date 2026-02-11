@@ -9,8 +9,30 @@ interface Props {
 }
 
 export default function TaskList({ project }: Props) {
-  const { saveProject, setFocus, focusCheckIns } = useProjects()
+  const { saveProject, setFocus, focusCheckIns, toggleTaskToDoNext } = useProjects()
   const [newTaskTitle, setNewTaskTitle] = useState('')
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editingTitle, setEditingTitle] = useState('')
+
+  const startEditing = (task: Task) => {
+    setEditingId(task.id)
+    setEditingTitle(task.title)
+  }
+
+  const saveEdit = async () => {
+    if (!editingId || !editingTitle.trim()) {
+      setEditingId(null)
+      return
+    }
+    // Get fresh project from store to avoid overwriting other fields (isToDoNext, completed, etc.)
+    const fresh = useProjects.getState().projects.find((p) => p.id === project.id)
+    if (!fresh) { setEditingId(null); return }
+    const tasks = fresh.tasks.map((t) =>
+      t.id === editingId ? { ...t, title: editingTitle.trim() } : t
+    )
+    await saveProject({ ...fresh, tasks })
+    setEditingId(null)
+  }
 
   const addTask = async () => {
     if (!newTaskTitle.trim()) return
@@ -55,16 +77,46 @@ export default function TaskList({ project }: Props) {
             >
               {task.completed && '✓'}
             </button>
-            <span className={`flex-1 text-sm truncate ${task.completed ? 'text-t-muted line-through' : 'text-t-primary'}`}>
-              {task.title}
-              {(() => {
-                const mins = calcTaskTime(focusCheckIns, task.id)
-                return mins > 0 ? (
-                  <span className="ml-2 text-[10px] font-mono text-t-muted">{formatCheckInTime(mins)}</span>
-                ) : null
-              })()}
-            </span>
+            {editingId === task.id ? (
+              <input
+                autoFocus
+                value={editingTitle}
+                onChange={(e) => setEditingTitle(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') saveEdit()
+                  if (e.key === 'Escape') setEditingId(null)
+                }}
+                onBlur={saveEdit}
+                className="flex-1 text-sm bg-surface border border-border rounded px-1 py-0.5 text-t-primary focus:outline-none focus:border-t-secondary"
+              />
+            ) : (
+              <span
+                onDoubleClick={() => startEditing(task)}
+                className={`flex-1 text-sm truncate cursor-default ${task.completed ? 'text-t-muted line-through' : 'text-t-primary'}`}
+              >
+                {task.title}
+                {(() => {
+                  const mins = calcTaskTime(focusCheckIns, task.id)
+                  return mins > 0 ? (
+                    <span className="ml-2 text-[10px] font-mono text-t-muted">{formatCheckInTime(mins)}</span>
+                  ) : null
+                })()}
+              </span>
+            )}
             <div className="flex gap-1">
+              {!task.completed && (
+                <button
+                  onClick={() => toggleTaskToDoNext(project.id, task.id)}
+                  className={`text-[10px] px-1.5 py-0.5 rounded transition-colors ${
+                    task.isToDoNext
+                      ? 'bg-amber-600/30 text-amber-400 hover:bg-amber-600/50'
+                      : 'bg-surface hover:bg-hover text-t-secondary hover:text-amber-400 opacity-0 group-hover:opacity-100'
+                  }`}
+                  title={task.isToDoNext ? 'Unpin from Quick Tasks' : 'Pin to Quick Tasks'}
+                >
+                  {task.isToDoNext ? '📌' : '📌'}
+                </button>
+              )}
               {!task.completed && (
                 <button
                   onClick={() => handleFocus(task)}

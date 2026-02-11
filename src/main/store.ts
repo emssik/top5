@@ -24,6 +24,17 @@ interface Task {
   title: string
   completed: boolean
   createdAt: string
+  isToDoNext?: boolean
+  toDoNextOrder?: number
+}
+
+interface QuickTask {
+  id: string
+  title: string
+  completed: boolean
+  createdAt: string
+  completedAt: string | null
+  order: number
 }
 
 interface Project {
@@ -51,6 +62,7 @@ interface AppConfig {
   focusProjectId: string | null
   compactMode: boolean
   theme: 'light' | 'dark'
+  quickTasksLimit: number
 }
 
 interface FocusCheckIn {
@@ -63,12 +75,14 @@ interface FocusCheckIn {
 
 interface AppData {
   projects: Project[]
+  quickTasks: QuickTask[]
   quickNotes: string
   config: AppConfig
 }
 
 const defaultData: AppData = {
   projects: [],
+  quickTasks: [],
   quickNotes: '',
   config: {
     globalShortcut: 'CommandOrControl+Shift+Space',
@@ -85,7 +99,8 @@ const defaultData: AppData = {
     focusTaskId: null,
     focusProjectId: null,
     compactMode: false,
-    theme: 'dark'
+    theme: 'dark',
+    quickTasksLimit: 5
   }
 }
 
@@ -263,6 +278,7 @@ function loadData(): AppData {
     const parsed = yaml.load(raw) as Partial<AppData> | null
     return {
       projects: parsed?.projects ?? defaultData.projects,
+      quickTasks: parsed?.quickTasks ?? [],
       quickNotes: parsed?.quickNotes ?? defaultData.quickNotes,
       config: { ...defaultData.config, ...parsed?.config }
     }
@@ -284,6 +300,7 @@ function migrateFromElectronStore(): void {
     const parsed = JSON.parse(raw) as Partial<AppData>
     const data: AppData = {
       projects: parsed.projects ?? defaultData.projects,
+      quickTasks: parsed.quickTasks ?? [],
       quickNotes: parsed.quickNotes ?? defaultData.quickNotes,
       config: { ...defaultData.config, ...parsed.config }
     }
@@ -316,6 +333,14 @@ export function setAppDataKey(key: keyof AppData, value: AppData[keyof AppData])
   setData(key, value)
 }
 
+function notifyAllWindows(): void {
+  for (const win of BrowserWindow.getAllWindows()) {
+    if (!win.isDestroyed()) {
+      win.webContents.send('reload-data')
+    }
+  }
+}
+
 export function registerStoreHandlers(ipcMain: IpcMain): void {
   migrateCheckInsToJsonl()
   dailyBackup()
@@ -337,14 +362,7 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
       projects.push(project)
     }
     setData('projects', projects)
-
-    // Notify all windows so they pick up changes
-    for (const win of BrowserWindow.getAllWindows()) {
-      if (!win.isDestroyed()) {
-        win.webContents.send('reload-data')
-      }
-    }
-
+    notifyAllWindows()
     return projects
   })
 
@@ -467,5 +485,89 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
 
     const uri = `obsidian://open?vault=${encodeURIComponent(vaultName)}&file=${encodeURIComponent(relativePath)}`
     return { path: filePath, uri }
+  })
+
+  // --- Quick Tasks ---
+
+  ipcMain.handle('save-quick-task', (_event, task: unknown) => {
+    if (!isRecord(task) || typeof task.id !== 'string' || typeof task.title !== 'string') return
+    const data = getData()
+    const quickTasks = [...data.quickTasks]
+    const qt = task as QuickTask
+    const index = quickTasks.findIndex((t) => t.id === qt.id)
+    if (index >= 0) {
+      quickTasks[index] = qt
+    } else {
+      qt.order = quickTasks.filter((t) => !t.completed).length
+      quickTasks.push(qt)
+    }
+    setData('quickTasks', quickTasks)
+    notifyAllWindows()
+    return quickTasks
+  })
+
+  ipcMain.handle('remove-quick-task', (_event, id: string) => {
+    if (typeof id !== 'string') return
+    const data = getData()
+    const quickTasks = data.quickTasks.filter((t) => t.id !== id)
+    setData('quickTasks', quickTasks)
+    notifyAllWindows()
+    return quickTasks
+  })
+
+  ipcMain.handle('complete-quick-task', (_event, id: string) => {
+    if (typeof id !== 'string') return
+    const data = getData()
+    const quickTasks = [...data.quickTasks]
+    const task = quickTasks.find((t) => t.id === id)
+    if (task) {
+      task.completed = true
+      task.completedAt = new Date().toISOString()
+      setData('quickTasks', quickTasks)
+      notifyAllWindows()
+    }
+    return quickTasks
+  })
+
+  ipcMain.handle('uncomplete-quick-task', (_event, id: string) => {
+    if (typeof id !== 'string') return
+    const data = getData()
+    const quickTasks = [...data.quickTasks]
+    const task = quickTasks.find((t) => t.id === id)
+    if (task) {
+      task.completed = false
+      task.completedAt = null
+      task.order = quickTasks.filter((t) => !t.completed).length
+      setData('quickTasks', quickTasks)
+      notifyAllWindows()
+    }
+    return quickTasks
+  })
+
+  ipcMain.handle('reorder-quick-tasks', (_event, orderedIds: string[]) => {
+    if (!Array.isArray(orderedIds)) return
+    const data = getData()
+    const quickTasks = [...data.quickTasks]
+    for (let i = 0; i < orderedIds.length; i++) {
+      const task = quickTasks.find((t) => t.id === orderedIds[i])
+      if (task) task.order = i
+    }
+    setData('quickTasks', quickTasks)
+    return quickTasks
+  })
+
+  ipcMain.handle('toggle-task-to-do-next', (_event, projectId: string, taskId: string) => {
+    if (typeof projectId !== 'string' || typeof taskId !== 'string') return
+    const data = getData()
+    const projects = [...data.projects]
+    const project = projects.find((p) => p.id === projectId)
+    if (!project) return projects
+    const task = project.tasks.find((t) => t.id === taskId)
+    if (task) {
+      task.isToDoNext = !task.isToDoNext
+      setData('projects', projects)
+      notifyAllWindows()
+    }
+    return projects
   })
 }

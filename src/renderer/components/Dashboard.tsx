@@ -3,19 +3,29 @@ import { useProjects } from '../hooks/useProjects'
 import ProjectTile from './ProjectTile'
 import QuickNotes from './QuickNotes'
 import Settings from './Settings'
+import QuickTasksView from './QuickTasksView'
+
+type Tab = 'tasks' | 'all-tasks' | 'projects' | 'archive'
 
 export default function Dashboard() {
-  const { projects, config, saveConfig, reorderProjects, unarchiveProject, setCompactMode } = useProjects()
+  const { projects, quickTasks, config, saveConfig, reorderProjects, unarchiveProject, setCompactMode } = useProjects()
   const [showNotes, setShowNotes] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [expandedProjectId, setExpandedProjectId] = useState<string | null>(null)
-  const [showArchived, setShowArchived] = useState(false)
+  const [activeTab, setActiveTab] = useState<Tab>('tasks')
   const [restoreError, setRestoreError] = useState<string | null>(null)
   const draggedId = useRef<string | null>(null)
   const [dragOverId, setDragOverId] = useState<string | null>(null)
 
   const activeProjects = projects.filter((p) => !p.archivedAt)
   const archivedProjects = projects.filter((p) => p.archivedAt)
+  const limit = config.quickTasksLimit ?? 5
+  const activeQuickTasks = quickTasks.filter((t) => !t.completed)
+  const pinnedTaskCount = activeProjects.reduce(
+    (sum, p) => sum + p.tasks.filter((t) => t.isToDoNext && !t.completed).length, 0
+  )
+  const totalTaskCount = activeQuickTasks.length + pinnedTaskCount
+  const hasOverflow = totalTaskCount > limit
 
   const toggleExpanded = useCallback((projectId: string) => {
     setExpandedProjectId((prev) => (prev === projectId ? null : projectId))
@@ -35,15 +45,16 @@ export default function Dashboard() {
     saveConfig({ ...config, theme: newTheme })
   }
 
-  // Auto-switch back to active view when archive becomes empty
+  // Auto-switch away from archive when it becomes empty
   useEffect(() => {
-    if (showArchived && archivedProjects.length === 0) {
-      setShowArchived(false)
+    if (activeTab === 'archive' && archivedProjects.length === 0) {
+      setActiveTab('tasks')
     }
-  }, [showArchived, archivedProjects.length])
+  }, [activeTab, archivedProjects.length])
 
   const handleShortcutAction = useCallback((data: { action: string; index?: number }) => {
     if (data.action === 'select-project' && data.index !== undefined) {
+      setActiveTab('projects')
       const sorted = [...activeProjects].sort((a, b) => a.order - b.order)
       if (data.index < sorted.length) {
         const targetId = sorted[data.index].id
@@ -66,20 +77,45 @@ export default function Dashboard() {
 
       <div className="flex-1 overflow-auto px-6 pb-6">
         <div className="flex items-center justify-between mb-6">
+          {/* Tabs */}
           <div className="flex items-center gap-1">
-            {showArchived && (
+            <button
+              onClick={() => setActiveTab('tasks')}
+              className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                activeTab === 'tasks'
+                  ? 'bg-surface text-t-primary'
+                  : 'text-t-secondary hover:text-t-primary'
+              }`}
+            >
+              Tasks
+            </button>
+            {hasOverflow && (
               <button
-                onClick={() => setShowArchived(false)}
-                className="px-3 py-1 rounded-lg text-sm font-medium text-t-secondary hover:text-t-primary transition-colors"
+                onClick={() => setActiveTab('all-tasks')}
+                className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                  activeTab === 'all-tasks'
+                    ? 'bg-surface text-t-primary'
+                    : 'text-t-secondary hover:text-t-primary'
+                }`}
               >
-                Active
+                All Tasks ({totalTaskCount})
               </button>
             )}
+            <button
+              onClick={() => setActiveTab('projects')}
+              className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                activeTab === 'projects'
+                  ? 'bg-surface text-t-primary'
+                  : 'text-t-secondary hover:text-t-primary'
+              }`}
+            >
+              Projects
+            </button>
             {archivedProjects.length > 0 && (
               <button
-                onClick={() => setShowArchived(true)}
+                onClick={() => setActiveTab('archive')}
                 className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
-                  showArchived
+                  activeTab === 'archive'
                     ? 'bg-surface text-t-primary'
                     : 'text-t-secondary hover:text-t-primary'
                 }`}
@@ -88,6 +124,8 @@ export default function Dashboard() {
               </button>
             )}
           </div>
+
+          {/* Toolbar */}
           <div className="flex items-center gap-1">
             <button
               onClick={toggleTheme}
@@ -128,17 +166,17 @@ export default function Dashboard() {
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
             </button>
-            {!showArchived && activeProjects.length < 5 && (
-              <div className="w-px h-4 bg-border-subtle mx-1" />
-            )}
-            {!showArchived && activeProjects.length < 5 && (
-              <button
-                onClick={() => window.api.openNewProjectWindow()}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-hover text-t-muted hover:text-t-primary text-sm transition-colors"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                Add Project
-              </button>
+            {activeTab === 'projects' && activeProjects.length < 5 && (
+              <>
+                <div className="w-px h-4 bg-border-subtle mx-1" />
+                <button
+                  onClick={() => window.api.openNewProjectWindow()}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-hover text-t-muted hover:text-t-primary text-sm transition-colors"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  Add Project
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -149,7 +187,52 @@ export default function Dashboard() {
           </div>
         )}
 
-        {showArchived ? (
+        {/* Tab content */}
+        {activeTab === 'tasks' && <QuickTasksView />}
+
+        {activeTab === 'all-tasks' && <QuickTasksView showAll />}
+
+        {activeTab === 'projects' && (
+          activeProjects.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-64 text-t-secondary">
+              <p className="text-lg mb-2">No projects yet</p>
+              <p className="text-sm">Add up to 5 projects to focus on</p>
+            </div>
+          ) : (
+            <div
+              className="grid grid-cols-1 gap-3"
+              onDragEnd={() => { draggedId.current = null; setDragOverId(null) }}
+            >
+              {activeProjects
+                .sort((a, b) => a.order - b.order)
+                .map((project) => (
+                  <ProjectTile
+                    key={project.id}
+                    project={project}
+                    expanded={expandedProjectId === project.id}
+                    onToggleExpand={() => toggleExpanded(project.id)}
+                    onDragStart={() => { draggedId.current = project.id }}
+                    onDragOver={(e) => { e.preventDefault(); setDragOverId(project.id) }}
+                    onDrop={() => {
+                      if (!draggedId.current || draggedId.current === project.id) return
+                      const sorted = [...activeProjects].sort((a, b) => a.order - b.order)
+                      const ids = sorted.map((p) => p.id)
+                      const fromIdx = ids.indexOf(draggedId.current)
+                      const toIdx = ids.indexOf(project.id)
+                      ids.splice(fromIdx, 1)
+                      ids.splice(toIdx, 0, draggedId.current)
+                      reorderProjects(ids)
+                      draggedId.current = null
+                      setDragOverId(null)
+                    }}
+                    isDragOver={dragOverId === project.id && draggedId.current !== project.id}
+                  />
+                ))}
+            </div>
+          )
+        )}
+
+        {activeTab === 'archive' && (
           archivedProjects.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-64 text-t-secondary">
               <p className="text-lg mb-2">No archived projects</p>
@@ -184,42 +267,6 @@ export default function Dashboard() {
                 ))}
             </div>
           )
-        ) : activeProjects.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-64 text-t-secondary">
-            <p className="text-lg mb-2">No projects yet</p>
-            <p className="text-sm">Add up to 5 projects to focus on</p>
-          </div>
-        ) : (
-          <div
-            className="grid grid-cols-1 gap-3"
-            onDragEnd={() => { draggedId.current = null; setDragOverId(null) }}
-          >
-            {activeProjects
-              .sort((a, b) => a.order - b.order)
-              .map((project) => (
-                <ProjectTile
-                  key={project.id}
-                  project={project}
-                  expanded={expandedProjectId === project.id}
-                  onToggleExpand={() => toggleExpanded(project.id)}
-                  onDragStart={() => { draggedId.current = project.id }}
-                  onDragOver={(e) => { e.preventDefault(); setDragOverId(project.id) }}
-                  onDrop={() => {
-                    if (!draggedId.current || draggedId.current === project.id) return
-                    const sorted = [...activeProjects].sort((a, b) => a.order - b.order)
-                    const ids = sorted.map((p) => p.id)
-                    const fromIdx = ids.indexOf(draggedId.current)
-                    const toIdx = ids.indexOf(project.id)
-                    ids.splice(fromIdx, 1)
-                    ids.splice(toIdx, 0, draggedId.current)
-                    reorderProjects(ids)
-                    draggedId.current = null
-                    setDragOverId(null)
-                  }}
-                  isDragOver={dragOverId === project.id && draggedId.current !== project.id}
-                />
-              ))}
-          </div>
         )}
       </div>
 

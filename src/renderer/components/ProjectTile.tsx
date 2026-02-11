@@ -22,6 +22,7 @@ export default function ProjectTile({ project, expanded, onToggleExpand, onDragS
   const projectMinutes = calcProjectTime(focusCheckIns, project.id)
   const timeFormatted = formatCheckInTime(projectMinutes)
 
+  const pinnedCount = project.tasks.filter((t) => t.isToDoNext && !t.completed).length
   const activeLaunchers = getActiveLaunchers(project.launchers)
 
   if (editing) {
@@ -51,6 +52,11 @@ export default function ProjectTile({ project, expanded, onToggleExpand, onDragS
             {projectMinutes > 0 && (
               <span className="text-[10px] font-mono px-1.5 py-0.5 rounded text-t-secondary">
                 {timeFormatted}
+              </span>
+            )}
+            {pinnedCount > 0 && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded text-amber-400/80" title={`${pinnedCount} pinned to Quick Tasks`}>
+                📌{pinnedCount > 1 && ` (${pinnedCount})`}
               </span>
             )}
           </div>
