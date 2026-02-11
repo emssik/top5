@@ -46,5 +46,4 @@ export interface AppData {
   projects: Project[]
   quickNotes: string
   config: AppConfig
-  focusCheckIns: FocusCheckIn[]
 }

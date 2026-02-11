@@ -37,12 +37,15 @@ export const useProjects = create<ProjectsState>((set, get) => ({
   loaded: false,
 
   loadData: async () => {
-    const data: AppData = await window.api.getAppData()
+    const [data, checkIns] = await Promise.all([
+      window.api.getAppData(),
+      window.api.getFocusCheckIns()
+    ])
     set({
       projects: data.projects,
       quickNotes: data.quickNotes,
       config: data.config,
-      focusCheckIns: data.focusCheckIns,
+      focusCheckIns: checkIns,
       loaded: true
     })
   },

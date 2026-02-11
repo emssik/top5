@@ -7,7 +7,9 @@ import { getAppData, setAppDataKey } from './store'
 let focusWindow: BrowserWindow | null = null
 let checkInWindow: BrowserWindow | null = null
 let statsWindow: BrowserWindow | null = null
-let checkInTimer: ReturnType<typeof setInterval> | null = null
+let checkInTimeout: ReturnType<typeof setTimeout> | null = null
+let countdownInterval: ReturnType<typeof setInterval> | null = null
+let checkInDeadline: number = 0
 
 const CHECK_IN_INTERVAL_MS = 15 * 60 * 1000
 
@@ -17,16 +19,38 @@ export function getFocusWindow(): BrowserWindow | null {
 
 function startCheckInTimer(): void {
   clearCheckInTimer()
-  checkInTimer = setInterval(() => {
+  checkInDeadline = Date.now() + CHECK_IN_INTERVAL_MS
+
+  // Send countdown updates to focus window every second
+  countdownInterval = setInterval(() => {
+    if (focusWindow && !focusWindow.isDestroyed()) {
+      const remaining = Math.max(0, checkInDeadline - Date.now())
+      focusWindow.webContents.send('checkin-countdown', remaining)
+    }
+  }, 1000)
+
+  checkInTimeout = setTimeout(() => {
+    clearCountdownInterval()
+    if (focusWindow && !focusWindow.isDestroyed()) {
+      focusWindow.webContents.send('checkin-countdown', 0)
+    }
     showCheckInPopup()
   }, CHECK_IN_INTERVAL_MS)
 }
 
-function clearCheckInTimer(): void {
-  if (checkInTimer) {
-    clearInterval(checkInTimer)
-    checkInTimer = null
+function clearCountdownInterval(): void {
+  if (countdownInterval) {
+    clearInterval(countdownInterval)
+    countdownInterval = null
   }
+}
+
+function clearCheckInTimer(): void {
+  if (checkInTimeout) {
+    clearTimeout(checkInTimeout)
+    checkInTimeout = null
+  }
+  clearCountdownInterval()
 }
 
 function showCheckInPopup(): void {
@@ -183,6 +207,10 @@ export function registerFocusHandlers(
 
   ipcMain.handle('dismiss-checkin', () => {
     closeCheckInPopup()
+    // Start next timer only after user responds
+    if (focusWindow && !focusWindow.isDestroyed()) {
+      startCheckInTimer()
+    }
   })
 
   ipcMain.handle('open-stats-window', () => {

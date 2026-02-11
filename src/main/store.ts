@@ -1,6 +1,20 @@
 import { dialog, app } from 'electron'
 import type { IpcMain } from 'electron'
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs'
+import {
+  existsSync,
+  readFileSync,
+  writeFileSync,
+  appendFileSync,
+  mkdirSync,
+  symlinkSync,
+  lstatSync,
+  renameSync,
+  readdirSync,
+  unlinkSync,
+  copyFileSync
+} from 'fs'
+import { createHash } from 'crypto'
+import { platform } from 'os'
 import { dirname, basename, relative, join } from 'path'
 import { homedir } from 'os'
 import yaml from 'js-yaml'
@@ -50,13 +64,11 @@ interface AppData {
   projects: Project[]
   quickNotes: string
   config: AppConfig
-  focusCheckIns: FocusCheckIn[]
 }
 
 const defaultData: AppData = {
   projects: [],
   quickNotes: '',
-  focusCheckIns: [],
   config: {
     globalShortcut: 'CommandOrControl+Shift+Space',
     actionShortcuts: {
@@ -75,8 +87,136 @@ const defaultData: AppData = {
   }
 }
 
-const CONFIG_DIR = join(homedir(), '.config', 'top5')
+const ICLOUD_DIR = join(homedir(), 'Library', 'Mobile Documents', 'com~apple~CloudDocs', 'top5')
+const SYMLINK_PATH = join(homedir(), '.config', 'top5')
+
+function ensureDataDir(): string {
+  if (platform() === 'darwin') {
+    // Create real dir in iCloud
+    mkdirSync(ICLOUD_DIR, { recursive: true })
+
+    // Migrate: if ~/.config/top5 is a real directory (not symlink), move contents to iCloud
+    if (existsSync(SYMLINK_PATH) && !lstatSync(SYMLINK_PATH).isSymbolicLink()) {
+      const files = ['data.yaml', 'checkins.jsonl']
+      for (const f of files) {
+        const src = join(SYMLINK_PATH, f)
+        const dst = join(ICLOUD_DIR, f)
+        if (existsSync(src) && !existsSync(dst)) {
+          renameSync(src, dst)
+        }
+      }
+      // Remove old dir (should be empty now) and create symlink
+      const { rmSync } = require('fs')
+      rmSync(SYMLINK_PATH, { recursive: true })
+    }
+
+    // Create symlink if missing
+    if (!existsSync(SYMLINK_PATH)) {
+      mkdirSync(dirname(SYMLINK_PATH), { recursive: true })
+      symlinkSync(ICLOUD_DIR, SYMLINK_PATH)
+    }
+
+    return ICLOUD_DIR
+  }
+
+  // Non-mac fallback
+  mkdirSync(SYMLINK_PATH, { recursive: true })
+  return SYMLINK_PATH
+}
+
+const CONFIG_DIR = ensureDataDir()
 const DATA_FILE = join(CONFIG_DIR, 'data.yaml')
+const CHECKINS_FILE = join(CONFIG_DIR, 'checkins.jsonl')
+
+// --- Daily backup ---
+
+const BACKUP_DIR = join(CONFIG_DIR, 'backups')
+const MAX_BACKUPS = 7
+
+function dailyBackup(): void {
+  const today = new Date().toISOString().slice(0, 10) // YYYY-MM-DD
+  const backupPrefix = `backup-${today}`
+
+  mkdirSync(BACKUP_DIR, { recursive: true })
+
+  // Already backed up today?
+  const existing = readdirSync(BACKUP_DIR)
+  if (existing.some((f) => f.startsWith(backupPrefix))) return
+
+  // Collect files to backup and check if anything changed since last backup
+  const filesToBackup = [DATA_FILE, CHECKINS_FILE].filter((f) => existsSync(f))
+  if (filesToBackup.length === 0) return
+
+  // Hash current content
+  const currentHash = filesToBackup
+    .map((f) => createHash('md5').update(readFileSync(f)).digest('hex'))
+    .join(':')
+
+  // Compare with most recent backup hash
+  const hashFile = join(BACKUP_DIR, '.last-hash')
+  if (existsSync(hashFile) && readFileSync(hashFile, 'utf-8').trim() === currentHash) return
+
+  // Create backups
+  for (const f of filesToBackup) {
+    const name = basename(f)
+    copyFileSync(f, join(BACKUP_DIR, `${backupPrefix}-${name}`))
+  }
+  writeFileSync(hashFile, currentHash, 'utf-8')
+
+  // Prune old backups — keep last MAX_BACKUPS days
+  const allBackups = readdirSync(BACKUP_DIR)
+    .filter((f) => f.startsWith('backup-'))
+  const days = [...new Set(allBackups.map((f) => f.slice(7, 17)))].sort().reverse()
+  const daysToRemove = days.slice(MAX_BACKUPS)
+  for (const day of daysToRemove) {
+    for (const f of allBackups.filter((b) => b.slice(7, 17) === day)) {
+      unlinkSync(join(BACKUP_DIR, f))
+    }
+  }
+}
+
+// --- JSONL check-ins ---
+
+function appendCheckIn(checkIn: FocusCheckIn): void {
+  mkdirSync(CONFIG_DIR, { recursive: true })
+  appendFileSync(CHECKINS_FILE, JSON.stringify(checkIn) + '\n', 'utf-8')
+}
+
+function loadCheckIns(): FocusCheckIn[] {
+  if (!existsSync(CHECKINS_FILE)) return []
+  try {
+    const raw = readFileSync(CHECKINS_FILE, 'utf-8')
+    return raw
+      .split('\n')
+      .filter((line) => line.trim())
+      .map((line) => JSON.parse(line))
+  } catch {
+    return []
+  }
+}
+
+function migrateCheckInsToJsonl(): void {
+  if (existsSync(CHECKINS_FILE)) return
+  // Migrate existing check-ins from YAML if present
+  if (!existsSync(DATA_FILE)) return
+  try {
+    const raw = readFileSync(DATA_FILE, 'utf-8')
+    const parsed = yaml.load(raw) as any
+    const checkIns: FocusCheckIn[] = parsed?.focusCheckIns ?? []
+    if (checkIns.length > 0) {
+      mkdirSync(CONFIG_DIR, { recursive: true })
+      const lines = checkIns.map((c) => JSON.stringify(c)).join('\n') + '\n'
+      writeFileSync(CHECKINS_FILE, lines, 'utf-8')
+    }
+    // Remove focusCheckIns from YAML
+    if (parsed?.focusCheckIns) {
+      delete parsed.focusCheckIns
+      writeFileSync(DATA_FILE, yaml.dump(parsed, { lineWidth: 120, noRefs: true }), 'utf-8')
+    }
+  } catch {
+    // Migration failed — not critical
+  }
+}
 
 function loadData(): AppData {
   if (!existsSync(DATA_FILE)) {
@@ -92,7 +232,6 @@ function loadData(): AppData {
     return {
       projects: parsed?.projects ?? defaultData.projects,
       quickNotes: parsed?.quickNotes ?? defaultData.quickNotes,
-      focusCheckIns: parsed?.focusCheckIns ?? [],
       config: { ...defaultData.config, ...parsed?.config }
     }
   } catch {
@@ -114,7 +253,6 @@ function migrateFromElectronStore(): void {
     const data: AppData = {
       projects: parsed.projects ?? defaultData.projects,
       quickNotes: parsed.quickNotes ?? defaultData.quickNotes,
-      focusCheckIns: (parsed as any).focusCheckIns ?? [],
       config: { ...defaultData.config, ...parsed.config }
     }
     saveData(data)
@@ -147,6 +285,9 @@ export function setAppDataKey(key: keyof AppData, value: AppData[keyof AppData])
 }
 
 export function registerStoreHandlers(ipcMain: IpcMain): void {
+  migrateCheckInsToJsonl()
+  dailyBackup()
+
   ipcMain.handle('get-app-data', () => {
     return getData()
   })
@@ -240,18 +381,16 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
   })
 
   ipcMain.handle('save-focus-checkin', (_event, checkIn: FocusCheckIn) => {
-    const data = getData()
-    const checkIns = [...data.focusCheckIns, checkIn]
-    setData('focusCheckIns', checkIns)
-    return checkIns
+    appendCheckIn(checkIn)
+    return loadCheckIns()
   })
 
   ipcMain.handle('get-focus-checkins', (_event, taskId?: string) => {
-    const data = getData()
+    const checkIns = loadCheckIns()
     if (taskId) {
-      return data.focusCheckIns.filter((c) => c.taskId === taskId)
+      return checkIns.filter((c) => c.taskId === taskId)
     }
-    return data.focusCheckIns
+    return checkIns
   })
 
   ipcMain.handle('pick-obsidian-note', async () => {

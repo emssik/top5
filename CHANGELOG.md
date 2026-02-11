@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-02-11
+
+### Added
+
+- iCloud Drive sync: data directory moved to `~/Library/Mobile Documents/com~apple~CloudDocs/top5/` with symlink at `~/.config/top5` (macOS)
+- Automatic migration of existing `~/.config/top5/` data to iCloud directory
+- Daily auto-backups with hash-based deduplication (max 7 days, skipped when unchanged)
+- Focus check-ins stored in append-only JSONL file (`checkins.jsonl`) instead of YAML
+- Migration of existing YAML check-ins to JSONL format on first launch
+- Countdown timer in focus mode widget showing time remaining until next check-in
+- `onCheckInCountdown` preload API for real-time countdown updates from main process
+
+### Changed
+
+- Check-in timer now starts only after user responds to the popup (no longer fires on a fixed interval)
+- `focusCheckIns` removed from `AppData` type and YAML storage; check-ins loaded independently via IPC
+- `useProjects` hook now fetches check-ins in parallel with app data on load
+- README updated with iCloud sync details, new features, and revised project structure
+
 ## [1.5.0] - 2026-02-11
 
 ### Added

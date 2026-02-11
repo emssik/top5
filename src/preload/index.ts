@@ -34,6 +34,11 @@ const api = {
     const handler = (_event: any, data: { action: string; index?: number }) => callback(data)
     ipcRenderer.on('shortcut-action', handler)
     return () => ipcRenderer.removeListener('shortcut-action', handler)
+  },
+  onCheckInCountdown: (callback: (remainingMs: number) => void) => {
+    const handler = (_event: any, remainingMs: number) => callback(remainingMs)
+    ipcRenderer.on('checkin-countdown', handler)
+    return () => ipcRenderer.removeListener('checkin-countdown', handler)
   }
 }
 

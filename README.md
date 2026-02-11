@@ -8,12 +8,16 @@ Desktop app for attention management. Forces a limit of 5 projects, minimizes co
 - **Drag-and-drop reordering** — arrange projects by priority
 - **Quick launchers** — one-click open VS Code, iTerm, Obsidian (specific note), browser per project
 - **Native file pickers** — system dialogs for selecting folders and Obsidian notes
-- **Focus mode** — frameless always-on-top mini-widget showing current task, visible on all macOS Spaces
-- **Time tracking** — per-project timer with start/stop, survives app restart
+- **Focus mode** — frameless always-on-top mini-widget with countdown timer to next check-in, visible on all macOS Spaces
+- **Focus check-ins** — every 15 min asks if you're still working; next timer starts only after response
+- **Compact mode** — always-on-top slim sidebar with project launchers
+- **Work stats** — heatmap of focus time per project (today/7d/month/6m/12m)
+- **Project archiving** — archive instead of delete, restore anytime
+- **Light/dark theme** — toggle in dashboard header, persisted across sessions
 - **Tasks** — simple task list per project with focus-on-task support
 - **Quick notes** — global scratchpad
 - **Global shortcuts** — `Cmd+Shift+Space` to toggle app, `Cmd+1-5` to jump to project, all configurable
-- **Persistent storage** — YAML-based local storage at `~/.config/top5/data.yaml`
+- **Persistent storage** — YAML config + JSONL check-ins, synced via iCloud Drive with daily backups
 
 ## Stack
 
@@ -53,9 +57,9 @@ Shortcuts are configurable in Settings.
 src/
   main/
     index.ts           # BrowserWindow, app lifecycle
-    store.ts           # YAML file storage, IPC handlers, native dialogs
+    store.ts           # YAML/JSONL storage, iCloud sync, daily backups, IPC handlers
     launchers.ts       # VS Code, iTerm, Obsidian, browser launchers
-    focus-window.ts    # Frameless focus mode window
+    focus-window.ts    # Focus mode window, check-in popups, countdown timer
     shortcuts.ts       # Global keyboard shortcuts
   preload/
     index.ts           # contextBridge IPC api
@@ -65,7 +69,10 @@ src/
       Dashboard.tsx    # Main view with project grid
       ProjectTile.tsx  # Project card with launchers, timer, tasks
       ProjectEditor.tsx # Inline editor with native file pickers
-      FocusMode.tsx    # Compact always-on-top task widget
+      FocusMode.tsx    # Always-on-top task widget with countdown
+      CheckInPopup.tsx # Focus check-in popup (yes/no/a little)
+      CompactBar.tsx   # Compact mode sidebar
+      StatsView.tsx    # Work stats heatmap
       TaskList.tsx     # Task CRUD with focus action
       QuickNotes.tsx   # Global notes modal
       Settings.tsx     # Shortcut configuration
@@ -78,7 +85,15 @@ src/
 
 ## Data storage
 
-Data is stored in `~/.config/top5/data.yaml`. On first launch, legacy data from `~/Library/Application Support/top5/config.json` is migrated automatically.
+Data lives in iCloud Drive (`~/Library/Mobile Documents/com~apple~CloudDocs/top5/`) with a symlink at `~/.config/top5`.
+
+| File | Content |
+|---|---|
+| `data.yaml` | Projects, config, quick notes |
+| `checkins.jsonl` | Focus check-in log (append-only, one JSON per line) |
+| `backups/` | Daily auto-backups (max 7 days, skipped if no changes) |
+
+On first launch, existing data from `~/.config/top5/` or legacy electron-store is migrated automatically.
 
 ## License
 

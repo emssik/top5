@@ -1,7 +1,20 @@
+import { useEffect, useState } from 'react'
 import { useProjects } from '../hooks/useProjects'
+
+function formatCountdown(ms: number): string {
+  const totalSec = Math.ceil(ms / 1000)
+  const min = Math.floor(totalSec / 60)
+  const sec = totalSec % 60
+  return `${min}:${sec.toString().padStart(2, '0')}`
+}
 
 export default function FocusMode() {
   const { projects, config, setFocus } = useProjects()
+  const [remainingMs, setRemainingMs] = useState<number | null>(null)
+
+  useEffect(() => {
+    return window.api.onCheckInCountdown((ms) => setRemainingMs(ms))
+  }, [])
 
   const project = projects.find((p) => p.id === config.focusProjectId)
   const task = project?.tasks.find((t) => t.id === config.focusTaskId)
@@ -25,6 +38,11 @@ export default function FocusMode() {
         <span className="text-[10px] text-t-muted flex-shrink-0">/</span>
         <span className="text-[13px] font-semibold truncate text-t-primary">{task?.title || 'No task'}</span>
       </div>
+      {remainingMs !== null && (
+        <span className={`text-[11px] tabular-nums flex-shrink-0 ${remainingMs === 0 ? 'text-amber-400' : 'text-t-muted'}`}>
+          {remainingMs === 0 ? 'check-in' : formatCountdown(remainingMs)}
+        </span>
+      )}
       <button
         onClick={handlePause}
         className="w-5 h-5 rounded-md flex items-center justify-center bg-surface/80 hover:bg-amber-900/60 text-t-secondary hover:text-amber-300 text-[10px] transition-colors flex-shrink-0"

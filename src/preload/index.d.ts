@@ -26,6 +26,7 @@ interface Api {
   pickObsidianNote: () => Promise<{ path: string; uri: string | null } | null>
   onReloadData: (callback: () => void) => () => void
   onShortcutAction: (callback: (data: { action: string; index?: number }) => void) => () => void
+  onCheckInCountdown: (callback: (remainingMs: number) => void) => () => void
 }
 
 declare global {
