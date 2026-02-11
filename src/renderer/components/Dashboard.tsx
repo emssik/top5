@@ -5,10 +5,10 @@ import QuickNotes from './QuickNotes'
 import Settings from './Settings'
 import QuickTasksView from './QuickTasksView'
 
-type Tab = 'tasks' | 'all-tasks' | 'projects' | 'archive'
+type Tab = 'tasks' | 'projects' | 'archive'
 
 export default function Dashboard() {
-  const { projects, quickTasks, config, saveConfig, reorderProjects, unarchiveProject, setCompactMode } = useProjects()
+  const { projects, config, saveConfig, reorderProjects, unarchiveProject, setCompactMode } = useProjects()
   const cleanView = config.cleanView ?? false
   const [showNotes, setShowNotes] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
@@ -20,13 +20,6 @@ export default function Dashboard() {
 
   const activeProjects = projects.filter((p) => !p.archivedAt)
   const archivedProjects = projects.filter((p) => p.archivedAt)
-  const limit = config.quickTasksLimit ?? 5
-  const activeQuickTasks = quickTasks.filter((t) => !t.completed)
-  const pinnedTaskCount = activeProjects.reduce(
-    (sum, p) => sum + p.tasks.filter((t) => t.isToDoNext && !t.completed).length, 0
-  )
-  const totalTaskCount = activeQuickTasks.length + pinnedTaskCount
-  const hasOverflow = totalTaskCount > limit
 
   const toggleExpanded = useCallback((projectId: string) => {
     setExpandedProjectId((prev) => (prev === projectId ? null : projectId))
@@ -145,8 +138,8 @@ export default function Dashboard() {
       {/* Draggable titlebar area */}
       <div className="h-8 flex-shrink-0" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties} />
 
-      <div className="flex-1 overflow-auto px-6 pb-6">
-        <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between px-6 pb-3 flex-shrink-0">
+        <div className="flex items-center justify-between w-full">
           {/* Tabs */}
           <div className="flex items-center gap-1">
             <button
@@ -159,18 +152,6 @@ export default function Dashboard() {
             >
               Tasks
             </button>
-            {hasOverflow && (
-              <button
-                onClick={() => setActiveTab('all-tasks')}
-                className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
-                  activeTab === 'all-tasks'
-                    ? 'bg-surface text-t-primary'
-                    : 'text-t-secondary hover:text-t-primary'
-                }`}
-              >
-                All Tasks ({totalTaskCount})
-              </button>
-            )}
             <button
               onClick={() => setActiveTab('projects')}
               className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
@@ -257,7 +238,9 @@ export default function Dashboard() {
             )}
           </div>
         </div>
+      </div>
 
+      <div className="flex-1 overflow-auto px-6 pb-6">
         {restoreError && (
           <div className="mb-4 px-3 py-2 rounded-lg bg-red-900/30 border border-red-800 text-red-300 text-sm">
             {restoreError}
@@ -265,9 +248,7 @@ export default function Dashboard() {
         )}
 
         {/* Tab content */}
-        {activeTab === 'tasks' && <QuickTasksView />}
-
-        {activeTab === 'all-tasks' && <QuickTasksView showAll />}
+        {activeTab === 'tasks' && <QuickTasksView showAll />}
 
         {activeTab === 'projects' && (
           activeProjects.length === 0 ? (

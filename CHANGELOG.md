@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.12.0] - 2026-02-11
+
+### Added
+
+- Launcher buttons (VS Code, iTerm, Obsidian, browser) in focus mode widget for quick access to project tools
+- `n` keyboard shortcut to add a quick task from the dashboard (when no input is focused)
+- "+" toggle button for task input replaces always-visible input field for a cleaner default view
+- Visual separator in all-tasks view dimming tasks below the configured limit
+
+### Changed
+
+- Tasks tab now always shows all tasks (removed separate "All Tasks" tab and overflow indicator)
+- Dashboard tabs header moved outside scroll area so it stays fixed while scrolling
+- Task add input is hidden by default; toggled via "+" button or `n` shortcut
+- README rewritten in English with updated feature descriptions, project structure, and stack details
+
+### Fixed
+
+- Inline task editing intermittent revert bug: switched to ref-based state tracking with fire-and-forget save pattern and single Enter→blur→saveEdit path (affects both QuickTasksView and TaskList)
+
 ## [1.11.0] - 2026-02-11
 
 ### Added

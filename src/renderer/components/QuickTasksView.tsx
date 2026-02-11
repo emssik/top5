@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { nanoid } from 'nanoid'
 import { useProjects } from '../hooks/useProjects'
 import { calcTaskTime, calcQuickTaskTime, formatCheckInTime } from '../utils/checkInTime'
@@ -41,6 +41,12 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
   const [completedPinned, setCompletedPinned] = useState<MergedTask[]>([])
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingTitle, setEditingTitle] = useState('')
+  const editingIdRef = useRef<string | null>(null)
+  const editingTitleRef = useRef('')
+  const editingProjectIdRef = useRef<string | undefined>(undefined)
+  const editingTaskIdRef = useRef<string | undefined>(undefined)
+  const [showAddInput, setShowAddInput] = useState(false)
+  const addInputRef = useRef<HTMLInputElement>(null)
   const draggedId = useRef<string | null>(null)
   const [dragOverId, setDragOverId] = useState<string | null>(null)
 
@@ -87,11 +93,14 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
     }))
   const todayCompleted = [...todayCompletedStandalone, ...completedPinned]
 
-  // On main tab: show up to limit slots total (active + today's completed = no backfill)
-  // On all-tasks tab: show all active
+  // showAll: display all tasks with a separator at the limit position
+  // Clean view: respect the limit (no backfill)
   const activeSlots = showAll ? allActiveTasks.length : Math.max(0, limit - todayCompleted.length)
   const visibleActive = showAll ? allActiveTasks : allActiveTasks.slice(0, activeSlots)
   const visibleCompleted = showAll ? [] : todayCompleted
+  // For showAll mode: tasks above and below the clean view limit
+  const aboveLimitTasks = showAll ? allActiveTasks.slice(0, limit) : visibleActive
+  const belowLimitTasks = showAll ? allActiveTasks.slice(limit) : []
 
   const addTask = async () => {
     if (!newTitle.trim()) return
@@ -105,7 +114,27 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
     }
     await saveQuickTask(task)
     setNewTitle('')
+    setShowAddInput(false)
   }
+
+  // Keyboard shortcut: 'n' to show add input (normal view only)
+  useEffect(() => {
+    if (cleanView) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement).tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return
+      if (e.key === 'n' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        e.preventDefault()
+        setShowAddInput(true)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [cleanView])
+
+  useEffect(() => {
+    if (showAddInput) addInputRef.current?.focus()
+  }, [showAddInput])
 
   const handleComplete = async (merged: MergedTask) => {
     if (merged.kind === 'quick') {
@@ -138,32 +167,49 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
   }
 
   const startEditing = (merged: MergedTask) => {
+    editingIdRef.current = merged.id
+    editingTitleRef.current = merged.title
+    editingProjectIdRef.current = merged.projectId
+    editingTaskIdRef.current = merged.taskId
     setEditingId(merged.id)
     setEditingTitle(merged.title)
   }
 
-  const saveEdit = async () => {
-    if (!editingId || !editingTitle.trim()) {
+  const saveEdit = () => {
+    const id = editingIdRef.current
+    const title = editingTitleRef.current
+    const projectId = editingProjectIdRef.current
+    const taskId = editingTaskIdRef.current
+    if (!id || !title.trim()) {
+      editingIdRef.current = null
+      editingProjectIdRef.current = undefined
+      editingTaskIdRef.current = undefined
       setEditingId(null)
       return
     }
-    const quickTask = quickTasks.find((t) => t.id === editingId)
-    if (quickTask) {
-      await saveQuickTask({ ...quickTask, title: editingTitle.trim() })
-    } else {
-      // Pinned task — get fresh project from store to avoid overwriting isToDoNext etc.
-      const match = editingId.match(/^pinned-(.+)-(.+)$/)
-      if (match) {
-        const [, projectId, taskId] = match
-        const fresh = useProjects.getState().projects.find((p) => p.id === projectId)
-        if (fresh) {
-          const updatedTasks = fresh.tasks.map((t) =>
-            t.id === taskId ? { ...t, title: editingTitle.trim() } : t
-          )
-          await saveProject({ ...fresh, tasks: updatedTasks })
-        }
+    editingIdRef.current = null
+    editingProjectIdRef.current = undefined
+    editingTaskIdRef.current = undefined
+    setEditingId(null)
+    // Fire-and-forget: UI is already cleared, save in background
+    const qt = useProjects.getState().quickTasks.find((t) => t.id === id)
+    if (qt) {
+      saveQuickTask({ ...qt, title: title.trim() })
+    } else if (projectId && taskId) {
+      const fresh = useProjects.getState().projects.find((p) => p.id === projectId)
+      if (fresh) {
+        const updatedTasks = fresh.tasks.map((t) =>
+          t.id === taskId ? { ...t, title: title.trim() } : t
+        )
+        saveProject({ ...fresh, tasks: updatedTasks })
       }
     }
+  }
+
+  const cancelEdit = () => {
+    editingIdRef.current = null
+    editingProjectIdRef.current = undefined
+    editingTaskIdRef.current = undefined
     setEditingId(null)
   }
 
@@ -277,10 +323,10 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
               <input
                 autoFocus
                 value={editingTitle}
-                onChange={(e) => setEditingTitle(e.target.value)}
+                onChange={(e) => { setEditingTitle(e.target.value); editingTitleRef.current = e.target.value }}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') saveEdit()
-                  if (e.key === 'Escape') setEditingId(null)
+                  if (e.key === 'Enter') e.currentTarget.blur()
+                  if (e.key === 'Escape') cancelEdit()
                 }}
                 onBlur={saveEdit}
                 className="w-full text-[22px] bg-transparent focus:outline-none py-0"
@@ -364,10 +410,10 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
             <input
               autoFocus
               value={editingTitle}
-              onChange={(e) => setEditingTitle(e.target.value)}
+              onChange={(e) => { setEditingTitle(e.target.value); editingTitleRef.current = e.target.value }}
               onKeyDown={(e) => {
-                if (e.key === 'Enter') saveEdit()
-                if (e.key === 'Escape') setEditingId(null)
+                if (e.key === 'Enter') e.currentTarget.blur()
+                if (e.key === 'Escape') cancelEdit()
               }}
               onBlur={saveEdit}
               className="w-full text-sm bg-surface border border-border rounded px-1 py-0.5 text-t-primary focus:outline-none focus:border-t-secondary"
@@ -413,7 +459,16 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
           <p className={cleanView ? 'text-[22px]' : 'text-sm'} style={cleanView ? { opacity: 0.25 } : undefined}>
             {cleanView ? 'Brak zadań' : 'No quick tasks yet'}
           </p>
-          {!cleanView && <p className="text-xs text-t-muted mt-1">Add tasks below or pin project tasks</p>}
+          {!cleanView && <p className="text-xs text-t-muted mt-1">Press <kbd className="px-1 py-0.5 rounded bg-surface border border-border text-[10px]">n</kbd> to add a task or pin project tasks</p>}
+        </div>
+      ) : showAll ? (
+        <div className="space-y-1" onDragEnd={handleDragEnd}>
+          {aboveLimitTasks.map(renderTask)}
+          {belowLimitTasks.length > 0 && (
+            <div className="space-y-1 opacity-40 mt-2">
+              {belowLimitTasks.map(renderTask)}
+            </div>
+          )}
         </div>
       ) : (
         <div className={cleanView ? '' : 'space-y-1'} onDragEnd={handleDragEnd}>
@@ -422,23 +477,41 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
         </div>
       )}
 
-      {/* Add task input */}
+      {/* Add task: "+" button toggles input, "n" shortcut */}
       {!cleanView && (
-        <div className="flex gap-2 pt-2">
-          <input
-            type="text"
-            value={newTitle}
-            onChange={(e) => setNewTitle(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && addTask()}
-            placeholder="Add a quick task..."
-            className="flex-1 px-3 py-1.5 rounded-lg bg-surface border border-border text-t-primary text-sm placeholder:text-t-muted focus:outline-none focus:border-t-secondary"
-          />
-          <button
-            onClick={addTask}
-            className="px-3 py-1.5 rounded-lg bg-surface hover:bg-hover text-t-secondary text-sm transition-colors"
-          >
-            Add
-          </button>
+        <div className="pt-2">
+          {showAddInput ? (
+            <div className="flex gap-2">
+              <input
+                ref={addInputRef}
+                type="text"
+                value={newTitle}
+                onChange={(e) => setNewTitle(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') addTask()
+                  if (e.key === 'Escape') { setShowAddInput(false); setNewTitle('') }
+                }}
+                onBlur={() => { if (!newTitle.trim()) { setShowAddInput(false); setNewTitle('') } }}
+                placeholder="Add a quick task..."
+                className="flex-1 px-3 py-1.5 rounded-lg bg-surface border border-border text-t-primary text-sm placeholder:text-t-muted focus:outline-none focus:border-t-secondary"
+              />
+              <button
+                onClick={addTask}
+                className="px-3 py-1.5 rounded-lg bg-surface hover:bg-hover text-t-secondary text-sm transition-colors"
+              >
+                Add
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowAddInput(true)}
+              className="flex items-center gap-1 text-t-muted hover:text-t-secondary text-sm transition-colors"
+              title="Add task (n)"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add task
+            </button>
+          )}
         </div>
       )}
     </div>

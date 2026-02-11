@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useProjects } from '../hooks/useProjects'
+import { getActiveLaunchers, launchByType, launcherMeta } from '../utils/launchers'
 
 function formatCountdown(ms: number): string {
   const totalSec = Math.ceil(ms / 1000)
@@ -91,6 +92,20 @@ export default function FocusMode() {
         <span className="text-[11px] text-blue-400/70 flex-shrink-0">{contextLabel}</span>
         <span className="text-[10px] text-t-muted flex-shrink-0">/</span>
         <span className="text-[13px] font-semibold truncate text-t-primary">{task?.title || 'No task'}</span>
+        {project?.launchers && getActiveLaunchers(project.launchers).length > 0 && (
+          <div className="flex items-center gap-0.5 flex-shrink-0 ml-1">
+            {getActiveLaunchers(project.launchers).map(([type, value]) => (
+              <button
+                key={type}
+                title={launcherMeta[type].label}
+                onClick={() => launchByType(type, value)}
+                className="w-5 h-5 rounded flex items-center justify-center text-[10px] text-t-muted hover:text-t-primary hover:bg-surface/80 transition-colors"
+              >
+                {launcherMeta[type].icon}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
       {remainingMs !== null && (
         <span className={`text-[11px] tabular-nums flex-shrink-0 ${remainingMs === 0 ? 'text-amber-400' : 'text-t-muted'}`}>
