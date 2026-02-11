@@ -1,4 +1,4 @@
-import { dialog, app } from 'electron'
+import { dialog, app, BrowserWindow } from 'electron'
 import type { IpcMain } from 'electron'
 import {
   existsSync,
@@ -331,9 +331,20 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
     if (index >= 0) {
       projects[index] = project
     } else {
+      // Assign order for new projects based on current active count
+      const activeCount = projects.filter((p) => !p.archivedAt).length
+      project.order = activeCount
       projects.push(project)
     }
     setData('projects', projects)
+
+    // Notify all windows so they pick up changes
+    for (const win of BrowserWindow.getAllWindows()) {
+      if (!win.isDestroyed()) {
+        win.webContents.send('reload-data')
+      }
+    }
+
     return projects
   })
 

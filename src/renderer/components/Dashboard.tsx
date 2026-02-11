@@ -5,7 +5,7 @@ import QuickNotes from './QuickNotes'
 import Settings from './Settings'
 
 export default function Dashboard() {
-  const { projects, config, saveConfig, addProject, reorderProjects, unarchiveProject, setCompactMode } = useProjects()
+  const { projects, config, saveConfig, reorderProjects, unarchiveProject, setCompactMode } = useProjects()
   const [showNotes, setShowNotes] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [expandedProjectId, setExpandedProjectId] = useState<string | null>(null)
@@ -133,7 +133,7 @@ export default function Dashboard() {
             )}
             {!showArchived && activeProjects.length < 5 && (
               <button
-                onClick={addProject}
+                onClick={() => window.api.openNewProjectWindow()}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-hover text-t-muted hover:text-t-primary text-sm transition-colors"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>

@@ -1,6 +1,5 @@
 import { create } from 'zustand'
 import type { Project, AppData, AppConfig, FocusCheckIn } from '../types'
-import { nanoid } from 'nanoid'
 
 interface ProjectsState {
   projects: Project[]
@@ -10,7 +9,6 @@ interface ProjectsState {
   loaded: boolean
 
   loadData: () => Promise<void>
-  addProject: () => Promise<void>
   saveProject: (project: Project) => Promise<void>
   deleteProject: (id: string) => Promise<void>
   archiveProject: (id: string) => Promise<void>
@@ -53,28 +51,6 @@ export const useProjects = create<ProjectsState>((set, get) => ({
       console.error('Failed to load app data', error)
       set({ loaded: true })
     }
-  },
-
-  addProject: async () => {
-    const { projects } = get()
-    const activeProjects = projects.filter((p) => !p.archivedAt)
-    if (activeProjects.length >= 5) return
-
-    const newProject: Project = {
-      id: nanoid(),
-      name: '',
-      description: '',
-      order: activeProjects.length,
-      deadline: null,
-      totalTimeMs: 0,
-      timerStartedAt: null,
-      launchers: { vscode: null, iterm: null, obsidian: null, browser: null },
-      tasks: [],
-      archivedAt: null
-    }
-
-    const updated = await window.api.saveProject(newProject)
-    set({ projects: updated })
   },
 
   saveProject: async (project: Project) => {

@@ -17,7 +17,7 @@ interface Props {
 }
 
 export default function ProjectTile({ project, expanded, onToggleExpand, onDragStart, onDragOver, onDrop, isDragOver }: Props) {
-  const [editing, setEditing] = useState(!project.name)
+  const [editing, setEditing] = useState(false)
   const { deleteProject, archiveProject, focusCheckIns } = useProjects()
   const projectMinutes = calcProjectTime(focusCheckIns, project.id)
   const timeFormatted = formatCheckInTime(projectMinutes)

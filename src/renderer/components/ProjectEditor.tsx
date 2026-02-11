@@ -1,38 +1,71 @@
 import { useState } from 'react'
+import { nanoid } from 'nanoid'
 import type { Project } from '../types'
 import { useProjects } from '../hooks/useProjects'
 
 interface Props {
-  project: Project
-  onClose: () => void
+  project?: Project
+  onClose?: () => void
 }
 
 export default function ProjectEditor({ project, onClose }: Props) {
   const { saveProject } = useProjects()
+  const isCreateMode = !project
+
   const [form, setForm] = useState({
-    name: project.name,
-    description: project.description,
-    deadline: project.deadline || '',
-    vscode: project.launchers.vscode || '',
-    iterm: project.launchers.iterm || '',
-    obsidian: project.launchers.obsidian || '',
-    browser: project.launchers.browser || ''
+    name: project?.name ?? '',
+    description: project?.description ?? '',
+    deadline: project?.deadline || '',
+    vscode: project?.launchers.vscode || '',
+    iterm: project?.launchers.iterm || '',
+    obsidian: project?.launchers.obsidian || '',
+    browser: project?.launchers.browser || ''
   })
 
+  const handleCancel = () => {
+    if (isCreateMode) {
+      window.api.closeNewProjectWindow()
+    } else {
+      onClose?.()
+    }
+  }
+
   const handleSave = async () => {
-    await saveProject({
-      ...project,
-      name: form.name,
-      description: form.description,
-      deadline: form.deadline || null,
-      launchers: {
-        vscode: form.vscode || null,
-        iterm: form.iterm || null,
-        obsidian: form.obsidian || null,
-        browser: form.browser || null
+    if (isCreateMode) {
+      const newProject: Project = {
+        id: nanoid(),
+        name: form.name,
+        description: form.description,
+        order: 0,
+        deadline: form.deadline || null,
+        totalTimeMs: 0,
+        timerStartedAt: null,
+        launchers: {
+          vscode: form.vscode || null,
+          iterm: form.iterm || null,
+          obsidian: form.obsidian || null,
+          browser: form.browser || null
+        },
+        tasks: [],
+        archivedAt: null
       }
-    })
-    onClose()
+      await window.api.saveProject(newProject)
+      window.api.closeNewProjectWindow()
+    } else {
+      await saveProject({
+        ...project,
+        name: form.name,
+        description: form.description,
+        deadline: form.deadline || null,
+        launchers: {
+          vscode: form.vscode || null,
+          iterm: form.iterm || null,
+          obsidian: form.obsidian || null,
+          browser: form.browser || null
+        }
+      })
+      onClose?.()
+    }
   }
 
   const pickFolder = async (key: 'vscode' | 'iterm') => {
@@ -66,19 +99,20 @@ export default function ProjectEditor({ project, onClose }: Props) {
   const pathField = (label: string, key: keyof typeof form, placeholder: string, onBrowse: () => void) => (
     <div>
       <label className="block text-xs text-t-secondary mb-1">{label}</label>
-      <div className="flex gap-1.5">
+      <div className="relative">
         <input
           type="text"
           value={form[key]}
           onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
           placeholder={placeholder}
-          className="flex-1 min-w-0 px-3 py-1.5 rounded-lg bg-surface border border-border text-t-heading text-sm placeholder:text-t-muted focus:outline-none focus:border-t-secondary"
+          className="w-full pl-3 pr-8 py-1.5 rounded-lg bg-surface border border-border text-t-heading text-sm placeholder:text-t-muted focus:outline-none focus:border-t-secondary"
         />
         <button
           onClick={onBrowse}
-          className="px-2.5 py-1.5 rounded-lg bg-hover hover:bg-border text-t-primary text-xs transition-colors flex-shrink-0"
+          className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1 rounded text-t-muted hover:text-t-primary transition-colors"
+          title="Browse"
         >
-          Browse
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
         </button>
       </div>
     </div>
@@ -104,7 +138,7 @@ export default function ProjectEditor({ project, onClose }: Props) {
 
       <div className="flex justify-end gap-2 mt-4">
         <button
-          onClick={onClose}
+          onClick={handleCancel}
           className="px-3 py-1.5 rounded-lg text-t-secondary hover:text-t-heading text-sm transition-colors"
         >
           Cancel

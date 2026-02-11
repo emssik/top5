@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-02-11
+
+### Added
+
+- Dedicated "New Project" window: creating a project now opens a separate BrowserWindow with the ProjectEditor in create mode
+- IPC handlers `open-new-project-window` and `close-new-project-window` with preload bridge
+- Auto-assign order for new projects based on current active project count
+- Broadcast `reload-data` to all windows when a project is saved
+
+### Changed
+
+- "Add Project" button opens a new window instead of inline-creating an empty project tile
+- ProjectEditor supports both create and edit modes (props made optional)
+- Removed `addProject` action from `useProjects` store; project creation now handled entirely in the new window
+- ProjectTile no longer auto-enters edit mode for unnamed projects
+- Path input "Browse" buttons now use folder icon instead of text label
+- macOS `activate` event shows existing main window instead of only creating a new one when none exist
+
 ## [1.7.0] - 2026-02-11
 
 ### Added

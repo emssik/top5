@@ -5,13 +5,15 @@ import FocusMode from './components/FocusMode'
 import CompactBar from './components/CompactBar'
 import CheckInPopup from './components/CheckInPopup'
 import StatsView from './components/StatsView'
+import ProjectEditor from './components/ProjectEditor'
 
 export default function App() {
   const { loaded, loadData, config } = useProjects()
   const windowHash = window.location.hash
   const isCheckInWindow = windowHash === '#checkin'
   const isStatsWindow = windowHash === '#stats'
-  const isAuxWindow = isCheckInWindow || isStatsWindow
+  const isNewProjectWindow = windowHash === '#new-project'
+  const isAuxWindow = isCheckInWindow || isStatsWindow || isNewProjectWindow
 
   // Separate windows with hash routing — apply theme from stored config.
   useEffect(() => {
@@ -68,6 +70,11 @@ export default function App() {
 
   if (isCheckInWindow) return <CheckInPopup />
   if (isStatsWindow) return <StatsView />
+  if (isNewProjectWindow) return (
+    <div className="h-screen bg-base text-t-primary p-6">
+      <ProjectEditor />
+    </div>
+  )
 
   if (!loaded) {
     return (
