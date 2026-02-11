@@ -121,9 +121,8 @@ export function registerFocusHandlers(
     // Hide main window
     mainWin.hide()
 
-    // Get current display
-    const cursorPoint = screen.getCursorScreenPoint()
-    const display = screen.getDisplayNearestPoint(cursorPoint)
+    // Always open on primary display
+    const display = screen.getPrimaryDisplay()
     const { x: workX, y: workY, width: workWidth } = display.workArea
 
     const focusWidth = 420
@@ -138,6 +137,7 @@ export function registerFocusHandlers(
       frame: false,
       transparent: true,
       resizable: false,
+      movable: true,
       skipTaskbar: true,
       alwaysOnTop: true,
       visibleOnAllWorkspaces: true,
@@ -149,9 +149,9 @@ export function registerFocusHandlers(
       }
     })
 
-    // Keep on all Spaces
+    // Keep on all Spaces but allow moving between monitors
     focusWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
-    focusWindow.setAlwaysOnTop(true, 'screen-saver')
+    focusWindow.setAlwaysOnTop(true, 'floating')
 
     if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
       focusWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])

@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.1] - 2026-02-11
+
+### Fixed
+
+- Focus window now opens on primary display and uses `floating` level instead of `screen-saver`, allowing it to be moved between monitors
+
+### Changed
+
+- Dashboard toolbar buttons replaced with SVG icons for consistent appearance across themes
+- Toolbar button styling unified with muted-to-primary hover transitions
+- Added visual separator before "Add Project" button
+
 ## [1.6.0] - 2026-02-11
 
 ### Added
