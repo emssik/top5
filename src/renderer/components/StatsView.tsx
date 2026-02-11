@@ -125,7 +125,7 @@ export default function StatsView() {
       const bucket = bucketFor(c.timestamp)
       if (!bucket || !g[bucket]) continue
       if (g[bucket][c.projectId] === undefined) continue
-      g[bucket][c.projectId] += checkInMinutes(c.response)
+      g[bucket][c.projectId] += checkInMinutes(c)
     }
 
     const totals: Record<string, number> = {}

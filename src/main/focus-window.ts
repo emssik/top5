@@ -11,6 +11,7 @@ let newProjectWindow: BrowserWindow | null = null
 let checkInTimeout: ReturnType<typeof setTimeout> | null = null
 let countdownInterval: ReturnType<typeof setInterval> | null = null
 let checkInDeadline: number = 0
+let lastCheckInAt: number = 0
 
 const CHECK_IN_INTERVAL_MS = 15 * 60 * 1000
 
@@ -20,6 +21,7 @@ export function getFocusWindow(): BrowserWindow | null {
 
 function startCheckInTimer(): void {
   clearCheckInTimer()
+  lastCheckInAt = Date.now()
   checkInDeadline = Date.now() + CHECK_IN_INTERVAL_MS
 
   // Send countdown updates to focus window every second
@@ -190,20 +192,9 @@ export function registerFocusHandlers(
     }
   })
 
-  ipcMain.handle('pause-focus-mode', () => {
-    // Clear focus state
-    const { config } = getAppData()
-    setAppDataKey('config', { ...config, focusProjectId: null, focusTaskId: null })
-
-    clearCheckInTimer()
-    closeCheckInPopup()
-
-    if (focusWindow && !focusWindow.isDestroyed()) {
-      focusWindow.close()
-      focusWindow = null
-    }
-
-    // Do NOT show main window — that's the difference from exit
+  ipcMain.handle('get-focus-unsaved-ms', () => {
+    if (!lastCheckInAt) return 0
+    return Date.now() - lastCheckInAt
   })
 
   ipcMain.handle('dismiss-checkin', () => {

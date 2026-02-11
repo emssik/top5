@@ -1,7 +1,8 @@
 import type { FocusCheckIn } from '../types'
 
-export function checkInMinutes(response: FocusCheckIn['response']): number {
-  switch (response) {
+export function checkInMinutes(checkIn: FocusCheckIn): number {
+  if (checkIn.minutes !== undefined) return checkIn.minutes
+  switch (checkIn.response) {
     case 'yes': return 15
     case 'a_little': return 7
     case 'no': return 0
@@ -11,19 +12,19 @@ export function checkInMinutes(response: FocusCheckIn['response']): number {
 export function calcTaskTime(checkIns: FocusCheckIn[], taskId: string): number {
   return checkIns
     .filter((c) => c.taskId === taskId)
-    .reduce((sum, c) => sum + checkInMinutes(c.response), 0)
+    .reduce((sum, c) => sum + checkInMinutes(c), 0)
 }
 
 export function calcProjectTime(checkIns: FocusCheckIn[], projectId: string): number {
   return checkIns
     .filter((c) => c.projectId === projectId)
-    .reduce((sum, c) => sum + checkInMinutes(c.response), 0)
+    .reduce((sum, c) => sum + checkInMinutes(c), 0)
 }
 
 export function calcQuickTaskTime(checkIns: FocusCheckIn[], quickTaskId: string): number {
   return checkIns
     .filter((c) => c.projectId === '__standalone__' && c.taskId === quickTaskId)
-    .reduce((sum, c) => sum + checkInMinutes(c.response), 0)
+    .reduce((sum, c) => sum + checkInMinutes(c), 0)
 }
 
 export function formatCheckInTime(minutes: number): string {

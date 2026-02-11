@@ -13,6 +13,7 @@ const STANDALONE_PROJECT_ID = '__standalone__'
 export default function FocusMode() {
   const { projects, quickTasks, config, setFocus } = useProjects()
   const [remainingMs, setRemainingMs] = useState<number | null>(null)
+  const [confirmExit, setConfirmExit] = useState<number | null>(null) // unsaved minutes
 
   useEffect(() => {
     return window.api.onCheckInCountdown((ms) => setRemainingMs(ms))
@@ -25,12 +26,59 @@ export default function FocusMode() {
     : project?.tasks.find((t) => t.id === config.focusTaskId)
   const contextLabel = isStandalone ? 'Quick Task' : project?.name
 
-  const handleExit = () => {
+  const handleExit = async () => {
+    const unsavedMs = await window.api.getFocusUnsavedMs()
+    const unsavedMin = Math.floor(unsavedMs / 60000)
+    if (unsavedMin >= 1) {
+      setConfirmExit(unsavedMin)
+    } else {
+      setFocus(null, null)
+    }
+  }
+
+  const handleSaveAndExit = () => {
+    if (confirmExit && config.focusProjectId && config.focusTaskId) {
+      window.api.saveFocusCheckIn({
+        id: crypto.randomUUID(),
+        projectId: config.focusProjectId,
+        taskId: config.focusTaskId,
+        timestamp: new Date().toISOString(),
+        response: 'yes',
+        minutes: confirmExit
+      })
+    }
     setFocus(null, null)
   }
 
-  const handlePause = () => {
-    window.api.pauseFocusMode()
+  const handleDiscardAndExit = () => {
+    setFocus(null, null)
+  }
+
+  if (confirmExit !== null) {
+    return (
+      <div
+        className="h-screen flex items-center px-3 gap-2.5 rounded-xl bg-card/95 border border-border/50"
+        style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
+      >
+        <span className="text-[12px] text-t-primary flex-shrink-0">
+          Zapisać {confirmExit} min?
+        </span>
+        <div className="flex gap-1.5 flex-shrink-0" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+          <button
+            onClick={handleSaveAndExit}
+            className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-blue-600/80 hover:bg-blue-500/80 text-white transition-colors"
+          >
+            Tak
+          </button>
+          <button
+            onClick={handleDiscardAndExit}
+            className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-surface/80 hover:bg-hover text-t-secondary transition-colors"
+          >
+            Nie
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -49,14 +97,6 @@ export default function FocusMode() {
           {remainingMs === 0 ? 'check-in' : formatCountdown(remainingMs)}
         </span>
       )}
-      <button
-        onClick={handlePause}
-        className="w-5 h-5 rounded-md flex items-center justify-center bg-surface/80 hover:bg-amber-900/60 text-t-secondary hover:text-amber-300 text-[10px] transition-colors flex-shrink-0"
-        style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-        title="Pause focus"
-      >
-        ⏸
-      </button>
       <button
         onClick={handleExit}
         className="w-5 h-5 rounded-md flex items-center justify-center bg-surface/80 hover:bg-red-900/60 text-t-secondary hover:text-red-300 text-[10px] transition-colors flex-shrink-0"

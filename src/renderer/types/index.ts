@@ -53,6 +53,7 @@ export interface FocusCheckIn {
   taskId: string
   timestamp: string
   response: 'yes' | 'no' | 'a_little'
+  minutes?: number
 }
 
 export interface AppData {

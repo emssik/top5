@@ -72,6 +72,7 @@ interface FocusCheckIn {
   taskId: string
   timestamp: string
   response: 'yes' | 'no' | 'a_little'
+  minutes?: number
 }
 
 interface AppData {
@@ -172,7 +173,10 @@ function toFocusCheckIn(value: unknown): FocusCheckIn | null {
     return null
   }
 
-  return { id, projectId, taskId, timestamp, response: response as FocusCheckIn['response'] }
+  const result: FocusCheckIn = { id, projectId, taskId, timestamp, response: response as FocusCheckIn['response'] }
+  const { minutes } = value
+  if (typeof minutes === 'number' && minutes >= 0) result.minutes = minutes
+  return result
 }
 
 function dailyBackup(): void {

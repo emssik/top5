@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react'
 import { nanoid } from 'nanoid'
 import { useProjects } from '../hooks/useProjects'
+import { calcTaskTime, calcQuickTaskTime, formatCheckInTime } from '../utils/checkInTime'
 import type { QuickTask } from '../types'
 
 const STANDALONE_PROJECT_ID = '__standalone__'
@@ -26,6 +27,7 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
     quickTasks,
     projects,
     config,
+    focusCheckIns,
     saveProject,
     saveQuickTask,
     removeQuickTask,
@@ -234,55 +236,42 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
     setDragOverId(null)
   }
 
+  const getTaskMinutes = (task: MergedTask): number => {
+    if (task.kind === 'quick') return calcQuickTaskTime(focusCheckIns, task.id)
+    if (task.taskId) return calcTaskTime(focusCheckIns, task.taskId)
+    return 0
+  }
+
   const renderTask = (task: MergedTask) => {
     const isCompleted = task.completed
     const isDragOver = dragOverId === task.id && draggedId.current !== task.id
 
-    // --- Clean view ---
+    // --- Clean view (bullet journal style) ---
     if (cleanView) {
-      if (isCompleted) {
-        return (
-          <div key={task.id} className="group flex items-center gap-2 py-2.5 px-1 border-b border-border-subtle/50">
-            <div className="w-5 flex-shrink-0 flex justify-center">
-              <button
-                onClick={() => handleUncomplete(task)}
-                className="w-3.5 h-3.5 rounded-full border border-border-subtle bg-hover flex-shrink-0 flex items-center justify-center text-[9px] text-t-muted hover:border-t-secondary transition-colors"
-                title="Mark as not done"
-              >
-                ✓
-              </button>
-            </div>
-            <span className="text-[15px] text-t-muted/60 line-through truncate">{task.title}</span>
-          </div>
-        )
-      }
+      const marker = isCompleted ? '×' : task.kind === 'pinned' ? '→' : '•'
+      const mins = getTaskMinutes(task)
 
       return (
         <div
           key={task.id}
-          className={`group flex items-center gap-2 py-2.5 px-1 border-b border-border-subtle/50 transition-colors cursor-grab active:cursor-grabbing ${isDragOver ? 'bg-hover/50' : ''}`}
-          draggable
-          onDragStart={() => handleDragStart(task.id)}
-          onDragOver={(e) => handleDragOver(e, task.id)}
-          onDrop={() => handleDrop(task.id)}
+          className={`group flex items-baseline gap-2.5 py-[6px] transition-colors ${!isCompleted ? 'cursor-grab active:cursor-grabbing' : ''}`}
+          style={isDragOver ? { opacity: 0.6 } : undefined}
+          draggable={!isCompleted}
+          onDragStart={!isCompleted ? () => handleDragStart(task.id) : undefined}
+          onDragOver={!isCompleted ? (e) => handleDragOver(e, task.id) : undefined}
+          onDrop={!isCompleted ? () => handleDrop(task.id) : undefined}
         >
-          {/* Left controls: visible on hover */}
-          <div className="w-5 flex-shrink-0 flex justify-center">
-            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-              <button
-                onClick={() => handleFocus(task)}
-                className="text-t-muted/50 hover:text-blue-400 transition-colors"
-                title="Focus"
-              >
-                <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
-              </button>
-              <button
-                onClick={() => handleComplete(task)}
-                className="w-3 h-3 rounded-full border border-border-subtle hover:border-t-secondary transition-colors"
-                title="Complete"
-              />
-            </div>
-          </div>
+          {/* Bullet marker — clickable */}
+          <button
+            onClick={() => isCompleted ? handleUncomplete(task) : handleComplete(task)}
+            className="w-5 flex-shrink-0 text-center text-[22px] leading-none transition-opacity"
+            style={{ opacity: isCompleted ? 0.3 : 0.5 }}
+            title={isCompleted ? 'Mark as not done' : 'Complete'}
+          >
+            {marker}
+          </button>
+
+          {/* Title */}
           <div className="flex-1 min-w-0">
             {editingId === task.id ? (
               <input
@@ -294,17 +283,36 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
                   if (e.key === 'Escape') setEditingId(null)
                 }}
                 onBlur={saveEdit}
-                className="w-full text-[15px] bg-transparent text-t-primary focus:outline-none py-0"
+                className="w-full text-[22px] bg-transparent focus:outline-none py-0"
+                style={{ color: 'inherit' }}
               />
             ) : (
               <span
-                onDoubleClick={() => startEditing(task)}
-                className="text-[15px] text-t-primary truncate block cursor-default"
+                onDoubleClick={() => !isCompleted && startEditing(task)}
+                className={`text-[22px] leading-snug truncate block cursor-default ${isCompleted ? 'line-through' : ''}`}
+                style={{ opacity: isCompleted ? 0.3 : 1 }}
               >
                 {task.title}
               </span>
             )}
           </div>
+
+          {/* Time + hover actions */}
+          {isCompleted ? null : (
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              {mins > 0 && (
+                <span className="text-[15px]" style={{ opacity: 0.25 }}>{formatCheckInTime(mins)}</span>
+              )}
+              <button
+                onClick={() => handleFocus(task)}
+                className="opacity-0 group-hover:opacity-40 hover:!opacity-70 transition-all"
+                title="Focus"
+                style={{ fontFamily: 'system-ui' }}
+              >
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
+              </button>
+            </div>
+          )}
         </div>
       )
     }
@@ -401,9 +409,9 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
   return (
     <div className={cleanView ? '' : 'space-y-1'}>
       {visibleActive.length === 0 && visibleCompleted.length === 0 ? (
-        <div className={`flex flex-col items-center justify-center text-t-secondary ${cleanView ? 'h-24' : 'h-40'}`}>
-          <p className={cleanView ? 'text-[15px] text-t-muted' : 'text-sm'}>
-            {cleanView ? 'No tasks' : 'No quick tasks yet'}
+        <div className={`flex flex-col items-center justify-center text-t-secondary ${cleanView ? 'h-16' : 'h-40'}`}>
+          <p className={cleanView ? 'text-[22px]' : 'text-sm'} style={cleanView ? { opacity: 0.25 } : undefined}>
+            {cleanView ? 'Brak zadań' : 'No quick tasks yet'}
           </p>
           {!cleanView && <p className="text-xs text-t-muted mt-1">Add tasks below or pin project tasks</p>}
         </div>
