@@ -9,6 +9,7 @@ interface ShortcutActionPayload {
 }
 
 const api = {
+  getIsDev: () => ipcRenderer.invoke('get-is-dev'),
   getAppData: () => ipcRenderer.invoke('get-app-data'),
   saveProject: (project: Project) => ipcRenderer.invoke('save-project', project),
   deleteProject: (id: string) => ipcRenderer.invoke('delete-project', id),

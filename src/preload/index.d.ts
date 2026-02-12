@@ -1,6 +1,7 @@
 import { ElectronAPI } from '@electron-toolkit/preload'
 
 interface Api {
+  getIsDev: () => Promise<boolean>
   getAppData: () => Promise<import('../renderer/types').AppData>
   saveProject: (project: import('../renderer/types').Project) => Promise<import('../renderer/types').Project[]>
   deleteProject: (id: string) => Promise<import('../renderer/types').Project[]>

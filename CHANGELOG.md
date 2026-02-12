@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.13.0] - 2026-02-12
+
+### Added
+
+- Dev mode isolation: separate data directory (`~/.config/top5-dev/`) when running in development, preventing dev sessions from modifying production data or syncing to iCloud
+- Visual DEV indicator badge in Dashboard and Focus Mode widget when running in development mode
+- Window title shows `[DEV] Top5` in development mode for easy identification
+- `get-is-dev` IPC handler and `getIsDev` preload API for renderer-side dev mode detection
+
 ## [1.12.1] - 2026-02-11
 
 ### Added

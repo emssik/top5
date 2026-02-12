@@ -15,6 +15,11 @@ export default function FocusMode() {
   const { projects, quickTasks, config, setFocus } = useProjects()
   const [remainingMs, setRemainingMs] = useState<number | null>(null)
   const [confirmExit, setConfirmExit] = useState<number | null>(null) // unsaved minutes
+  const [isDev, setIsDev] = useState(false)
+
+  useEffect(() => {
+    window.api.getIsDev().then(setIsDev)
+  }, [])
 
   useEffect(() => {
     return window.api.onCheckInCountdown((ms) => setRemainingMs(ms))
@@ -88,6 +93,11 @@ export default function FocusMode() {
       style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
     >
       <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse flex-shrink-0" />
+      {isDev && (
+        <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-orange-500/20 text-orange-400 border border-orange-500/30 flex-shrink-0">
+          DEV
+        </span>
+      )}
       <div className="flex-1 min-w-0 flex items-center gap-1.5" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
         <span className="text-[11px] text-blue-400/70 flex-shrink-0">{contextLabel}</span>
         <span className="text-[10px] text-t-muted flex-shrink-0">/</span>

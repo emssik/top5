@@ -17,9 +17,14 @@ export default function Dashboard() {
   const [restoreError, setRestoreError] = useState<string | null>(null)
   const draggedId = useRef<string | null>(null)
   const [dragOverId, setDragOverId] = useState<string | null>(null)
+  const [isDev, setIsDev] = useState(false)
 
   const activeProjects = projects.filter((p) => !p.archivedAt)
   const archivedProjects = projects.filter((p) => p.archivedAt)
+
+  useEffect(() => {
+    window.api.getIsDev().then(setIsDev)
+  }, [])
 
   const toggleExpanded = useCallback((projectId: string) => {
     setExpandedProjectId((prev) => (prev === projectId ? null : projectId))
@@ -141,7 +146,13 @@ export default function Dashboard() {
       <div className="flex items-center justify-between px-6 pb-3 flex-shrink-0">
         <div className="flex items-center justify-between w-full">
           {/* Tabs */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
+            {isDev && (
+              <span className="px-2 py-0.5 rounded text-xs font-bold bg-orange-500/20 text-orange-400 border border-orange-500/30">
+                DEV
+              </span>
+            )}
+            <div className="flex items-center gap-1">
             <button
               onClick={() => setActiveTab('tasks')}
               className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
@@ -174,6 +185,7 @@ export default function Dashboard() {
                 Archive ({archivedProjects.length})
               </button>
             )}
+            </div>
           </div>
 
           {/* Toolbar */}

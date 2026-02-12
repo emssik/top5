@@ -107,10 +107,17 @@ const defaultData: AppData = {
   }
 }
 
+export const IS_DEV = process.env.NODE_ENV === 'development' || process.env.TOP5_DEV === '1'
 const ICLOUD_DIR = join(homedir(), 'Library', 'Mobile Documents', 'com~apple~CloudDocs', 'top5')
-const SYMLINK_PATH = join(homedir(), '.config', 'top5')
+const SYMLINK_PATH = join(homedir(), '.config', IS_DEV ? 'top5-dev' : 'top5')
 
 function ensureDataDir(): string {
+  // Dev mode: always use local directory, no iCloud sync
+  if (IS_DEV) {
+    mkdirSync(SYMLINK_PATH, { recursive: true })
+    return SYMLINK_PATH
+  }
+
   if (platform() === 'darwin') {
     // Create real dir in iCloud
     mkdirSync(ICLOUD_DIR, { recursive: true })
@@ -350,6 +357,10 @@ function notifyAllWindows(): void {
 export function registerStoreHandlers(ipcMain: IpcMain): void {
   migrateCheckInsToJsonl()
   dailyBackup()
+
+  ipcMain.handle('get-is-dev', () => {
+    return IS_DEV
+  })
 
   ipcMain.handle('get-app-data', () => {
     return getData()

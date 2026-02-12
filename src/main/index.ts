@@ -1,7 +1,7 @@
 import { app, BrowserWindow, shell, ipcMain, globalShortcut, screen } from 'electron'
 import { join } from 'path'
 import { is, optimizer, electronApp } from '@electron-toolkit/utils'
-import { registerStoreHandlers, getAppData } from './store'
+import { registerStoreHandlers, getAppData, IS_DEV } from './store'
 import { registerLauncherHandlers } from './launchers'
 import { registerFocusHandlers, getFocusWindow } from './focus-window'
 import { registerShortcuts } from './shortcuts'
@@ -39,6 +39,7 @@ function createWindow(): void {
     minWidth: 600,
     minHeight: 400,
     show: false,
+    title: IS_DEV ? '[DEV] Top5' : 'Top5',
     titleBarStyle: 'hiddenInset',
     trafficLightPosition: { x: 15, y: 10 },
     webPreferences: {
