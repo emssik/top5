@@ -6,6 +6,7 @@ export interface Task {
   completedAt?: string | null
   isToDoNext?: boolean
   toDoNextOrder?: number
+  inProgress?: boolean
 }
 
 export type RepeatSchedule =
@@ -34,6 +35,7 @@ export interface QuickTask {
   completedAt: string | null
   order: number
   repeatingTaskId?: string | null
+  inProgress?: boolean
 }
 
 export interface ProjectLaunchers {
@@ -132,8 +134,10 @@ declare global {
       completeQuickTask: (id: string) => Promise<QuickTask[]>
       uncompleteQuickTask: (id: string) => Promise<QuickTask[]>
       reorderQuickTasks: (orderedIds: string[]) => Promise<QuickTask[]>
+      toggleQuickTaskInProgress: (id: string) => Promise<QuickTask[]>
       reorderProjects: (orderedIds: string[]) => Promise<Project[]>
       reorderPinnedTasks: (updates: { projectId: string; taskId: string; order: number }[]) => Promise<void>
+      toggleTaskInProgress: (projectId: string, taskId: string) => Promise<Project[]>
       toggleTaskToDoNext: (projectId: string, taskId: string) => Promise<Project[]>
       saveRepeatingTask: (task: RepeatingTask) => Promise<RepeatingTask[]>
       removeRepeatingTask: (id: string) => Promise<RepeatingTask[]>

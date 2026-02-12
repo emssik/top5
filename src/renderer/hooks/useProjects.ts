@@ -29,6 +29,8 @@ interface ProjectsState {
   completeQuickTask: (id: string) => Promise<void>
   uncompleteQuickTask: (id: string) => Promise<void>
   reorderQuickTasks: (orderedIds: string[]) => Promise<void>
+  toggleQuickTaskInProgress: (id: string) => Promise<void>
+  toggleTaskInProgress: (projectId: string, taskId: string) => Promise<void>
   toggleTaskToDoNext: (projectId: string, taskId: string) => Promise<void>
   saveRepeatingTask: (task: RepeatingTask) => Promise<void>
   removeRepeatingTask: (id: string) => Promise<void>
@@ -185,6 +187,16 @@ export const useProjects = create<ProjectsState>((set, get) => ({
   reorderQuickTasks: async (orderedIds: string[]) => {
     const updated = await window.api.reorderQuickTasks(orderedIds)
     set({ quickTasks: updated })
+  },
+
+  toggleQuickTaskInProgress: async (id: string) => {
+    const updated = await window.api.toggleQuickTaskInProgress(id)
+    set({ quickTasks: updated })
+  },
+
+  toggleTaskInProgress: async (projectId: string, taskId: string) => {
+    const updated = await window.api.toggleTaskInProgress(projectId, taskId)
+    set({ projects: updated })
   },
 
   toggleTaskToDoNext: async (projectId: string, taskId: string) => {

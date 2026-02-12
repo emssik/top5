@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- "In progress" status for tasks: toggle via button on quick tasks and pinned tasks
+- IPC handlers: `toggle-quick-task-in-progress`, `toggle-task-in-progress`
+- Amber border highlight on in-progress task cards in default view
+- Amber dot indicator and `▸` bullet marker for in-progress tasks in clean view
+- `inProgress` field on `Task` and `QuickTask` types (both main and renderer)
+
+### Changed
+
+- Completing a task automatically clears its in-progress state
+- `MergedTask` type extended with `inProgress` field for unified task list
+
+### Removed
+
+- Deleted `src/preload/index.d.ts` (stale TypeScript build artifact)
+
 ## [1.18.0] - 2026-02-12
 
 ### Added
