@@ -77,7 +77,7 @@ export default function Sidebar({
   archivedProjects,
   suspendedOpen,
   archivedOpen,
-  activeProjectsLimit,
+  activeProjectsLimit: _activeProjectsLimit,
   theme,
   onSelectView,
   onToggleCleanView,
@@ -199,7 +199,6 @@ export default function Sidebar({
       const targetIndex = activeProjects.findIndex((item) => item.id === projectId)
       onUnsuspendProject(draggedId, targetIndex)
     } else if (dragSource === 'archived') {
-      const targetIndex = activeProjects.findIndex((item) => item.id === projectId)
       // Restore archived then reorder — onRestoreArchived handles limit check
       onRestoreArchived(draggedId)
       // Position will be at end; reordering after async restore is handled by Dashboard

@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.22.0] - 2026-02-13
+
+### Changed
+
+- Today view "Up Next" section now separates regular tasks from repeating tasks with a visual divider
+- "Up Next" section label hidden when no Focus or In Progress tasks are present above it
+- Removed unused `activeProjectsLimit` destructuring and dead `targetIndex` variable in Sidebar drag-and-drop handler
+
 ## [1.21.0] - 2026-02-13
 
 ### Added
