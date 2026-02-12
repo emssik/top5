@@ -98,6 +98,23 @@ export interface FocusCheckIn {
   minutes?: number
 }
 
+export type OperationType =
+  | 'task_created' | 'task_completed' | 'task_uncompleted' | 'task_deleted'
+  | 'quick_task_created' | 'quick_task_completed' | 'quick_task_uncompleted' | 'quick_task_deleted'
+  | 'project_created' | 'project_updated' | 'project_archived' | 'project_unarchived'
+  | 'project_suspended' | 'project_unsuspended' | 'project_deleted'
+  | 'focus_started' | 'focus_checkin'
+
+export interface OperationLogEntry {
+  id: string
+  timestamp: string
+  type: OperationType
+  projectId?: string
+  projectName?: string
+  taskTitle?: string
+  details?: string
+}
+
 export interface AppData {
   projects: Project[]
   quickTasks: QuickTask[]
@@ -139,6 +156,7 @@ declare global {
       getFocusCheckIns: (taskId?: string) => Promise<FocusCheckIn[]>
       dismissCheckIn: () => Promise<void>
       openStatsWindow: () => Promise<void>
+      openOperationLogWindow: () => Promise<void>
       openNewProjectWindow: () => Promise<void>
       closeNewProjectWindow: () => Promise<void>
       enterCompactMode: () => Promise<void>
@@ -163,6 +181,7 @@ declare global {
       reorderRepeatingTasks: (orderedIds: string[]) => Promise<RepeatingTask[]>
       acceptRepeatingProposal: (repeatingTaskId: string) => Promise<QuickTask[]>
       dismissRepeatingProposal: (repeatingTaskId: string) => Promise<void>
+      getOperations: (since?: string) => Promise<OperationLogEntry[]>
       onReloadData: (callback: () => void) => () => void
       onShortcutAction: (callback: (data: ShortcutActionPayload) => void) => () => void
       onCheckInCountdown: (callback: (remainingMs: number) => void) => () => void

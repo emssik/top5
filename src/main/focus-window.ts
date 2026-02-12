@@ -8,6 +8,7 @@ import { getAppData, setAppDataKey } from './store'
 let focusWindow: BrowserWindow | null = null
 let checkInWindow: BrowserWindow | null = null
 let statsWindow: BrowserWindow | null = null
+let operationLogWindow: BrowserWindow | null = null
 let newProjectWindow: BrowserWindow | null = null
 let checkInTimeout: ReturnType<typeof setTimeout> | null = null
 let countdownInterval: ReturnType<typeof setInterval> | null = null
@@ -278,6 +279,34 @@ export function registerFocusHandlers(
 
     statsWindow.on('closed', () => {
       statsWindow = null
+    })
+  })
+
+  ipcMain.handle('open-operation-log-window', () => {
+    if (operationLogWindow && !operationLogWindow.isDestroyed()) {
+      operationLogWindow.focus()
+      return
+    }
+
+    operationLogWindow = new BrowserWindow({
+      width: 520,
+      height: 600,
+      resizable: true,
+      title: 'Activity Log',
+      webPreferences: {
+        preload: join(__dirname, '../preload/index.js'),
+        sandbox: false
+      }
+    })
+
+    if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
+      operationLogWindow.loadURL(process.env['ELECTRON_RENDERER_URL'] + '#operation-log')
+    } else {
+      operationLogWindow.loadFile(join(__dirname, '../renderer/index.html'), { hash: 'operation-log' })
+    }
+
+    operationLogWindow.on('closed', () => {
+      operationLogWindow = null
     })
   })
 }

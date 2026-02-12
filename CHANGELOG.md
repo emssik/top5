@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.21.0] - 2026-02-13
+
+### Added
+
+- Activity operation log: JSONL-based persistent log tracking task creates/completes/deletes, project lifecycle events, and focus check-ins
+- `OperationLogView` component displaying activity history in a dedicated window with date grouping and human-readable labels
+- `open-operation-log-window` IPC handler with dedicated Electron BrowserWindow (hash route `#operation-log`)
+- `get-operations` IPC handler to query operation log entries with optional `since` filter
+- "Activity log" link in `InlineStatsView` and `StatsView` for quick access to the operation log window
+- `OperationType` and `OperationLogEntry` types in both main and renderer type definitions
+- Operations file (`operations.jsonl`) included in daily backup rotation
+
 ## [1.20.0] - 2026-02-12
 
 ### Added
