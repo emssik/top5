@@ -49,6 +49,9 @@ function createWindow(): void {
   })
 
   mainWindow.on('ready-to-show', () => {
+    if (process.platform === 'darwin') {
+      mainWindow!.setWindowButtonVisibility(false)
+    }
     mainWindow!.show()
   })
 
@@ -180,13 +183,13 @@ app.whenReady().then(() => {
       savedBounds = null
     }
     if (process.platform === 'darwin') {
-      mainWindow.setWindowButtonVisibility(true)
+      mainWindow.setWindowButtonVisibility(false)
     }
   })
 
-  ipcMain.handle('set-traffic-lights-visible', (_event, visible: boolean) => {
+  ipcMain.handle('set-traffic-lights-visible', () => {
     if (!mainWindow || process.platform !== 'darwin') return
-    mainWindow.setWindowButtonVisibility(visible)
+    mainWindow.setWindowButtonVisibility(false)
   })
 
   app.on('activate', () => {

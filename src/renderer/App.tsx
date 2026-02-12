@@ -2,13 +2,12 @@ import { useEffect } from 'react'
 import { useProjects } from './hooks/useProjects'
 import Dashboard from './components/Dashboard'
 import FocusMode from './components/FocusMode'
-import CompactBar from './components/CompactBar'
 import CheckInPopup from './components/CheckInPopup'
 import StatsView from './components/StatsView'
 import ProjectEditor from './components/ProjectEditor'
 
 export default function App() {
-  const { loaded, loadData, config } = useProjects()
+  const { loaded, loadData, config, saveConfig } = useProjects()
   const windowHash = window.location.hash
   const isFocusWindow = windowHash === '#focus'
   const isCheckInWindow = windowHash === '#checkin'
@@ -48,18 +47,6 @@ export default function App() {
     return cleanup
   }, [isMainOrFocus, loadData])
 
-  useEffect(() => {
-    if (isAuxWindow || isFocusWindow) return
-
-    const cleanup = window.api.onShortcutAction((data) => {
-      if (data.action === 'exit-compact-mode') {
-        const { config, saveConfig } = useProjects.getState()
-        saveConfig({ ...config, compactMode: false })
-      }
-    })
-    return cleanup
-  }, [isAuxWindow, isFocusWindow])
-
   // Apply theme to <html> in the main app and focus windows.
   useEffect(() => {
     if (!isMainOrFocus) return
@@ -71,11 +58,17 @@ export default function App() {
     }
   }, [isMainOrFocus, config.theme])
 
+  useEffect(() => {
+    if (!isMainOrFocus) return
+    if (!config.compactMode) return
+    saveConfig({ ...config, compactMode: false })
+  }, [config, isMainOrFocus, saveConfig])
+
   if (isFocusWindow) return loaded ? <FocusMode /> : null
   if (isCheckInWindow) return <CheckInPopup />
   if (isStatsWindow) return <StatsView />
   if (isNewProjectWindow) return (
-    <div className="h-screen bg-base text-t-primary p-6">
+    <div className="h-screen bg-base text-t-primary p-6 flex items-center justify-center">
       <ProjectEditor />
     </div>
   )
@@ -86,10 +79,6 @@ export default function App() {
         Loading...
       </div>
     )
-  }
-
-  if (config.compactMode) {
-    return <CompactBar />
   }
 
   return <Dashboard />

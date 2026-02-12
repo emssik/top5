@@ -25,6 +25,7 @@ export const api = {
   launchIterm: (path: string) => ipcRenderer.invoke('launch-iterm', path),
   launchObsidian: (vault: string) => ipcRenderer.invoke('launch-obsidian', vault),
   launchBrowser: (url: string) => ipcRenderer.invoke('launch-browser', url),
+  openExternal: (url: string) => ipcRenderer.invoke('open-external', url),
   enterFocusMode: () => ipcRenderer.invoke('enter-focus-mode'),
   exitFocusMode: () => ipcRenderer.invoke('exit-focus-mode'),
   getFocusUnsavedMs: () => ipcRenderer.invoke('get-focus-unsaved-ms'),

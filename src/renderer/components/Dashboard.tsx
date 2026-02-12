@@ -1,57 +1,53 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useProjects } from '../hooks/useProjects'
-import ProjectTile from './ProjectTile'
-import type { TaskListHandle } from './TaskList'
-import QuickNotes from './QuickNotes'
+import Sidebar from './Sidebar'
+import QuickNotesPanel from './QuickNotesPanel'
 import Settings from './Settings'
-import QuickTasksView from './QuickTasksView'
-import TabBar, { type Tab } from './TabBar'
-import DashboardToolbar from './DashboardToolbar'
 import CleanViewHeader from './CleanViewHeader'
-import RepeatingTasksTab from './RepeatingTasksTab'
+import QuickTasksView from './QuickTasksView'
+import ProjectEditor from './ProjectEditor'
+import TodayView from './TodayView'
+import ProjectDetailView from './ProjectDetailView'
+import RepeatView from './RepeatView'
+import InlineStatsView from './InlineStatsView'
 
 export default function Dashboard() {
-  const { projects, config, saveConfig, reorderProjects, unarchiveProject, unsuspendProject, setCompactMode } = useProjects()
+  const { projects, config, saveConfig, unarchiveProject, unsuspendProject, suspendProject, reorderProjects } = useProjects()
   const cleanView = config.cleanView ?? false
+  const activeProjectsLimit = config.activeProjectsLimit ?? 5
+
+  const [activeView, setActiveView] = useState('today')
   const [showNotes, setShowNotes] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
-  const [expandedProjectId, setExpandedProjectId] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<Tab>('tasks')
   const [restoreError, setRestoreError] = useState<string | null>(null)
-  const draggedId = useRef<string | null>(null)
-  const [dragOverId, setDragOverId] = useState<string | null>(null)
-  const taskListRef = useRef<TaskListHandle | null>(null)
-  const [isDev, setIsDev] = useState(false)
+  const [suspendedOpen, setSuspendedOpen] = useState(false)
+  const [archivedOpen, setArchivedOpen] = useState(false)
+  const [editorProjectId, setEditorProjectId] = useState<string | null>(null)
+  const [showEditor, setShowEditor] = useState(false)
 
-  const activeProjects = projects.filter((p) => !p.archivedAt && !p.suspendedAt)
-  const suspendedProjects = projects.filter((p) => p.suspendedAt && !p.archivedAt)
-  const archivedProjects = projects.filter((p) => p.archivedAt)
+  const activeProjects = useMemo(
+    () => projects.filter((project) => !project.archivedAt && !project.suspendedAt).sort((a, b) => a.order - b.order),
+    [projects]
+  )
+  const suspendedProjects = useMemo(
+    () => projects.filter((project) => project.suspendedAt && !project.archivedAt).sort((a, b) => (b.suspendedAt ?? '').localeCompare(a.suspendedAt ?? '')),
+    [projects]
+  )
+  const archivedProjects = useMemo(
+    () => projects.filter((project) => project.archivedAt).sort((a, b) => (b.archivedAt ?? '').localeCompare(a.archivedAt ?? '')),
+    [projects]
+  )
 
-  useEffect(() => {
-    window.api.getIsDev().then(setIsDev)
-  }, [])
+  const editingProject = useMemo(
+    () => (editorProjectId ? projects.find((project) => project.id === editorProjectId) : undefined),
+    [editorProjectId, projects]
+  )
 
-  const toggleExpanded = useCallback((projectId: string) => {
-    setExpandedProjectId((prev) => (prev === projectId ? null : projectId))
-  }, [])
-
-  const handleRestore = async (id: string) => {
-    setRestoreError(null)
-    const error = await unarchiveProject(id)
-    if (error) {
-      setRestoreError(error)
-      setTimeout(() => setRestoreError(null), 3000)
-    }
-  }
-
-  const handleUnsuspend = async (id: string) => {
-    setRestoreError(null)
-    const error = await unsuspendProject(id)
-    if (error) {
-      setRestoreError(error)
-      setTimeout(() => setRestoreError(null), 3000)
-    }
-  }
+  const selectedProject = useMemo(() => {
+    if (!activeView.startsWith('project-')) return null
+    const projectId = activeView.slice('project-'.length)
+    return projects.find((project) => project.id === projectId) ?? null
+  }, [activeView, projects])
 
   const toggleTheme = () => {
     const newTheme = config.theme === 'light' ? 'dark' : 'light'
@@ -75,24 +71,65 @@ export default function Dashboard() {
   }, [cleanView])
 
   useEffect(() => {
-    if (activeTab === 'archive' && archivedProjects.length === 0) {
-      setActiveTab('tasks')
+    if (!activeView.startsWith('project-')) return
+    const projectId = activeView.slice('project-'.length)
+    const exists = projects.some((project) => project.id === projectId && !project.archivedAt)
+    if (!exists) {
+      setActiveView('today')
     }
-    if (activeTab === 'suspended' && suspendedProjects.length === 0) {
-      setActiveTab('tasks')
+  }, [activeView, projects])
+
+  const handleRestoreArchived = async (id: string) => {
+    setRestoreError(null)
+    const error = await unarchiveProject(id)
+    if (error) {
+      setRestoreError(error)
+      setTimeout(() => setRestoreError(null), 3000)
+      return
     }
-  }, [activeTab, archivedProjects.length, suspendedProjects.length])
+    setActiveView(`project-${id}`)
+  }
+
+  const handleUnsuspendDrop = async (projectId: string, targetIndex?: number) => {
+    setRestoreError(null)
+    const error = await unsuspendProject(projectId)
+    if (error) {
+      setRestoreError(error)
+      setTimeout(() => setRestoreError(null), 3000)
+      return
+    }
+
+    const nextIds = [...activeProjects.map((project) => project.id), projectId]
+    const fromIndex = nextIds.lastIndexOf(projectId)
+    const toIndex = typeof targetIndex === 'number'
+      ? Math.max(0, Math.min(targetIndex, nextIds.length - 1))
+      : nextIds.length - 1
+
+    if (fromIndex !== toIndex) {
+      nextIds.splice(fromIndex, 1)
+      nextIds.splice(toIndex, 0, projectId)
+    }
+    await reorderProjects(nextIds)
+    setActiveView(`project-${projectId}`)
+  }
+
+  const handleSuspendDrop = async (projectId: string) => {
+    await suspendProject(projectId)
+    if (activeView === `project-${projectId}`) {
+      setActiveView('today')
+    }
+  }
 
   const handleShortcutAction = useCallback((data: { action: string; index?: number }) => {
     if (data.action === 'select-project' && data.index !== undefined) {
-      setActiveTab('projects')
-      const sorted = [...activeProjects].sort((a, b) => a.order - b.order)
-      if (data.index < sorted.length) {
-        const targetId = sorted[data.index].id
-        setExpandedProjectId((prev) => (prev === targetId ? null : targetId))
+      if (data.index >= 0 && data.index < activeProjects.length) {
+        setActiveView(`project-${activeProjects[data.index].id}`)
       }
-    } else if (data.action === 'toggle-quick-notes') {
-      setShowNotes((prev) => !prev)
+      return
+    }
+
+    if (data.action === 'toggle-quick-notes') {
+      setShowNotes((value) => !value)
     }
   }, [activeProjects])
 
@@ -100,20 +137,6 @@ export default function Dashboard() {
     const cleanup = window.api.onShortcutAction(handleShortcutAction)
     return cleanup
   }, [handleShortcutAction])
-
-  useEffect(() => {
-    if (activeTab !== 'projects' || !expandedProjectId) return
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const tag = (e.target as HTMLElement).tagName
-      if (tag === 'INPUT' || tag === 'TEXTAREA') return
-      if (e.key === 'n' && !e.metaKey && !e.ctrlKey && !e.altKey) {
-        e.preventDefault()
-        taskListRef.current?.focusAddInput()
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [activeTab, expandedProjectId])
 
   if (cleanView) {
     return (
@@ -143,150 +166,79 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="h-screen bg-base text-t-primary flex flex-col">
-      <div className="h-8 flex-shrink-0" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties} />
+    <div className="h-screen app-shell">
+      <Sidebar
+        activeView={activeView}
+        activeProjects={activeProjects}
+        suspendedProjects={suspendedProjects}
+        archivedProjects={archivedProjects}
+        suspendedOpen={suspendedOpen}
+        archivedOpen={archivedOpen}
+        theme={config.theme}
+        onSelectView={setActiveView}
+        onToggleCleanView={toggleCleanView}
+        onToggleNotes={() => setShowNotes((value) => !value)}
+        onToggleSettings={() => setShowSettings(true)}
+        onToggleTheme={toggleTheme}
+        onAddProject={() => {
+          if (activeProjects.length >= activeProjectsLimit) {
+            setRestoreError(`Cannot add project: active projects limit (${activeProjectsLimit}) reached.`)
+            setTimeout(() => setRestoreError(null), 3000)
+            return
+          }
+          setEditorProjectId(null)
+          setShowEditor(true)
+        }}
+        onToggleSuspended={() => setSuspendedOpen((value) => !value)}
+        onToggleArchived={() => setArchivedOpen((value) => !value)}
+        onRestoreArchived={handleRestoreArchived}
+        onReorderActiveProjects={reorderProjects}
+        onUnsuspendProject={handleUnsuspendDrop}
+        onSuspendProject={handleSuspendDrop}
+      />
 
-      <div className="flex items-center justify-between px-6 pb-3 flex-shrink-0">
-        <div className="flex items-center justify-between w-full">
-          <TabBar
-            activeTab={activeTab}
-            setActiveTab={setActiveTab}
-            isDev={isDev}
-            suspendedCount={suspendedProjects.length}
-            archivedCount={archivedProjects.length}
-          />
-          <DashboardToolbar
-            config={config}
-            onToggleTheme={toggleTheme}
-            onToggleCleanView={toggleCleanView}
-            onShowNotes={() => setShowNotes(true)}
-            onShowSettings={() => setShowSettings(true)}
-            onCompactMode={() => setCompactMode(true)}
-            showAddProject={activeTab === 'projects' && activeProjects.length < 5}
-          />
+      <div className="main-panel-wrap">
+        <div className="dashboard-titlebar" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties} />
+
+        <div className="main">
+          {restoreError && (
+            <div className="restore-error">
+              {restoreError}
+            </div>
+          )}
+
+          {activeView === 'today' && <TodayView />}
+          {activeView === 'repeat' && <RepeatView />}
+          {activeView === 'stats' && <InlineStatsView />}
+
+          {selectedProject && (
+            <ProjectDetailView
+              project={selectedProject}
+              onEdit={() => {
+                setEditorProjectId(selectedProject.id)
+                setShowEditor(true)
+              }}
+            />
+          )}
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto px-6 pb-6">
-        {restoreError && (
-          <div className="mb-4 px-3 py-2 rounded-lg bg-red-900/30 border border-red-800 text-red-300 text-sm">
-            {restoreError}
+      <QuickNotesPanel open={showNotes} onClose={() => setShowNotes(false)} />
+      <Settings open={showSettings} onClose={() => setShowSettings(false)} />
+
+      <div className={`modal-overlay ${showEditor ? 'open' : ''}`} onClick={() => setShowEditor(false)}>
+        {showEditor && (
+          <div onClick={(event) => event.stopPropagation()}>
+            <ProjectEditor
+              project={editingProject}
+              onClose={() => {
+                setShowEditor(false)
+                setEditorProjectId(null)
+              }}
+            />
           </div>
         )}
-
-        {activeTab === 'tasks' && <QuickTasksView showAll />}
-
-        {activeTab === 'repeat' && <RepeatingTasksTab />}
-
-        {activeTab === 'projects' && (
-          activeProjects.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-64 text-t-secondary">
-              <p className="text-lg mb-2">No projects yet</p>
-              <p className="text-sm">Add up to 5 projects to focus on</p>
-            </div>
-          ) : (
-            <div
-              className="grid grid-cols-1 gap-3"
-              onDragEnd={() => { draggedId.current = null; setDragOverId(null) }}
-            >
-              {activeProjects
-                .sort((a, b) => a.order - b.order)
-                .map((project) => (
-                  <ProjectTile
-                    key={project.id}
-                    project={project}
-                    expanded={expandedProjectId === project.id}
-                    onToggleExpand={() => toggleExpanded(project.id)}
-                    onDragStart={() => { draggedId.current = project.id }}
-                    onDragOver={(e) => { e.preventDefault(); setDragOverId(project.id) }}
-                    onDrop={() => {
-                      if (!draggedId.current || draggedId.current === project.id) return
-                      const sorted = [...activeProjects].sort((a, b) => a.order - b.order)
-                      const ids = sorted.map((p) => p.id)
-                      const fromIdx = ids.indexOf(draggedId.current)
-                      const toIdx = ids.indexOf(project.id)
-                      ids.splice(fromIdx, 1)
-                      ids.splice(toIdx, 0, draggedId.current)
-                      reorderProjects(ids)
-                      draggedId.current = null
-                      setDragOverId(null)
-                    }}
-                    isDragOver={dragOverId === project.id && draggedId.current !== project.id}
-                    taskListRef={expandedProjectId === project.id ? taskListRef : undefined}
-                  />
-                ))}
-            </div>
-          )
-        )}
-
-        {activeTab === 'suspended' && (
-          suspendedProjects.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-64 text-t-secondary">
-              <p className="text-lg mb-2">No suspended projects</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-3">
-              {suspendedProjects
-                .sort((a, b) => (b.suspendedAt ?? '').localeCompare(a.suspendedAt ?? ''))
-                .map((project) => (
-                  <ProjectTile
-                    key={project.id}
-                    project={project}
-                    expanded={expandedProjectId === project.id}
-                    onToggleExpand={() => toggleExpanded(project.id)}
-                    onDragStart={() => {}}
-                    onDragOver={() => {}}
-                    onDrop={() => {}}
-                    isDragOver={false}
-                    isSuspended
-                    onUnsuspend={() => handleUnsuspend(project.id)}
-                    taskListRef={expandedProjectId === project.id ? taskListRef : undefined}
-                  />
-                ))}
-            </div>
-          )
-        )}
-
-        {activeTab === 'archive' && (
-          archivedProjects.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-64 text-t-secondary">
-              <p className="text-lg mb-2">No archived projects</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-3">
-              {archivedProjects
-                .sort((a, b) => (b.archivedAt ?? '').localeCompare(a.archivedAt ?? ''))
-                .map((project) => (
-                  <div
-                    key={project.id}
-                    className="rounded-xl bg-card border border-border-subtle p-4 flex items-center justify-between"
-                  >
-                    <div className="min-w-0">
-                      <h3 className="font-medium text-t-secondary truncate">
-                        {project.name || 'Untitled Project'}
-                      </h3>
-                      {project.description && (
-                        <p className="text-sm text-t-muted mt-0.5 truncate">{project.description}</p>
-                      )}
-                      <p className="text-xs text-t-muted mt-1">
-                        Archived {new Date(project.archivedAt!).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => handleRestore(project.id)}
-                      className="ml-4 px-3 py-1.5 rounded-lg bg-surface hover:bg-hover text-t-primary text-sm transition-colors shrink-0"
-                    >
-                      Restore
-                    </button>
-                  </div>
-                ))}
-            </div>
-          )
-        )}
       </div>
-
-      <QuickNotes open={showNotes} onClose={() => setShowNotes(false)} />
-      <Settings open={showSettings} onClose={() => setShowSettings(false)} />
     </div>
   )
 }

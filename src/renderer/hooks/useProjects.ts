@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { Project, QuickTask, AppConfig, FocusCheckIn, RepeatingTask } from '../types'
+import { assignMissingProjectColors, normalizeProject } from '../utils/projects'
 
 interface ProjectsState {
   projects: Project[]
@@ -52,6 +53,7 @@ export const useProjects = create<ProjectsState>((set, get) => ({
     cleanView: false,
     theme: 'dark',
     quickTasksLimit: 5,
+    activeProjectsLimit: 5,
     cleanViewFont: 'Caveat'
   },
   focusCheckIns: [],
@@ -60,14 +62,17 @@ export const useProjects = create<ProjectsState>((set, get) => ({
   dismissedRepeatingDate: '',
   loaded: false,
 
+  // Normalize project shape (links/color) when data comes from main process.
+
   loadData: async () => {
     try {
       const [data, checkIns] = await Promise.all([
         window.api.getAppData(),
         window.api.getFocusCheckIns()
       ])
+      const normalizedProjects = assignMissingProjectColors((data.projects ?? []).map(normalizeProject))
       set({
-        projects: data.projects,
+        projects: normalizedProjects,
         quickTasks: data.quickTasks ?? [],
         quickNotes: data.quickNotes,
         config: data.config,
@@ -84,18 +89,18 @@ export const useProjects = create<ProjectsState>((set, get) => ({
   },
 
   saveProject: async (project: Project) => {
-    const updated = await window.api.saveProject(project)
-    set({ projects: updated })
+    const updated = await window.api.saveProject(normalizeProject(project))
+    set({ projects: assignMissingProjectColors((updated ?? []).map(normalizeProject)) })
   },
 
   deleteProject: async (id: string) => {
     const updated = await window.api.deleteProject(id)
-    set({ projects: updated })
+    set({ projects: assignMissingProjectColors((updated ?? []).map(normalizeProject)) })
   },
 
   archiveProject: async (id: string) => {
     const updated = await window.api.archiveProject(id)
-    set({ projects: updated })
+    set({ projects: assignMissingProjectColors((updated ?? []).map(normalizeProject)) })
   },
 
   unarchiveProject: async (id: string) => {
@@ -103,13 +108,13 @@ export const useProjects = create<ProjectsState>((set, get) => ({
     if ('error' in result) {
       return result.error
     }
-    set({ projects: result.projects })
+    set({ projects: assignMissingProjectColors((result.projects ?? []).map(normalizeProject)) })
     return null
   },
 
   suspendProject: async (id: string) => {
     const updated = await window.api.suspendProject(id)
-    set({ projects: updated })
+    set({ projects: assignMissingProjectColors((updated ?? []).map(normalizeProject)) })
   },
 
   unsuspendProject: async (id: string) => {
@@ -117,7 +122,7 @@ export const useProjects = create<ProjectsState>((set, get) => ({
     if ('error' in result) {
       return result.error
     }
-    set({ projects: result.projects })
+    set({ projects: assignMissingProjectColors((result.projects ?? []).map(normalizeProject)) })
     return null
   },
 
@@ -133,7 +138,7 @@ export const useProjects = create<ProjectsState>((set, get) => ({
 
   reorderProjects: async (orderedIds: string[]) => {
     const updated = await window.api.reorderProjects(orderedIds)
-    set({ projects: updated })
+    set({ projects: assignMissingProjectColors((updated ?? []).map(normalizeProject)) })
   },
 
   setFocus: async (projectId: string | null, taskId: string | null) => {
@@ -196,12 +201,12 @@ export const useProjects = create<ProjectsState>((set, get) => ({
 
   toggleTaskInProgress: async (projectId: string, taskId: string) => {
     const updated = await window.api.toggleTaskInProgress(projectId, taskId)
-    set({ projects: updated })
+    set({ projects: assignMissingProjectColors((updated ?? []).map(normalizeProject)) })
   },
 
   toggleTaskToDoNext: async (projectId: string, taskId: string) => {
     const updated = await window.api.toggleTaskToDoNext(projectId, taskId)
-    set({ projects: updated })
+    set({ projects: assignMissingProjectColors((updated ?? []).map(normalizeProject)) })
   },
 
   saveRepeatingTask: async (task: RepeatingTask) => {

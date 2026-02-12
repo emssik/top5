@@ -45,6 +45,21 @@ export interface ProjectLaunchers {
   browser: string | null
 }
 
+export type ProjectColor =
+  | 'red'
+  | 'orange'
+  | 'amber'
+  | 'green'
+  | 'blue'
+  | 'purple'
+  | 'pink'
+  | 'teal'
+
+export interface ProjectLink {
+  label: string
+  url: string
+}
+
 export interface Project {
   id: string
   name: string
@@ -53,7 +68,9 @@ export interface Project {
   deadline: string | null // ISO date
   totalTimeMs: number
   timerStartedAt: string | null // ISO timestamp, null = paused
-  launchers: ProjectLaunchers
+  launchers?: ProjectLaunchers
+  links?: ProjectLink[]
+  color?: ProjectColor
   tasks: Task[]
   archivedAt: string | null // ISO date = archived, null = active
   suspendedAt: string | null // ISO date = suspended, null = not suspended
@@ -68,6 +85,7 @@ export interface AppConfig {
   cleanView: boolean
   theme: 'light' | 'dark'
   quickTasksLimit: number
+  activeProjectsLimit: number
   cleanViewFont: string
 }
 
@@ -113,6 +131,7 @@ declare global {
       launchIterm: (path: string) => Promise<void>
       launchObsidian: (vault: string) => Promise<void>
       launchBrowser: (url: string) => Promise<void>
+      openExternal: (url: string) => Promise<void>
       enterFocusMode: () => Promise<void>
       exitFocusMode: () => Promise<void>
       getFocusUnsavedMs: () => Promise<number>

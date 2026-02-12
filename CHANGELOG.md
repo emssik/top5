@@ -7,6 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Sidebar navigation replacing tab-based UI: fixed sidebar with project color dots, collapsible suspended/archived sections, and drag-and-drop reorder between active/suspended states
+- New `Sidebar` component with drag-and-drop support for reordering active projects and moving projects between active/suspended states
+- Today view (`TodayView`) as the default landing page, grouping tasks into Focus, In Progress, Up Next, and Done sections
+- Full-screen `ProjectDetailView` for managing individual project tasks, links, and metadata
+- Project color system: 8 color options (red, orange, amber, green, blue, purple, pink, teal) with auto-assignment for new projects
+- `ProjectColor` and `ProjectLink` types in both main and renderer type definitions
+- Project quick links replacing launcher path fields: flexible label+URL pairs with support for vscode://, iterm://, obsidian://, mailto:, http(s):// protocols
+- Color picker and links editor in `ProjectEditor` modal with add/remove link rows
+- `open-external` IPC handler with protocol allowlist validation (http, https, mailto, obsidian, vscode, iterm)
+- `InlineStatsView` component for viewing focus time stats within the main panel
+- `RepeatView` component wrapping repeating tasks management in the sidebar layout
+- `QuickNotesPanel` slide-in panel replacing the previous modal-style quick notes
+- `activeProjectsLimit` config option (1-20) replacing the hardcoded 5-project limit
+- Renderer-side project normalization utilities (`src/renderer/utils/projects.ts`): color assignment, link normalization, launcher-to-link migration
+- Project color CSS variables (`--pc-red` through `--pc-teal`) for both dark and light themes
+- Sidebar theming CSS variables (`--bg-sidebar`, `--bg-sidebar-hover`, `--bg-sidebar-active`)
+- Archive button in the Edit Project modal for quick project archiving
+- Keyboard shortcuts reference section (collapsible) in Settings modal
+- iCloud sync and data location info displayed in Settings
+
+### Changed
+
+- Dashboard layout migrated from tabbed interface to sidebar + main panel architecture
+- `ProjectEditor` redesigned as a centered modal with color picker and links management, replacing inline path-based launcher fields
+- Settings modal redesigned with cleaner row-based layout, removing editable shortcut fields in favor of a read-only reference
+- `Project.launchers` field made optional; links system provides backward-compatible migration from launchers to links via `launchersToLinks`/`mergeLaunchersFromLinks`
+- Project save pipeline normalizes links and colors on both main and renderer sides
+- macOS traffic light buttons permanently hidden (sidebar replaces window chrome)
+- Compact mode auto-disabled on load (removed compact mode UI entirely)
+- Active project limit now configurable via `activeProjectsLimit` instead of hardcoded to 5
+- All project state updates in Zustand store now normalize projects through `assignMissingProjectColors` and `normalizeProject`
+
+### Removed
+
+- `TabBar` and `DashboardToolbar` components (replaced by Sidebar)
+- `CompactBar` component and compact mode functionality
+- Editable keyboard shortcut fields in Settings (shortcuts are now display-only)
+- Launcher path fields with native folder pickers in ProjectEditor (replaced by flexible links)
+
 ## [1.19.0] - 2026-02-12
 
 ### Added

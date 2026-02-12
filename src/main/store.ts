@@ -59,6 +59,21 @@ interface QuickTask {
   inProgress?: boolean
 }
 
+type ProjectColor =
+  | 'red'
+  | 'orange'
+  | 'amber'
+  | 'green'
+  | 'blue'
+  | 'purple'
+  | 'pink'
+  | 'teal'
+
+interface ProjectLink {
+  label: string
+  url: string
+}
+
 interface Project {
   id: string
   name: string
@@ -67,12 +82,14 @@ interface Project {
   deadline: string | null
   totalTimeMs: number
   timerStartedAt: string | null
-  launchers: {
+  launchers?: {
     vscode: string | null
     iterm: string | null
     obsidian: string | null
     browser: string | null
   }
+  links?: ProjectLink[]
+  color?: ProjectColor
   tasks: Task[]
   archivedAt: string | null
   suspendedAt: string | null
@@ -87,6 +104,7 @@ interface AppConfig {
   cleanView: boolean
   theme: 'light' | 'dark'
   quickTasksLimit: number
+  activeProjectsLimit: number
   cleanViewFont: string
 }
 
@@ -134,6 +152,7 @@ const defaultData: AppData = {
     cleanView: false,
     theme: 'dark',
     quickTasksLimit: 5,
+    activeProjectsLimit: 5,
     cleanViewFont: 'Caveat'
   }
 }
@@ -191,6 +210,13 @@ const CHECKINS_FILE = join(CONFIG_DIR, 'checkins.jsonl')
 const BACKUP_DIR = join(CONFIG_DIR, 'backups')
 const MAX_BACKUPS = 7
 const VALID_CHECK_IN_RESPONSES = new Set<FocusCheckIn['response']>(['yes', 'no', 'a_little'])
+const PROJECT_COLORS: ProjectColor[] = ['red', 'orange', 'amber', 'green', 'blue', 'purple', 'pink', 'teal']
+const LAUNCHER_LINK_META = {
+  vscode: 'VS Code',
+  iterm: 'Terminal',
+  obsidian: 'Obsidian',
+  browser: 'Browser'
+} as const
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
@@ -224,20 +250,119 @@ function isValidTask(value: unknown): value is Task {
 
 function isValidProject(value: unknown): value is Project {
   if (!isRecord(value)) return false
-  const { id, name, order, tasks, launchers } = value
+  const { id, name, order, tasks } = value
   if (typeof id !== 'string' || typeof name !== 'string' || typeof order !== 'number') return false
   if (!Array.isArray(tasks) || !tasks.every(isValidTask)) return false
-  if (!isRecord(launchers)) return false
+  if (value.links !== undefined) {
+    if (!Array.isArray(value.links)) return false
+    for (const link of value.links) {
+      if (!isRecord(link) || typeof link.label !== 'string' || typeof link.url !== 'string') return false
+    }
+  }
   return true
+}
+
+function isProjectColor(value: unknown): value is ProjectColor {
+  return typeof value === 'string' && PROJECT_COLORS.includes(value as ProjectColor)
+}
+
+function normalizeLaunchers(value: unknown): NonNullable<Project['launchers']> {
+  if (!isRecord(value)) {
+    return { vscode: null, iterm: null, obsidian: null, browser: null }
+  }
+  return {
+    vscode: typeof value.vscode === 'string' ? value.vscode : null,
+    iterm: typeof value.iterm === 'string' ? value.iterm : null,
+    obsidian: typeof value.obsidian === 'string' ? value.obsidian : null,
+    browser: typeof value.browser === 'string' ? value.browser : null
+  }
+}
+
+function normalizeLinks(value: unknown): ProjectLink[] {
+  if (!Array.isArray(value)) return []
+  return value
+    .filter((link): link is ProjectLink => isRecord(link) && typeof link.label === 'string' && typeof link.url === 'string')
+    .map((link) => ({ label: link.label.trim(), url: link.url.trim() }))
+    .filter((link) => link.label.length > 0 && link.url.length > 0)
+}
+
+function launchersToLinks(launchers: NonNullable<Project['launchers']>): ProjectLink[] {
+  return Object.entries(launchers)
+    .filter(([, value]) => typeof value === 'string' && value.trim().length > 0)
+    .map(([type, value]) => ({
+      label: LAUNCHER_LINK_META[type as keyof typeof LAUNCHER_LINK_META],
+      url: (value as string).trim()
+    }))
+}
+
+function mergeLaunchersFromLinks(launchers: NonNullable<Project['launchers']>, links: ProjectLink[]): NonNullable<Project['launchers']> {
+  const next = { ...launchers }
+
+  for (const link of links) {
+    const label = link.label.toLowerCase()
+    const url = link.url.trim()
+    if (!url) continue
+
+    if (!next.vscode && (label.includes('code') || url.startsWith('vscode://'))) {
+      next.vscode = url
+      continue
+    }
+
+    if (!next.iterm && (label.includes('term') || url.startsWith('iterm://'))) {
+      next.iterm = url
+      continue
+    }
+
+    if (!next.obsidian && (label.includes('obsidian') || url.startsWith('obsidian://'))) {
+      next.obsidian = url
+      continue
+    }
+
+    if (!next.browser && (url.startsWith('http://') || url.startsWith('https://') || label.includes('browser'))) {
+      next.browser = url
+    }
+  }
+
+  return next
+}
+
+function normalizeProject(project: Project): Project {
+  const launchers = normalizeLaunchers(project.launchers)
+  const links = normalizeLinks(project.links)
+  const normalizedLinks = links.length > 0 ? links : launchersToLinks(launchers)
+  return {
+    ...project,
+    launchers: mergeLaunchersFromLinks(launchers, normalizedLinks),
+    links: normalizedLinks,
+    color: isProjectColor(project.color) ? project.color : undefined
+  }
+}
+
+function assignMissingProjectColors(projects: Project[]): Project[] {
+  const used = new Set(projects.map((project) => project.color).filter(isProjectColor))
+  const available = PROJECT_COLORS.filter((color) => !used.has(color))
+
+  return projects.map((project) => {
+    if (isProjectColor(project.color)) return project
+    const fallback = PROJECT_COLORS[Math.max(0, project.order) % PROJECT_COLORS.length]
+    const nextColor = available.shift() ?? fallback
+    used.add(nextColor)
+    return { ...project, color: nextColor }
+  })
+}
+
+function getActiveProjectsLimit(config: AppConfig): number {
+  return Math.max(1, Math.min(20, config.activeProjectsLimit ?? 5))
 }
 
 function isValidAppConfig(value: unknown): value is AppConfig {
   if (!isRecord(value)) return false
-  const { globalShortcut, actionShortcuts, theme, quickTasksLimit } = value
+  const { globalShortcut, actionShortcuts, theme, quickTasksLimit, activeProjectsLimit } = value
   if (typeof globalShortcut !== 'string') return false
   if (!isRecord(actionShortcuts)) return false
   if (theme !== 'light' && theme !== 'dark') return false
   if (typeof quickTasksLimit !== 'number' || quickTasksLimit < 1 || quickTasksLimit > 20) return false
+  if (typeof activeProjectsLimit !== 'number' || activeProjectsLimit < 1 || activeProjectsLimit > 20) return false
   return true
 }
 
@@ -367,8 +492,9 @@ function loadData(): AppData {
     const parsed = yaml.load(raw) as Partial<AppData> | null
     const today = new Date().toISOString().slice(0, 10)
     const dismissedRepeatingDate = parsed?.dismissedRepeatingDate ?? ''
+    const projects = assignMissingProjectColors((parsed?.projects ?? defaultData.projects).map(normalizeProject))
     return {
-      projects: parsed?.projects ?? defaultData.projects,
+      projects,
       quickTasks: parsed?.quickTasks ?? [],
       quickNotes: parsed?.quickNotes ?? defaultData.quickNotes,
       repeatingTasks: parsed?.repeatingTasks ?? [],
@@ -454,18 +580,24 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
     if (!isValidProject(project)) return getData().projects
     const data = getData()
     const projects = [...data.projects]
+    const normalizedProject = normalizeProject(project)
     const index = projects.findIndex((p) => p.id === project.id)
     if (index >= 0) {
-      projects[index] = project
+      projects[index] = normalizedProject
     } else {
       // Assign order for new projects based on current active count
       const activeCount = projects.filter((p) => !p.archivedAt && !p.suspendedAt).length
-      project.order = activeCount
-      projects.push(project)
+      const activeLimit = getActiveProjectsLimit(data.config)
+      if (!normalizedProject.archivedAt && !normalizedProject.suspendedAt && activeCount >= activeLimit) {
+        return projects
+      }
+      normalizedProject.order = activeCount
+      projects.push(normalizedProject)
     }
-    setData('projects', projects)
+    const nextProjects = assignMissingProjectColors(projects.map(normalizeProject))
+    setData('projects', nextProjects)
     notifyAllWindows()
-    return projects
+    return nextProjects
   })
 
   ipcMain.handle('delete-project', (_event, projectId: string) => {
@@ -519,9 +651,10 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
   ipcMain.handle('unarchive-project', (_event, projectId: string) => {
     const data = getData()
     const projects = [...data.projects]
+    const activeLimit = getActiveProjectsLimit(data.config)
     const activeProjects = projects.filter((p) => !p.archivedAt && !p.suspendedAt)
-    if (activeProjects.length >= 5) {
-      return { error: 'Cannot restore: 5 active projects already. Archive or suspend one first.' }
+    if (activeProjects.length >= activeLimit) {
+      return { error: `Cannot restore: ${activeLimit} active projects already. Archive or suspend one first.` }
     }
     const project = projects.find((p) => p.id === projectId)
     if (project) {
@@ -551,9 +684,10 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
   ipcMain.handle('unsuspend-project', (_event, projectId: string) => {
     const data = getData()
     const projects = [...data.projects]
+    const activeLimit = getActiveProjectsLimit(data.config)
     const activeProjects = projects.filter((p) => !p.archivedAt && !p.suspendedAt)
-    if (activeProjects.length >= 5) {
-      return { error: 'Cannot restore: 5 active projects already. Archive or suspend one first.' }
+    if (activeProjects.length >= activeLimit) {
+      return { error: `Cannot restore: ${activeLimit} active projects already. Archive or suspend one first.` }
     }
     const project = projects.find((p) => p.id === projectId)
     if (project) {
