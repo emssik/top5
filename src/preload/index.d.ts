@@ -1,51 +1,54 @@
-import { ElectronAPI } from '@electron-toolkit/preload'
-
-interface Api {
-  getIsDev: () => Promise<boolean>
-  getAppData: () => Promise<import('../renderer/types').AppData>
-  saveProject: (project: import('../renderer/types').Project) => Promise<import('../renderer/types').Project[]>
-  deleteProject: (id: string) => Promise<import('../renderer/types').Project[]>
-  archiveProject: (id: string) => Promise<import('../renderer/types').Project[]>
-  unarchiveProject: (id: string) => Promise<{ projects: import('../renderer/types').Project[] } | { error: string }>
-  suspendProject: (id: string) => Promise<import('../renderer/types').Project[]>
-  unsuspendProject: (id: string) => Promise<{ projects: import('../renderer/types').Project[] } | { error: string }>
-  saveQuickNotes: (notes: string) => Promise<void>
-  saveConfig: (config: import('../renderer/types').AppConfig) => Promise<void>
-  updateProjectTimer: (projectId: string, totalTimeMs: number, timerStartedAt: string | null) => Promise<import('../renderer/types').Project[]>
-  launchVscode: (path: string) => Promise<void>
-  launchIterm: (path: string) => Promise<void>
-  launchObsidian: (vault: string) => Promise<void>
-  launchBrowser: (url: string) => Promise<void>
-  enterFocusMode: () => Promise<void>
-  exitFocusMode: () => Promise<void>
-  getFocusUnsavedMs: () => Promise<number>
-  saveFocusCheckIn: (checkIn: import('../renderer/types').FocusCheckIn) => Promise<import('../renderer/types').FocusCheckIn[]>
-  getFocusCheckIns: (taskId?: string) => Promise<import('../renderer/types').FocusCheckIn[]>
-  dismissCheckIn: () => Promise<void>
-  openStatsWindow: () => Promise<void>
-  openNewProjectWindow: () => Promise<void>
-  closeNewProjectWindow: () => Promise<void>
-  enterCompactMode: () => Promise<void>
-  exitCompactMode: () => Promise<void>
-  enterCleanView: () => Promise<void>
-  exitCleanView: () => Promise<void>
-  setTrafficLightsVisible: (visible: boolean) => Promise<void>
-  pickFolder: () => Promise<string | null>
-  pickObsidianNote: () => Promise<{ path: string; uri: string | null } | null>
-  saveQuickTask: (task: import('../renderer/types').QuickTask) => Promise<import('../renderer/types').QuickTask[]>
-  removeQuickTask: (id: string) => Promise<import('../renderer/types').QuickTask[]>
-  completeQuickTask: (id: string) => Promise<import('../renderer/types').QuickTask[]>
-  uncompleteQuickTask: (id: string) => Promise<import('../renderer/types').QuickTask[]>
-  reorderQuickTasks: (orderedIds: string[]) => Promise<import('../renderer/types').QuickTask[]>
-  toggleTaskToDoNext: (projectId: string, taskId: string) => Promise<import('../renderer/types').Project[]>
-  onReloadData: (callback: () => void) => () => void
-  onShortcutAction: (callback: (data: { action: string; index?: number }) => void) => () => void
-  onCheckInCountdown: (callback: (remainingMs: number) => void) => () => void
+import type { AppConfig, FocusCheckIn, Project, QuickTask } from '../renderer/types';
+interface ShortcutActionPayload {
+    action: string;
+    index?: number;
 }
-
-declare global {
-  interface Window {
-    electron: ElectronAPI
-    api: Api
-  }
-}
+export declare const api: {
+    getIsDev: () => Promise<any>;
+    getAppData: () => Promise<any>;
+    saveProject: (project: Project) => Promise<any>;
+    deleteProject: (id: string) => Promise<any>;
+    archiveProject: (id: string) => Promise<any>;
+    unarchiveProject: (id: string) => Promise<any>;
+    suspendProject: (id: string) => Promise<any>;
+    unsuspendProject: (id: string) => Promise<any>;
+    saveQuickNotes: (notes: string) => Promise<any>;
+    saveConfig: (config: AppConfig) => Promise<any>;
+    updateProjectTimer: (projectId: string, totalTimeMs: number, timerStartedAt: string | null) => Promise<any>;
+    launchVscode: (path: string) => Promise<any>;
+    launchIterm: (path: string) => Promise<any>;
+    launchObsidian: (vault: string) => Promise<any>;
+    launchBrowser: (url: string) => Promise<any>;
+    enterFocusMode: () => Promise<any>;
+    exitFocusMode: () => Promise<any>;
+    getFocusUnsavedMs: () => Promise<any>;
+    saveFocusCheckIn: (checkIn: FocusCheckIn) => Promise<any>;
+    getFocusCheckIns: (taskId?: string) => Promise<any>;
+    dismissCheckIn: () => Promise<any>;
+    openStatsWindow: () => Promise<any>;
+    openNewProjectWindow: () => Promise<any>;
+    closeNewProjectWindow: () => Promise<any>;
+    enterCompactMode: () => Promise<any>;
+    exitCompactMode: () => Promise<any>;
+    enterCleanView: () => Promise<any>;
+    exitCleanView: () => Promise<any>;
+    setTrafficLightsVisible: (visible: boolean) => Promise<any>;
+    pickFolder: () => Promise<any>;
+    pickObsidianNote: () => Promise<any>;
+    saveQuickTask: (task: QuickTask) => Promise<any>;
+    removeQuickTask: (id: string) => Promise<any>;
+    completeQuickTask: (id: string) => Promise<any>;
+    uncompleteQuickTask: (id: string) => Promise<any>;
+    reorderQuickTasks: (orderedIds: string[]) => Promise<any>;
+    reorderProjects: (orderedIds: string[]) => Promise<any>;
+    reorderPinnedTasks: (updates: {
+        projectId: string;
+        taskId: string;
+        order: number;
+    }[]) => Promise<any>;
+    toggleTaskToDoNext: (projectId: string, taskId: string) => Promise<any>;
+    onReloadData: (callback: () => void) => () => Electron.IpcRenderer;
+    onShortcutAction: (callback: (data: ShortcutActionPayload) => void) => () => Electron.IpcRenderer;
+    onCheckInCountdown: (callback: (remainingMs: number) => void) => () => Electron.IpcRenderer;
+};
+export {};

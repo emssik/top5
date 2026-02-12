@@ -7,13 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.16.0] - 2026-02-12
+
 ### Added
 
+- Content Security Policy (CSP) meta tag on renderer HTML
+- Obsidian URI command whitelist: only `open` and `vault` commands are allowed
+- Structural IPC input validation for `save-project`, `save-config`, and `save-quick-task` handlers
+- `will-navigate` event prevention on main window to block unwanted navigation
+- Focus lock: prevent opening duplicate focus windows when one is already active
+- Batch `reorder-projects` and `reorder-pinned-tasks` IPC handlers replacing per-item saves
+- `typecheck` npm script; `build` now runs `tsc --build` before `electron-vite build`
+- Extracted `TabBar`, `DashboardToolbar`, and `CleanViewHeader` components from Dashboard
+- Shared `constants.ts` module for `STANDALONE_PROJECT_ID` sentinel value
 - Project suspend/unsuspend feature: temporarily pause projects without archiving them
 - Suspended tab in Dashboard showing suspended projects with restore option
 - `suspendProject` and `unsuspendProject` IPC handlers, preload bridge, and Zustand actions
 - `suspendedAt` field on Project type (both main and renderer)
-- Suspend (⏸) button on project tiles and restore (▲) button on suspended project tiles
+- Suspend button on project tiles and restore button on suspended project tiles
 - Double-click to copy task title in Focus Mode
 - Hover tooltip in Focus Mode bar showing full task title after 500ms delay
 - Focus indicator (blue pulsing dot) on currently focused task in QuickTasksView clean view
@@ -21,17 +32,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Dashboard refactored: toolbar, tab bar, and clean view header extracted into dedicated components
+- Project and pinned task reorder operations use dedicated batch IPC instead of sequential per-item saves
+- Settings component syncs local state with config changes via `useEffect`
+- Replaced `any` type casts with `unknown` + `Record<string, unknown>` in main process and preload
+- Removed `visibleOnAllWorkspaces` from focus and check-in windows
+- `tsconfig.node.json` includes `src/renderer/types/index.ts` for preload type resolution
 - Focus Mode window height increased to accommodate tooltip area
 - CheckInPopup now scrollable when content overflows
 - Focus button in TaskList hidden by default, shown on row hover
-- Focus lock: starting a new focus session is blocked while one is already active
 - Focus Mode confirm-exit dialog uses fixed 38px height instead of full screen
+- README updated with suspend feature, dev mode isolation, and revised project structure
 
 ### Fixed
 
+- New project creation now includes `suspendedAt: null` field
 - Active project count now excludes both archived and suspended projects
 - Unarchive also clears `suspendedAt` to ensure restored projects are fully active
 - Error message for max-project limit updated to mention suspend as an option
+- Non-null assertion for Obsidian picker URI result in ProjectEditor
 
 ## [1.14.0] - 2026-02-12
 

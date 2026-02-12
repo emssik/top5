@@ -83,7 +83,6 @@ function showCheckInPopup(): void {
     resizable: false,
     skipTaskbar: true,
     alwaysOnTop: true,
-    visibleOnAllWorkspaces: true,
     hasShadow: true,
     roundedCorners: true,
     webPreferences: {
@@ -118,6 +117,8 @@ export function registerFocusHandlers(
   getMainWindow: () => BrowserWindow | null
 ): void {
   ipcMain.handle('enter-focus-mode', () => {
+    if (focusWindow && !focusWindow.isDestroyed()) return
+
     const mainWin = getMainWindow()
     if (!mainWin) return
 
@@ -143,7 +144,6 @@ export function registerFocusHandlers(
       movable: true,
       skipTaskbar: true,
       alwaysOnTop: true,
-      visibleOnAllWorkspaces: true,
       hasShadow: true,
       roundedCorners: true,
       webPreferences: {

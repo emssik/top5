@@ -1,7 +1,6 @@
 import { useProjects } from '../hooks/useProjects'
 import { getActiveLaunchers, launcherMeta, launchByType } from '../utils/launchers'
-
-const STANDALONE_PROJECT_ID = '__standalone__'
+import { STANDALONE_PROJECT_ID } from '../utils/constants'
 
 export default function CompactBar() {
   const { projects, quickTasks, setCompactMode, setFocus } = useProjects()

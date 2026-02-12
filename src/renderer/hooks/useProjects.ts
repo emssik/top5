@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { Project, QuickTask, AppData, AppConfig, FocusCheckIn } from '../types'
+import type { Project, QuickTask, AppConfig, FocusCheckIn } from '../types'
 
 interface ProjectsState {
   projects: Project[]
@@ -115,14 +115,7 @@ export const useProjects = create<ProjectsState>((set, get) => ({
   },
 
   reorderProjects: async (orderedIds: string[]) => {
-    const { projects } = get()
-    let updated = projects
-    for (let i = 0; i < orderedIds.length; i++) {
-      const project = projects.find((p) => p.id === orderedIds[i])
-      if (project && project.order !== i) {
-        updated = await window.api.saveProject({ ...project, order: i })
-      }
-    }
+    const updated = await window.api.reorderProjects(orderedIds)
     set({ projects: updated })
   },
 

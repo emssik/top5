@@ -3,7 +3,7 @@ import { join } from 'path'
 import { is, optimizer, electronApp } from '@electron-toolkit/utils'
 import { registerStoreHandlers, getAppData, IS_DEV } from './store'
 import { registerLauncherHandlers } from './launchers'
-import { registerFocusHandlers, getFocusWindow } from './focus-window'
+import { registerFocusHandlers } from './focus-window'
 import { registerShortcuts } from './shortcuts'
 
 let mainWindow: BrowserWindow | null = null
@@ -54,7 +54,7 @@ function createWindow(): void {
 
   // Hide instead of destroy on close (macOS pattern)
   mainWindow.on('close', (e) => {
-    if (!app.isQuitting) {
+    if (!(app as unknown as Record<string, unknown>).isQuitting) {
       e.preventDefault()
       mainWindow!.hide()
     }
@@ -65,6 +65,10 @@ function createWindow(): void {
       shell.openExternal(details.url)
     }
     return { action: 'deny' }
+  })
+
+  mainWindow.webContents.on('will-navigate', (event) => {
+    event.preventDefault()
   })
 
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
@@ -176,5 +180,5 @@ app.on('window-all-closed', () => {
 })
 
 app.on('before-quit', () => {
-  (app as any).isQuitting = true
+  ;(app as unknown as Record<string, unknown>).isQuitting = true
 })

@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useProjects } from '../hooks/useProjects'
 import { getActiveLaunchers, launchByType, launcherMeta } from '../utils/launchers'
+import { STANDALONE_PROJECT_ID } from '../utils/constants'
 
 function formatCountdown(ms: number): string {
   const totalSec = Math.ceil(ms / 1000)
@@ -8,8 +9,6 @@ function formatCountdown(ms: number): string {
   const sec = totalSec % 60
   return `${min}:${sec.toString().padStart(2, '0')}`
 }
-
-const STANDALONE_PROJECT_ID = '__standalone__'
 
 export default function FocusMode() {
   const { projects, quickTasks, config, setFocus } = useProjects()

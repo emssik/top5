@@ -1,4 +1,4 @@
-import { useState, type RefObject } from 'react'
+import { useState, type Ref } from 'react'
 import type { Project } from '../types'
 import { useProjects } from '../hooks/useProjects'
 import { calcProjectTime, formatCheckInTime } from '../utils/checkInTime'
@@ -16,7 +16,7 @@ interface Props {
   isDragOver: boolean
   isSuspended?: boolean
   onUnsuspend?: () => void
-  taskListRef?: RefObject<TaskListHandle | null>
+  taskListRef?: Ref<TaskListHandle>
 }
 
 export default function ProjectTile({ project, expanded, onToggleExpand, onDragStart, onDragOver, onDrop, isDragOver, isSuspended, onUnsuspend, taskListRef }: Props) {
