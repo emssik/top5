@@ -11,7 +11,8 @@ export const launcherMeta: Record<LauncherType, { label: string; icon: string }>
 
 const launcherTypes: LauncherType[] = ['vscode', 'iterm', 'obsidian', 'browser']
 
-export function getActiveLaunchers(launchers: ProjectLaunchers): Array<[LauncherType, string]> {
+export function getActiveLaunchers(launchers?: ProjectLaunchers): Array<[LauncherType, string]> {
+  if (!launchers) return []
   const active: Array<[LauncherType, string]> = []
 
   for (const type of launcherTypes) {

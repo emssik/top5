@@ -4,6 +4,14 @@ import type { IpcMain } from 'electron'
 
 const ALLOWED_BROWSER_PROTOCOLS = new Set(['http:', 'https:'])
 const ALLOWED_OBSIDIAN_COMMANDS = new Set(['open', 'vault'])
+const ALLOWED_EXTERNAL_PROTOCOLS = new Set([
+  'http:',
+  'https:',
+  'mailto:',
+  'obsidian:',
+  'vscode:',
+  'iterm:'
+])
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0
@@ -35,6 +43,18 @@ function normalizeBrowserUrl(value: unknown): string | null {
   const parsed = direct ?? (raw.includes('://') ? null : parse(`https://${raw}`))
   if (!parsed || !ALLOWED_BROWSER_PROTOCOLS.has(parsed.protocol)) return null
   return parsed.toString()
+}
+
+function normalizeExternalUrl(value: unknown): string | null {
+  if (!isNonEmptyString(value)) return null
+  const raw = value.trim()
+  try {
+    const parsed = new URL(raw)
+    if (!ALLOWED_EXTERNAL_PROTOCOLS.has(parsed.protocol)) return null
+    return parsed.toString()
+  } catch {
+    return null
+  }
 }
 
 const ITERM_SCRIPT_LINES = [
@@ -90,6 +110,12 @@ export function registerLauncherHandlers(ipcMain: IpcMain): void {
 
   ipcMain.handle('launch-browser', (_event, url: unknown) => {
     const normalizedUrl = normalizeBrowserUrl(url)
+    if (!normalizedUrl) return
+    shell.openExternal(normalizedUrl)
+  })
+
+  ipcMain.handle('open-external', (_event, url: unknown) => {
+    const normalizedUrl = normalizeExternalUrl(url)
     if (!normalizedUrl) return
     shell.openExternal(normalizedUrl)
   })
