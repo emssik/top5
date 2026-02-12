@@ -4,7 +4,6 @@ import { useProjects } from '../hooks/useProjects'
 import { useTaskList } from '../hooks/useTaskList'
 import type { MergedTask } from '../hooks/useTaskList'
 import { calcTaskTime, calcQuickTaskTime, formatCheckInTime } from '../utils/checkInTime'
-import type { CompletedPinnedTask } from '../hooks/useProjects'
 import type { QuickTask, RepeatingTask } from '../types'
 import { STANDALONE_PROJECT_ID } from '../utils/constants'
 
@@ -16,7 +15,6 @@ interface Props {
 export default function QuickTasksView({ showAll, cleanView }: Props) {
   const {
     quickTasks,
-    projects,
     config,
     focusCheckIns,
     saveProject,
@@ -27,9 +25,7 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
     toggleTaskToDoNext,
     setFocus,
     acceptRepeatingProposal,
-    dismissRepeatingProposal,
-    addCompletedPinned,
-    removeCompletedPinned
+    dismissRepeatingProposal
   } = useProjects()
 
   const {
@@ -92,22 +88,11 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
   const handleComplete = async (merged: MergedTask) => {
     if (merged.kind === 'quick') {
       await completeQuickTask(merged.id)
-    } else if (merged.kind === 'pinned' && merged.projectId && merged.projectName && merged.taskId) {
-      addCompletedPinned({
-        id: merged.id,
-        kind: 'pinned',
-        title: merged.title,
-        order: merged.order,
-        completed: true,
-        projectId: merged.projectId,
-        projectName: merged.projectName,
-        taskId: merged.taskId,
-        repeatingTaskId: merged.repeatingTaskId
-      } as CompletedPinnedTask)
-      const project = projects.find((p) => p.id === merged.projectId)
+    } else if (merged.kind === 'pinned' && merged.projectId && merged.taskId) {
+      const project = useProjects.getState().projects.find((p) => p.id === merged.projectId)
       if (!project) return
       const updatedTasks = project.tasks.map((t) =>
-        t.id === merged.taskId ? { ...t, completed: true, isToDoNext: false } : t
+        t.id === merged.taskId ? { ...t, completed: true, completedAt: new Date().toISOString() } : t
       )
       await saveProject({ ...project, tasks: updatedTasks })
     }
@@ -120,10 +105,9 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
       const fresh = useProjects.getState().projects.find((p) => p.id === merged.projectId)
       if (!fresh) return
       const updatedTasks = fresh.tasks.map((t) =>
-        t.id === merged.taskId ? { ...t, completed: false, isToDoNext: true } : t
+        t.id === merged.taskId ? { ...t, completed: false, completedAt: null } : t
       )
       await saveProject({ ...fresh, tasks: updatedTasks })
-      removeCompletedPinned(merged.id)
     }
   }
 
@@ -312,7 +296,7 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
               onClick={() => {
                 if (task.repeatingTaskId) dismissRepeatingProposal(task.repeatingTaskId)
                 if (task.kind === 'quick') removeQuickTask(task.id)
-                else removeCompletedPinned(task.id)
+                else if (task.projectId && task.taskId) toggleTaskToDoNext(task.projectId, task.taskId)
               }}
               className="opacity-0 group-hover:opacity-40 hover:!opacity-70 transition-all"
               title="Remove"
@@ -365,7 +349,7 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
             onClick={() => {
               if (task.repeatingTaskId) dismissRepeatingProposal(task.repeatingTaskId)
               if (task.kind === 'quick') removeQuickTask(task.id)
-              else removeCompletedPinned(task.id)
+              else if (task.projectId && task.taskId) toggleTaskToDoNext(task.projectId, task.taskId)
             }}
             className="text-[10px] px-1.5 py-0.5 rounded bg-surface hover:bg-hover text-t-secondary hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
             title="Remove"

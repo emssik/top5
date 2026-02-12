@@ -4,7 +4,7 @@ import { is, optimizer, electronApp } from '@electron-toolkit/utils'
 import { registerStoreHandlers, getAppData, IS_DEV } from './store'
 import { registerLauncherHandlers } from './launchers'
 import { registerFocusHandlers } from './focus-window'
-import { registerShortcuts } from './shortcuts'
+import { registerGlobalShortcut, registerLocalShortcuts } from './shortcuts'
 
 let mainWindow: BrowserWindow | null = null
 let savedBounds: Electron.Rectangle | null = null
@@ -88,8 +88,9 @@ app.whenReady().then(() => {
   registerStoreHandlers(ipcMain)
   registerLauncherHandlers(ipcMain)
   registerFocusHandlers(ipcMain, () => mainWindow)
-  registerShortcuts(globalShortcut, () => mainWindow, screen, () => isCompactMode, exitCompactMode)
+  registerGlobalShortcut(globalShortcut, () => mainWindow)
   createWindow()
+  registerLocalShortcuts(mainWindow!, () => isCompactMode, exitCompactMode)
 
   ipcMain.handle('enter-compact-mode', () => {
     if (!mainWindow || isCompactMode) return

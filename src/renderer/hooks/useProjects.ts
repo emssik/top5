@@ -1,18 +1,6 @@
 import { create } from 'zustand'
 import type { Project, QuickTask, AppConfig, FocusCheckIn, RepeatingTask } from '../types'
 
-export interface CompletedPinnedTask {
-  id: string
-  kind: 'pinned'
-  title: string
-  order: number
-  completed: true
-  projectId: string
-  projectName: string
-  taskId: string
-  repeatingTaskId?: string | null
-}
-
 interface ProjectsState {
   projects: Project[]
   quickTasks: QuickTask[]
@@ -22,7 +10,6 @@ interface ProjectsState {
   repeatingTasks: RepeatingTask[]
   dismissedRepeating: string[]
   dismissedRepeatingDate: string
-  completedPinned: CompletedPinnedTask[]
   loaded: boolean
 
   loadData: () => Promise<void>
@@ -48,8 +35,6 @@ interface ProjectsState {
   reorderRepeatingTasks: (orderedIds: string[]) => Promise<void>
   acceptRepeatingProposal: (repeatingTaskId: string) => Promise<void>
   dismissRepeatingProposal: (repeatingTaskId: string) => Promise<void>
-  addCompletedPinned: (task: CompletedPinnedTask) => void
-  removeCompletedPinned: (id: string) => void
 }
 
 export const useProjects = create<ProjectsState>((set, get) => ({
@@ -71,7 +56,6 @@ export const useProjects = create<ProjectsState>((set, get) => ({
   repeatingTasks: [],
   dismissedRepeating: [],
   dismissedRepeatingDate: '',
-  completedPinned: [],
   loaded: false,
 
   loadData: async () => {
@@ -236,13 +220,5 @@ export const useProjects = create<ProjectsState>((set, get) => ({
       dismissedRepeating: [...dismissedRepeating, repeatingTaskId],
       dismissedRepeatingDate: today
     })
-  },
-
-  addCompletedPinned: (task: CompletedPinnedTask) => {
-    set({ completedPinned: [...get().completedPinned, task] })
-  },
-
-  removeCompletedPinned: (id: string) => {
-    set({ completedPinned: get().completedPinned.filter((t) => t.id !== id) })
   }
 }))

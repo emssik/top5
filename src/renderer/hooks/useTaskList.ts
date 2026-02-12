@@ -51,8 +51,7 @@ export function useTaskList(): TaskListData {
     config,
     repeatingTasks,
     dismissedRepeating,
-    dismissedRepeatingDate,
-    completedPinned
+    dismissedRepeatingDate
   } = useProjects()
 
   const limit = config.quickTasksLimit ?? 5
@@ -109,7 +108,25 @@ export function useTaskList(): TaskListData {
       completed: true,
       repeatingTaskId: t.repeatingTaskId
     }))
-  const completedTasks: MergedTask[] = [...todayCompletedStandalone, ...completedPinned]
+
+  const todayCompletedPinned: MergedTask[] = projects
+    .filter((p) => !p.archivedAt)
+    .flatMap((p) =>
+      p.tasks
+        .filter((t) => t.isToDoNext && t.completed && t.completedAt?.startsWith(today))
+        .map((t) => ({
+          kind: 'pinned' as const,
+          id: `pinned-${p.id}-${t.id}`,
+          title: t.title,
+          order: t.toDoNextOrder ?? 999,
+          completed: true,
+          projectId: p.id,
+          projectName: p.name,
+          taskId: t.id
+        }))
+    )
+
+  const completedTasks: MergedTask[] = [...todayCompletedStandalone, ...todayCompletedPinned]
 
   const regularActive = allActiveTasks.filter((t) => !t.repeatingTaskId)
   const repeatingActive = allActiveTasks.filter((t) => t.repeatingTaskId)

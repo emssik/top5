@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.18.0] - 2026-02-12
+
+### Added
+
+- `completedAt` timestamp on project tasks, persisted in data file for durable completed-today tracking
+
+### Changed
+
+- Completed pinned tasks now derived from project data (`completedAt` matching today) instead of ephemeral in-memory state
+- Removed `CompletedPinnedTask` type and `completedPinned` Zustand state — no longer needed
+- Action shortcuts (project switching, quick notes, toggle focus) changed from global to local (window-scoped) using `before-input-event`, keeping only toggle-app as a true global shortcut
+- Shortcuts module split into `registerGlobalShortcut` and `registerLocalShortcuts` with accelerator parsing
+- Remove button on completed pinned tasks now unpins the task (`toggleTaskToDoNext`) instead of removing from ephemeral list
+
+### Fixed
+
+- Completed pinned tasks no longer lost on app restart or window reload
+
 ## [1.17.0] - 2026-02-12
 
 ### Added
