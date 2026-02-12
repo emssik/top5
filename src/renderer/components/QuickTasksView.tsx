@@ -1,20 +1,12 @@
 import { useState, useRef, useEffect } from 'react'
 import { nanoid } from 'nanoid'
 import { useProjects } from '../hooks/useProjects'
+import { useTaskList } from '../hooks/useTaskList'
+import type { MergedTask } from '../hooks/useTaskList'
 import { calcTaskTime, calcQuickTaskTime, formatCheckInTime } from '../utils/checkInTime'
-import type { QuickTask } from '../types'
+import type { CompletedPinnedTask } from '../hooks/useProjects'
+import type { QuickTask, RepeatingTask } from '../types'
 import { STANDALONE_PROJECT_ID } from '../utils/constants'
-
-interface MergedTask {
-  kind: 'quick' | 'pinned'
-  id: string
-  title: string
-  order: number
-  completed?: boolean
-  projectId?: string
-  projectName?: string
-  taskId?: string
-}
 
 interface Props {
   showAll?: boolean
@@ -33,10 +25,20 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
     completeQuickTask,
     uncompleteQuickTask,
     toggleTaskToDoNext,
-    setFocus
+    setFocus,
+    acceptRepeatingProposal,
+    dismissRepeatingProposal,
+    addCompletedPinned,
+    removeCompletedPinned
   } = useProjects()
+
+  const {
+    activeTasks, repeatingActive, completedTasks, proposals,
+    overflowTasks, allActiveTasks,
+    hasRepeatingSection, hasCompletedSection
+  } = useTaskList()
+
   const [newTitle, setNewTitle] = useState('')
-  const [completedPinned, setCompletedPinned] = useState<MergedTask[]>([])
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingTitle, setEditingTitle] = useState('')
   const editingIdRef = useRef<string | null>(null)
@@ -48,57 +50,10 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
   const draggedId = useRef<string | null>(null)
   const [dragOverId, setDragOverId] = useState<string | null>(null)
 
+  // Separator for clean view
+  const cleanSeparator = <div className="my-1.5 border-t border-current" style={{ opacity: 0.08 }} />
+
   const activeQuickTasks = quickTasks.filter((t) => !t.completed)
-
-  // Merge standalone quick tasks with pinned project tasks
-  const pinnedTasks: MergedTask[] = projects
-    .filter((p) => !p.archivedAt)
-    .flatMap((p) =>
-      p.tasks
-        .filter((t) => t.isToDoNext && !t.completed)
-        .map((t) => ({
-          kind: 'pinned' as const,
-          id: `pinned-${p.id}-${t.id}`,
-          title: t.title,
-          order: t.toDoNextOrder ?? 999,
-          projectId: p.id,
-          projectName: p.name,
-          taskId: t.id
-        }))
-    )
-
-  const standaloneTasks: MergedTask[] = activeQuickTasks
-    .map((t) => ({
-      kind: 'quick' as const,
-      id: t.id,
-      title: t.title,
-      order: t.order
-    }))
-
-  const allActiveTasks = [...standaloneTasks, ...pinnedTasks].sort((a, b) => a.order - b.order)
-  const limit = config.quickTasksLimit ?? 5
-
-  // Today's completed tasks (standalone + pinned completed this session)
-  const today = new Date().toISOString().slice(0, 10)
-  const todayCompletedStandalone: MergedTask[] = quickTasks
-    .filter((t) => t.completed && t.completedAt?.startsWith(today))
-    .map((t) => ({
-      kind: 'quick' as const,
-      id: t.id,
-      title: t.title,
-      order: t.order,
-      completed: true
-    }))
-  const todayCompleted = [...todayCompletedStandalone, ...completedPinned]
-
-  // showAll: display all tasks with a separator at the limit position
-  // Clean view: respect the limit (no backfill)
-  const activeSlots = showAll ? allActiveTasks.length : Math.max(0, limit - todayCompleted.length)
-  const visibleActive = showAll ? allActiveTasks : allActiveTasks.slice(0, activeSlots)
-  const visibleCompleted = showAll ? [] : todayCompleted
-  // For showAll mode: tasks above and below the clean view limit
-  const aboveLimitTasks = showAll ? allActiveTasks.slice(0, limit) : visibleActive
-  const belowLimitTasks = showAll ? allActiveTasks.slice(limit) : []
 
   const addTask = async () => {
     if (!newTitle.trim()) return
@@ -137,9 +92,18 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
   const handleComplete = async (merged: MergedTask) => {
     if (merged.kind === 'quick') {
       await completeQuickTask(merged.id)
-    } else if (merged.projectId && merged.taskId) {
-      // Track pinned task as completed locally so it doesn't backfill
-      setCompletedPinned((prev) => [...prev, { ...merged, completed: true }])
+    } else if (merged.kind === 'pinned' && merged.projectId && merged.projectName && merged.taskId) {
+      addCompletedPinned({
+        id: merged.id,
+        kind: 'pinned',
+        title: merged.title,
+        order: merged.order,
+        completed: true,
+        projectId: merged.projectId,
+        projectName: merged.projectName,
+        taskId: merged.taskId,
+        repeatingTaskId: merged.repeatingTaskId
+      } as CompletedPinnedTask)
       const project = projects.find((p) => p.id === merged.projectId)
       if (!project) return
       const updatedTasks = project.tasks.map((t) =>
@@ -153,14 +117,13 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
     if (merged.kind === 'quick') {
       await uncompleteQuickTask(merged.id)
     } else if (merged.projectId && merged.taskId) {
-      // Restore pinned task: mark as not completed and re-pin
       const fresh = useProjects.getState().projects.find((p) => p.id === merged.projectId)
       if (!fresh) return
       const updatedTasks = fresh.tasks.map((t) =>
         t.id === merged.taskId ? { ...t, completed: false, isToDoNext: true } : t
       )
       await saveProject({ ...fresh, tasks: updatedTasks })
-      setCompletedPinned((prev) => prev.filter((t) => t.id !== merged.id))
+      removeCompletedPinned(merged.id)
     }
   }
 
@@ -189,7 +152,6 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
     editingProjectIdRef.current = undefined
     editingTaskIdRef.current = undefined
     setEditingId(null)
-    // Fire-and-forget: UI is already cleared, save in background
     const qt = useProjects.getState().quickTasks.find((t) => t.id === id)
     if (qt) {
       saveQuickTask({ ...qt, title: title.trim() })
@@ -248,15 +210,12 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
     const taskMap = new Map(allActiveTasks.map((t) => [t.id, t]))
     const reordered = ids.map((id, i) => ({ ...taskMap.get(id)!, order: i }))
 
-    // Batch reorder quick tasks via existing IPC
     const quickReordered = reordered.filter((t) => t.kind === 'quick')
     if (quickReordered.length > 0) {
-      // reorder-quick-tasks expects ordered IDs; order index assigned server-side
       const orderedQuickIds = quickReordered.sort((a, b) => a.order - b.order).map((t) => t.id)
       await window.api.reorderQuickTasks(orderedQuickIds)
     }
 
-    // Batch reorder pinned tasks
     const pinnedUpdates: { projectId: string; taskId: string; order: number }[] = []
     for (const t of reordered.filter((r) => r.kind === 'pinned')) {
       if (t.projectId && t.taskId) {
@@ -282,18 +241,19 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
     return 0
   }
 
-  const renderTask = (task: MergedTask) => {
+  const renderTask = (task: MergedTask, small = false) => {
     const isCompleted = task.completed
     const isDragOver = dragOverId === task.id && draggedId.current !== task.id
 
     // --- Clean view (bullet journal style) ---
     if (cleanView) {
-      const marker = isCompleted ? '×' : task.kind === 'pinned' ? '→' : '•'
+      const marker = isCompleted ? '×' : task.repeatingTaskId ? '↻' : task.kind === 'pinned' ? '→' : '•'
       const mins = getTaskMinutes(task)
       const isFocused = !isCompleted && (
         (task.kind === 'quick' && config.focusProjectId === STANDALONE_PROJECT_ID && config.focusTaskId === task.id) ||
         (task.kind === 'pinned' && config.focusProjectId === task.projectId && config.focusTaskId === task.taskId)
       )
+      const textSize = small ? 'text-[18px]' : 'text-[22px]'
 
       return (
         <div
@@ -313,7 +273,7 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
           {/* Bullet marker — clickable */}
           <button
             onClick={() => isCompleted ? handleUncomplete(task) : handleComplete(task)}
-            className="w-5 flex-shrink-0 text-center text-[22px] leading-none transition-opacity"
+            className={`w-5 flex-shrink-0 text-center ${textSize} leading-none transition-opacity`}
             style={{ opacity: isCompleted ? 0.3 : 0.5 }}
             title={isCompleted ? 'Mark as not done' : 'Complete'}
           >
@@ -332,13 +292,13 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
                   if (e.key === 'Escape') cancelEdit()
                 }}
                 onBlur={saveEdit}
-                className="w-full text-[22px] bg-transparent focus:outline-none py-0"
+                className={`w-full ${textSize} bg-transparent focus:outline-none py-0`}
                 style={{ color: 'inherit' }}
               />
             ) : (
               <span
                 onDoubleClick={() => !isCompleted && startEditing(task)}
-                className={`text-[22px] leading-snug truncate block cursor-default ${isCompleted ? 'line-through' : ''}`}
+                className={`${textSize} leading-snug truncate block cursor-default ${isCompleted ? 'line-through' : ''}`}
                 style={{ opacity: isCompleted ? 0.3 : 1 }}
               >
                 {task.title}
@@ -347,7 +307,20 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
           </div>
 
           {/* Time + hover actions */}
-          {isCompleted ? null : (
+          {isCompleted ? (
+            <button
+              onClick={() => {
+                if (task.repeatingTaskId) dismissRepeatingProposal(task.repeatingTaskId)
+                if (task.kind === 'quick') removeQuickTask(task.id)
+                else removeCompletedPinned(task.id)
+              }}
+              className="opacity-0 group-hover:opacity-40 hover:!opacity-70 transition-all"
+              title="Remove"
+              style={{ fontFamily: 'system-ui' }}
+            >
+              ✕
+            </button>
+          ) : (
             <div className="flex items-center gap-1.5 flex-shrink-0">
               {mins > 0 && (
                 <span className="text-[15px]" style={{ opacity: 0.25 }}>{formatCheckInTime(mins)}</span>
@@ -388,6 +361,17 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
               <span className="text-[10px] text-blue-400/50">{task.projectName}</span>
             )}
           </div>
+          <button
+            onClick={() => {
+              if (task.repeatingTaskId) dismissRepeatingProposal(task.repeatingTaskId)
+              if (task.kind === 'quick') removeQuickTask(task.id)
+              else removeCompletedPinned(task.id)
+            }}
+            className="text-[10px] px-1.5 py-0.5 rounded bg-surface hover:bg-hover text-t-secondary hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
+            title="Remove"
+          >
+            ✕
+          </button>
         </div>
       )
     }
@@ -427,6 +411,7 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
                 onDoubleClick={() => startEditing(task)}
                 className="text-sm text-t-primary truncate block cursor-default"
               >
+                {task.repeatingTaskId && <span className="text-t-muted mr-1" style={{ opacity: 0.5 }}>↻</span>}
                 {task.title}
               </span>
               {task.kind === 'pinned' && task.projectName && (
@@ -455,9 +440,58 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
     )
   }
 
+  const renderProposal = (rt: RepeatingTask) => {
+    if (cleanView) {
+      return (
+        <div key={`proposal-${rt.id}`} className="group flex items-baseline gap-2.5 py-[6px]" style={{ opacity: 0.45 }}>
+          <button
+            onClick={() => acceptRepeatingProposal(rt.id)}
+            className="w-5 flex-shrink-0 text-center text-[18px] leading-none transition-opacity hover:opacity-80"
+            title="Accept"
+          >
+            ↻
+          </button>
+          <span className="flex-1 text-[18px] leading-snug truncate block cursor-default">
+            {rt.title}
+          </span>
+          <button
+            onClick={() => dismissRepeatingProposal(rt.id)}
+            className="opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-all text-[15px]"
+            title="Skip"
+            style={{ fontFamily: 'system-ui' }}
+          >
+            ✕
+          </button>
+        </div>
+      )
+    }
+    return (
+      <div key={`proposal-${rt.id}`} className="group flex items-center gap-2 py-1.5 px-3 rounded-lg bg-card/50 border border-dashed border-border-subtle">
+        <span className="text-t-muted text-sm flex-shrink-0" style={{ opacity: 0.5 }}>↻</span>
+        <span className="flex-1 text-sm text-t-secondary truncate">{rt.title}</span>
+        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button
+            onClick={() => acceptRepeatingProposal(rt.id)}
+            className="text-[10px] px-2 py-0.5 rounded bg-green-600/20 hover:bg-green-600/40 text-green-400 hover:text-green-300 transition-colors"
+            title="Accept"
+          >
+            ✓
+          </button>
+          <button
+            onClick={() => dismissRepeatingProposal(rt.id)}
+            className="text-[10px] px-1.5 py-0.5 rounded bg-surface hover:bg-hover text-t-secondary hover:text-red-400 transition-colors"
+            title="Skip"
+          >
+            ✕
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className={cleanView ? '' : 'space-y-1'}>
-      {visibleActive.length === 0 && visibleCompleted.length === 0 ? (
+      {activeTasks.length === 0 && !hasRepeatingSection && !hasCompletedSection ? (
         <div className={`flex flex-col items-center justify-center text-t-secondary ${cleanView ? 'h-16' : 'h-40'}`}>
           <p className={cleanView ? 'text-[22px]' : 'text-sm'} style={cleanView ? { opacity: 0.25 } : undefined}>
             {cleanView ? 'Brak zadań' : 'No quick tasks yet'}
@@ -466,17 +500,36 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
         </div>
       ) : showAll ? (
         <div className="space-y-1" onDragEnd={handleDragEnd}>
-          {aboveLimitTasks.map(renderTask)}
-          {belowLimitTasks.length > 0 && (
+          {activeTasks.map((t) => renderTask(t))}
+          {hasRepeatingSection && (
+            <div className="space-y-1 mt-2">
+              {repeatingActive.map((t) => renderTask(t))}
+              {proposals.map(renderProposal)}
+            </div>
+          )}
+          {hasCompletedSection && completedTasks.map((t) => renderTask(t))}
+          {overflowTasks.length > 0 && (
             <div className="space-y-1 opacity-40 mt-2">
-              {belowLimitTasks.map(renderTask)}
+              {overflowTasks.map((t) => renderTask(t))}
             </div>
           )}
         </div>
       ) : (
         <div className={cleanView ? '' : 'space-y-1'} onDragEnd={handleDragEnd}>
-          {visibleActive.map(renderTask)}
-          {visibleCompleted.map(renderTask)}
+          {activeTasks.map((t) => renderTask(t))}
+          {hasRepeatingSection && (
+            <>
+              {cleanView && activeTasks.length > 0 && cleanSeparator}
+              {repeatingActive.map((t) => renderTask(t, cleanView))}
+              {proposals.map(renderProposal)}
+            </>
+          )}
+          {hasCompletedSection && (
+            <>
+              {cleanView && (activeTasks.length > 0 || hasRepeatingSection) && cleanSeparator}
+              {completedTasks.map((t) => renderTask(t))}
+            </>
+          )}
         </div>
       )}
 

@@ -1,4 +1,4 @@
-import type { AppConfig, FocusCheckIn, Project, QuickTask } from '../renderer/types';
+import type { AppConfig, FocusCheckIn, Project, QuickTask, RepeatingTask } from '../renderer/types';
 interface ShortcutActionPayload {
     action: string;
     index?: number;
@@ -47,6 +47,11 @@ export declare const api: {
         order: number;
     }[]) => Promise<any>;
     toggleTaskToDoNext: (projectId: string, taskId: string) => Promise<any>;
+    saveRepeatingTask: (task: RepeatingTask) => Promise<any>;
+    removeRepeatingTask: (id: string) => Promise<any>;
+    reorderRepeatingTasks: (orderedIds: string[]) => Promise<any>;
+    acceptRepeatingProposal: (repeatingTaskId: string) => Promise<any>;
+    dismissRepeatingProposal: (repeatingTaskId: string) => Promise<any>;
     onReloadData: (callback: () => void) => () => Electron.IpcRenderer;
     onShortcutAction: (callback: (data: ShortcutActionPayload) => void) => () => Electron.IpcRenderer;
     onCheckInCountdown: (callback: (remainingMs: number) => void) => () => Electron.IpcRenderer;

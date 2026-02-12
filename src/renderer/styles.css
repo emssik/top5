@@ -69,6 +69,24 @@
   font-display: swap;
 }
 
+@font-face {
+  font-family: 'Patrick Hand';
+  src: url('./assets/fonts/PatrickHand-Regular.ttf') format('truetype');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Kalam';
+  src: url('./assets/fonts/Kalam-Regular.ttf') format('truetype');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Architects Daughter';
+  src: url('./assets/fonts/ArchitectsDaughter-Regular.ttf') format('truetype');
+  font-display: swap;
+}
+
 html, body {
   background: transparent;
 }

@@ -1,5 +1,17 @@
 import { create } from 'zustand'
-import type { Project, QuickTask, AppConfig, FocusCheckIn } from '../types'
+import type { Project, QuickTask, AppConfig, FocusCheckIn, RepeatingTask } from '../types'
+
+export interface CompletedPinnedTask {
+  id: string
+  kind: 'pinned'
+  title: string
+  order: number
+  completed: true
+  projectId: string
+  projectName: string
+  taskId: string
+  repeatingTaskId?: string | null
+}
 
 interface ProjectsState {
   projects: Project[]
@@ -7,6 +19,10 @@ interface ProjectsState {
   quickNotes: string
   config: AppConfig
   focusCheckIns: FocusCheckIn[]
+  repeatingTasks: RepeatingTask[]
+  dismissedRepeating: string[]
+  dismissedRepeatingDate: string
+  completedPinned: CompletedPinnedTask[]
   loaded: boolean
 
   loadData: () => Promise<void>
@@ -27,6 +43,13 @@ interface ProjectsState {
   uncompleteQuickTask: (id: string) => Promise<void>
   reorderQuickTasks: (orderedIds: string[]) => Promise<void>
   toggleTaskToDoNext: (projectId: string, taskId: string) => Promise<void>
+  saveRepeatingTask: (task: RepeatingTask) => Promise<void>
+  removeRepeatingTask: (id: string) => Promise<void>
+  reorderRepeatingTasks: (orderedIds: string[]) => Promise<void>
+  acceptRepeatingProposal: (repeatingTaskId: string) => Promise<void>
+  dismissRepeatingProposal: (repeatingTaskId: string) => Promise<void>
+  addCompletedPinned: (task: CompletedPinnedTask) => void
+  removeCompletedPinned: (id: string) => void
 }
 
 export const useProjects = create<ProjectsState>((set, get) => ({
@@ -41,9 +64,14 @@ export const useProjects = create<ProjectsState>((set, get) => ({
     compactMode: false,
     cleanView: false,
     theme: 'dark',
-    quickTasksLimit: 5
+    quickTasksLimit: 5,
+    cleanViewFont: 'Caveat'
   },
   focusCheckIns: [],
+  repeatingTasks: [],
+  dismissedRepeating: [],
+  dismissedRepeatingDate: '',
+  completedPinned: [],
   loaded: false,
 
   loadData: async () => {
@@ -58,6 +86,9 @@ export const useProjects = create<ProjectsState>((set, get) => ({
         quickNotes: data.quickNotes,
         config: data.config,
         focusCheckIns: checkIns,
+        repeatingTasks: data.repeatingTasks ?? [],
+        dismissedRepeating: data.dismissedRepeating ?? [],
+        dismissedRepeatingDate: data.dismissedRepeatingDate ?? '',
         loaded: true
       })
     } catch (error) {
@@ -175,5 +206,43 @@ export const useProjects = create<ProjectsState>((set, get) => ({
   toggleTaskToDoNext: async (projectId: string, taskId: string) => {
     const updated = await window.api.toggleTaskToDoNext(projectId, taskId)
     set({ projects: updated })
+  },
+
+  saveRepeatingTask: async (task: RepeatingTask) => {
+    const updated = await window.api.saveRepeatingTask(task)
+    set({ repeatingTasks: updated })
+  },
+
+  removeRepeatingTask: async (id: string) => {
+    const updated = await window.api.removeRepeatingTask(id)
+    set({ repeatingTasks: updated })
+  },
+
+  reorderRepeatingTasks: async (orderedIds: string[]) => {
+    const updated = await window.api.reorderRepeatingTasks(orderedIds)
+    set({ repeatingTasks: updated })
+  },
+
+  acceptRepeatingProposal: async (repeatingTaskId: string) => {
+    const updated = await window.api.acceptRepeatingProposal(repeatingTaskId)
+    set({ quickTasks: updated })
+  },
+
+  dismissRepeatingProposal: async (repeatingTaskId: string) => {
+    await window.api.dismissRepeatingProposal(repeatingTaskId)
+    const { dismissedRepeating } = get()
+    const today = new Date().toISOString().slice(0, 10)
+    set({
+      dismissedRepeating: [...dismissedRepeating, repeatingTaskId],
+      dismissedRepeatingDate: today
+    })
+  },
+
+  addCompletedPinned: (task: CompletedPinnedTask) => {
+    set({ completedPinned: [...get().completedPinned, task] })
+  },
+
+  removeCompletedPinned: (id: string) => {
+    set({ completedPinned: get().completedPinned.filter((t) => t.id !== id) })
   }
 }))

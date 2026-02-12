@@ -1,4 +1,4 @@
-type Tab = 'tasks' | 'projects' | 'suspended' | 'archive'
+type Tab = 'tasks' | 'projects' | 'repeat' | 'suspended' | 'archive'
 
 interface Props {
   activeTab: Tab
@@ -27,6 +27,9 @@ export default function TabBar({ activeTab, setActiveTab, isDev, suspendedCount,
         </button>
         <button onClick={() => setActiveTab('projects')} className={tabClass('projects')}>
           Projects
+        </button>
+        <button onClick={() => setActiveTab('repeat')} className={tabClass('repeat')}>
+          Repeat
         </button>
         {suspendedCount > 0 && (
           <button onClick={() => setActiveTab('suspended')} className={tabClass('suspended')}>

@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { IpcRendererEvent } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
-import type { AppConfig, FocusCheckIn, Project, QuickTask } from '../renderer/types'
+import type { AppConfig, FocusCheckIn, Project, QuickTask, RepeatingTask } from '../renderer/types'
 
 interface ShortcutActionPayload {
   action: string
@@ -49,6 +49,11 @@ export const api = {
   reorderProjects: (orderedIds: string[]) => ipcRenderer.invoke('reorder-projects', orderedIds),
   reorderPinnedTasks: (updates: { projectId: string; taskId: string; order: number }[]) => ipcRenderer.invoke('reorder-pinned-tasks', updates),
   toggleTaskToDoNext: (projectId: string, taskId: string) => ipcRenderer.invoke('toggle-task-to-do-next', projectId, taskId),
+  saveRepeatingTask: (task: RepeatingTask) => ipcRenderer.invoke('save-repeating-task', task),
+  removeRepeatingTask: (id: string) => ipcRenderer.invoke('remove-repeating-task', id),
+  reorderRepeatingTasks: (orderedIds: string[]) => ipcRenderer.invoke('reorder-repeating-tasks', orderedIds),
+  acceptRepeatingProposal: (repeatingTaskId: string) => ipcRenderer.invoke('accept-repeating-proposal', repeatingTaskId),
+  dismissRepeatingProposal: (repeatingTaskId: string) => ipcRenderer.invoke('dismiss-repeating-proposal', repeatingTaskId),
   onReloadData: (callback: () => void) => {
     ipcRenderer.on('reload-data', callback)
     return () => ipcRenderer.removeListener('reload-data', callback)

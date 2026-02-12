@@ -28,6 +28,24 @@ interface Task {
   toDoNextOrder?: number
 }
 
+type RepeatSchedule =
+  | { type: 'daily' }
+  | { type: 'weekdays'; days: number[] }
+  | { type: 'interval'; days: number }
+  | { type: 'afterCompletion'; days: number }
+
+interface RepeatingTask {
+  id: string
+  title: string
+  schedule: RepeatSchedule
+  createdAt: string
+  lastCompletedAt: string | null
+  order: number
+  acceptedCount: number
+  dismissedCount: number
+  completedCount: number
+}
+
 interface QuickTask {
   id: string
   title: string
@@ -35,6 +53,7 @@ interface QuickTask {
   createdAt: string
   completedAt: string | null
   order: number
+  repeatingTaskId?: string | null
 }
 
 interface Project {
@@ -65,6 +84,7 @@ interface AppConfig {
   cleanView: boolean
   theme: 'light' | 'dark'
   quickTasksLimit: number
+  cleanViewFont: string
 }
 
 interface FocusCheckIn {
@@ -81,12 +101,18 @@ interface AppData {
   quickTasks: QuickTask[]
   quickNotes: string
   config: AppConfig
+  repeatingTasks: RepeatingTask[]
+  dismissedRepeating: string[]
+  dismissedRepeatingDate: string
 }
 
 const defaultData: AppData = {
   projects: [],
   quickTasks: [],
   quickNotes: '',
+  repeatingTasks: [],
+  dismissedRepeating: [],
+  dismissedRepeatingDate: '',
   config: {
     globalShortcut: 'CommandOrControl+Shift+Space',
     actionShortcuts: {
@@ -104,7 +130,8 @@ const defaultData: AppData = {
     compactMode: false,
     cleanView: false,
     theme: 'dark',
-    quickTasksLimit: 5
+    quickTasksLimit: 5,
+    cleanViewFont: 'Caveat'
   }
 }
 
@@ -217,6 +244,21 @@ function isValidQuickTask(value: unknown): value is QuickTask {
   return typeof id === 'string' && typeof title === 'string' && typeof completed === 'boolean' && typeof order === 'number'
 }
 
+function isValidRepeatSchedule(value: unknown): value is RepeatSchedule {
+  if (!isRecord(value)) return false
+  const { type } = value
+  if (type === 'daily') return true
+  if (type === 'weekdays') return Array.isArray(value.days) && value.days.every((d: unknown) => typeof d === 'number')
+  if (type === 'interval' || type === 'afterCompletion') return typeof value.days === 'number' && value.days > 0
+  return false
+}
+
+function isValidRepeatingTask(value: unknown): value is RepeatingTask {
+  if (!isRecord(value)) return false
+  const { id, title, schedule, order } = value
+  return typeof id === 'string' && typeof title === 'string' && typeof order === 'number' && isValidRepeatSchedule(schedule)
+}
+
 function dailyBackup(): void {
   const today = new Date().toISOString().slice(0, 10) // YYYY-MM-DD
   const backupPrefix = `backup-${today}`
@@ -320,10 +362,15 @@ function loadData(): AppData {
   try {
     const raw = readFileSync(DATA_FILE, 'utf-8')
     const parsed = yaml.load(raw) as Partial<AppData> | null
+    const today = new Date().toISOString().slice(0, 10)
+    const dismissedRepeatingDate = parsed?.dismissedRepeatingDate ?? ''
     return {
       projects: parsed?.projects ?? defaultData.projects,
       quickTasks: parsed?.quickTasks ?? [],
       quickNotes: parsed?.quickNotes ?? defaultData.quickNotes,
+      repeatingTasks: parsed?.repeatingTasks ?? [],
+      dismissedRepeating: dismissedRepeatingDate === today ? (parsed?.dismissedRepeating ?? []) : [],
+      dismissedRepeatingDate: dismissedRepeatingDate === today ? today : '',
       config: { ...defaultData.config, ...parsed?.config }
     }
   } catch {
@@ -346,6 +393,9 @@ function migrateFromElectronStore(): void {
       projects: parsed.projects ?? defaultData.projects,
       quickTasks: parsed.quickTasks ?? [],
       quickNotes: parsed.quickNotes ?? defaultData.quickNotes,
+      repeatingTasks: [],
+      dismissedRepeating: [],
+      dismissedRepeatingDate: '',
       config: { ...defaultData.config, ...parsed.config }
     }
     saveData(data)
@@ -606,6 +656,18 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
       task.completed = true
       task.completedAt = new Date().toISOString()
       setData('quickTasks', quickTasks)
+      // Update repeating task stats and lastCompletedAt
+      if (task.repeatingTaskId) {
+        const repeatingTasks = [...data.repeatingTasks]
+        const rt = repeatingTasks.find((r) => r.id === task.repeatingTaskId)
+        if (rt) {
+          rt.completedCount = (rt.completedCount || 0) + 1
+          if (rt.schedule.type === 'afterCompletion') {
+            rt.lastCompletedAt = task.completedAt
+          }
+          setData('repeatingTasks', repeatingTasks)
+        }
+      }
       notifyAllWindows()
     }
     return quickTasks
@@ -664,6 +726,86 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
     setData('projects', projects)
     notifyAllWindows()
     return projects
+  })
+
+  // --- Repeating Tasks ---
+
+  ipcMain.handle('save-repeating-task', (_event, task: unknown) => {
+    if (!isValidRepeatingTask(task)) return
+    const data = getData()
+    const repeatingTasks = [...data.repeatingTasks]
+    const index = repeatingTasks.findIndex((t) => t.id === task.id)
+    if (index >= 0) {
+      repeatingTasks[index] = task
+    } else {
+      task.order = repeatingTasks.length
+      repeatingTasks.push(task)
+    }
+    setData('repeatingTasks', repeatingTasks)
+    notifyAllWindows()
+    return repeatingTasks
+  })
+
+  ipcMain.handle('remove-repeating-task', (_event, id: string) => {
+    if (typeof id !== 'string') return
+    const data = getData()
+    const repeatingTasks = data.repeatingTasks.filter((t) => t.id !== id)
+    setData('repeatingTasks', repeatingTasks)
+    notifyAllWindows()
+    return repeatingTasks
+  })
+
+  ipcMain.handle('reorder-repeating-tasks', (_event, orderedIds: string[]) => {
+    if (!Array.isArray(orderedIds)) return
+    const data = getData()
+    const repeatingTasks = [...data.repeatingTasks]
+    for (let i = 0; i < orderedIds.length; i++) {
+      const task = repeatingTasks.find((t) => t.id === orderedIds[i])
+      if (task) task.order = i
+    }
+    setData('repeatingTasks', repeatingTasks)
+    return repeatingTasks
+  })
+
+  ipcMain.handle('accept-repeating-proposal', (_event, repeatingTaskId: string) => {
+    if (typeof repeatingTaskId !== 'string') return
+    const data = getData()
+    const repeatingTasks = [...data.repeatingTasks]
+    const rt = repeatingTasks.find((t) => t.id === repeatingTaskId)
+    if (!rt) return data.quickTasks
+    const quickTasks = [...data.quickTasks]
+    const newTask: QuickTask = {
+      id: require('crypto').randomUUID().slice(0, 21),
+      title: rt.title,
+      completed: false,
+      createdAt: new Date().toISOString(),
+      completedAt: null,
+      order: quickTasks.filter((t) => !t.completed).length,
+      repeatingTaskId
+    }
+    quickTasks.push(newTask)
+    setData('quickTasks', quickTasks)
+    rt.acceptedCount = (rt.acceptedCount || 0) + 1
+    setData('repeatingTasks', repeatingTasks)
+    notifyAllWindows()
+    return quickTasks
+  })
+
+  ipcMain.handle('dismiss-repeating-proposal', (_event, repeatingTaskId: string) => {
+    if (typeof repeatingTaskId !== 'string') return
+    const data = getData()
+    const today = new Date().toISOString().slice(0, 10)
+    const dismissed = data.dismissedRepeatingDate === today ? [...data.dismissedRepeating] : []
+    if (!dismissed.includes(repeatingTaskId)) dismissed.push(repeatingTaskId)
+    setData('dismissedRepeating', dismissed)
+    setData('dismissedRepeatingDate', today)
+    const repeatingTasks = [...data.repeatingTasks]
+    const rt = repeatingTasks.find((t) => t.id === repeatingTaskId)
+    if (rt) {
+      rt.dismissedCount = (rt.dismissedCount || 0) + 1
+      setData('repeatingTasks', repeatingTasks)
+    }
+    notifyAllWindows()
   })
 
   ipcMain.handle('toggle-task-to-do-next', (_event, projectId: string, taskId: string) => {
