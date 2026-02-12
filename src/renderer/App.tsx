@@ -4,6 +4,7 @@ import Dashboard from './components/Dashboard'
 import FocusMode from './components/FocusMode'
 import CheckInPopup from './components/CheckInPopup'
 import StatsView from './components/StatsView'
+import OperationLogView from './components/OperationLogView'
 import ProjectEditor from './components/ProjectEditor'
 
 export default function App() {
@@ -12,8 +13,9 @@ export default function App() {
   const isFocusWindow = windowHash === '#focus'
   const isCheckInWindow = windowHash === '#checkin'
   const isStatsWindow = windowHash === '#stats'
+  const isOperationLogWindow = windowHash === '#operation-log'
   const isNewProjectWindow = windowHash === '#new-project'
-  const isAuxWindow = isCheckInWindow || isStatsWindow || isNewProjectWindow
+  const isAuxWindow = isCheckInWindow || isStatsWindow || isOperationLogWindow || isNewProjectWindow
   const isMainOrFocus = !isAuxWindow
 
   // Separate windows with hash routing — apply theme from stored config.
@@ -67,6 +69,7 @@ export default function App() {
   if (isFocusWindow) return loaded ? <FocusMode /> : null
   if (isCheckInWindow) return <CheckInPopup />
   if (isStatsWindow) return <StatsView />
+  if (isOperationLogWindow) return <OperationLogView />
   if (isNewProjectWindow) return (
     <div className="h-screen bg-base text-t-primary p-6 flex items-center justify-center">
       <ProjectEditor />

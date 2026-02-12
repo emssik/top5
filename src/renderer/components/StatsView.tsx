@@ -224,6 +224,15 @@ export default function StatsView() {
             </table>
           </div>
         )}
+
+        <div style={{ marginTop: 24 }}>
+          <button
+            onClick={() => window.api.openOperationLogWindow()}
+            className="text-xs text-t-secondary hover:text-t-heading transition-colors cursor-pointer"
+          >
+            Open Activity Log &rarr;
+          </button>
+        </div>
       </div>
     </div>
   )

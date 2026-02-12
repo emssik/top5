@@ -117,6 +117,23 @@ interface FocusCheckIn {
   minutes?: number
 }
 
+type OperationType =
+  | 'task_created' | 'task_completed' | 'task_uncompleted' | 'task_deleted'
+  | 'quick_task_created' | 'quick_task_completed' | 'quick_task_uncompleted' | 'quick_task_deleted'
+  | 'project_created' | 'project_updated' | 'project_archived' | 'project_unarchived'
+  | 'project_suspended' | 'project_unsuspended' | 'project_deleted'
+  | 'focus_started' | 'focus_checkin'
+
+interface OperationLogEntry {
+  id: string
+  timestamp: string
+  type: OperationType
+  projectId?: string
+  projectName?: string
+  taskTitle?: string
+  details?: string
+}
+
 interface AppData {
   projects: Project[]
   quickTasks: QuickTask[]
@@ -204,6 +221,7 @@ function ensureDataDir(): string {
 const CONFIG_DIR = ensureDataDir()
 const DATA_FILE = join(CONFIG_DIR, 'data.yaml')
 const CHECKINS_FILE = join(CONFIG_DIR, 'checkins.jsonl')
+const OPERATIONS_FILE = join(CONFIG_DIR, 'operations.jsonl')
 
 // --- Daily backup ---
 
@@ -398,7 +416,7 @@ function dailyBackup(): void {
   if (existing.some((f) => f.startsWith(backupPrefix))) return
 
   // Collect files to backup and check if anything changed since last backup
-  const filesToBackup = [DATA_FILE, CHECKINS_FILE].filter((f) => existsSync(f))
+  const filesToBackup = [DATA_FILE, CHECKINS_FILE, OPERATIONS_FILE].filter((f) => existsSync(f))
   if (filesToBackup.length === 0) return
 
   // Hash current content
@@ -451,6 +469,43 @@ function loadCheckIns(): FocusCheckIn[] {
       }
     }
     return parsed
+  } catch {
+    return []
+  }
+}
+
+// --- Operation log ---
+
+function appendOperation(entry: Omit<OperationLogEntry, 'id' | 'timestamp'>): void {
+  const full: OperationLogEntry = {
+    id: require('crypto').randomUUID().slice(0, 21),
+    timestamp: new Date().toISOString(),
+    ...entry
+  }
+  mkdirSync(CONFIG_DIR, { recursive: true })
+  appendFileSync(OPERATIONS_FILE, JSON.stringify(full) + '\n', 'utf-8')
+}
+
+function loadOperations(since?: string): OperationLogEntry[] {
+  if (!existsSync(OPERATIONS_FILE)) return []
+  try {
+    const raw = readFileSync(OPERATIONS_FILE, 'utf-8')
+    const entries: OperationLogEntry[] = []
+    const sinceTime = since ? new Date(since).getTime() : 0
+    for (const line of raw.split('\n')) {
+      if (!line.trim()) continue
+      try {
+        const entry = JSON.parse(line) as OperationLogEntry
+        if (entry.id && entry.timestamp && entry.type) {
+          if (!since || new Date(entry.timestamp).getTime() >= sinceTime) {
+            entries.push(entry)
+          }
+        }
+      } catch {
+        // skip malformed lines
+      }
+    }
+    return entries
   } catch {
     return []
   }
@@ -576,12 +631,18 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
     return getData()
   })
 
+  ipcMain.handle('get-operations', (_event, since?: string) => {
+    return loadOperations(since)
+  })
+
   ipcMain.handle('save-project', (_event, project: unknown) => {
     if (!isValidProject(project)) return getData().projects
     const data = getData()
     const projects = [...data.projects]
     const normalizedProject = normalizeProject(project)
     const index = projects.findIndex((p) => p.id === project.id)
+    const isNew = index < 0
+    const oldProject = index >= 0 ? projects[index] : null
     if (index >= 0) {
       projects[index] = normalizedProject
     } else {
@@ -596,14 +657,54 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
     }
     const nextProjects = assignMissingProjectColors(projects.map(normalizeProject))
     setData('projects', nextProjects)
+
+    if (isNew) {
+      appendOperation({ type: 'project_created', projectId: project.id, projectName: project.name })
+    } else if (oldProject) {
+      // Detect task-level changes
+      const oldTaskMap = new Map(oldProject.tasks.map((t) => [t.id, t]))
+      const newTaskMap = new Map(project.tasks.map((t: Task) => [t.id, t]))
+
+      for (const t of project.tasks as Task[]) {
+        const old = oldTaskMap.get(t.id)
+        if (!old) {
+          appendOperation({ type: 'task_created', projectId: project.id, projectName: project.name, taskTitle: t.title })
+        } else if (t.completed && !old.completed) {
+          appendOperation({ type: 'task_completed', projectId: project.id, projectName: project.name, taskTitle: t.title })
+        } else if (!t.completed && old.completed) {
+          appendOperation({ type: 'task_uncompleted', projectId: project.id, projectName: project.name, taskTitle: t.title })
+        }
+      }
+
+      for (const t of oldProject.tasks) {
+        if (!newTaskMap.has(t.id)) {
+          appendOperation({ type: 'task_deleted', projectId: project.id, projectName: project.name, taskTitle: t.title })
+        }
+      }
+
+      // Log project-level update only if no task changes were logged and something else changed
+      const hasTaskChanges = project.tasks.length !== oldProject.tasks.length ||
+        (project.tasks as Task[]).some((t) => {
+          const old = oldTaskMap.get(t.id)
+          return !old || t.completed !== old.completed
+        })
+      if (!hasTaskChanges && (project.name !== oldProject.name || project.description !== oldProject.description)) {
+        appendOperation({ type: 'project_updated', projectId: project.id, projectName: project.name })
+      }
+    }
+
     notifyAllWindows()
     return nextProjects
   })
 
   ipcMain.handle('delete-project', (_event, projectId: string) => {
     const data = getData()
+    const deleted = data.projects.find((p) => p.id === projectId)
     const projects = data.projects.filter((p) => p.id !== projectId)
     setData('projects', projects)
+    if (deleted) {
+      appendOperation({ type: 'project_deleted', projectId, projectName: deleted.name })
+    }
     return projects
   })
 
@@ -644,6 +745,7 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
       }
       project.archivedAt = new Date().toISOString()
       setData('projects', projects)
+      appendOperation({ type: 'project_archived', projectId, projectName: project.name })
     }
     return projects
   })
@@ -666,6 +768,7 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
       while (usedOrders.includes(nextOrder)) nextOrder++
       project.order = nextOrder
       setData('projects', projects)
+      appendOperation({ type: 'project_unarchived', projectId, projectName: project.name })
     }
     return { projects }
   })
@@ -677,6 +780,7 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
     if (project) {
       project.suspendedAt = new Date().toISOString()
       setData('projects', projects)
+      appendOperation({ type: 'project_suspended', projectId, projectName: project.name })
     }
     return projects
   })
@@ -698,6 +802,7 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
       while (usedOrders.includes(nextOrder)) nextOrder++
       project.order = nextOrder
       setData('projects', projects)
+      appendOperation({ type: 'project_unsuspended', projectId, projectName: project.name })
     }
     return { projects }
   })
@@ -714,6 +819,14 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
     const normalized = toFocusCheckIn(checkIn)
     if (!normalized) return loadCheckIns()
     appendCheckIn(normalized)
+    const data = getData()
+    const project = data.projects.find((p) => p.id === normalized.projectId)
+    appendOperation({
+      type: 'focus_checkin',
+      projectId: normalized.projectId,
+      projectName: project?.name,
+      details: `Response: ${normalized.response}`
+    })
     return loadCheckIns()
   })
 
@@ -764,6 +877,7 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
     const quickTasks = [...data.quickTasks]
     const qt = task
     const index = quickTasks.findIndex((t) => t.id === qt.id)
+    const isNew = index < 0
     if (index >= 0) {
       quickTasks[index] = qt
     } else {
@@ -771,6 +885,9 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
       quickTasks.push(qt)
     }
     setData('quickTasks', quickTasks)
+    if (isNew) {
+      appendOperation({ type: 'quick_task_created', taskTitle: qt.title })
+    }
     notifyAllWindows()
     return quickTasks
   })
@@ -778,8 +895,12 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
   ipcMain.handle('remove-quick-task', (_event, id: string) => {
     if (typeof id !== 'string') return
     const data = getData()
+    const removed = data.quickTasks.find((t) => t.id === id)
     const quickTasks = data.quickTasks.filter((t) => t.id !== id)
     setData('quickTasks', quickTasks)
+    if (removed) {
+      appendOperation({ type: 'quick_task_deleted', taskTitle: removed.title })
+    }
     notifyAllWindows()
     return quickTasks
   })
@@ -794,6 +915,7 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
       task.completedAt = new Date().toISOString()
       task.inProgress = false
       setData('quickTasks', quickTasks)
+      appendOperation({ type: 'quick_task_completed', taskTitle: task.title })
       // Update repeating task stats and lastCompletedAt
       if (task.repeatingTaskId) {
         const repeatingTasks = [...data.repeatingTasks]
@@ -821,6 +943,7 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
       task.completedAt = null
       task.order = quickTasks.filter((t) => !t.completed).length
       setData('quickTasks', quickTasks)
+      appendOperation({ type: 'quick_task_uncompleted', taskTitle: task.title })
       notifyAllWindows()
     }
     return quickTasks

@@ -677,6 +677,13 @@ body {
   opacity: 0.6;
 }
 
+.repeating-separator {
+  height: 1px;
+  background: var(--c-border-subtle);
+  margin: 12px 0 8px;
+  opacity: 0.5;
+}
+
 .limit-indicator {
   display: flex;
   align-items: center;

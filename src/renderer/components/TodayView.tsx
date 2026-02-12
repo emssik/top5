@@ -554,10 +554,19 @@ export default function TodayView() {
         </>
       )}
 
-      {upNextTasks.length > 0 && (
+      {upNextTasks.filter((t) => !isRepeatingEntry(t)).length > 0 && (
         <>
-          <div className="section-label mt-section">Up Next</div>
-          {upNextTasks.map((task) => renderTask(task, 'up-next'))}
+          {(focusTask || inProgressTasks.length > 0) && (
+            <div className="section-label mt-section">Up Next</div>
+          )}
+          {upNextTasks.filter((t) => !isRepeatingEntry(t)).map((task) => renderTask(task, 'up-next'))}
+        </>
+      )}
+
+      {upNextTasks.filter((t) => isRepeatingEntry(t)).length > 0 && (
+        <>
+          <div className="repeating-separator" />
+          {upNextTasks.filter((t) => isRepeatingEntry(t)).map((task) => renderTask(task, 'up-next'))}
         </>
       )}
 

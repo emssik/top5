@@ -210,9 +210,18 @@ export default function InlineStatsView() {
 
   return (
     <div>
-      <div className="section-label" style={{ marginBottom: 16 }}>
-        <span style={{ opacity: 0.5 }}>📊</span>
-        <span>Statistics</span>
+      <div className="section-label" style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="flex items-center gap-2">
+          <span style={{ opacity: 0.5 }}>📊</span>
+          <span>Statistics</span>
+        </div>
+        <button
+          onClick={() => window.api.openOperationLogWindow()}
+          className="text-xs text-t-secondary hover:text-t-heading transition-colors cursor-pointer"
+          style={{ textTransform: 'none', letterSpacing: 'normal', fontWeight: 400 }}
+        >
+          activity log
+        </button>
       </div>
 
       <div className="stat-grid">
@@ -302,6 +311,7 @@ export default function InlineStatsView() {
           </table>
         </div>
       )}
+
     </div>
   )
 }

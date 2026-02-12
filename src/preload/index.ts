@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { IpcRendererEvent } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
-import type { AppConfig, FocusCheckIn, Project, QuickTask, RepeatingTask } from '../renderer/types'
+import type { AppConfig, FocusCheckIn, OperationLogEntry, Project, QuickTask, RepeatingTask } from '../renderer/types'
 
 interface ShortcutActionPayload {
   action: string
@@ -33,6 +33,7 @@ export const api = {
   getFocusCheckIns: (taskId?: string) => ipcRenderer.invoke('get-focus-checkins', taskId),
   dismissCheckIn: () => ipcRenderer.invoke('dismiss-checkin'),
   openStatsWindow: () => ipcRenderer.invoke('open-stats-window'),
+  openOperationLogWindow: () => ipcRenderer.invoke('open-operation-log-window'),
   openNewProjectWindow: () => ipcRenderer.invoke('open-new-project-window'),
   closeNewProjectWindow: () => ipcRenderer.invoke('close-new-project-window'),
   enterCompactMode: () => ipcRenderer.invoke('enter-compact-mode'),
@@ -57,6 +58,7 @@ export const api = {
   reorderRepeatingTasks: (orderedIds: string[]) => ipcRenderer.invoke('reorder-repeating-tasks', orderedIds),
   acceptRepeatingProposal: (repeatingTaskId: string) => ipcRenderer.invoke('accept-repeating-proposal', repeatingTaskId),
   dismissRepeatingProposal: (repeatingTaskId: string) => ipcRenderer.invoke('dismiss-repeating-proposal', repeatingTaskId),
+  getOperations: (since?: string): Promise<OperationLogEntry[]> => ipcRenderer.invoke('get-operations', since),
   onReloadData: (callback: () => void) => {
     ipcRenderer.on('reload-data', callback)
     return () => ipcRenderer.removeListener('reload-data', callback)
