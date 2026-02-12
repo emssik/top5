@@ -6,10 +6,10 @@ import QuickNotes from './QuickNotes'
 import Settings from './Settings'
 import QuickTasksView from './QuickTasksView'
 
-type Tab = 'tasks' | 'projects' | 'archive'
+type Tab = 'tasks' | 'projects' | 'suspended' | 'archive'
 
 export default function Dashboard() {
-  const { projects, config, saveConfig, reorderProjects, unarchiveProject, setCompactMode } = useProjects()
+  const { projects, config, saveConfig, reorderProjects, unarchiveProject, unsuspendProject, setCompactMode } = useProjects()
   const cleanView = config.cleanView ?? false
   const [showNotes, setShowNotes] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
@@ -21,7 +21,8 @@ export default function Dashboard() {
   const taskListRef = useRef<TaskListHandle | null>(null)
   const [isDev, setIsDev] = useState(false)
 
-  const activeProjects = projects.filter((p) => !p.archivedAt)
+  const activeProjects = projects.filter((p) => !p.archivedAt && !p.suspendedAt)
+  const suspendedProjects = projects.filter((p) => p.suspendedAt && !p.archivedAt)
   const archivedProjects = projects.filter((p) => p.archivedAt)
 
   useEffect(() => {
@@ -35,6 +36,15 @@ export default function Dashboard() {
   const handleRestore = async (id: string) => {
     setRestoreError(null)
     const error = await unarchiveProject(id)
+    if (error) {
+      setRestoreError(error)
+      setTimeout(() => setRestoreError(null), 3000)
+    }
+  }
+
+  const handleUnsuspend = async (id: string) => {
+    setRestoreError(null)
+    const error = await unsuspendProject(id)
     if (error) {
       setRestoreError(error)
       setTimeout(() => setRestoreError(null), 3000)
@@ -63,12 +73,15 @@ export default function Dashboard() {
     }
   }, [cleanView])
 
-  // Auto-switch away from archive when it becomes empty
+  // Auto-switch away from empty tabs
   useEffect(() => {
     if (activeTab === 'archive' && archivedProjects.length === 0) {
       setActiveTab('tasks')
     }
-  }, [activeTab, archivedProjects.length])
+    if (activeTab === 'suspended' && suspendedProjects.length === 0) {
+      setActiveTab('tasks')
+    }
+  }, [activeTab, archivedProjects.length, suspendedProjects.length])
 
   const handleShortcutAction = useCallback((data: { action: string; index?: number }) => {
     if (data.action === 'select-project' && data.index !== undefined) {
@@ -190,6 +203,18 @@ export default function Dashboard() {
             >
               Projects
             </button>
+            {suspendedProjects.length > 0 && (
+              <button
+                onClick={() => setActiveTab('suspended')}
+                className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                  activeTab === 'suspended'
+                    ? 'bg-surface text-t-primary'
+                    : 'text-t-secondary hover:text-t-primary'
+                }`}
+              >
+                Suspended ({suspendedProjects.length})
+              </button>
+            )}
             {archivedProjects.length > 0 && (
               <button
                 onClick={() => setActiveTab('archive')}
@@ -313,6 +338,34 @@ export default function Dashboard() {
                       setDragOverId(null)
                     }}
                     isDragOver={dragOverId === project.id && draggedId.current !== project.id}
+                    taskListRef={expandedProjectId === project.id ? taskListRef : undefined}
+                  />
+                ))}
+            </div>
+          )
+        )}
+
+        {activeTab === 'suspended' && (
+          suspendedProjects.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-64 text-t-secondary">
+              <p className="text-lg mb-2">No suspended projects</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-3">
+              {suspendedProjects
+                .sort((a, b) => (b.suspendedAt ?? '').localeCompare(a.suspendedAt ?? ''))
+                .map((project) => (
+                  <ProjectTile
+                    key={project.id}
+                    project={project}
+                    expanded={expandedProjectId === project.id}
+                    onToggleExpand={() => toggleExpanded(project.id)}
+                    onDragStart={() => {}}
+                    onDragOver={() => {}}
+                    onDrop={() => {}}
+                    isDragOver={false}
+                    isSuspended
+                    onUnsuspend={() => handleUnsuspend(project.id)}
                     taskListRef={expandedProjectId === project.id ? taskListRef : undefined}
                   />
                 ))}

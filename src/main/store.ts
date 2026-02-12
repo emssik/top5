@@ -53,6 +53,7 @@ interface Project {
   }
   tasks: Task[]
   archivedAt: string | null
+  suspendedAt: string | null
 }
 
 interface AppConfig {
@@ -374,7 +375,7 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
       projects[index] = project
     } else {
       // Assign order for new projects based on current active count
-      const activeCount = projects.filter((p) => !p.archivedAt).length
+      const activeCount = projects.filter((p) => !p.archivedAt && !p.suspendedAt).length
       project.order = activeCount
       projects.push(project)
     }
@@ -433,13 +434,45 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
   ipcMain.handle('unarchive-project', (_event, projectId: string) => {
     const data = getData()
     const projects = [...data.projects]
-    const activeProjects = projects.filter((p) => !p.archivedAt)
+    const activeProjects = projects.filter((p) => !p.archivedAt && !p.suspendedAt)
     if (activeProjects.length >= 5) {
-      return { error: 'Cannot restore: 5 active projects already. Archive one first.' }
+      return { error: 'Cannot restore: 5 active projects already. Archive or suspend one first.' }
     }
     const project = projects.find((p) => p.id === projectId)
     if (project) {
       project.archivedAt = null
+      project.suspendedAt = null
+      // Assign next available order
+      const usedOrders = activeProjects.map((p) => p.order)
+      let nextOrder = 0
+      while (usedOrders.includes(nextOrder)) nextOrder++
+      project.order = nextOrder
+      setData('projects', projects)
+    }
+    return { projects }
+  })
+
+  ipcMain.handle('suspend-project', (_event, projectId: string) => {
+    const data = getData()
+    const projects = [...data.projects]
+    const project = projects.find((p) => p.id === projectId)
+    if (project) {
+      project.suspendedAt = new Date().toISOString()
+      setData('projects', projects)
+    }
+    return projects
+  })
+
+  ipcMain.handle('unsuspend-project', (_event, projectId: string) => {
+    const data = getData()
+    const projects = [...data.projects]
+    const activeProjects = projects.filter((p) => !p.archivedAt && !p.suspendedAt)
+    if (activeProjects.length >= 5) {
+      return { error: 'Cannot restore: 5 active projects already. Archive or suspend one first.' }
+    }
+    const project = projects.find((p) => p.id === projectId)
+    if (project) {
+      project.suspendedAt = null
       // Assign next available order
       const usedOrders = activeProjects.map((p) => p.order)
       let nextOrder = 0

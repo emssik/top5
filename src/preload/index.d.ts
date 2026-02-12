@@ -7,6 +7,8 @@ interface Api {
   deleteProject: (id: string) => Promise<import('../renderer/types').Project[]>
   archiveProject: (id: string) => Promise<import('../renderer/types').Project[]>
   unarchiveProject: (id: string) => Promise<{ projects: import('../renderer/types').Project[] } | { error: string }>
+  suspendProject: (id: string) => Promise<import('../renderer/types').Project[]>
+  unsuspendProject: (id: string) => Promise<{ projects: import('../renderer/types').Project[] } | { error: string }>
   saveQuickNotes: (notes: string) => Promise<void>
   saveConfig: (config: import('../renderer/types').AppConfig) => Promise<void>
   updateProjectTimer: (projectId: string, totalTimeMs: number, timerStartedAt: string | null) => Promise<import('../renderer/types').Project[]>

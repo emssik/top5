@@ -7,7 +7,7 @@ export default function CompactBar() {
   const { projects, quickTasks, setCompactMode, setFocus } = useProjects()
 
   const activeProjects = projects
-    .filter((p) => !p.archivedAt)
+    .filter((p) => !p.archivedAt && !p.suspendedAt)
     .sort((a, b) => a.order - b.order)
 
   const activeQuickTasks = quickTasks.filter((t) => !t.completed).sort((a, b) => a.order - b.order)

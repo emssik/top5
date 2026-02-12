@@ -14,6 +14,8 @@ interface ProjectsState {
   deleteProject: (id: string) => Promise<void>
   archiveProject: (id: string) => Promise<void>
   unarchiveProject: (id: string) => Promise<string | null>
+  suspendProject: (id: string) => Promise<void>
+  unsuspendProject: (id: string) => Promise<string | null>
   saveQuickNotes: (notes: string) => Promise<void>
   saveConfig: (config: AppConfig) => Promise<void>
   reorderProjects: (orderedIds: string[]) => Promise<void>
@@ -81,6 +83,20 @@ export const useProjects = create<ProjectsState>((set, get) => ({
 
   unarchiveProject: async (id: string) => {
     const result = await window.api.unarchiveProject(id)
+    if ('error' in result) {
+      return result.error
+    }
+    set({ projects: result.projects })
+    return null
+  },
+
+  suspendProject: async (id: string) => {
+    const updated = await window.api.suspendProject(id)
+    set({ projects: updated })
+  },
+
+  unsuspendProject: async (id: string) => {
+    const result = await window.api.unsuspendProject(id)
     if ('error' in result) {
       return result.error
     }

@@ -14,12 +14,14 @@ interface Props {
   onDragOver: (e: React.DragEvent) => void
   onDrop: () => void
   isDragOver: boolean
+  isSuspended?: boolean
+  onUnsuspend?: () => void
   taskListRef?: RefObject<TaskListHandle | null>
 }
 
-export default function ProjectTile({ project, expanded, onToggleExpand, onDragStart, onDragOver, onDrop, isDragOver, taskListRef }: Props) {
+export default function ProjectTile({ project, expanded, onToggleExpand, onDragStart, onDragOver, onDrop, isDragOver, isSuspended, onUnsuspend, taskListRef }: Props) {
   const [editing, setEditing] = useState(false)
-  const { deleteProject, archiveProject, focusCheckIns } = useProjects()
+  const { deleteProject, archiveProject, suspendProject, focusCheckIns } = useProjects()
   const projectMinutes = calcProjectTime(focusCheckIns, project.id)
   const timeFormatted = formatCheckInTime(projectMinutes)
 
@@ -73,6 +75,23 @@ export default function ProjectTile({ project, expanded, onToggleExpand, onDragS
           >
             ✎
           </button>
+          {isSuspended ? (
+            <button
+              onClick={onUnsuspend}
+              className="p-1.5 rounded-lg hover:bg-surface text-t-secondary hover:text-green-400 text-xs transition-colors"
+              title="Restore to active"
+            >
+              ▲
+            </button>
+          ) : (
+            <button
+              onClick={() => suspendProject(project.id)}
+              className="p-1.5 rounded-lg hover:bg-surface text-t-secondary hover:text-blue-400 text-xs transition-colors"
+              title="Suspend"
+            >
+              ⏸
+            </button>
+          )}
           <button
             onClick={() => archiveProject(project.id)}
             className="p-1.5 rounded-lg hover:bg-surface text-t-secondary hover:text-amber-400 text-xs transition-colors"

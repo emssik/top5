@@ -101,7 +101,17 @@ export default function FocusMode() {
       <div className="flex-1 min-w-0 flex items-center gap-1.5" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
         <span className="text-[11px] text-blue-400/70 flex-shrink-0">{contextLabel}</span>
         <span className="text-[10px] text-t-muted flex-shrink-0">/</span>
-        <span className="text-[13px] font-semibold truncate text-t-primary">{task?.title || 'No task'}</span>
+        <span
+          className="text-[13px] font-semibold truncate text-t-primary cursor-default"
+          onDoubleClick={() => {
+            if (task?.title) {
+              navigator.clipboard.writeText(task.title)
+            }
+          }}
+          title="Double-click to copy"
+        >
+          {task?.title || 'No task'}
+        </span>
         {project?.launchers && getActiveLaunchers(project.launchers).length > 0 && (
           <div className="flex items-center gap-0.5 flex-shrink-0 ml-1">
             {getActiveLaunchers(project.launchers).map(([type, value]) => (

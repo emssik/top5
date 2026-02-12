@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Project suspend/unsuspend feature: temporarily pause projects without archiving them
+- Suspended tab in Dashboard showing suspended projects with restore option
+- `suspendProject` and `unsuspendProject` IPC handlers, preload bridge, and Zustand actions
+- `suspendedAt` field on Project type (both main and renderer)
+- Suspend (⏸) button on project tiles and restore (▲) button on suspended project tiles
+- Double-click to copy task title in Focus Mode
+
+### Changed
+
+- Active project count now excludes both archived and suspended projects
+- Unarchive also clears `suspendedAt` to ensure restored projects are fully active
+- Error message for max-project limit updated to mention suspend as an option
+
 ## [1.14.0] - 2026-02-12
 
 ### Changed
