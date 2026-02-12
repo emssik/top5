@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.14.0] - 2026-02-12
+
+### Changed
+
+- Focus mode now opens in a dedicated window using hash-based routing (`#focus`) instead of rendering inline in the main window
+- Focus window loads data from the Zustand store independently, allowing main window and focus window to coexist
+- Global toggle-app shortcut no longer blocks when focus window is open, so the main window can be toggled freely during focus sessions
+- TaskList component refactored to `forwardRef` with `TaskListHandle` interface exposing `focusAddInput()`
+
+### Added
+
+- `n` keyboard shortcut on the Projects tab to focus the add-task input when a project tile is expanded
+
 ## [1.13.0] - 2026-02-12
 
 ### Added

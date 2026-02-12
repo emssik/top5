@@ -157,9 +157,9 @@ export function registerFocusHandlers(
     focusWindow.setAlwaysOnTop(true, 'floating')
 
     if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-      focusWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
+      focusWindow.loadURL(process.env['ELECTRON_RENDERER_URL'] + '#focus')
     } else {
-      focusWindow.loadFile(join(__dirname, '../renderer/index.html'))
+      focusWindow.loadFile(join(__dirname, '../renderer/index.html'), { hash: 'focus' })
     }
 
     focusWindow.on('closed', () => {

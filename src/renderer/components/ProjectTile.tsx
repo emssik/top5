@@ -1,10 +1,10 @@
-import { useState } from 'react'
+import { useState, type RefObject } from 'react'
 import type { Project } from '../types'
 import { useProjects } from '../hooks/useProjects'
 import { calcProjectTime, formatCheckInTime } from '../utils/checkInTime'
 import { getActiveLaunchers, launcherMeta, launchByType } from '../utils/launchers'
 import ProjectEditor from './ProjectEditor'
-import TaskList from './TaskList'
+import TaskList, { type TaskListHandle } from './TaskList'
 
 interface Props {
   project: Project
@@ -14,9 +14,10 @@ interface Props {
   onDragOver: (e: React.DragEvent) => void
   onDrop: () => void
   isDragOver: boolean
+  taskListRef?: RefObject<TaskListHandle | null>
 }
 
-export default function ProjectTile({ project, expanded, onToggleExpand, onDragStart, onDragOver, onDrop, isDragOver }: Props) {
+export default function ProjectTile({ project, expanded, onToggleExpand, onDragStart, onDragOver, onDrop, isDragOver, taskListRef }: Props) {
   const [editing, setEditing] = useState(false)
   const { deleteProject, archiveProject, focusCheckIns } = useProjects()
   const projectMinutes = calcProjectTime(focusCheckIns, project.id)
@@ -114,7 +115,7 @@ export default function ProjectTile({ project, expanded, onToggleExpand, onDragS
         </div>
       )}
 
-      {expanded && <TaskList project={project} />}
+      {expanded && <TaskList ref={taskListRef} project={project} />}
     </div>
   )
 }

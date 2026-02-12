@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useProjects } from '../hooks/useProjects'
 import ProjectTile from './ProjectTile'
+import type { TaskListHandle } from './TaskList'
 import QuickNotes from './QuickNotes'
 import Settings from './Settings'
 import QuickTasksView from './QuickTasksView'
@@ -17,6 +18,7 @@ export default function Dashboard() {
   const [restoreError, setRestoreError] = useState<string | null>(null)
   const draggedId = useRef<string | null>(null)
   const [dragOverId, setDragOverId] = useState<string | null>(null)
+  const taskListRef = useRef<TaskListHandle | null>(null)
   const [isDev, setIsDev] = useState(false)
 
   const activeProjects = projects.filter((p) => !p.archivedAt)
@@ -85,6 +87,21 @@ export default function Dashboard() {
     const cleanup = window.api.onShortcutAction(handleShortcutAction)
     return cleanup
   }, [handleShortcutAction])
+
+  // 'n' shortcut to focus add-task input when a project is expanded
+  useEffect(() => {
+    if (activeTab !== 'projects' || !expandedProjectId) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement).tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return
+      if (e.key === 'n' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        e.preventDefault()
+        taskListRef.current?.focusAddInput()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [activeTab, expandedProjectId])
 
   // Live clock for clean view
   const [now, setNow] = useState(new Date())
@@ -296,6 +313,7 @@ export default function Dashboard() {
                       setDragOverId(null)
                     }}
                     isDragOver={dragOverId === project.id && draggedId.current !== project.id}
+                    taskListRef={expandedProjectId === project.id ? taskListRef : undefined}
                   />
                 ))}
             </div>

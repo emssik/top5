@@ -1,20 +1,29 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, forwardRef, useImperativeHandle } from 'react'
 import { nanoid } from 'nanoid'
 import type { Project, Task } from '../types'
 import { useProjects } from '../hooks/useProjects'
 import { calcTaskTime, formatCheckInTime } from '../utils/checkInTime'
 
+export interface TaskListHandle {
+  focusAddInput: () => void
+}
+
 interface Props {
   project: Project
 }
 
-export default function TaskList({ project }: Props) {
+const TaskList = forwardRef<TaskListHandle, Props>(function TaskList({ project }, ref) {
   const { saveProject, setFocus, focusCheckIns, toggleTaskToDoNext } = useProjects()
   const [newTaskTitle, setNewTaskTitle] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingTitle, setEditingTitle] = useState('')
+  const addInputRef = useRef<HTMLInputElement>(null)
   const editingIdRef = useRef<string | null>(null)
   const editingTitleRef = useRef('')
+
+  useImperativeHandle(ref, () => ({
+    focusAddInput: () => addInputRef.current?.focus()
+  }))
 
   const startEditing = (task: Task) => {
     editingIdRef.current = task.id
@@ -152,6 +161,7 @@ export default function TaskList({ project }: Props) {
 
       <div className="flex gap-2 mt-2">
         <input
+          ref={addInputRef}
           type="text"
           value={newTaskTitle}
           onChange={(e) => setNewTaskTitle(e.target.value)}
@@ -168,4 +178,6 @@ export default function TaskList({ project }: Props) {
       </div>
     </div>
   )
-}
+})
+
+export default TaskList
