@@ -7,10 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.20.0] - 2026-02-12
+
 ### Added
 
 - Sidebar navigation replacing tab-based UI: fixed sidebar with project color dots, collapsible suspended/archived sections, and drag-and-drop reorder between active/suspended states
-- New `Sidebar` component with drag-and-drop support for reordering active projects and moving projects between active/suspended states
+- New `Sidebar` component with drag-and-drop support for reordering active projects and moving projects between active/suspended/archived states
 - Today view (`TodayView`) as the default landing page, grouping tasks into Focus, In Progress, Up Next, and Done sections
 - Full-screen `ProjectDetailView` for managing individual project tasks, links, and metadata
 - Project color system: 8 color options (red, orange, amber, green, blue, purple, pink, teal) with auto-assignment for new projects
@@ -18,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Project quick links replacing launcher path fields: flexible label+URL pairs with support for vscode://, iterm://, obsidian://, mailto:, http(s):// protocols
 - Color picker and links editor in `ProjectEditor` modal with add/remove link rows
 - `open-external` IPC handler with protocol allowlist validation (http, https, mailto, obsidian, vscode, iterm)
+- Work Stats table in `InlineStatsView`: per-project focus time breakdown with selectable time ranges (7d, 14d, month, prev month, 6m, 12m) and intensity-colored cells
 - `InlineStatsView` component for viewing focus time stats within the main panel
 - `RepeatView` component wrapping repeating tasks management in the sidebar layout
 - `QuickNotesPanel` slide-in panel replacing the previous modal-style quick notes
@@ -28,6 +31,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Archive button in the Edit Project modal for quick project archiving
 - Keyboard shortcuts reference section (collapsible) in Settings modal
 - iCloud sync and data location info displayed in Settings
+- Drag-and-drop archiving: drag projects from active or suspended sections to the Archived label/zone
+- Drag-and-drop restore from archived: drag archived projects to active or suspended zones
+- `n` keyboard shortcut in `ProjectDetailView` to focus the add-task input
 
 ### Changed
 
@@ -40,6 +46,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Compact mode auto-disabled on load (removed compact mode UI entirely)
 - Active project limit now configurable via `activeProjectsLimit` instead of hardcoded to 5
 - All project state updates in Zustand store now normalize projects through `assignMissingProjectColors` and `normalizeProject`
+- Sidebar drag-and-drop now supports all transitions between active, suspended, and archived states (previously only active/suspended)
+- This Week stats grid columns now adapt to actual project count instead of fixed 5-column layout
 
 ### Removed
 
@@ -47,6 +55,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `CompactBar` component and compact mode functionality
 - Editable keyboard shortcut fields in Settings (shortcuts are now display-only)
 - Launcher path fields with native folder pickers in ProjectEditor (replaced by flexible links)
+- Activity heatmap placeholder in InlineStatsView (replaced by Work Stats table)
 
 ## [1.19.0] - 2026-02-12
 

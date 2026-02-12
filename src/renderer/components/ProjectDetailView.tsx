@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { nanoid } from 'nanoid'
 import { useProjects } from '../hooks/useProjects'
 import type { Project, Task } from '../types'
@@ -113,6 +113,19 @@ export default function ProjectDetailView({ project, onEdit }: Props) {
     await updateTasks(nextTasks)
     clearTaskDragState()
   }
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'n' && event.key !== 'N') return
+      const target = event.target as HTMLElement
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return
+      event.preventDefault()
+      setShowAddInput(true)
+      setTimeout(() => addInputRef.current?.focus(), 0)
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
 
   const renderTask = (task: Task, done = false) => {
     const isPinned = !done && !!task.isToDoNext

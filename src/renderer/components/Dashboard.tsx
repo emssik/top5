@@ -12,7 +12,7 @@ import RepeatView from './RepeatView'
 import InlineStatsView from './InlineStatsView'
 
 export default function Dashboard() {
-  const { projects, config, saveConfig, unarchiveProject, unsuspendProject, suspendProject, reorderProjects } = useProjects()
+  const { projects, config, saveConfig, archiveProject, unarchiveProject, unsuspendProject, suspendProject, reorderProjects } = useProjects()
   const cleanView = config.cleanView ?? false
   const activeProjectsLimit = config.activeProjectsLimit ?? 5
 
@@ -120,6 +120,24 @@ export default function Dashboard() {
     }
   }
 
+  const handleArchiveDrop = async (projectId: string) => {
+    await archiveProject(projectId)
+    if (activeView === `project-${projectId}`) {
+      setActiveView('today')
+    }
+  }
+
+  const handleRestoreArchivedToSuspended = async (projectId: string) => {
+    setRestoreError(null)
+    const error = await unarchiveProject(projectId)
+    if (error) {
+      setRestoreError(error)
+      setTimeout(() => setRestoreError(null), 3000)
+      return
+    }
+    await suspendProject(projectId)
+  }
+
   const handleShortcutAction = useCallback((data: { action: string; index?: number }) => {
     if (data.action === 'select-project' && data.index !== undefined) {
       if (data.index >= 0 && data.index < activeProjects.length) {
@@ -192,9 +210,12 @@ export default function Dashboard() {
         onToggleSuspended={() => setSuspendedOpen((value) => !value)}
         onToggleArchived={() => setArchivedOpen((value) => !value)}
         onRestoreArchived={handleRestoreArchived}
+        onRestoreArchivedToSuspended={handleRestoreArchivedToSuspended}
         onReorderActiveProjects={reorderProjects}
         onUnsuspendProject={handleUnsuspendDrop}
         onSuspendProject={handleSuspendDrop}
+        onArchiveProject={handleArchiveDrop}
+        activeProjectsLimit={activeProjectsLimit}
       />
 
       <div className="main-panel-wrap">

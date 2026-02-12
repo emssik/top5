@@ -2,6 +2,8 @@ import { useState } from 'react'
 import type { Project } from '../types'
 import { projectColorValue } from '../utils/projects'
 
+type DragSource = 'active' | 'suspended' | 'archived'
+
 interface Props {
   activeView: string
   activeProjects: Project[]
@@ -9,6 +11,7 @@ interface Props {
   archivedProjects: Project[]
   suspendedOpen: boolean
   archivedOpen: boolean
+  activeProjectsLimit: number
   theme: 'light' | 'dark'
   onSelectView: (view: string) => void
   onToggleCleanView: () => void
@@ -19,9 +22,11 @@ interface Props {
   onToggleSuspended: () => void
   onToggleArchived: () => void
   onRestoreArchived: (projectId: string) => void
+  onRestoreArchivedToSuspended: (projectId: string) => void | Promise<void>
   onReorderActiveProjects: (orderedIds: string[]) => void | Promise<void>
   onUnsuspendProject: (projectId: string, targetIndex?: number) => void | Promise<void>
   onSuspendProject: (projectId: string) => void | Promise<void>
+  onArchiveProject: (projectId: string) => void | Promise<void>
 }
 
 function SidebarItem({
@@ -72,6 +77,7 @@ export default function Sidebar({
   archivedProjects,
   suspendedOpen,
   archivedOpen,
+  activeProjectsLimit,
   theme,
   onSelectView,
   onToggleCleanView,
@@ -82,17 +88,20 @@ export default function Sidebar({
   onToggleSuspended,
   onToggleArchived,
   onRestoreArchived,
+  onRestoreArchivedToSuspended,
   onReorderActiveProjects,
   onUnsuspendProject,
-  onSuspendProject
+  onSuspendProject,
+  onArchiveProject
 }: Props) {
   const themeIcon = theme === 'light' ? '🌙' : '☀'
   const themeLabel = theme === 'light' ? 'Dark mode' : 'Light mode'
   const [draggedId, setDraggedId] = useState<string | null>(null)
-  const [dragSource, setDragSource] = useState<'active' | 'suspended' | null>(null)
+  const [dragSource, setDragSource] = useState<DragSource | null>(null)
   const [dragOverProjectId, setDragOverProjectId] = useState<string | null>(null)
   const [dragOverActiveZone, setDragOverActiveZone] = useState(false)
   const [dragOverSuspendedZone, setDragOverSuspendedZone] = useState(false)
+  const [dragOverArchivedZone, setDragOverArchivedZone] = useState(false)
 
   const clearDragState = () => {
     setDraggedId(null)
@@ -100,6 +109,7 @@ export default function Sidebar({
     setDragOverProjectId(null)
     setDragOverActiveZone(false)
     setDragOverSuspendedZone(false)
+    setDragOverArchivedZone(false)
   }
 
   const moveInList = (ids: string[], id: string, targetId: string) => {
@@ -112,20 +122,88 @@ export default function Sidebar({
     return next
   }
 
-  const handleDragStart = (projectId: string, source: 'active' | 'suspended') => {
+  const handleDragStart = (projectId: string, source: DragSource) => {
     setDraggedId(projectId)
     setDragSource(source)
   }
 
+  // --- Active zone: accepts from suspended & archived ---
+  const canDropToActive = dragSource === 'suspended' || dragSource === 'archived'
+
+  const handleActiveDragOver = (event: React.DragEvent) => {
+    if (!canDropToActive) return
+    event.preventDefault()
+    setDragOverActiveZone(true)
+  }
+
+  const handleActiveDrop = () => {
+    if (!draggedId || !canDropToActive) return
+    if (dragSource === 'suspended') {
+      onUnsuspendProject(draggedId, activeProjects.length)
+    } else if (dragSource === 'archived') {
+      onRestoreArchived(draggedId)
+    }
+    clearDragState()
+  }
+
+  // --- Suspended zone: accepts from active & archived ---
+  const canDropToSuspended = dragSource === 'active' || dragSource === 'archived'
+
   const handleSuspendDragOver = (event: React.DragEvent) => {
-    if (dragSource !== 'active') return
+    if (!canDropToSuspended) return
     event.preventDefault()
     setDragOverSuspendedZone(true)
   }
 
   const handleSuspendDrop = () => {
-    if (!draggedId || dragSource !== 'active') return
-    onSuspendProject(draggedId)
+    if (!draggedId || !canDropToSuspended) return
+    if (dragSource === 'active') {
+      onSuspendProject(draggedId)
+    } else if (dragSource === 'archived') {
+      onRestoreArchivedToSuspended(draggedId)
+    }
+    clearDragState()
+  }
+
+  // --- Archived zone: accepts from active & suspended ---
+  const canDropToArchived = dragSource === 'active' || dragSource === 'suspended'
+
+  const handleArchivedDragOver = (event: React.DragEvent) => {
+    if (!canDropToArchived) return
+    event.preventDefault()
+    setDragOverArchivedZone(true)
+  }
+
+  const handleArchivedDrop = () => {
+    if (!draggedId || !canDropToArchived) return
+    onArchiveProject(draggedId)
+    clearDragState()
+  }
+
+  // --- Active item drop: accepts reorder from active, insert from suspended & archived ---
+  const handleActiveItemDragOver = (event: React.DragEvent, projectId: string) => {
+    if (!draggedId) return
+    if (dragSource !== 'active' && dragSource !== 'suspended' && dragSource !== 'archived') return
+    event.preventDefault()
+    setDragOverProjectId(projectId)
+    setDragOverActiveZone(false)
+  }
+
+  const handleActiveItemDrop = (event: React.DragEvent, projectId: string) => {
+    event.preventDefault()
+    if (!draggedId || draggedId === projectId) return
+    if (dragSource === 'active') {
+      const ordered = moveInList(activeProjects.map((item) => item.id), draggedId, projectId)
+      onReorderActiveProjects(ordered)
+    } else if (dragSource === 'suspended') {
+      const targetIndex = activeProjects.findIndex((item) => item.id === projectId)
+      onUnsuspendProject(draggedId, targetIndex)
+    } else if (dragSource === 'archived') {
+      const targetIndex = activeProjects.findIndex((item) => item.id === projectId)
+      // Restore archived then reorder — onRestoreArchived handles limit check
+      onRestoreArchived(draggedId)
+      // Position will be at end; reordering after async restore is handled by Dashboard
+    }
     clearDragState()
   }
 
@@ -147,17 +225,9 @@ export default function Sidebar({
         <div className="sidebar-label">Projects</div>
         <div
           className={dragOverActiveZone ? 'sidebar-drop-zone active' : 'sidebar-drop-zone'}
-          onDragOver={(event) => {
-            if (dragSource !== 'suspended') return
-            event.preventDefault()
-            setDragOverActiveZone(true)
-          }}
+          onDragOver={handleActiveDragOver}
           onDragLeave={() => setDragOverActiveZone(false)}
-          onDrop={() => {
-            if (!draggedId || dragSource !== 'suspended') return
-            onUnsuspendProject(draggedId, activeProjects.length)
-            clearDragState()
-          }}
+          onDrop={() => handleActiveDrop()}
         >
           {activeProjects.map((project) => (
             <div
@@ -165,30 +235,13 @@ export default function Sidebar({
               draggable
               onDragStart={() => handleDragStart(project.id, 'active')}
               onDragEnd={clearDragState}
-              onDragOver={(event) => {
-                if (!draggedId) return
-                if (dragSource !== 'active' && dragSource !== 'suspended') return
-                event.preventDefault()
-                setDragOverProjectId(project.id)
-                setDragOverActiveZone(false)
-              }}
+              onDragOver={(event) => handleActiveItemDragOver(event, project.id)}
               onDragLeave={() => {
                 if (dragOverProjectId === project.id) {
                   setDragOverProjectId(null)
                 }
               }}
-              onDrop={(event) => {
-                event.preventDefault()
-                if (!draggedId || draggedId === project.id) return
-                if (dragSource === 'active') {
-                  const ordered = moveInList(activeProjects.map((item) => item.id), draggedId, project.id)
-                  onReorderActiveProjects(ordered)
-                } else if (dragSource === 'suspended') {
-                  const targetIndex = activeProjects.findIndex((item) => item.id === project.id)
-                  onUnsuspendProject(draggedId, targetIndex)
-                }
-                clearDragState()
-              }}
+              onDrop={(event) => handleActiveItemDrop(event, project.id)}
             >
               <SidebarItem
                 active={activeView === `project-${project.id}`}
@@ -248,25 +301,52 @@ export default function Sidebar({
             </div>
           ))}
         </div>
-      </div>
-
-      <div className="sidebar-section">
-        <div className="sidebar-label" style={{ cursor: 'pointer' }} onClick={onToggleArchived}>
+        <div
+          className={dragOverArchivedZone ? 'sidebar-label drag-target' : 'sidebar-label'}
+          style={{ cursor: 'pointer' }}
+          onClick={onToggleArchived}
+          onDragOver={handleArchivedDragOver}
+          onDrop={(event) => {
+            event.preventDefault()
+            handleArchivedDrop()
+          }}
+        >
           Archived <span style={{ fontSize: 9, marginLeft: 2 }}>{archivedOpen ? '▾' : '▸'}</span>
         </div>
-        {archivedOpen && archivedProjects.map((project) => (
-          <SidebarItem
-            key={project.id}
-            icon="📦"
-            label={project.name || 'Untitled Project'}
-            faded
-            onClick={() => {
-              if (confirm(`Restore archived project "${project.name || 'Untitled Project'}"?`)) {
-                onRestoreArchived(project.id)
-              }
-            }}
-          />
-        ))}
+        <div
+          className={dragOverArchivedZone ? 'sidebar-drop-zone active' : 'sidebar-drop-zone'}
+          onDragOver={handleArchivedDragOver}
+          onDragLeave={() => setDragOverArchivedZone(false)}
+          onDrop={(event) => {
+            event.preventDefault()
+            handleArchivedDrop()
+          }}
+        >
+          {archivedOpen && archivedProjects.map((project) => (
+            <div
+              key={project.id}
+              draggable
+              onDragStart={() => handleDragStart(project.id, 'archived')}
+              onDragEnd={clearDragState}
+              onDragOver={handleArchivedDragOver}
+              onDrop={(event) => {
+                event.preventDefault()
+                handleArchivedDrop()
+              }}
+            >
+              <SidebarItem
+                icon="📦"
+                label={project.name || 'Untitled Project'}
+                faded
+                onClick={() => {
+                  if (confirm(`Restore archived project "${project.name || 'Untitled Project'}"?`)) {
+                    onRestoreArchived(project.id)
+                  }
+                }}
+              />
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className="sidebar-section">
