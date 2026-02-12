@@ -1,14 +1,14 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useProjects } from '../hooks/useProjects'
 import ProjectTile from './ProjectTile'
 import QuickNotes from './QuickNotes'
 import Settings from './Settings'
 import QuickTasksView from './QuickTasksView'
 
-type Tab = 'tasks' | 'all-tasks' | 'projects' | 'archive'
+type Tab = 'tasks' | 'projects' | 'archive'
 
 export default function Dashboard() {
-  const { projects, quickTasks, config, saveConfig, reorderProjects, unarchiveProject, setCompactMode } = useProjects()
+  const { projects, config, saveConfig, reorderProjects, unarchiveProject, setCompactMode } = useProjects()
   const cleanView = config.cleanView ?? false
   const [showNotes, setShowNotes] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
@@ -20,13 +20,6 @@ export default function Dashboard() {
 
   const activeProjects = projects.filter((p) => !p.archivedAt)
   const archivedProjects = projects.filter((p) => p.archivedAt)
-  const limit = config.quickTasksLimit ?? 5
-  const activeQuickTasks = quickTasks.filter((t) => !t.completed)
-  const pinnedTaskCount = activeProjects.reduce(
-    (sum, p) => sum + p.tasks.filter((t) => t.isToDoNext && !t.completed).length, 0
-  )
-  const totalTaskCount = activeQuickTasks.length + pinnedTaskCount
-  const hasOverflow = totalTaskCount > limit
 
   const toggleExpanded = useCallback((projectId: string) => {
     setExpandedProjectId((prev) => (prev === projectId ? null : projectId))
@@ -56,6 +49,13 @@ export default function Dashboard() {
     }
   }
 
+  // Restore clean view window size on startup (waits for config to load)
+  useEffect(() => {
+    if (cleanView) {
+      window.api.enterCleanView()
+    }
+  }, [cleanView])
+
   // Auto-switch away from archive when it becomes empty
   useEffect(() => {
     if (activeTab === 'archive' && archivedProjects.length === 0) {
@@ -81,10 +81,29 @@ export default function Dashboard() {
     return cleanup
   }, [handleShortcutAction])
 
+  // Live clock for clean view
+  const [now, setNow] = useState(new Date())
+  useEffect(() => {
+    if (!cleanView) return
+    const interval = setInterval(() => setNow(new Date()), 1000)
+    return () => clearInterval(interval)
+  }, [cleanView])
+
+  const dateLabel = useMemo(() => {
+    const days = ['Niedziela', 'Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota']
+    const months = ['Stycznia', 'Lutego', 'Marca', 'Kwietnia', 'Maja', 'Czerwca', 'Lipca', 'Sierpnia', 'Września', 'Października', 'Listopada', 'Grudnia']
+    return `${days[now.getDay()]}, ${now.getDate()} ${months[now.getMonth()]}`
+  }, [now.getDay(), now.getDate(), now.getMonth()])
+
+  const timeLabel = useMemo(() => {
+    return now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  }, [Math.floor(now.getTime() / 60000)])
+
   if (cleanView) {
     return (
       <div
-        className="group/window h-screen bg-base text-t-primary flex flex-col"
+        className="group/window h-screen flex flex-col clean-view-dots"
+        style={{ fontFamily: "'Caveat', cursive" }}
         onMouseEnter={() => window.api.setTrafficLightsVisible(true)}
         onMouseLeave={() => window.api.setTrafficLightsVisible(false)}
       >
@@ -92,15 +111,22 @@ export default function Dashboard() {
         <div className="h-7 flex-shrink-0 flex items-center justify-end px-3" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}>
           <button
             onClick={toggleCleanView}
-            className="opacity-0 group-hover/window:opacity-100 transition-opacity p-1 rounded hover:bg-hover text-t-muted hover:text-t-primary"
+            className="opacity-0 group-hover/window:opacity-100 transition-opacity p-1 rounded hover:opacity-60"
             title="Exit clean view"
-            style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+            style={{ WebkitAppRegion: 'no-drag', fontFamily: 'system-ui' } as React.CSSProperties}
           >
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
         </div>
 
-        <div className="flex-1 overflow-auto px-4 pb-3">
+        <div className="flex-1 overflow-auto px-5 pb-3">
+          {/* Date + Clock header */}
+          <div className="text-center mb-4">
+            <div className="text-[26px] font-semibold">{dateLabel}</div>
+            <div className="text-[18px] opacity-40 mt-0.5">{timeLabel}</div>
+            <div className="mt-3 mx-auto w-full h-px opacity-15" style={{ backgroundColor: 'currentColor' }} />
+          </div>
+
           <QuickTasksView cleanView />
         </div>
       </div>
@@ -112,8 +138,8 @@ export default function Dashboard() {
       {/* Draggable titlebar area */}
       <div className="h-8 flex-shrink-0" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties} />
 
-      <div className="flex-1 overflow-auto px-6 pb-6">
-        <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between px-6 pb-3 flex-shrink-0">
+        <div className="flex items-center justify-between w-full">
           {/* Tabs */}
           <div className="flex items-center gap-1">
             <button
@@ -126,18 +152,6 @@ export default function Dashboard() {
             >
               Tasks
             </button>
-            {hasOverflow && (
-              <button
-                onClick={() => setActiveTab('all-tasks')}
-                className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
-                  activeTab === 'all-tasks'
-                    ? 'bg-surface text-t-primary'
-                    : 'text-t-secondary hover:text-t-primary'
-                }`}
-              >
-                All Tasks ({totalTaskCount})
-              </button>
-            )}
             <button
               onClick={() => setActiveTab('projects')}
               className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
@@ -224,7 +238,9 @@ export default function Dashboard() {
             )}
           </div>
         </div>
+      </div>
 
+      <div className="flex-1 overflow-auto px-6 pb-6">
         {restoreError && (
           <div className="mb-4 px-3 py-2 rounded-lg bg-red-900/30 border border-red-800 text-red-300 text-sm">
             {restoreError}
@@ -232,9 +248,7 @@ export default function Dashboard() {
         )}
 
         {/* Tab content */}
-        {activeTab === 'tasks' && <QuickTasksView />}
-
-        {activeTab === 'all-tasks' && <QuickTasksView showAll />}
+        {activeTab === 'tasks' && <QuickTasksView showAll />}
 
         {activeTab === 'projects' && (
           activeProjects.length === 0 ? (

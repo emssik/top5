@@ -7,6 +7,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.12.1] - 2026-02-11
+
+### Added
+
+- Confirmation dialog when deleting a project to prevent accidental deletion
+- Enter key handler in ProjectEditor to save changes without clicking the save button
+
+## [1.12.0] - 2026-02-11
+
+### Added
+
+- Launcher buttons (VS Code, iTerm, Obsidian, browser) in focus mode widget for quick access to project tools
+- `n` keyboard shortcut to add a quick task from the dashboard (when no input is focused)
+- "+" toggle button for task input replaces always-visible input field for a cleaner default view
+- Visual separator in all-tasks view dimming tasks below the configured limit
+
+### Changed
+
+- Tasks tab now always shows all tasks (removed separate "All Tasks" tab and overflow indicator)
+- Dashboard tabs header moved outside scroll area so it stays fixed while scrolling
+- Task add input is hidden by default; toggled via "+" button or `n` shortcut
+- README rewritten in English with updated feature descriptions, project structure, and stack details
+
+### Fixed
+
+- Inline task editing intermittent revert bug: switched to ref-based state tracking with fire-and-forget save pattern and single Enter→blur→saveEdit path (affects both QuickTasksView and TaskList)
+
+## [1.11.0] - 2026-02-11
+
+### Added
+
+- Bullet journal style clean view: dotted notebook background, Caveat handwriting font, date and live clock header
+- Warm notebook color palette for light theme (sepia tones replacing cool grays)
+- Focus exit confirmation dialog: prompts to save unsaved minutes when exiting focus mode with tracked time
+- `minutes` field on `FocusCheckIn` for exact elapsed-time tracking (replaces fixed 15/7/0 estimates)
+- `get-focus-unsaved-ms` IPC handler returning milliseconds since last check-in
+- Time display on clean view tasks showing accumulated focus minutes
+- Clean view window size restored on app startup when mode was previously active
+- Caveat variable font bundled in `src/renderer/assets/fonts/`
+
+### Changed
+
+- Clean view layout: bullet markers (`•`, `→`, `×`) replace checkbox controls, larger 22px handwriting-style text
+- Clean view empty state text changed to Polish ("Brak zadań")
+- Light theme CSS variables updated to warm notebook palette (sepia base, olive accents)
+- `checkInMinutes()` now accepts full `FocusCheckIn` object and uses `minutes` field when available
+- Clean view window dimensions adjusted (340px wide, better height calculation per task row)
+- `enter-clean-view` preserves saved bounds on startup restore to avoid overwriting
+
+### Removed
+
+- `pause-focus-mode` IPC handler and pause button from focus mode widget (replaced by save-and-exit flow)
+
 ## [1.10.0] - 2026-02-11
 
 ### Added

@@ -15,7 +15,7 @@ interface Api {
   launchBrowser: (url: string) => Promise<void>
   enterFocusMode: () => Promise<void>
   exitFocusMode: () => Promise<void>
-  pauseFocusMode: () => Promise<void>
+  getFocusUnsavedMs: () => Promise<number>
   saveFocusCheckIn: (checkIn: import('../renderer/types').FocusCheckIn) => Promise<import('../renderer/types').FocusCheckIn[]>
   getFocusCheckIns: (taskId?: string) => Promise<import('../renderer/types').FocusCheckIn[]>
   dismissCheckIn: () => Promise<void>

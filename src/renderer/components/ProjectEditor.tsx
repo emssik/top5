@@ -68,6 +68,13 @@ export default function ProjectEditor({ project, onClose }: Props) {
     }
   }
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
+      e.preventDefault()
+      handleSave()
+    }
+  }
+
   const pickFolder = async (key: 'vscode' | 'iterm') => {
     const path = await window.api.pickFolder()
     if (path) setForm((f) => ({ ...f, [key]: path }))
@@ -119,7 +126,7 @@ export default function ProjectEditor({ project, onClose }: Props) {
   )
 
   return (
-    <div className="rounded-xl bg-card border border-border p-4">
+    <div className="rounded-xl bg-card border border-border p-4" onKeyDown={handleKeyDown}>
       <div className="space-y-3">
         {textField('Project Name', 'name', 'My Project')}
         {textField('Description', 'description', 'Brief description...')}

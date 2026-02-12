@@ -80,7 +80,11 @@ export default function ProjectTile({ project, expanded, onToggleExpand, onDragS
             ▼
           </button>
           <button
-            onClick={() => deleteProject(project.id)}
+            onClick={() => {
+              if (confirm(`Are you sure you want to delete "${project.name || 'Untitled Project'}"? This action cannot be undone.`)) {
+                deleteProject(project.id)
+              }
+            }}
             className="p-1.5 rounded-lg hover:bg-surface text-t-secondary hover:text-red-400 text-xs transition-colors"
             title="Delete"
           >

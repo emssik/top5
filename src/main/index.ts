@@ -115,14 +115,20 @@ app.whenReady().then(() => {
 
   ipcMain.handle('enter-clean-view', () => {
     if (!mainWindow || isCompactMode) return
-    savedBounds = mainWindow.getBounds()
+    // Only save bounds if not already in clean view (avoid overwriting on startup restore)
+    if (!savedBounds) {
+      savedBounds = mainWindow.getBounds()
+    }
     const bounds = mainWindow.getBounds()
     const display = screen.getDisplayNearestPoint({ x: bounds.x, y: bounds.y })
     const workArea = display.workArea
     const data = getAppData()
     const limit = data.config.quickTasksLimit ?? 5
-    const width = 320
-    const height = Math.min(Math.max(limit * 44 + 60, 180), workArea.height)
+    const width = 340
+    // Header: titlebar 28 + padding 16 + date 40 + time 28 + separator 20 + bottom margin 16 ≈ 148
+    // Each task row: 22px font + 12px padding + gaps ≈ 42px
+    // Bottom padding: 12px
+    const height = Math.min(Math.max(limit * 42 + 160, 260), workArea.height)
     mainWindow.setMinimumSize(width, 100)
     mainWindow.setBounds({
       x: bounds.x + Math.round((bounds.width - width) / 2),

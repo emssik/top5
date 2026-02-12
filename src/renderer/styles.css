@@ -41,27 +41,56 @@
   --c-cell-text: #6ee7b7;
 }
 
-/* Light theme */
+/* Light theme — warm notebook palette */
 [data-theme="light"] {
-  --bg-base: #f3f4f6;
-  --bg-card: #ffffff;
-  --bg-surface: #e5e7eb;
-  --c-border: #d1d5db;
-  --c-border-subtle: #e5e7eb;
-  --c-text-primary: #111827;
-  --c-text-heading: #1f2937;
-  --c-text-secondary: #4b5563;
-  --c-text-muted: #9ca3af;
-  --bg-hover: #d1d5db;
-  --bg-accent-row: rgba(209, 250, 229, 0.7);
-  --c-accent-row-text: #065f46;
-  --c-accent-row-heading: #047857;
-  --bg-cell-lo: rgba(209, 250, 229, 0.6);
-  --bg-cell-mid: rgba(167, 243, 208, 0.7);
-  --bg-cell-hi: rgba(110, 231, 183, 0.7);
-  --c-cell-text: #065f46;
+  --bg-base: #faf4e8;
+  --bg-card: #fdf8ef;
+  --bg-surface: #f0e8d8;
+  --c-border: #d4c9a8;
+  --c-border-subtle: #e8dfc8;
+  --c-text-primary: #3c3836;
+  --c-text-heading: #2e2a26;
+  --c-text-secondary: #6b6258;
+  --c-text-muted: #b0a68e;
+  --bg-hover: #e8dfc8;
+  --bg-accent-row: rgba(120, 140, 80, 0.2);
+  --c-accent-row-text: #4a5530;
+  --c-accent-row-heading: #3d4828;
+  --bg-cell-lo: rgba(120, 140, 80, 0.15);
+  --bg-cell-mid: rgba(120, 140, 80, 0.25);
+  --bg-cell-hi: rgba(120, 140, 80, 0.4);
+  --c-cell-text: #4a5530;
+}
+
+@font-face {
+  font-family: 'Caveat';
+  src: url('./assets/fonts/Caveat-Variable.ttf') format('truetype');
+  font-weight: 400 700;
+  font-display: swap;
 }
 
 html, body {
   background: transparent;
+}
+
+/* Clean view — notebook style */
+.clean-view-dots {
+  background-color: #fdf6e3;
+  background-image: radial-gradient(circle, #d4c9a8 0.6px, transparent 0.6px);
+  background-size: 18px 18px;
+  background-position: 9px 9px;
+  color: #3c3836;
+}
+
+[data-theme="dark"] .clean-view-dots,
+:root .clean-view-dots {
+  background-color: #2a2520;
+  background-image: radial-gradient(circle, #4a4035 0.6px, transparent 0.6px);
+  color: #e8dcc8;
+}
+
+[data-theme="light"] .clean-view-dots {
+  background-color: #fdf6e3;
+  background-image: radial-gradient(circle, #d4c9a8 0.6px, transparent 0.6px);
+  color: #3c3836;
 }

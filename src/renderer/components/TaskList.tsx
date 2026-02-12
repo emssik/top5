@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { nanoid } from 'nanoid'
 import type { Project, Task } from '../types'
 import { useProjects } from '../hooks/useProjects'
@@ -13,24 +13,37 @@ export default function TaskList({ project }: Props) {
   const [newTaskTitle, setNewTaskTitle] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingTitle, setEditingTitle] = useState('')
+  const editingIdRef = useRef<string | null>(null)
+  const editingTitleRef = useRef('')
 
   const startEditing = (task: Task) => {
+    editingIdRef.current = task.id
+    editingTitleRef.current = task.title
     setEditingId(task.id)
     setEditingTitle(task.title)
   }
 
-  const saveEdit = async () => {
-    if (!editingId || !editingTitle.trim()) {
+  const saveEdit = () => {
+    const id = editingIdRef.current
+    const title = editingTitleRef.current
+    if (!id || !title.trim()) {
+      editingIdRef.current = null
       setEditingId(null)
       return
     }
-    // Get fresh project from store to avoid overwriting other fields (isToDoNext, completed, etc.)
+    editingIdRef.current = null
+    setEditingId(null)
+    // Fire-and-forget: UI is already cleared, save in background
     const fresh = useProjects.getState().projects.find((p) => p.id === project.id)
-    if (!fresh) { setEditingId(null); return }
+    if (!fresh) return
     const tasks = fresh.tasks.map((t) =>
-      t.id === editingId ? { ...t, title: editingTitle.trim() } : t
+      t.id === id ? { ...t, title: title.trim() } : t
     )
-    await saveProject({ ...fresh, tasks })
+    saveProject({ ...fresh, tasks })
+  }
+
+  const cancelEdit = () => {
+    editingIdRef.current = null
     setEditingId(null)
   }
 
@@ -81,10 +94,10 @@ export default function TaskList({ project }: Props) {
               <input
                 autoFocus
                 value={editingTitle}
-                onChange={(e) => setEditingTitle(e.target.value)}
+                onChange={(e) => { setEditingTitle(e.target.value); editingTitleRef.current = e.target.value }}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') saveEdit()
-                  if (e.key === 'Escape') setEditingId(null)
+                  if (e.key === 'Enter') e.currentTarget.blur()
+                  if (e.key === 'Escape') cancelEdit()
                 }}
                 onBlur={saveEdit}
                 className="flex-1 text-sm bg-surface border border-border rounded px-1 py-0.5 text-t-primary focus:outline-none focus:border-t-secondary"
