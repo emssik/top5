@@ -64,7 +64,7 @@ function showCheckInPopup(): void {
   const display = screen.getDisplayNearestPoint({ x: focusBounds.x, y: focusBounds.y })
 
   const popupWidth = 340
-  const popupHeight = 140
+  const popupHeight = 200
 
   // Position below the focus bar, right-aligned with it
   const x = Math.min(
@@ -129,7 +129,7 @@ export function registerFocusHandlers(
     const { x: workX, y: workY, width: workWidth } = display.workArea
 
     const focusWidth = 420
-    const focusHeight = 38
+    const focusHeight = 110
 
     // Create frameless focus window
     focusWindow = new BrowserWindow({

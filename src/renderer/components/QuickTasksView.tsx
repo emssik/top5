@@ -296,6 +296,10 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
     if (cleanView) {
       const marker = isCompleted ? '×' : task.kind === 'pinned' ? '→' : '•'
       const mins = getTaskMinutes(task)
+      const isFocused = !isCompleted && (
+        (task.kind === 'quick' && config.focusProjectId === STANDALONE_PROJECT_ID && config.focusTaskId === task.id) ||
+        (task.kind === 'pinned' && config.focusProjectId === task.projectId && config.focusTaskId === task.taskId)
+      )
 
       return (
         <div
@@ -307,6 +311,11 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
           onDragOver={!isCompleted ? (e) => handleDragOver(e, task.id) : undefined}
           onDrop={!isCompleted ? () => handleDrop(task.id) : undefined}
         >
+          {/* Focus indicator */}
+          {isFocused && (
+            <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse flex-shrink-0 self-center -mr-1" />
+          )}
+
           {/* Bullet marker — clickable */}
           <button
             onClick={() => isCompleted ? handleUncomplete(task) : handleComplete(task)}

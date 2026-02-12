@@ -39,7 +39,7 @@ export default function CheckInPopup() {
   }
 
   return (
-    <div className="h-screen flex flex-col items-center justify-center p-4 rounded-xl bg-card/95 border border-border/50">
+    <div className="h-screen flex flex-col items-center justify-center p-4 rounded-xl bg-card/95 border border-border/50 overflow-y-auto">
       <p className="text-[11px] text-t-secondary mb-1">Ostatnie 15 min</p>
       <p className="text-[13px] text-t-primary font-medium text-center mb-4 leading-tight">
         Pracowałeś nad{' '}

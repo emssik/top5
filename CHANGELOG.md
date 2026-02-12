@@ -15,8 +15,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `suspendedAt` field on Project type (both main and renderer)
 - Suspend (⏸) button on project tiles and restore (▲) button on suspended project tiles
 - Double-click to copy task title in Focus Mode
+- Hover tooltip in Focus Mode bar showing full task title after 500ms delay
+- Focus indicator (blue pulsing dot) on currently focused task in QuickTasksView clean view
+- Focus badge on active task in TaskList replacing the Focus button
 
 ### Changed
+
+- Focus Mode window height increased to accommodate tooltip area
+- CheckInPopup now scrollable when content overflows
+- Focus button in TaskList hidden by default, shown on row hover
+- Focus lock: starting a new focus session is blocked while one is already active
+- Focus Mode confirm-exit dialog uses fixed 38px height instead of full screen
+
+### Fixed
 
 - Active project count now excludes both archived and suspended projects
 - Unarchive also clears `suspendedAt` to ensure restored projects are fully active

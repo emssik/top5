@@ -13,7 +13,7 @@ interface Props {
 }
 
 const TaskList = forwardRef<TaskListHandle, Props>(function TaskList({ project }, ref) {
-  const { saveProject, setFocus, focusCheckIns, toggleTaskToDoNext } = useProjects()
+  const { saveProject, setFocus, focusCheckIns, toggleTaskToDoNext, config } = useProjects()
   const [newTaskTitle, setNewTaskTitle] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingTitle, setEditingTitle] = useState('')
@@ -139,10 +139,15 @@ const TaskList = forwardRef<TaskListHandle, Props>(function TaskList({ project }
                   {task.isToDoNext ? '📌' : '📌'}
                 </button>
               )}
-              {!task.completed && (
+              {!task.completed && config.focusProjectId === project.id && config.focusTaskId === task.id ? (
+                <span className="text-[10px] px-2 py-0.5 rounded bg-blue-600/30 text-blue-400 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse inline-block" />
+                  Focus
+                </span>
+              ) : !task.completed && (
                 <button
                   onClick={() => handleFocus(task)}
-                  className="text-[10px] px-2 py-0.5 rounded bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 hover:text-blue-300 transition-colors"
+                  className="text-[10px] px-2 py-0.5 rounded bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 hover:text-blue-300 transition-colors opacity-0 group-hover:opacity-100"
                   title="Focus on this task"
                 >
                   Focus

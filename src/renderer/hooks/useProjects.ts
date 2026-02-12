@@ -128,6 +128,8 @@ export const useProjects = create<ProjectsState>((set, get) => ({
 
   setFocus: async (projectId: string | null, taskId: string | null) => {
     const { config } = get()
+    // Block starting new focus while one is already active
+    if (projectId && taskId && config.focusProjectId && config.focusTaskId) return
     const newConfig = { ...config, focusProjectId: projectId, focusTaskId: taskId }
     await window.api.saveConfig(newConfig)
     set({ config: newConfig })
