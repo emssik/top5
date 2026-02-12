@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Repeating tasks system: define tasks with recurring schedules (daily, specific weekdays, every N days, N days after completion)
+- `RepeatingTasksTab` component with CRUD, inline editing, schedule picker, and drag-and-drop reorder
+- "Repeat" tab in TabBar (always visible) for managing repeating task definitions
+- Repeating task proposals in QuickTasksView: due tasks appear as suggestions below active tasks, with accept/dismiss actions
+- Dismissed proposals reset daily; accepted proposals create quick tasks linked via `repeatingTaskId`
+- `afterCompletion` schedule updates `lastCompletedAt` when the linked quick task is completed
+- `useTaskList` hook extracting merged task list logic (active, repeating, completed, proposals, overflow) from QuickTasksView
+- `CompletedPinnedTask` type and `completedPinned` state in Zustand store (replaces local component state)
+- Clean view font picker in Settings: choose between Caveat, Patrick Hand, Kalam, and Architects Daughter
+- Bundled Patrick Hand, Kalam, and Architects Daughter font files with `@font-face` declarations
+- IPC handlers: `save-repeating-task`, `remove-repeating-task`, `reorder-repeating-tasks`, `accept-repeating-proposal`, `dismiss-repeating-proposal`
+- Repeating task marker (`↻`) shown on linked tasks in both clean view and normal view
+- Remove button on completed tasks in clean view (dismisses repeating proposal on removal)
+
+### Changed
+
+- Clean view window height calculation accounts for repeating tasks, proposals, and section separators
+- Clean view font configurable via `AppConfig.cleanViewFont` (default: Caveat)
+- QuickTasksView refactored: task list logic extracted to `useTaskList` hook, completed pinned state lifted to Zustand
+- Settings dialog scrollable with `max-h-[90vh]` and `overflow-auto`
+- Proposal and repeating active tasks rendered in a separate section with visual separators in clean view
+
 ## [1.16.0] - 2026-02-12
 
 ### Added

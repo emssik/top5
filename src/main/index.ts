@@ -130,10 +130,34 @@ app.whenReady().then(() => {
     const data = getAppData()
     const limit = data.config.quickTasksLimit ?? 5
     const width = 340
-    // Header: titlebar 28 + padding 16 + date 40 + time 28 + separator 20 + bottom margin 16 ≈ 148
-    // Each task row: 22px font + 12px padding + gaps ≈ 42px
-    // Bottom padding: 12px
-    const height = Math.min(Math.max(limit * 42 + 160, 260), workArea.height)
+    // Count visible rows to match renderer logic
+    const today = new Date().toISOString().slice(0, 10)
+    const qts: any[] = data.quickTasks ?? []
+    const completedToday = qts.filter((t) => t.completed && t.completedAt?.startsWith(today))
+    const regularCompleted = completedToday.filter((t) => !t.repeatingTaskId)
+    const activeQuick = qts.filter((t) => !t.completed)
+    const pinnedCount = (data.projects ?? [])
+      .filter((p: any) => !p.archivedAt)
+      .reduce((n: number, p: any) => n + p.tasks.filter((t: any) => t.isToDoNext && !t.completed).length, 0)
+    const regularActiveCount = activeQuick.filter((t) => !t.repeatingTaskId).length + pinnedCount
+    const repeatingActiveCount = activeQuick.filter((t) => t.repeatingTaskId).length
+    const activeSlots = Math.max(0, limit - regularCompleted.length)
+    const visibleRegularCount = Math.min(regularActiveCount, activeSlots)
+    // Proposals: approximate count (slightly overcount is safe — window can scroll)
+    const rts: any[] = data.repeatingTasks ?? []
+    const dismissed: string[] = data.dismissedRepeatingDate === today ? (data.dismissedRepeating ?? []) : []
+    const proposalCount = rts.filter((rt) =>
+      !dismissed.includes(rt.id) &&
+      !qts.some((qt) => qt.repeatingTaskId === rt.id && !qt.completed) &&
+      !qts.some((qt) => qt.repeatingTaskId === rt.id && qt.completed && qt.completedAt?.startsWith(today))
+    ).length
+    const totalRows = visibleRegularCount + repeatingActiveCount + proposalCount + completedToday.length
+    // Separators: only when preceding section has content
+    const hasRepeating = repeatingActiveCount + proposalCount > 0
+    const hasCompleted = completedToday.length > 0
+    const separators = (hasRepeating && visibleRegularCount > 0 ? 1 : 0) + (hasCompleted && (visibleRegularCount > 0 || hasRepeating) ? 1 : 0)
+    // Header ≈ 148, each row ≈ 42px, each separator ≈ 20px, bottom padding 12px
+    const height = Math.min(Math.max(totalRows * 42 + separators * 20 + 160, 260), workArea.height)
     mainWindow.setMinimumSize(width, 100)
     mainWindow.setBounds({
       x: bounds.x + Math.round((bounds.width - width) / 2),

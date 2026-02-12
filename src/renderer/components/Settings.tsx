@@ -17,14 +17,18 @@ const shortcutLabels: Record<string, string> = {
   'quick-notes': 'Quick Notes'
 }
 
+const CLEAN_VIEW_FONTS = ['Caveat', 'Patrick Hand', 'Kalam', 'Architects Daughter']
+
 export default function Settings({ open, onClose }: Props) {
   const { config, saveConfig } = useProjects()
   const [shortcuts, setShortcuts] = useState(config.actionShortcuts)
   const [quickTasksLimit, setQuickTasksLimit] = useState(config.quickTasksLimit ?? 5)
+  const [cleanViewFont, setCleanViewFont] = useState(config.cleanViewFont || 'Caveat')
 
   useEffect(() => {
     setShortcuts(config.actionShortcuts)
     setQuickTasksLimit(config.quickTasksLimit ?? 5)
+    setCleanViewFont(config.cleanViewFont || 'Caveat')
   }, [config])
 
   if (!open) return null
@@ -34,7 +38,8 @@ export default function Settings({ open, onClose }: Props) {
       ...config,
       actionShortcuts: shortcuts,
       globalShortcut: shortcuts['toggle-app'] || config.globalShortcut,
-      quickTasksLimit
+      quickTasksLimit,
+      cleanViewFont
     })
     onClose()
   }
@@ -42,7 +47,7 @@ export default function Settings({ open, onClose }: Props) {
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={onClose}>
       <div
-        className="bg-card border border-border rounded-xl w-[480px] flex flex-col"
+        className="bg-card border border-border rounded-xl w-[480px] flex flex-col max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-4 py-3 border-b border-border-subtle">
@@ -54,7 +59,7 @@ export default function Settings({ open, onClose }: Props) {
             Save
           </button>
         </div>
-        <div className="p-4 space-y-4">
+        <div className="p-4 space-y-4 overflow-auto">
           {/* Quick Tasks limit */}
           <div>
             <h3 className="text-xs font-medium text-t-secondary mb-2">Quick Tasks</h3>
@@ -68,6 +73,31 @@ export default function Settings({ open, onClose }: Props) {
                 onChange={(e) => setQuickTasksLimit(Math.max(1, Math.min(20, Number(e.target.value) || 5)))}
                 className="w-16 px-2 py-1 rounded-md bg-surface border border-border text-t-primary text-xs text-center font-mono focus:outline-none focus:border-t-secondary"
               />
+            </div>
+          </div>
+
+          {/* Clean View Font */}
+          <div>
+            <h3 className="text-xs font-medium text-t-secondary mb-2">Clean View Font</h3>
+            <div className="grid grid-cols-2 gap-2">
+              {CLEAN_VIEW_FONTS.map((font) => (
+                <button
+                  key={font}
+                  onClick={() => setCleanViewFont(font)}
+                  className={`px-3 py-2.5 rounded-lg border text-left transition-colors ${
+                    cleanViewFont === font
+                      ? 'border-blue-500/50 bg-blue-600/10'
+                      : 'border-border-subtle bg-surface hover:bg-hover'
+                  }`}
+                >
+                  <span
+                    className="text-lg text-t-primary block"
+                    style={{ fontFamily: `'${font}', cursive` }}
+                  >
+                    {font}
+                  </span>
+                </button>
+              ))}
             </div>
           </div>
 

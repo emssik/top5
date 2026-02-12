@@ -7,6 +7,21 @@ export interface Task {
   toDoNextOrder?: number
 }
 
+export type RepeatSchedule =
+  | { type: 'daily' }
+  | { type: 'weekdays'; days: number[] }
+  | { type: 'interval'; days: number }
+  | { type: 'afterCompletion'; days: number }
+
+export interface RepeatingTask {
+  id: string
+  title: string
+  schedule: RepeatSchedule
+  createdAt: string
+  lastCompletedAt: string | null
+  order: number
+}
+
 export interface QuickTask {
   id: string
   title: string
@@ -14,6 +29,7 @@ export interface QuickTask {
   createdAt: string
   completedAt: string | null
   order: number
+  repeatingTaskId?: string | null
 }
 
 export interface ProjectLaunchers {
@@ -46,6 +62,7 @@ export interface AppConfig {
   cleanView: boolean
   theme: 'light' | 'dark'
   quickTasksLimit: number
+  cleanViewFont: string
 }
 
 export interface FocusCheckIn {
@@ -62,4 +79,7 @@ export interface AppData {
   quickTasks: QuickTask[]
   quickNotes: string
   config: AppConfig
+  repeatingTasks: RepeatingTask[]
+  dismissedRepeating: string[]
+  dismissedRepeatingDate: string
 }

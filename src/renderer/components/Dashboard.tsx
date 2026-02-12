@@ -8,6 +8,7 @@ import QuickTasksView from './QuickTasksView'
 import TabBar, { type Tab } from './TabBar'
 import DashboardToolbar from './DashboardToolbar'
 import CleanViewHeader from './CleanViewHeader'
+import RepeatingTasksTab from './RepeatingTasksTab'
 
 export default function Dashboard() {
   const { projects, config, saveConfig, reorderProjects, unarchiveProject, unsuspendProject, setCompactMode } = useProjects()
@@ -118,7 +119,7 @@ export default function Dashboard() {
     return (
       <div
         className="group/window h-screen flex flex-col clean-view-dots"
-        style={{ fontFamily: "'Caveat', cursive" }}
+        style={{ fontFamily: `'${config.cleanViewFont || 'Caveat'}', cursive` }}
         onMouseEnter={() => window.api.setTrafficLightsVisible(true)}
         onMouseLeave={() => window.api.setTrafficLightsVisible(false)}
       >
@@ -174,6 +175,8 @@ export default function Dashboard() {
         )}
 
         {activeTab === 'tasks' && <QuickTasksView showAll />}
+
+        {activeTab === 'repeat' && <RepeatingTasksTab />}
 
         {activeTab === 'projects' && (
           activeProjects.length === 0 ? (
