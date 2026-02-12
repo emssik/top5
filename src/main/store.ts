@@ -41,6 +41,9 @@ interface RepeatingTask {
   createdAt: string
   lastCompletedAt: string | null
   order: number
+  acceptedCount: number
+  dismissedCount: number
+  completedCount: number
 }
 
 interface QuickTask {
@@ -653,12 +656,15 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
       task.completed = true
       task.completedAt = new Date().toISOString()
       setData('quickTasks', quickTasks)
-      // If afterCompletion schedule, update lastCompletedAt on the repeating task
+      // Update repeating task stats and lastCompletedAt
       if (task.repeatingTaskId) {
         const repeatingTasks = [...data.repeatingTasks]
         const rt = repeatingTasks.find((r) => r.id === task.repeatingTaskId)
-        if (rt && rt.schedule.type === 'afterCompletion') {
-          rt.lastCompletedAt = task.completedAt
+        if (rt) {
+          rt.completedCount = (rt.completedCount || 0) + 1
+          if (rt.schedule.type === 'afterCompletion') {
+            rt.lastCompletedAt = task.completedAt
+          }
           setData('repeatingTasks', repeatingTasks)
         }
       }
@@ -764,7 +770,8 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
   ipcMain.handle('accept-repeating-proposal', (_event, repeatingTaskId: string) => {
     if (typeof repeatingTaskId !== 'string') return
     const data = getData()
-    const rt = data.repeatingTasks.find((t) => t.id === repeatingTaskId)
+    const repeatingTasks = [...data.repeatingTasks]
+    const rt = repeatingTasks.find((t) => t.id === repeatingTaskId)
     if (!rt) return data.quickTasks
     const quickTasks = [...data.quickTasks]
     const newTask: QuickTask = {
@@ -778,6 +785,8 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
     }
     quickTasks.push(newTask)
     setData('quickTasks', quickTasks)
+    rt.acceptedCount = (rt.acceptedCount || 0) + 1
+    setData('repeatingTasks', repeatingTasks)
     notifyAllWindows()
     return quickTasks
   })
@@ -790,6 +799,12 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
     if (!dismissed.includes(repeatingTaskId)) dismissed.push(repeatingTaskId)
     setData('dismissedRepeating', dismissed)
     setData('dismissedRepeatingDate', today)
+    const repeatingTasks = [...data.repeatingTasks]
+    const rt = repeatingTasks.find((t) => t.id === repeatingTaskId)
+    if (rt) {
+      rt.dismissedCount = (rt.dismissedCount || 0) + 1
+      setData('repeatingTasks', repeatingTasks)
+    }
     notifyAllWindows()
   })
 

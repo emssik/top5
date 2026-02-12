@@ -9,7 +9,8 @@ Desktop app for attention management. Forces a limit of 5 projects, minimizes co
 - **Tasks per project** — simple task list with inline editing, completion, time tracking
 - **Focus mode** — dedicated always-on-top window with countdown timer, launcher buttons, and double-click to copy task title
 - **Focus check-ins** — every 15 min asks if you're still working; tracks time per project and task
-- **Clean view** — distraction-free notebook style with handwriting font (Caveat) and dot grid background
+- **Repeating tasks** — recurring task definitions with schedules (daily, specific weekdays, every N days, N days after completion); due tasks appear as proposals below active quick tasks
+- **Clean view** — distraction-free notebook style with configurable handwriting font (Caveat, Patrick Hand, Kalam, Architects Daughter) and dot grid background
 - **Compact mode** — always-on-top slim sidebar with project launchers and quick tasks
 - **Work stats** — heatmap of focus time per project (today / 7d / 14d / month / 6m / 12m)
 - **Quick launchers** — one-click open VS Code, iTerm, Obsidian (specific note), browser per project
@@ -88,11 +89,13 @@ src/
       StatsView.tsx      # Work stats heatmap across time ranges
       TaskList.tsx       # Per-project task CRUD with focus action
       QuickTasksView.tsx # Merged standalone + pinned tasks view
+      RepeatingTasksTab.tsx # Repeating task CRUD with schedule picker and reorder
       CleanViewHeader.tsx # Header for clean/notebook view mode
       QuickNotes.tsx     # Global notes modal
       Settings.tsx       # Shortcut and quick tasks limit configuration
     hooks/
       useProjects.ts   # Zustand store (single source of truth)
+      useTaskList.ts   # Merged task list logic (active, repeating, completed, proposals)
       useTimer.ts      # Live timer hook
     utils/
       checkInTime.ts   # Focus time calculations and formatting
@@ -108,7 +111,7 @@ Data lives in iCloud Drive (`~/Library/Mobile Documents/com~apple~CloudDocs/top5
 
 | File | Content |
 |---|---|
-| `data.yaml` | Projects, quick tasks, quick notes, config |
+| `data.yaml` | Projects, quick tasks, repeating tasks, quick notes, config |
 | `checkins.jsonl` | Focus check-in log (append-only, one JSON per line) |
 | `backups/` | Daily auto-backups (max 7 days, skipped if no changes) |
 

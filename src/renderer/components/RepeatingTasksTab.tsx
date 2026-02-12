@@ -155,7 +155,10 @@ export default function RepeatingTasksTab() {
       schedule: newSchedule,
       createdAt: new Date().toISOString(),
       lastCompletedAt: null,
-      order: repeatingTasks.length
+      order: repeatingTasks.length,
+      acceptedCount: 0,
+      dismissedCount: 0,
+      completedCount: 0
     }
     await saveRepeatingTask(task)
     setNewTitle('')
@@ -252,6 +255,15 @@ export default function RepeatingTasksTab() {
                     </span>
                   )}
                 </div>
+                {((task.acceptedCount || 0) + (task.dismissedCount || 0) + (task.completedCount || 0) > 0) && (
+                  <span className="text-[10px] text-t-muted flex-shrink-0 tabular-nums">
+                    {(task.completedCount || 0) > 0 && <span title="Completed">✓{task.completedCount}</span>}
+                    {(task.completedCount || 0) > 0 && ((task.dismissedCount || 0) > 0 || (task.acceptedCount || 0) > 0) && ' '}
+                    {(task.dismissedCount || 0) > 0 && <span title="Skipped">✕{task.dismissedCount}</span>}
+                    {(task.dismissedCount || 0) > 0 && (task.acceptedCount || 0) > 0 && ' '}
+                    {(task.acceptedCount || 0) > 0 && <span title="Accepted">↓{task.acceptedCount}</span>}
+                  </span>
+                )}
                 <button
                   onClick={() => setSchedulePickerId(schedulePickerId === task.id ? null : task.id)}
                   className="text-[10px] px-2 py-0.5 rounded bg-surface hover:bg-hover text-t-muted hover:text-t-secondary transition-colors flex-shrink-0"
