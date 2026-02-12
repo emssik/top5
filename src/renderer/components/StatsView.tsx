@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useProjects } from '../hooks/useProjects'
 import { checkInMinutes, formatCheckInTime } from '../utils/checkInTime'
-import type { FocusCheckIn } from '../types'
+import { STANDALONE_PROJECT_ID } from '../utils/constants'
 
 type Range = '1d' | '7d' | '14d' | 'month' | 'prev_month' | '6m' | '12m'
 
@@ -93,8 +93,6 @@ function buildBuckets(range: Range): { keys: string[]; label: (k: string) => str
     }
   }
 }
-
-const STANDALONE_PROJECT_ID = '__standalone__'
 
 export default function StatsView() {
   const { projects, focusCheckIns, loaded, loadData } = useProjects()

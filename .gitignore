@@ -35,3 +35,11 @@ build/
 out/
 target/
 *.egg-info/
+
+# TypeScript build artifacts
+*.tsbuildinfo
+src/**/*.js
+src/main/**/*.d.ts
+src/renderer/**/*.d.ts
+electron.vite.config.js
+electron.vite.config.d.ts

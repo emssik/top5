@@ -1,13 +1,12 @@
 import { useProjects } from '../hooks/useProjects'
 import { getActiveLaunchers, launcherMeta, launchByType } from '../utils/launchers'
-
-const STANDALONE_PROJECT_ID = '__standalone__'
+import { STANDALONE_PROJECT_ID } from '../utils/constants'
 
 export default function CompactBar() {
   const { projects, quickTasks, setCompactMode, setFocus } = useProjects()
 
   const activeProjects = projects
-    .filter((p) => !p.archivedAt)
+    .filter((p) => !p.archivedAt && !p.suspendedAt)
     .sort((a, b) => a.order - b.order)
 
   const activeQuickTasks = quickTasks.filter((t) => !t.completed).sort((a, b) => a.order - b.order)

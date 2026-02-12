@@ -1,10 +1,10 @@
-import { useState } from 'react'
+import { useState, type Ref } from 'react'
 import type { Project } from '../types'
 import { useProjects } from '../hooks/useProjects'
 import { calcProjectTime, formatCheckInTime } from '../utils/checkInTime'
 import { getActiveLaunchers, launcherMeta, launchByType } from '../utils/launchers'
 import ProjectEditor from './ProjectEditor'
-import TaskList from './TaskList'
+import TaskList, { type TaskListHandle } from './TaskList'
 
 interface Props {
   project: Project
@@ -14,11 +14,14 @@ interface Props {
   onDragOver: (e: React.DragEvent) => void
   onDrop: () => void
   isDragOver: boolean
+  isSuspended?: boolean
+  onUnsuspend?: () => void
+  taskListRef?: Ref<TaskListHandle>
 }
 
-export default function ProjectTile({ project, expanded, onToggleExpand, onDragStart, onDragOver, onDrop, isDragOver }: Props) {
+export default function ProjectTile({ project, expanded, onToggleExpand, onDragStart, onDragOver, onDrop, isDragOver, isSuspended, onUnsuspend, taskListRef }: Props) {
   const [editing, setEditing] = useState(false)
-  const { deleteProject, archiveProject, focusCheckIns } = useProjects()
+  const { deleteProject, archiveProject, suspendProject, focusCheckIns } = useProjects()
   const projectMinutes = calcProjectTime(focusCheckIns, project.id)
   const timeFormatted = formatCheckInTime(projectMinutes)
 
@@ -72,6 +75,23 @@ export default function ProjectTile({ project, expanded, onToggleExpand, onDragS
           >
             ✎
           </button>
+          {isSuspended ? (
+            <button
+              onClick={onUnsuspend}
+              className="p-1.5 rounded-lg hover:bg-surface text-t-secondary hover:text-green-400 text-xs transition-colors"
+              title="Restore to active"
+            >
+              ▲
+            </button>
+          ) : (
+            <button
+              onClick={() => suspendProject(project.id)}
+              className="p-1.5 rounded-lg hover:bg-surface text-t-secondary hover:text-blue-400 text-xs transition-colors"
+              title="Suspend"
+            >
+              ⏸
+            </button>
+          )}
           <button
             onClick={() => archiveProject(project.id)}
             className="p-1.5 rounded-lg hover:bg-surface text-t-secondary hover:text-amber-400 text-xs transition-colors"
@@ -114,7 +134,7 @@ export default function ProjectTile({ project, expanded, onToggleExpand, onDragS
         </div>
       )}
 
-      {expanded && <TaskList project={project} />}
+      {expanded && <TaskList ref={taskListRef} project={project} />}
     </div>
   )
 }

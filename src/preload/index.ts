@@ -8,12 +8,15 @@ interface ShortcutActionPayload {
   index?: number
 }
 
-const api = {
+export const api = {
+  getIsDev: () => ipcRenderer.invoke('get-is-dev'),
   getAppData: () => ipcRenderer.invoke('get-app-data'),
   saveProject: (project: Project) => ipcRenderer.invoke('save-project', project),
   deleteProject: (id: string) => ipcRenderer.invoke('delete-project', id),
   archiveProject: (id: string) => ipcRenderer.invoke('archive-project', id),
   unarchiveProject: (id: string) => ipcRenderer.invoke('unarchive-project', id),
+  suspendProject: (id: string) => ipcRenderer.invoke('suspend-project', id),
+  unsuspendProject: (id: string) => ipcRenderer.invoke('unsuspend-project', id),
   saveQuickNotes: (notes: string) => ipcRenderer.invoke('save-quick-notes', notes),
   saveConfig: (config: AppConfig) => ipcRenderer.invoke('save-config', config),
   updateProjectTimer: (projectId: string, totalTimeMs: number, timerStartedAt: string | null) =>
@@ -43,6 +46,8 @@ const api = {
   completeQuickTask: (id: string) => ipcRenderer.invoke('complete-quick-task', id),
   uncompleteQuickTask: (id: string) => ipcRenderer.invoke('uncomplete-quick-task', id),
   reorderQuickTasks: (orderedIds: string[]) => ipcRenderer.invoke('reorder-quick-tasks', orderedIds),
+  reorderProjects: (orderedIds: string[]) => ipcRenderer.invoke('reorder-projects', orderedIds),
+  reorderPinnedTasks: (updates: { projectId: string; taskId: string; order: number }[]) => ipcRenderer.invoke('reorder-pinned-tasks', updates),
   toggleTaskToDoNext: (projectId: string, taskId: string) => ipcRenderer.invoke('toggle-task-to-do-next', projectId, taskId),
   onReloadData: (callback: () => void) => {
     ipcRenderer.on('reload-data', callback)
@@ -68,7 +73,7 @@ if (process.contextIsolated) {
     console.error(error)
   }
 } else {
-  const windowWithApi = window as Window & { electron: typeof electronAPI; api: typeof api }
+  const windowWithApi = window as unknown as Window & { electron: typeof electronAPI; api: typeof api }
   windowWithApi.electron = electronAPI
   windowWithApi.api = api
 }

@@ -7,6 +7,73 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.16.0] - 2026-02-12
+
+### Added
+
+- Content Security Policy (CSP) meta tag on renderer HTML
+- Obsidian URI command whitelist: only `open` and `vault` commands are allowed
+- Structural IPC input validation for `save-project`, `save-config`, and `save-quick-task` handlers
+- `will-navigate` event prevention on main window to block unwanted navigation
+- Focus lock: prevent opening duplicate focus windows when one is already active
+- Batch `reorder-projects` and `reorder-pinned-tasks` IPC handlers replacing per-item saves
+- `typecheck` npm script; `build` now runs `tsc --build` before `electron-vite build`
+- Extracted `TabBar`, `DashboardToolbar`, and `CleanViewHeader` components from Dashboard
+- Shared `constants.ts` module for `STANDALONE_PROJECT_ID` sentinel value
+- Project suspend/unsuspend feature: temporarily pause projects without archiving them
+- Suspended tab in Dashboard showing suspended projects with restore option
+- `suspendProject` and `unsuspendProject` IPC handlers, preload bridge, and Zustand actions
+- `suspendedAt` field on Project type (both main and renderer)
+- Suspend button on project tiles and restore button on suspended project tiles
+- Double-click to copy task title in Focus Mode
+- Hover tooltip in Focus Mode bar showing full task title after 500ms delay
+- Focus indicator (blue pulsing dot) on currently focused task in QuickTasksView clean view
+- Focus badge on active task in TaskList replacing the Focus button
+
+### Changed
+
+- Dashboard refactored: toolbar, tab bar, and clean view header extracted into dedicated components
+- Project and pinned task reorder operations use dedicated batch IPC instead of sequential per-item saves
+- Settings component syncs local state with config changes via `useEffect`
+- Replaced `any` type casts with `unknown` + `Record<string, unknown>` in main process and preload
+- Removed `visibleOnAllWorkspaces` from focus and check-in windows
+- `tsconfig.node.json` includes `src/renderer/types/index.ts` for preload type resolution
+- Focus Mode window height increased to accommodate tooltip area
+- CheckInPopup now scrollable when content overflows
+- Focus button in TaskList hidden by default, shown on row hover
+- Focus Mode confirm-exit dialog uses fixed 38px height instead of full screen
+- README updated with suspend feature, dev mode isolation, and revised project structure
+
+### Fixed
+
+- New project creation now includes `suspendedAt: null` field
+- Active project count now excludes both archived and suspended projects
+- Unarchive also clears `suspendedAt` to ensure restored projects are fully active
+- Error message for max-project limit updated to mention suspend as an option
+- Non-null assertion for Obsidian picker URI result in ProjectEditor
+
+## [1.14.0] - 2026-02-12
+
+### Changed
+
+- Focus mode now opens in a dedicated window using hash-based routing (`#focus`) instead of rendering inline in the main window
+- Focus window loads data from the Zustand store independently, allowing main window and focus window to coexist
+- Global toggle-app shortcut no longer blocks when focus window is open, so the main window can be toggled freely during focus sessions
+- TaskList component refactored to `forwardRef` with `TaskListHandle` interface exposing `focusAddInput()`
+
+### Added
+
+- `n` keyboard shortcut on the Projects tab to focus the add-task input when a project tile is expanded
+
+## [1.13.0] - 2026-02-12
+
+### Added
+
+- Dev mode isolation: separate data directory (`~/.config/top5-dev/`) when running in development, preventing dev sessions from modifying production data or syncing to iCloud
+- Visual DEV indicator badge in Dashboard and Focus Mode widget when running in development mode
+- Window title shows `[DEV] Top5` in development mode for easy identification
+- `get-is-dev` IPC handler and `getIsDev` preload API for renderer-side dev mode detection
+
 ## [1.12.1] - 2026-02-11
 
 ### Added

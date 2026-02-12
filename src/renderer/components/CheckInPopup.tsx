@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import type { AppData } from '../types'
+import { STANDALONE_PROJECT_ID } from '../utils/constants'
 
 export default function CheckInPopup() {
   const [taskTitle, setTaskTitle] = useState('')
-  const [projectName, setProjectName] = useState('')
   const [projectId, setProjectId] = useState('')
   const [taskId, setTaskId] = useState('')
 
@@ -14,14 +14,12 @@ export default function CheckInPopup() {
       setProjectId(focusPid)
       setTaskId(focusTid)
 
-      if (focusPid === '__standalone__') {
+      if (focusPid === STANDALONE_PROJECT_ID) {
         const qt = (data.quickTasks ?? []).find((t) => t.id === focusTid)
-        setProjectName('Quick Task')
         setTaskTitle(qt?.title ?? '')
       } else {
         const project = data.projects.find((p) => p.id === focusPid)
         const task = project?.tasks.find((t) => t.id === focusTid)
-        setProjectName(project?.name ?? '')
         setTaskTitle(task?.title ?? '')
       }
     })
@@ -39,7 +37,7 @@ export default function CheckInPopup() {
   }
 
   return (
-    <div className="h-screen flex flex-col items-center justify-center p-4 rounded-xl bg-card/95 border border-border/50">
+    <div className="h-screen flex flex-col items-center justify-center p-4 rounded-xl bg-card/95 border border-border/50 overflow-y-auto">
       <p className="text-[11px] text-t-secondary mb-1">Ostatnie 15 min</p>
       <p className="text-[13px] text-t-primary font-medium text-center mb-4 leading-tight">
         Pracowałeś nad{' '}

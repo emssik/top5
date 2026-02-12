@@ -7,7 +7,7 @@ Desktop app for attention management. Forces a limit of 5 projects, minimizes co
 - **5 project limit** — forces prioritization, no infinite backlog
 - **Quick tasks** — standalone task list + pinned "To Do Next" tasks from projects, configurable limit (default 5)
 - **Tasks per project** — simple task list with inline editing, completion, time tracking
-- **Focus mode** — frameless always-on-top mini-widget with countdown timer to next check-in, visible on all macOS Spaces
+- **Focus mode** — dedicated always-on-top window with countdown timer, launcher buttons, and double-click to copy task title
 - **Focus check-ins** — every 15 min asks if you're still working; tracks time per project and task
 - **Clean view** — distraction-free notebook style with handwriting font (Caveat) and dot grid background
 - **Compact mode** — always-on-top slim sidebar with project launchers and quick tasks
@@ -16,9 +16,11 @@ Desktop app for attention management. Forces a limit of 5 projects, minimizes co
 - **Native file pickers** — system dialogs for selecting folders and Obsidian notes
 - **Drag-and-drop reordering** — arrange projects and quick tasks by priority
 - **Project archiving** — archive instead of delete, restore anytime
+- **Project suspend** — temporarily pause projects without archiving, excluded from the 5-project limit
 - **Light/dark theme** — warm notebook palette (light) or OLED-friendly dark, persisted across sessions
 - **Quick notes** — global scratchpad
 - **Global shortcuts** — `Cmd+Shift+Space` to toggle app, `Cmd+1-5` to jump to project, all configurable
+- **Dev mode isolation** — separate data directory in development, preventing dev sessions from modifying production data
 - **Persistent storage** — YAML config + JSONL check-ins, synced via iCloud Drive with daily backups
 
 ## Stack
@@ -55,7 +57,7 @@ See `docs/CODING_GUIDE.md` for coding conventions and patterns used in this proj
 | `Cmd+1..5` | Switch to project (configurable) |
 | `Cmd+Shift+F` | Toggle focus mode (configurable) |
 | `Cmd+Shift+N` | Quick notes (configurable) |
-| `n` | Add quick task (when in dashboard) |
+| `n` | Add quick task / focus add-task input (context-dependent) |
 
 All shortcuts are configurable in Settings.
 
@@ -75,23 +77,27 @@ src/
   renderer/
     App.tsx            # Root — routes between Dashboard and FocusMode
     components/
-      Dashboard.tsx    # Main view with tabbed interface (Tasks/Projects/Archive)
-      ProjectTile.tsx  # Project card with launchers, timer, tasks
-      ProjectEditor.tsx # Modal editor with native file pickers
-      FocusMode.tsx    # Always-on-top task widget with countdown
-      CheckInPopup.tsx # Focus check-in popup (yes/no/a little)
-      CompactBar.tsx   # Compact mode sidebar (260px, always-on-top)
-      StatsView.tsx    # Work stats heatmap across time ranges
-      TaskList.tsx     # Per-project task CRUD with focus action
+      Dashboard.tsx      # Main view with tabbed interface (Tasks/Projects/Suspended/Archive)
+      DashboardToolbar.tsx # Top toolbar with view toggles and actions
+      TabBar.tsx         # Reusable tab bar component
+      ProjectTile.tsx    # Project card with launchers, timer, tasks
+      ProjectEditor.tsx  # Modal editor with native file pickers
+      FocusMode.tsx      # Dedicated focus window with countdown and launchers
+      CheckInPopup.tsx   # Focus check-in popup (yes/no/a little)
+      CompactBar.tsx     # Compact mode sidebar (260px, always-on-top)
+      StatsView.tsx      # Work stats heatmap across time ranges
+      TaskList.tsx       # Per-project task CRUD with focus action
       QuickTasksView.tsx # Merged standalone + pinned tasks view
-      QuickNotes.tsx   # Global notes modal
-      Settings.tsx     # Shortcut and quick tasks limit configuration
+      CleanViewHeader.tsx # Header for clean/notebook view mode
+      QuickNotes.tsx     # Global notes modal
+      Settings.tsx       # Shortcut and quick tasks limit configuration
     hooks/
       useProjects.ts   # Zustand store (single source of truth)
       useTimer.ts      # Live timer hook
     utils/
       checkInTime.ts   # Focus time calculations and formatting
       launchers.ts     # Launcher metadata and dispatch helpers
+      constants.ts     # Shared constants and configuration defaults
     types/
       index.ts         # TypeScript interfaces
 ```

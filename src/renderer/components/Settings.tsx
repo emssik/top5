@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useProjects } from '../hooks/useProjects'
 
 interface Props {
@@ -6,21 +6,26 @@ interface Props {
   onClose: () => void
 }
 
-const defaultShortcuts: Record<string, { label: string; default: string }> = {
-  'toggle-app': { label: 'Toggle App', default: 'CommandOrControl+Shift+Space' },
-  'project-1': { label: 'Project 1', default: 'CommandOrControl+1' },
-  'project-2': { label: 'Project 2', default: 'CommandOrControl+2' },
-  'project-3': { label: 'Project 3', default: 'CommandOrControl+3' },
-  'project-4': { label: 'Project 4', default: 'CommandOrControl+4' },
-  'project-5': { label: 'Project 5', default: 'CommandOrControl+5' },
-  'toggle-focus': { label: 'Toggle Focus', default: 'CommandOrControl+Shift+F' },
-  'quick-notes': { label: 'Quick Notes', default: 'CommandOrControl+Shift+N' }
+const shortcutLabels: Record<string, string> = {
+  'toggle-app': 'Toggle App',
+  'project-1': 'Project 1',
+  'project-2': 'Project 2',
+  'project-3': 'Project 3',
+  'project-4': 'Project 4',
+  'project-5': 'Project 5',
+  'toggle-focus': 'Toggle Focus',
+  'quick-notes': 'Quick Notes'
 }
 
 export default function Settings({ open, onClose }: Props) {
   const { config, saveConfig } = useProjects()
   const [shortcuts, setShortcuts] = useState(config.actionShortcuts)
   const [quickTasksLimit, setQuickTasksLimit] = useState(config.quickTasksLimit ?? 5)
+
+  useEffect(() => {
+    setShortcuts(config.actionShortcuts)
+    setQuickTasksLimit(config.quickTasksLimit ?? 5)
+  }, [config])
 
   if (!open) return null
 
@@ -70,11 +75,11 @@ export default function Settings({ open, onClose }: Props) {
           <div>
             <h3 className="text-xs font-medium text-t-secondary mb-2">Keyboard Shortcuts</h3>
           </div>
-          {Object.entries(defaultShortcuts).map(([key, { label, default: def }]) => (
+          {Object.entries(shortcutLabels).map(([key, label]) => (
             <div key={key} className="flex items-center justify-between">
               <span className="text-sm text-t-secondary">{label}</span>
               <input
-                value={shortcuts[key] || def}
+                value={shortcuts[key] || ''}
                 onChange={(e) => setShortcuts((s) => ({ ...s, [key]: e.target.value }))}
                 className="w-56 px-2 py-1 rounded-md bg-surface border border-border text-t-primary text-xs font-mono focus:outline-none focus:border-t-secondary"
               />

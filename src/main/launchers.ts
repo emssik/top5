@@ -3,6 +3,7 @@ import { shell } from 'electron'
 import type { IpcMain } from 'electron'
 
 const ALLOWED_BROWSER_PROTOCOLS = new Set(['http:', 'https:'])
+const ALLOWED_OBSIDIAN_COMMANDS = new Set(['open', 'vault'])
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0
@@ -73,6 +74,14 @@ export function registerLauncherHandlers(ipcMain: IpcMain): void {
     const trimmed = uri.trim()
 
     if (trimmed.startsWith('obsidian://')) {
+      // Only allow whitelisted commands (open, vault)
+      try {
+        const parsed = new URL(trimmed)
+        const command = parsed.pathname.replace(/^\/+/, '') || parsed.hostname
+        if (!ALLOWED_OBSIDIAN_COMMANDS.has(command)) return
+      } catch {
+        return
+      }
       shell.openExternal(trimmed)
     } else {
       shell.openExternal(`obsidian://open?vault=${encodeURIComponent(trimmed)}`)

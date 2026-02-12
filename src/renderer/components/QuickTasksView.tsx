@@ -3,8 +3,7 @@ import { nanoid } from 'nanoid'
 import { useProjects } from '../hooks/useProjects'
 import { calcTaskTime, calcQuickTaskTime, formatCheckInTime } from '../utils/checkInTime'
 import type { QuickTask } from '../types'
-
-const STANDALONE_PROJECT_ID = '__standalone__'
+import { STANDALONE_PROJECT_ID } from '../utils/constants'
 
 interface MergedTask {
   kind: 'quick' | 'pinned'
@@ -33,7 +32,6 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
     removeQuickTask,
     completeQuickTask,
     uncompleteQuickTask,
-    reorderQuickTasks,
     toggleTaskToDoNext,
     setFocus
   } = useProjects()
@@ -250,27 +248,23 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
     const taskMap = new Map(allActiveTasks.map((t) => [t.id, t]))
     const reordered = ids.map((id, i) => ({ ...taskMap.get(id)!, order: i }))
 
-    for (const t of reordered.filter((t) => t.kind === 'quick')) {
-      const existing = quickTasks.find((qt) => qt.id === t.id)
-      if (existing && existing.order !== t.order) {
-        await saveQuickTask({ ...existing, order: t.order })
-      }
+    // Batch reorder quick tasks via existing IPC
+    const quickReordered = reordered.filter((t) => t.kind === 'quick')
+    if (quickReordered.length > 0) {
+      // reorder-quick-tasks expects ordered IDs; order index assigned server-side
+      const orderedQuickIds = quickReordered.sort((a, b) => a.order - b.order).map((t) => t.id)
+      await window.api.reorderQuickTasks(orderedQuickIds)
     }
 
-    const pinnedByProject = new Map<string, { taskId: string; order: number }[]>()
+    // Batch reorder pinned tasks
+    const pinnedUpdates: { projectId: string; taskId: string; order: number }[] = []
     for (const t of reordered.filter((r) => r.kind === 'pinned')) {
-      if (!t.projectId || !t.taskId) continue
-      if (!pinnedByProject.has(t.projectId)) pinnedByProject.set(t.projectId, [])
-      pinnedByProject.get(t.projectId)!.push({ taskId: t.taskId, order: t.order })
+      if (t.projectId && t.taskId) {
+        pinnedUpdates.push({ projectId: t.projectId, taskId: t.taskId, order: t.order })
+      }
     }
-    for (const [projectId, updates] of pinnedByProject) {
-      const project = projects.find((p) => p.id === projectId)
-      if (!project) continue
-      const updatedTasks = project.tasks.map((task) => {
-        const update = updates.find((u) => u.taskId === task.id)
-        return update ? { ...task, toDoNextOrder: update.order } : task
-      })
-      await saveProject({ ...project, tasks: updatedTasks })
+    if (pinnedUpdates.length > 0) {
+      await window.api.reorderPinnedTasks(pinnedUpdates)
     }
 
     draggedId.current = null
@@ -296,6 +290,10 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
     if (cleanView) {
       const marker = isCompleted ? '×' : task.kind === 'pinned' ? '→' : '•'
       const mins = getTaskMinutes(task)
+      const isFocused = !isCompleted && (
+        (task.kind === 'quick' && config.focusProjectId === STANDALONE_PROJECT_ID && config.focusTaskId === task.id) ||
+        (task.kind === 'pinned' && config.focusProjectId === task.projectId && config.focusTaskId === task.taskId)
+      )
 
       return (
         <div
@@ -307,6 +305,11 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
           onDragOver={!isCompleted ? (e) => handleDragOver(e, task.id) : undefined}
           onDrop={!isCompleted ? () => handleDrop(task.id) : undefined}
         >
+          {/* Focus indicator */}
+          {isFocused && (
+            <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse flex-shrink-0 self-center -mr-1" />
+          )}
+
           {/* Bullet marker — clickable */}
           <button
             onClick={() => isCompleted ? handleUncomplete(task) : handleComplete(task)}

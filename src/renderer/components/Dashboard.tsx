@@ -1,14 +1,16 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useProjects } from '../hooks/useProjects'
 import ProjectTile from './ProjectTile'
+import type { TaskListHandle } from './TaskList'
 import QuickNotes from './QuickNotes'
 import Settings from './Settings'
 import QuickTasksView from './QuickTasksView'
-
-type Tab = 'tasks' | 'projects' | 'archive'
+import TabBar, { type Tab } from './TabBar'
+import DashboardToolbar from './DashboardToolbar'
+import CleanViewHeader from './CleanViewHeader'
 
 export default function Dashboard() {
-  const { projects, config, saveConfig, reorderProjects, unarchiveProject, setCompactMode } = useProjects()
+  const { projects, config, saveConfig, reorderProjects, unarchiveProject, unsuspendProject, setCompactMode } = useProjects()
   const cleanView = config.cleanView ?? false
   const [showNotes, setShowNotes] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
@@ -17,9 +19,16 @@ export default function Dashboard() {
   const [restoreError, setRestoreError] = useState<string | null>(null)
   const draggedId = useRef<string | null>(null)
   const [dragOverId, setDragOverId] = useState<string | null>(null)
+  const taskListRef = useRef<TaskListHandle | null>(null)
+  const [isDev, setIsDev] = useState(false)
 
-  const activeProjects = projects.filter((p) => !p.archivedAt)
+  const activeProjects = projects.filter((p) => !p.archivedAt && !p.suspendedAt)
+  const suspendedProjects = projects.filter((p) => p.suspendedAt && !p.archivedAt)
   const archivedProjects = projects.filter((p) => p.archivedAt)
+
+  useEffect(() => {
+    window.api.getIsDev().then(setIsDev)
+  }, [])
 
   const toggleExpanded = useCallback((projectId: string) => {
     setExpandedProjectId((prev) => (prev === projectId ? null : projectId))
@@ -28,6 +37,15 @@ export default function Dashboard() {
   const handleRestore = async (id: string) => {
     setRestoreError(null)
     const error = await unarchiveProject(id)
+    if (error) {
+      setRestoreError(error)
+      setTimeout(() => setRestoreError(null), 3000)
+    }
+  }
+
+  const handleUnsuspend = async (id: string) => {
+    setRestoreError(null)
+    const error = await unsuspendProject(id)
     if (error) {
       setRestoreError(error)
       setTimeout(() => setRestoreError(null), 3000)
@@ -49,19 +67,20 @@ export default function Dashboard() {
     }
   }
 
-  // Restore clean view window size on startup (waits for config to load)
   useEffect(() => {
     if (cleanView) {
       window.api.enterCleanView()
     }
   }, [cleanView])
 
-  // Auto-switch away from archive when it becomes empty
   useEffect(() => {
     if (activeTab === 'archive' && archivedProjects.length === 0) {
       setActiveTab('tasks')
     }
-  }, [activeTab, archivedProjects.length])
+    if (activeTab === 'suspended' && suspendedProjects.length === 0) {
+      setActiveTab('tasks')
+    }
+  }, [activeTab, archivedProjects.length, suspendedProjects.length])
 
   const handleShortcutAction = useCallback((data: { action: string; index?: number }) => {
     if (data.action === 'select-project' && data.index !== undefined) {
@@ -81,23 +100,19 @@ export default function Dashboard() {
     return cleanup
   }, [handleShortcutAction])
 
-  // Live clock for clean view
-  const [now, setNow] = useState(new Date())
   useEffect(() => {
-    if (!cleanView) return
-    const interval = setInterval(() => setNow(new Date()), 1000)
-    return () => clearInterval(interval)
-  }, [cleanView])
-
-  const dateLabel = useMemo(() => {
-    const days = ['Niedziela', 'Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota']
-    const months = ['Stycznia', 'Lutego', 'Marca', 'Kwietnia', 'Maja', 'Czerwca', 'Lipca', 'Sierpnia', 'Września', 'Października', 'Listopada', 'Grudnia']
-    return `${days[now.getDay()]}, ${now.getDate()} ${months[now.getMonth()]}`
-  }, [now.getDay(), now.getDate(), now.getMonth()])
-
-  const timeLabel = useMemo(() => {
-    return now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-  }, [Math.floor(now.getTime() / 60000)])
+    if (activeTab !== 'projects' || !expandedProjectId) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement).tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return
+      if (e.key === 'n' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        e.preventDefault()
+        taskListRef.current?.focusAddInput()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [activeTab, expandedProjectId])
 
   if (cleanView) {
     return (
@@ -107,7 +122,6 @@ export default function Dashboard() {
         onMouseEnter={() => window.api.setTrafficLightsVisible(true)}
         onMouseLeave={() => window.api.setTrafficLightsVisible(false)}
       >
-        {/* Draggable titlebar + exit button (visible only on window hover) */}
         <div className="h-7 flex-shrink-0 flex items-center justify-end px-3" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}>
           <button
             onClick={toggleCleanView}
@@ -120,13 +134,7 @@ export default function Dashboard() {
         </div>
 
         <div className="flex-1 overflow-auto px-5 pb-3">
-          {/* Date + Clock header */}
-          <div className="text-center mb-4">
-            <div className="text-[26px] font-semibold">{dateLabel}</div>
-            <div className="text-[18px] opacity-40 mt-0.5">{timeLabel}</div>
-            <div className="mt-3 mx-auto w-full h-px opacity-15" style={{ backgroundColor: 'currentColor' }} />
-          </div>
-
+          <CleanViewHeader />
           <QuickTasksView cleanView />
         </div>
       </div>
@@ -135,108 +143,26 @@ export default function Dashboard() {
 
   return (
     <div className="h-screen bg-base text-t-primary flex flex-col">
-      {/* Draggable titlebar area */}
       <div className="h-8 flex-shrink-0" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties} />
 
       <div className="flex items-center justify-between px-6 pb-3 flex-shrink-0">
         <div className="flex items-center justify-between w-full">
-          {/* Tabs */}
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setActiveTab('tasks')}
-              className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
-                activeTab === 'tasks'
-                  ? 'bg-surface text-t-primary'
-                  : 'text-t-secondary hover:text-t-primary'
-              }`}
-            >
-              Tasks
-            </button>
-            <button
-              onClick={() => setActiveTab('projects')}
-              className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
-                activeTab === 'projects'
-                  ? 'bg-surface text-t-primary'
-                  : 'text-t-secondary hover:text-t-primary'
-              }`}
-            >
-              Projects
-            </button>
-            {archivedProjects.length > 0 && (
-              <button
-                onClick={() => setActiveTab('archive')}
-                className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
-                  activeTab === 'archive'
-                    ? 'bg-surface text-t-primary'
-                    : 'text-t-secondary hover:text-t-primary'
-                }`}
-              >
-                Archive ({archivedProjects.length})
-              </button>
-            )}
-          </div>
-
-          {/* Toolbar */}
-          <div className="flex items-center gap-1">
-            <button
-              onClick={toggleTheme}
-              className="p-2 rounded-lg hover:bg-hover text-t-muted hover:text-t-primary transition-colors"
-              title={config.theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
-            >
-              {config.theme === 'light' ? (
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-              ) : (
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-              )}
-            </button>
-            <button
-              onClick={() => window.api.openStatsWindow()}
-              className="p-2 rounded-lg hover:bg-hover text-t-muted hover:text-t-primary transition-colors"
-              title="Work stats"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="18" y="3" width="4" height="18" rx="1"/><rect x="10" y="8" width="4" height="13" rx="1"/><rect x="2" y="13" width="4" height="8" rx="1"/></svg>
-            </button>
-            <button
-              onClick={() => setCompactMode(true)}
-              className="p-2 rounded-lg hover:bg-hover text-t-muted hover:text-t-primary transition-colors"
-              title="Compact mode"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-            </button>
-            <button
-              onClick={toggleCleanView}
-              className="p-2 rounded-lg hover:bg-hover text-t-muted hover:text-t-primary transition-colors"
-              title="Clean view"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-            </button>
-            <button
-              onClick={() => setShowNotes(true)}
-              className="p-2 rounded-lg hover:bg-hover text-t-muted hover:text-t-primary transition-colors"
-              title="Quick Notes"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-            </button>
-            <button
-              onClick={() => setShowSettings(true)}
-              className="p-2 rounded-lg hover:bg-hover text-t-muted hover:text-t-primary transition-colors"
-              title="Settings"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-            </button>
-            {activeTab === 'projects' && activeProjects.length < 5 && (
-              <>
-                <div className="w-px h-4 bg-border-subtle mx-1" />
-                <button
-                  onClick={() => window.api.openNewProjectWindow()}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-hover text-t-muted hover:text-t-primary text-sm transition-colors"
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                  Add Project
-                </button>
-              </>
-            )}
-          </div>
+          <TabBar
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            isDev={isDev}
+            suspendedCount={suspendedProjects.length}
+            archivedCount={archivedProjects.length}
+          />
+          <DashboardToolbar
+            config={config}
+            onToggleTheme={toggleTheme}
+            onToggleCleanView={toggleCleanView}
+            onShowNotes={() => setShowNotes(true)}
+            onShowSettings={() => setShowSettings(true)}
+            onCompactMode={() => setCompactMode(true)}
+            showAddProject={activeTab === 'projects' && activeProjects.length < 5}
+          />
         </div>
       </div>
 
@@ -247,7 +173,6 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Tab content */}
         {activeTab === 'tasks' && <QuickTasksView showAll />}
 
         {activeTab === 'projects' && (
@@ -284,6 +209,35 @@ export default function Dashboard() {
                       setDragOverId(null)
                     }}
                     isDragOver={dragOverId === project.id && draggedId.current !== project.id}
+                    taskListRef={expandedProjectId === project.id ? taskListRef : undefined}
+                  />
+                ))}
+            </div>
+          )
+        )}
+
+        {activeTab === 'suspended' && (
+          suspendedProjects.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-64 text-t-secondary">
+              <p className="text-lg mb-2">No suspended projects</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-3">
+              {suspendedProjects
+                .sort((a, b) => (b.suspendedAt ?? '').localeCompare(a.suspendedAt ?? ''))
+                .map((project) => (
+                  <ProjectTile
+                    key={project.id}
+                    project={project}
+                    expanded={expandedProjectId === project.id}
+                    onToggleExpand={() => toggleExpanded(project.id)}
+                    onDragStart={() => {}}
+                    onDragOver={() => {}}
+                    onDrop={() => {}}
+                    isDragOver={false}
+                    isSuspended
+                    onUnsuspend={() => handleUnsuspend(project.id)}
+                    taskListRef={expandedProjectId === project.id ? taskListRef : undefined}
                   />
                 ))}
             </div>

@@ -1,6 +1,5 @@
 import type { BrowserWindow, GlobalShortcut, Screen } from 'electron'
 import { getAppData } from './store'
-import { getFocusWindow } from './focus-window'
 
 function showAndFocus(win: BrowserWindow): void {
   if (!win.isVisible()) {
@@ -22,9 +21,6 @@ export function registerShortcuts(
   // Toggle app visibility
   const toggleShortcut = shortcuts['toggle-app'] || config?.globalShortcut || 'CommandOrControl+Shift+Space'
   globalShortcutModule.register(toggleShortcut, () => {
-    const focusWin = getFocusWindow()
-    if (focusWin && !focusWin.isDestroyed()) return
-
     const win = getMainWindow()
     if (!win) return
 

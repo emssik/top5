@@ -47,7 +47,8 @@ export default function ProjectEditor({ project, onClose }: Props) {
           browser: form.browser || null
         },
         tasks: [],
-        archivedAt: null
+        archivedAt: null,
+        suspendedAt: null
       }
       await window.api.saveProject(newProject)
       window.api.closeNewProjectWindow()
@@ -84,7 +85,7 @@ export default function ProjectEditor({ project, onClose }: Props) {
     const result = await window.api.pickObsidianNote()
     if (!result) return
     if (result.uri) {
-      setForm((f) => ({ ...f, obsidian: result.uri }))
+      setForm((f) => ({ ...f, obsidian: result.uri! }))
     } else {
       setForm((f) => ({ ...f, obsidian: result.path }))
     }

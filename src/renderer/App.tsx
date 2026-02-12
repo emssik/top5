@@ -10,10 +10,12 @@ import ProjectEditor from './components/ProjectEditor'
 export default function App() {
   const { loaded, loadData, config } = useProjects()
   const windowHash = window.location.hash
+  const isFocusWindow = windowHash === '#focus'
   const isCheckInWindow = windowHash === '#checkin'
   const isStatsWindow = windowHash === '#stats'
   const isNewProjectWindow = windowHash === '#new-project'
   const isAuxWindow = isCheckInWindow || isStatsWindow || isNewProjectWindow
+  const isMainOrFocus = !isAuxWindow
 
   // Separate windows with hash routing — apply theme from stored config.
   useEffect(() => {
@@ -34,8 +36,9 @@ export default function App() {
     }
   }, [isAuxWindow])
 
+  // Load data for main window and focus window (both use useProjects store)
   useEffect(() => {
-    if (isAuxWindow) return
+    if (!isMainOrFocus) return
 
     loadData()
 
@@ -43,10 +46,10 @@ export default function App() {
       loadData()
     })
     return cleanup
-  }, [isAuxWindow, loadData])
+  }, [isMainOrFocus, loadData])
 
   useEffect(() => {
-    if (isAuxWindow) return
+    if (isAuxWindow || isFocusWindow) return
 
     const cleanup = window.api.onShortcutAction((data) => {
       if (data.action === 'exit-compact-mode') {
@@ -55,19 +58,20 @@ export default function App() {
       }
     })
     return cleanup
-  }, [isAuxWindow])
+  }, [isAuxWindow, isFocusWindow])
 
-  // Apply theme to <html> in the main app window.
+  // Apply theme to <html> in the main app and focus windows.
   useEffect(() => {
-    if (isAuxWindow) return
+    if (!isMainOrFocus) return
 
     if (config.theme === 'light') {
       document.documentElement.setAttribute('data-theme', 'light')
     } else {
       document.documentElement.removeAttribute('data-theme')
     }
-  }, [isAuxWindow, config.theme])
+  }, [isMainOrFocus, config.theme])
 
+  if (isFocusWindow) return loaded ? <FocusMode /> : null
   if (isCheckInWindow) return <CheckInPopup />
   if (isStatsWindow) return <StatsView />
   if (isNewProjectWindow) return (
@@ -86,10 +90,6 @@ export default function App() {
 
   if (config.compactMode) {
     return <CompactBar />
-  }
-
-  if (config.focusProjectId && config.focusTaskId) {
-    return <FocusMode />
   }
 
   return <Dashboard />

@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { Project, QuickTask, AppData, AppConfig, FocusCheckIn } from '../types'
+import type { Project, QuickTask, AppConfig, FocusCheckIn } from '../types'
 
 interface ProjectsState {
   projects: Project[]
@@ -14,6 +14,8 @@ interface ProjectsState {
   deleteProject: (id: string) => Promise<void>
   archiveProject: (id: string) => Promise<void>
   unarchiveProject: (id: string) => Promise<string | null>
+  suspendProject: (id: string) => Promise<void>
+  unsuspendProject: (id: string) => Promise<string | null>
   saveQuickNotes: (notes: string) => Promise<void>
   saveConfig: (config: AppConfig) => Promise<void>
   reorderProjects: (orderedIds: string[]) => Promise<void>
@@ -88,6 +90,20 @@ export const useProjects = create<ProjectsState>((set, get) => ({
     return null
   },
 
+  suspendProject: async (id: string) => {
+    const updated = await window.api.suspendProject(id)
+    set({ projects: updated })
+  },
+
+  unsuspendProject: async (id: string) => {
+    const result = await window.api.unsuspendProject(id)
+    if ('error' in result) {
+      return result.error
+    }
+    set({ projects: result.projects })
+    return null
+  },
+
   saveQuickNotes: async (notes: string) => {
     await window.api.saveQuickNotes(notes)
     set({ quickNotes: notes })
@@ -99,19 +115,14 @@ export const useProjects = create<ProjectsState>((set, get) => ({
   },
 
   reorderProjects: async (orderedIds: string[]) => {
-    const { projects } = get()
-    let updated = projects
-    for (let i = 0; i < orderedIds.length; i++) {
-      const project = projects.find((p) => p.id === orderedIds[i])
-      if (project && project.order !== i) {
-        updated = await window.api.saveProject({ ...project, order: i })
-      }
-    }
+    const updated = await window.api.reorderProjects(orderedIds)
     set({ projects: updated })
   },
 
   setFocus: async (projectId: string | null, taskId: string | null) => {
     const { config } = get()
+    // Block starting new focus while one is already active
+    if (projectId && taskId && config.focusProjectId && config.focusTaskId) return
     const newConfig = { ...config, focusProjectId: projectId, focusTaskId: taskId }
     await window.api.saveConfig(newConfig)
     set({ config: newConfig })

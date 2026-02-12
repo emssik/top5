@@ -34,6 +34,7 @@ export interface Project {
   launchers: ProjectLaunchers
   tasks: Task[]
   archivedAt: string | null // ISO date = archived, null = active
+  suspendedAt: string | null // ISO date = suspended, null = not suspended
 }
 
 export interface AppConfig {

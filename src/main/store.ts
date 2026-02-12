@@ -53,6 +53,7 @@ interface Project {
   }
   tasks: Task[]
   archivedAt: string | null
+  suspendedAt: string | null
 }
 
 interface AppConfig {
@@ -107,10 +108,17 @@ const defaultData: AppData = {
   }
 }
 
+export const IS_DEV = process.env.NODE_ENV === 'development' || process.env.TOP5_DEV === '1'
 const ICLOUD_DIR = join(homedir(), 'Library', 'Mobile Documents', 'com~apple~CloudDocs', 'top5')
-const SYMLINK_PATH = join(homedir(), '.config', 'top5')
+const SYMLINK_PATH = join(homedir(), '.config', IS_DEV ? 'top5-dev' : 'top5')
 
 function ensureDataDir(): string {
+  // Dev mode: always use local directory, no iCloud sync
+  if (IS_DEV) {
+    mkdirSync(SYMLINK_PATH, { recursive: true })
+    return SYMLINK_PATH
+  }
+
   if (platform() === 'darwin') {
     // Create real dir in iCloud
     mkdirSync(ICLOUD_DIR, { recursive: true })
@@ -177,6 +185,36 @@ function toFocusCheckIn(value: unknown): FocusCheckIn | null {
   const { minutes } = value
   if (typeof minutes === 'number' && minutes >= 0) result.minutes = minutes
   return result
+}
+
+function isValidTask(value: unknown): value is Task {
+  if (!isRecord(value)) return false
+  return typeof value.id === 'string' && typeof value.title === 'string' && typeof value.completed === 'boolean'
+}
+
+function isValidProject(value: unknown): value is Project {
+  if (!isRecord(value)) return false
+  const { id, name, order, tasks, launchers } = value
+  if (typeof id !== 'string' || typeof name !== 'string' || typeof order !== 'number') return false
+  if (!Array.isArray(tasks) || !tasks.every(isValidTask)) return false
+  if (!isRecord(launchers)) return false
+  return true
+}
+
+function isValidAppConfig(value: unknown): value is AppConfig {
+  if (!isRecord(value)) return false
+  const { globalShortcut, actionShortcuts, theme, quickTasksLimit } = value
+  if (typeof globalShortcut !== 'string') return false
+  if (!isRecord(actionShortcuts)) return false
+  if (theme !== 'light' && theme !== 'dark') return false
+  if (typeof quickTasksLimit !== 'number' || quickTasksLimit < 1 || quickTasksLimit > 20) return false
+  return true
+}
+
+function isValidQuickTask(value: unknown): value is QuickTask {
+  if (!isRecord(value)) return false
+  const { id, title, completed, order } = value
+  return typeof id === 'string' && typeof title === 'string' && typeof completed === 'boolean' && typeof order === 'number'
 }
 
 function dailyBackup(): void {
@@ -351,11 +389,16 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
   migrateCheckInsToJsonl()
   dailyBackup()
 
+  ipcMain.handle('get-is-dev', () => {
+    return IS_DEV
+  })
+
   ipcMain.handle('get-app-data', () => {
     return getData()
   })
 
-  ipcMain.handle('save-project', (_event, project: Project) => {
+  ipcMain.handle('save-project', (_event, project: unknown) => {
+    if (!isValidProject(project)) return getData().projects
     const data = getData()
     const projects = [...data.projects]
     const index = projects.findIndex((p) => p.id === project.id)
@@ -363,7 +406,7 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
       projects[index] = project
     } else {
       // Assign order for new projects based on current active count
-      const activeCount = projects.filter((p) => !p.archivedAt).length
+      const activeCount = projects.filter((p) => !p.archivedAt && !p.suspendedAt).length
       project.order = activeCount
       projects.push(project)
     }
@@ -383,7 +426,8 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
     setData('quickNotes', notes)
   })
 
-  ipcMain.handle('save-config', (_event, config: AppConfig) => {
+  ipcMain.handle('save-config', (_event, config: unknown) => {
+    if (!isValidAppConfig(config)) return
     setData('config', config)
   })
 
@@ -422,13 +466,45 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
   ipcMain.handle('unarchive-project', (_event, projectId: string) => {
     const data = getData()
     const projects = [...data.projects]
-    const activeProjects = projects.filter((p) => !p.archivedAt)
+    const activeProjects = projects.filter((p) => !p.archivedAt && !p.suspendedAt)
     if (activeProjects.length >= 5) {
-      return { error: 'Cannot restore: 5 active projects already. Archive one first.' }
+      return { error: 'Cannot restore: 5 active projects already. Archive or suspend one first.' }
     }
     const project = projects.find((p) => p.id === projectId)
     if (project) {
       project.archivedAt = null
+      project.suspendedAt = null
+      // Assign next available order
+      const usedOrders = activeProjects.map((p) => p.order)
+      let nextOrder = 0
+      while (usedOrders.includes(nextOrder)) nextOrder++
+      project.order = nextOrder
+      setData('projects', projects)
+    }
+    return { projects }
+  })
+
+  ipcMain.handle('suspend-project', (_event, projectId: string) => {
+    const data = getData()
+    const projects = [...data.projects]
+    const project = projects.find((p) => p.id === projectId)
+    if (project) {
+      project.suspendedAt = new Date().toISOString()
+      setData('projects', projects)
+    }
+    return projects
+  })
+
+  ipcMain.handle('unsuspend-project', (_event, projectId: string) => {
+    const data = getData()
+    const projects = [...data.projects]
+    const activeProjects = projects.filter((p) => !p.archivedAt && !p.suspendedAt)
+    if (activeProjects.length >= 5) {
+      return { error: 'Cannot restore: 5 active projects already. Archive or suspend one first.' }
+    }
+    const project = projects.find((p) => p.id === projectId)
+    if (project) {
+      project.suspendedAt = null
       // Assign next available order
       const usedOrders = activeProjects.map((p) => p.order)
       let nextOrder = 0
@@ -496,10 +572,10 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
   // --- Quick Tasks ---
 
   ipcMain.handle('save-quick-task', (_event, task: unknown) => {
-    if (!isRecord(task) || typeof task.id !== 'string' || typeof task.title !== 'string') return
+    if (!isValidQuickTask(task)) return
     const data = getData()
     const quickTasks = [...data.quickTasks]
-    const qt = task as QuickTask
+    const qt = task
     const index = quickTasks.findIndex((t) => t.id === qt.id)
     if (index >= 0) {
       quickTasks[index] = qt
@@ -560,6 +636,34 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
     }
     setData('quickTasks', quickTasks)
     return quickTasks
+  })
+
+  ipcMain.handle('reorder-projects', (_event, orderedIds: string[]) => {
+    if (!Array.isArray(orderedIds)) return
+    const data = getData()
+    const projects = [...data.projects]
+    for (let i = 0; i < orderedIds.length; i++) {
+      const project = projects.find((p) => p.id === orderedIds[i])
+      if (project) project.order = i
+    }
+    setData('projects', projects)
+    notifyAllWindows()
+    return projects
+  })
+
+  ipcMain.handle('reorder-pinned-tasks', (_event, updates: { projectId: string; taskId: string; order: number }[]) => {
+    if (!Array.isArray(updates)) return
+    const data = getData()
+    const projects = [...data.projects]
+    for (const { projectId, taskId, order } of updates) {
+      const project = projects.find((p) => p.id === projectId)
+      if (!project) continue
+      const task = project.tasks.find((t) => t.id === taskId)
+      if (task) task.toDoNextOrder = order
+    }
+    setData('projects', projects)
+    notifyAllWindows()
+    return projects
   })
 
   ipcMain.handle('toggle-task-to-do-next', (_event, projectId: string, taskId: string) => {

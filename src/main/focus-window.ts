@@ -64,7 +64,7 @@ function showCheckInPopup(): void {
   const display = screen.getDisplayNearestPoint({ x: focusBounds.x, y: focusBounds.y })
 
   const popupWidth = 340
-  const popupHeight = 140
+  const popupHeight = 200
 
   // Position below the focus bar, right-aligned with it
   const x = Math.min(
@@ -83,7 +83,6 @@ function showCheckInPopup(): void {
     resizable: false,
     skipTaskbar: true,
     alwaysOnTop: true,
-    visibleOnAllWorkspaces: true,
     hasShadow: true,
     roundedCorners: true,
     webPreferences: {
@@ -118,6 +117,8 @@ export function registerFocusHandlers(
   getMainWindow: () => BrowserWindow | null
 ): void {
   ipcMain.handle('enter-focus-mode', () => {
+    if (focusWindow && !focusWindow.isDestroyed()) return
+
     const mainWin = getMainWindow()
     if (!mainWin) return
 
@@ -129,7 +130,7 @@ export function registerFocusHandlers(
     const { x: workX, y: workY, width: workWidth } = display.workArea
 
     const focusWidth = 420
-    const focusHeight = 38
+    const focusHeight = 110
 
     // Create frameless focus window
     focusWindow = new BrowserWindow({
@@ -143,7 +144,6 @@ export function registerFocusHandlers(
       movable: true,
       skipTaskbar: true,
       alwaysOnTop: true,
-      visibleOnAllWorkspaces: true,
       hasShadow: true,
       roundedCorners: true,
       webPreferences: {
@@ -157,9 +157,9 @@ export function registerFocusHandlers(
     focusWindow.setAlwaysOnTop(true, 'floating')
 
     if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-      focusWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
+      focusWindow.loadURL(process.env['ELECTRON_RENDERER_URL'] + '#focus')
     } else {
-      focusWindow.loadFile(join(__dirname, '../renderer/index.html'))
+      focusWindow.loadFile(join(__dirname, '../renderer/index.html'), { hash: 'focus' })
     }
 
     focusWindow.on('closed', () => {

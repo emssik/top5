@@ -1,20 +1,29 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, forwardRef, useImperativeHandle } from 'react'
 import { nanoid } from 'nanoid'
 import type { Project, Task } from '../types'
 import { useProjects } from '../hooks/useProjects'
 import { calcTaskTime, formatCheckInTime } from '../utils/checkInTime'
 
+export interface TaskListHandle {
+  focusAddInput: () => void
+}
+
 interface Props {
   project: Project
 }
 
-export default function TaskList({ project }: Props) {
-  const { saveProject, setFocus, focusCheckIns, toggleTaskToDoNext } = useProjects()
+const TaskList = forwardRef<TaskListHandle, Props>(function TaskList({ project }, ref) {
+  const { saveProject, setFocus, focusCheckIns, toggleTaskToDoNext, config } = useProjects()
   const [newTaskTitle, setNewTaskTitle] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingTitle, setEditingTitle] = useState('')
+  const addInputRef = useRef<HTMLInputElement>(null)
   const editingIdRef = useRef<string | null>(null)
   const editingTitleRef = useRef('')
+
+  useImperativeHandle(ref, () => ({
+    focusAddInput: () => addInputRef.current?.focus()
+  }))
 
   const startEditing = (task: Task) => {
     editingIdRef.current = task.id
@@ -130,10 +139,15 @@ export default function TaskList({ project }: Props) {
                   {task.isToDoNext ? '📌' : '📌'}
                 </button>
               )}
-              {!task.completed && (
+              {!task.completed && config.focusProjectId === project.id && config.focusTaskId === task.id ? (
+                <span className="text-[10px] px-2 py-0.5 rounded bg-blue-600/30 text-blue-400 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse inline-block" />
+                  Focus
+                </span>
+              ) : !task.completed && (
                 <button
                   onClick={() => handleFocus(task)}
-                  className="text-[10px] px-2 py-0.5 rounded bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 hover:text-blue-300 transition-colors"
+                  className="text-[10px] px-2 py-0.5 rounded bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 hover:text-blue-300 transition-colors opacity-0 group-hover:opacity-100"
                   title="Focus on this task"
                 >
                   Focus
@@ -152,6 +166,7 @@ export default function TaskList({ project }: Props) {
 
       <div className="flex gap-2 mt-2">
         <input
+          ref={addInputRef}
           type="text"
           value={newTaskTitle}
           onChange={(e) => setNewTaskTitle(e.target.value)}
@@ -168,4 +183,6 @@ export default function TaskList({ project }: Props) {
       </div>
     </div>
   )
-}
+})
+
+export default TaskList
