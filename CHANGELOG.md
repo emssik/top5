@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.19.0] - 2026-02-12
+
 ### Added
 
 - "In progress" status for tasks: toggle via button on quick tasks and pinned tasks
@@ -14,11 +16,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Amber border highlight on in-progress task cards in default view
 - Amber dot indicator and `▸` bullet marker for in-progress tasks in clean view
 - `inProgress` field on `Task` and `QuickTask` types (both main and renderer)
+- Audible notification sound (macOS system `Tink.aiff`) on focus check-in popup
+- `clean` npm script to remove stale `.js` artifacts and `.tsbuildinfo` cache files
 
 ### Changed
 
 - Completing a task automatically clears its in-progress state
 - `MergedTask` type extended with `inProgress` field for unified task list
+- Build script now runs `clean` before `typecheck` and `electron-vite build` to prevent stale `.js` file resolution
+- TypeScript configs (`tsconfig.node.json`, `tsconfig.web.json`) set `noEmit: true` so `tsc --build` only type-checks without emitting `.js` files
 
 ### Removed
 
