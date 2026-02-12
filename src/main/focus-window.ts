@@ -1,5 +1,6 @@
 import { BrowserWindow, screen } from 'electron'
 import { join } from 'path'
+import { execFile } from 'child_process'
 import { is } from '@electron-toolkit/utils'
 import type { IpcMain } from 'electron'
 import { getAppData, setAppDataKey } from './store'
@@ -56,9 +57,16 @@ function clearCheckInTimer(): void {
   clearCountdownInterval()
 }
 
+function playCheckInSound(): void {
+  // Play macOS system notification sound
+  execFile('afplay', ['/System/Library/Sounds/Tink.aiff'])
+}
+
 function showCheckInPopup(): void {
   if (checkInWindow && !checkInWindow.isDestroyed()) return
   if (!focusWindow || focusWindow.isDestroyed()) return
+
+  playCheckInSound()
 
   const focusBounds = focusWindow.getBounds()
   const display = screen.getDisplayNearestPoint({ x: focusBounds.x, y: focusBounds.y })

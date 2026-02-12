@@ -22,6 +22,8 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
     removeQuickTask,
     completeQuickTask,
     uncompleteQuickTask,
+    toggleQuickTaskInProgress,
+    toggleTaskInProgress,
     toggleTaskToDoNext,
     setFocus,
     acceptRepeatingProposal,
@@ -92,7 +94,7 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
       const project = useProjects.getState().projects.find((p) => p.id === merged.projectId)
       if (!project) return
       const updatedTasks = project.tasks.map((t) =>
-        t.id === merged.taskId ? { ...t, completed: true, completedAt: new Date().toISOString() } : t
+        t.id === merged.taskId ? { ...t, completed: true, completedAt: new Date().toISOString(), inProgress: false } : t
       )
       await saveProject({ ...project, tasks: updatedTasks })
     }
@@ -173,6 +175,14 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
     }
   }
 
+  const handleToggleInProgress = (task: MergedTask) => {
+    if (task.kind === 'quick') {
+      toggleQuickTaskInProgress(task.id)
+    } else if (task.projectId && task.taskId) {
+      toggleTaskInProgress(task.projectId, task.taskId)
+    }
+  }
+
   const handleDragStart = (id: string) => {
     draggedId.current = id
   }
@@ -231,7 +241,7 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
 
     // --- Clean view (bullet journal style) ---
     if (cleanView) {
-      const marker = isCompleted ? '×' : task.repeatingTaskId ? '↻' : task.kind === 'pinned' ? '→' : '•'
+      const marker = isCompleted ? '×' : task.repeatingTaskId ? '↻' : task.inProgress ? '▸' : task.kind === 'pinned' ? '→' : '•'
       const mins = getTaskMinutes(task)
       const isFocused = !isCompleted && (
         (task.kind === 'quick' && config.focusProjectId === STANDALONE_PROJECT_ID && config.focusTaskId === task.id) ||
@@ -249,6 +259,10 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
           onDragOver={!isCompleted ? (e) => handleDragOver(e, task.id) : undefined}
           onDrop={!isCompleted ? () => handleDrop(task.id) : undefined}
         >
+          {/* In-progress indicator */}
+          {!isCompleted && task.inProgress && !isFocused && (
+            <div className="w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0 self-center -mr-1" />
+          )}
           {/* Focus indicator */}
           {isFocused && (
             <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse flex-shrink-0 self-center -mr-1" />
@@ -310,6 +324,14 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
                 <span className="text-[15px]" style={{ opacity: 0.25 }}>{formatCheckInTime(mins)}</span>
               )}
               <button
+                onClick={() => handleToggleInProgress(task)}
+                className="text-[11px] transition-all opacity-0 group-hover:opacity-40 hover:!opacity-70"
+                title={task.inProgress ? 'Stop working' : 'Mark as in progress'}
+                style={{ fontFamily: 'system-ui' }}
+              >
+                ●
+              </button>
+              <button
                 onClick={() => handleFocus(task)}
                 className="opacity-0 group-hover:opacity-40 hover:!opacity-70 transition-all"
                 title="Focus"
@@ -364,7 +386,7 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
       <div
         key={task.id}
         className={`group flex items-center gap-2 py-1.5 px-3 rounded-lg bg-card border transition-colors cursor-grab active:cursor-grabbing ${
-          isDragOver ? 'border-blue-500/50' : 'border-border-subtle'
+          isDragOver ? 'border-blue-500/50' : task.inProgress ? 'border-amber-500/40' : 'border-border-subtle'
         }`}
         draggable
         onDragStart={() => handleDragStart(task.id)}
@@ -405,6 +427,17 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
           )}
         </div>
         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button
+            onClick={() => handleToggleInProgress(task)}
+            className={`text-[10px] px-2 py-0.5 rounded transition-colors ${
+              task.inProgress
+                ? 'bg-amber-600/30 hover:bg-amber-600/50 text-amber-400 hover:text-amber-300'
+                : 'bg-amber-600/20 hover:bg-amber-600/40 text-amber-400 hover:text-amber-300'
+            }`}
+            title={task.inProgress ? 'Stop working' : 'In progress'}
+          >
+            ▶
+          </button>
           <button
             onClick={() => handleFocus(task)}
             className="text-[10px] px-2 py-0.5 rounded bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 hover:text-blue-300 transition-colors"

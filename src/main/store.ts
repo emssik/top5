@@ -27,6 +27,7 @@ interface Task {
   completedAt?: string | null
   isToDoNext?: boolean
   toDoNextOrder?: number
+  inProgress?: boolean
 }
 
 type RepeatSchedule =
@@ -55,6 +56,7 @@ interface QuickTask {
   completedAt: string | null
   order: number
   repeatingTaskId?: string | null
+  inProgress?: boolean
 }
 
 interface Project {
@@ -656,6 +658,7 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
     if (task) {
       task.completed = true
       task.completedAt = new Date().toISOString()
+      task.inProgress = false
       setData('quickTasks', quickTasks)
       // Update repeating task stats and lastCompletedAt
       if (task.repeatingTaskId) {
@@ -698,6 +701,19 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
       if (task) task.order = i
     }
     setData('quickTasks', quickTasks)
+    return quickTasks
+  })
+
+  ipcMain.handle('toggle-quick-task-in-progress', (_event, id: string) => {
+    if (typeof id !== 'string') return
+    const data = getData()
+    const quickTasks = [...data.quickTasks]
+    const task = quickTasks.find((t) => t.id === id)
+    if (task && !task.completed) {
+      task.inProgress = !task.inProgress
+      setData('quickTasks', quickTasks)
+      notifyAllWindows()
+    }
     return quickTasks
   })
 
@@ -807,6 +823,21 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
       setData('repeatingTasks', repeatingTasks)
     }
     notifyAllWindows()
+  })
+
+  ipcMain.handle('toggle-task-in-progress', (_event, projectId: string, taskId: string) => {
+    if (typeof projectId !== 'string' || typeof taskId !== 'string') return
+    const data = getData()
+    const projects = [...data.projects]
+    const project = projects.find((p) => p.id === projectId)
+    if (!project) return projects
+    const task = project.tasks.find((t) => t.id === taskId)
+    if (task && !task.completed) {
+      task.inProgress = !task.inProgress
+      setData('projects', projects)
+      notifyAllWindows()
+    }
+    return projects
   })
 
   ipcMain.handle('toggle-task-to-do-next', (_event, projectId: string, taskId: string) => {

@@ -12,6 +12,7 @@ export interface MergedTask {
   projectName?: string
   taskId?: string
   repeatingTaskId?: string | null
+  inProgress?: boolean
 }
 
 export interface TaskListData {
@@ -71,7 +72,8 @@ export function useTaskList(): TaskListData {
           order: t.toDoNextOrder ?? 999,
           projectId: p.id,
           projectName: p.name,
-          taskId: t.id
+          taskId: t.id,
+          inProgress: t.inProgress
         }))
     )
 
@@ -80,7 +82,8 @@ export function useTaskList(): TaskListData {
     id: t.id,
     title: t.title,
     order: t.order,
-    repeatingTaskId: t.repeatingTaskId
+    repeatingTaskId: t.repeatingTaskId,
+    inProgress: t.inProgress
   }))
 
   const allActiveTasks = [...standaloneTasks, ...pinnedTasks].sort((a, b) => a.order - b.order)
