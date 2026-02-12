@@ -1,0 +1,2055 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Top5 — UI Prototype</title>
+<style>
+/* ═══════════════════════════════════════════
+   RESET & BASE
+   ═══════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --sidebar-w: 170px;
+  /* Project colors */
+  --pc-red: #ef4444;
+  --pc-orange: #f97316;
+  --pc-amber: #f59e0b;
+  --pc-green: #22c55e;
+  --pc-blue: #3b82f6;
+  --pc-purple: #a855f7;
+  --pc-pink: #ec4899;
+  --pc-teal: #14b8a6;
+}
+
+/* ═══════════════════════════════════════════
+   DARK THEME (default)
+   ═══════════════════════════════════════════ */
+body {
+  --bg-base: #0a0a0a;
+  --bg-card: #171717;
+  --bg-surface: #262626;
+  --bg-sidebar: #111111;
+  --c-border: #404040;
+  --c-border-subtle: #262626;
+  --c-text-primary: #f5f5f5;
+  --c-text-heading: #e5e5e5;
+  --c-text-secondary: #a3a3a3;
+  --c-text-muted: #525252;
+  --bg-hover: #2a2a2a;
+  --bg-sidebar-hover: #1e1e1e;
+  --bg-sidebar-active: #262626;
+  --bg-done: rgba(34,197,94,0.08);
+}
+
+/* ═══════════════════════════════════════════
+   LIGHT THEME — warm notebook
+   ═══════════════════════════════════════════ */
+body.light {
+  --bg-base: #faf4e8;
+  --bg-card: #fdf8ef;
+  --bg-surface: #f0e8d8;
+  --bg-sidebar: #f5eedf;
+  --c-border: #d4c9a8;
+  --c-border-subtle: #e8dfc8;
+  --c-text-primary: #3c3836;
+  --c-text-heading: #2e2a26;
+  --c-text-secondary: #6b6258;
+  --c-text-muted: #b0a68e;
+  --bg-hover: #ebe3d2;
+  --bg-sidebar-hover: #ebe3d2;
+  --bg-sidebar-active: #e4dbc8;
+  --bg-done: rgba(34,197,94,0.06);
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
+  background: var(--bg-base);
+  color: var(--c-text-primary);
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ═══════════════════════════════════════════
+   SIDEBAR
+   ═══════════════════════════════════════════ */
+.sidebar {
+  width: var(--sidebar-w);
+  height: 100vh;
+  background: var(--bg-sidebar);
+  border-right: 1px solid var(--c-border-subtle);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  overflow-y: auto;
+  user-select: none;
+}
+
+.sidebar-logo {
+  padding: 16px 14px 12px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--c-text-heading);
+  letter-spacing: -0.3px;
+}
+.sidebar-logo .sun { font-size: 16px; opacity: 0.7; }
+
+.sidebar-section {
+  padding: 0 8px;
+}
+.sidebar-section + .sidebar-section {
+  margin-top: 4px;
+}
+
+.sidebar-divider {
+  height: 1px;
+  background: var(--c-border-subtle);
+  margin: 6px 14px;
+}
+
+.sidebar-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--c-text-muted);
+  padding: 6px 8px 4px;
+}
+
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--c-text-secondary);
+  transition: all 0.15s;
+  position: relative;
+}
+.sidebar-item:hover {
+  background: var(--bg-sidebar-hover);
+  color: var(--c-text-primary);
+}
+.sidebar-item.active {
+  background: var(--bg-sidebar-active);
+  color: var(--c-text-primary);
+  font-weight: 500;
+}
+
+.sidebar-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.sidebar-icon {
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+
+.sidebar-bottom {
+  margin-top: auto;
+  padding-bottom: 12px;
+}
+
+.sidebar-item .badge {
+  margin-left: auto;
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 8px;
+  background: var(--bg-surface);
+  color: var(--c-text-muted);
+}
+
+/* ═══════════════════════════════════════════
+   MAIN PANEL
+   ═══════════════════════════════════════════ */
+.main {
+  flex: 1;
+  height: 100vh;
+  overflow-y: auto;
+  padding: 24px 32px;
+}
+
+/* ═══════════════════════════════════════════
+   VIEW: TODAY
+   ═══════════════════════════════════════════ */
+.section-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--c-text-muted);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.section-label .count {
+  font-weight: 400;
+  opacity: 0.6;
+}
+
+.task-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--c-border-subtle);
+  margin-bottom: 4px;
+  cursor: default;
+  transition: all 0.15s;
+  position: relative;
+}
+.task-card:hover {
+  border-color: var(--c-border);
+}
+
+.task-card.in-progress {
+  border-left: 3px solid #f59e0b;
+}
+/* Focus card — hero treatment */
+.focus-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: var(--bg-card);
+  border: 1.5px solid rgba(59,130,246,0.35);
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.08);
+  margin-bottom: 4px;
+  cursor: default;
+  position: relative;
+  transition: all 0.15s;
+}
+.focus-card::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 4px;
+  border-radius: 10px 0 0 10px;
+  background: #3b82f6;
+}
+.focus-card .focus-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #3b82f6;
+  flex-shrink: 0;
+  animation: pulse-focus 2s ease-in-out infinite;
+}
+@keyframes pulse-focus {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(59,130,246,0.5); }
+  50% { opacity: 0.6; box-shadow: 0 0 0 6px rgba(59,130,246,0); }
+}
+.focus-card .task-title {
+  font-size: 15px;
+  font-weight: 500;
+}
+.focus-card .task-actions {
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.focus-card:hover .task-actions {
+  opacity: 1;
+}
+.focus-timer {
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: #60a5fa;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.task-checkbox {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1.5px solid var(--c-border);
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.task-checkbox:hover {
+  border-color: var(--c-text-secondary);
+}
+.task-checkbox.checked {
+  background: var(--pc-green);
+  border-color: var(--pc-green);
+  position: relative;
+}
+.task-checkbox.checked::after {
+  content: '✓';
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%,-50%);
+  font-size: 10px;
+  color: #fff;
+  font-weight: 700;
+}
+
+.task-content {
+  flex: 1;
+  min-width: 0;
+}
+.task-title {
+  font-size: 14px;
+  color: var(--c-text-primary);
+  line-height: 1.3;
+}
+.task-title.completed {
+  text-decoration: line-through;
+  color: var(--c-text-muted);
+}
+.task-meta {
+  font-size: 11px;
+  color: var(--c-text-muted);
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.task-meta .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.task-actions {
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.task-card:hover .task-actions {
+  opacity: 1;
+}
+
+.task-action-btn {
+  padding: 3px 8px;
+  border-radius: 5px;
+  font-size: 10px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+.btn-focus {
+  background: rgba(59,130,246,0.15);
+  color: #60a5fa;
+}
+.btn-focus:hover { background: rgba(59,130,246,0.3); }
+.btn-progress {
+  background: rgba(245,158,11,0.15);
+  color: #fbbf24;
+}
+.btn-progress:hover { background: rgba(245,158,11,0.3); }
+
+/* Repeating proposal */
+.proposal-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--bg-card);
+  border: 1px dashed var(--c-border-subtle);
+  margin-bottom: 4px;
+  opacity: 0.6;
+}
+.proposal-card .repeat-icon {
+  font-size: 14px;
+  color: var(--c-text-muted);
+}
+.proposal-card .title {
+  flex: 1;
+  font-size: 14px;
+  color: var(--c-text-secondary);
+}
+.proposal-btn {
+  padding: 3px 8px;
+  border-radius: 5px;
+  font-size: 10px;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+.proposal-btn.accept {
+  background: rgba(34,197,94,0.15);
+  color: #4ade80;
+}
+.proposal-btn.accept:hover { background: rgba(34,197,94,0.3); }
+.proposal-btn.dismiss {
+  background: var(--bg-surface);
+  color: var(--c-text-secondary);
+}
+.proposal-btn.dismiss:hover { color: #f87171; }
+
+/* Done section */
+.done-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 0;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--c-text-muted);
+  user-select: none;
+  transition: color 0.15s;
+}
+.done-toggle:hover { color: var(--c-text-secondary); }
+.done-toggle .chevron {
+  font-size: 10px;
+  transition: transform 0.2s;
+}
+.done-toggle.open .chevron { transform: rotate(90deg); }
+.done-toggle .done-check { color: var(--pc-green); opacity: 0.5; }
+
+.done-list {
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height 0.3s ease;
+}
+.done-list.open {
+  max-height: 500px;
+}
+
+/* Add task */
+.add-task-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 0;
+  font-size: 13px;
+  color: var(--c-text-muted);
+  cursor: pointer;
+  border: none;
+  background: none;
+  font-family: inherit;
+  transition: color 0.15s;
+}
+.add-task-btn:hover { color: var(--c-text-secondary); }
+.add-task-btn .plus { font-size: 15px; }
+
+/* Overflow (beyond limit) */
+.overflow-section .task-card {
+  opacity: 0.35;
+}
+.overflow-section .task-card:hover {
+  opacity: 0.6;
+}
+
+/* Limit indicator */
+.limit-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  margin: 12px 0 8px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--c-text-muted);
+  opacity: 0.5;
+}
+.limit-indicator::before,
+.limit-indicator::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--c-border-subtle);
+}
+
+/* Source tag for standalone tasks */
+.task-source {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--bg-surface);
+  color: var(--c-text-muted);
+  white-space: nowrap;
+}
+
+/* ═══════════════════════════════════════════
+   VIEW: PROJECT DETAIL
+   ═══════════════════════════════════════════ */
+.project-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--c-border-subtle);
+}
+.project-color-bar {
+  width: 4px;
+  height: 56px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.project-header-content { flex: 1; }
+.project-header-content h2 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--c-text-heading);
+  margin-bottom: 2px;
+}
+.project-header-content .desc {
+  font-size: 13px;
+  color: var(--c-text-secondary);
+  margin-bottom: 6px;
+}
+.project-stats {
+  display: flex;
+  gap: 12px;
+  font-size: 11px;
+  color: var(--c-text-muted);
+}
+
+.project-actions-bar {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.project-action-icon {
+  padding: 5px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--c-text-muted);
+  transition: all 0.15s;
+}
+.project-action-icon:hover {
+  background: var(--bg-hover);
+  color: var(--c-text-secondary);
+}
+
+.quick-links {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+.quick-link {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  background: var(--bg-surface);
+  color: var(--c-text-secondary);
+  cursor: pointer;
+  border: 1px solid var(--c-border-subtle);
+  transition: all 0.15s;
+}
+.quick-link:hover {
+  background: var(--bg-hover);
+  color: var(--c-text-primary);
+}
+
+/* Pin indicator — pinned */
+.pin-icon {
+  font-size: 11px;
+  color: var(--c-text-muted);
+  opacity: 0.5;
+}
+/* Pin action — not yet pinned, visible on hover */
+.pin-action {
+  font-size: 11px;
+  color: var(--c-text-muted);
+  opacity: 0;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  background: none;
+  border: none;
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-family: inherit;
+}
+.task-card:hover .pin-action {
+  opacity: 0.35;
+}
+.pin-action:hover {
+  opacity: 0.8 !important;
+  background: var(--bg-surface);
+}
+
+/* ═══════════════════════════════════════════
+   VIEW: REPEAT
+   ═══════════════════════════════════════════ */
+.repeat-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--c-border-subtle);
+  margin-bottom: 4px;
+}
+.repeat-item .icon { font-size: 14px; color: var(--c-text-muted); }
+.repeat-item .title { flex: 1; font-size: 14px; }
+.repeat-item .schedule {
+  font-size: 11px;
+  color: var(--c-text-muted);
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--bg-surface);
+}
+
+/* ═══════════════════════════════════════════
+   SETTINGS MODAL
+   ═══════════════════════════════════════════ */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+.modal-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+.modal {
+  background: var(--bg-card);
+  border: 1px solid var(--c-border);
+  border-radius: 12px;
+  width: 400px;
+  max-height: 80vh;
+  overflow-y: auto;
+  padding: 24px;
+}
+.modal h2 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--c-text-heading);
+  margin-bottom: 16px;
+}
+.modal-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--c-border-subtle);
+}
+.modal-row:last-child { border-bottom: none; }
+.modal-row label {
+  font-size: 13px;
+  color: var(--c-text-secondary);
+}
+.modal-row .value {
+  font-size: 13px;
+  color: var(--c-text-muted);
+}
+.modal-close {
+  width: 100%;
+  margin-top: 16px;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid var(--c-border-subtle);
+  background: var(--bg-surface);
+  color: var(--c-text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+.modal-close:hover {
+  background: var(--bg-hover);
+  color: var(--c-text-primary);
+}
+
+/* Edit project form */
+.form-group {
+  margin-bottom: 14px;
+}
+.form-group label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--c-text-muted);
+  margin-bottom: 5px;
+}
+.form-input {
+  width: 100%;
+  padding: 7px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--c-border);
+  background: var(--bg-surface);
+  color: var(--c-text-primary);
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.form-input:focus {
+  border-color: var(--c-text-secondary);
+}
+.form-textarea {
+  resize: vertical;
+  min-height: 60px;
+}
+.form-color-picker {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.form-color-dot {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all 0.15s;
+}
+.form-color-dot:hover {
+  transform: scale(1.15);
+}
+.form-color-dot.selected {
+  border-color: var(--c-text-primary);
+  box-shadow: 0 0 0 2px var(--bg-base);
+}
+.form-links-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.form-link-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.form-link-row .form-input {
+  flex: 1;
+}
+.form-link-remove {
+  padding: 4px 8px;
+  border-radius: 5px;
+  border: none;
+  background: var(--bg-surface);
+  color: var(--c-text-muted);
+  cursor: pointer;
+  font-size: 11px;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+.form-link-remove:hover {
+  color: #f87171;
+  background: var(--bg-hover);
+}
+.form-add-link {
+  font-size: 12px;
+  color: var(--c-text-muted);
+  cursor: pointer;
+  background: none;
+  border: none;
+  font-family: inherit;
+  padding: 4px 0;
+  transition: color 0.15s;
+}
+.form-add-link:hover { color: var(--c-text-secondary); }
+.form-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 18px;
+}
+.form-btn {
+  flex: 1;
+  padding: 8px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s;
+  border: 1px solid var(--c-border-subtle);
+}
+.form-btn-primary {
+  background: rgba(59,130,246,0.15);
+  color: #60a5fa;
+  border-color: rgba(59,130,246,0.3);
+}
+.form-btn-primary:hover {
+  background: rgba(59,130,246,0.25);
+}
+.form-btn-secondary {
+  background: var(--bg-surface);
+  color: var(--c-text-secondary);
+}
+.form-btn-secondary:hover {
+  background: var(--bg-hover);
+  color: var(--c-text-primary);
+}
+.form-btn-danger {
+  background: rgba(239,68,68,0.1);
+  color: #f87171;
+  border-color: rgba(239,68,68,0.2);
+  flex: 0;
+  padding: 8px 14px;
+}
+.form-btn-danger:hover {
+  background: rgba(239,68,68,0.2);
+}
+
+/* ═══════════════════════════════════════════
+   STATS VIEW
+   ═══════════════════════════════════════════ */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.stat-card {
+  padding: 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--c-border-subtle);
+  border-radius: 10px;
+  text-align: center;
+}
+.stat-card .number {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--c-text-heading);
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.stat-card .label {
+  font-size: 11px;
+  color: var(--c-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.heatmap-placeholder {
+  padding: 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--c-border-subtle);
+  border-radius: 10px;
+  text-align: center;
+  color: var(--c-text-muted);
+  font-size: 13px;
+}
+
+/* ═══════════════════════════════════════════
+   TRANSITIONS & UTILS
+   ═══════════════════════════════════════════ */
+.view { display: none; }
+.view.active { display: block; }
+
+.mt-section { margin-top: 20px; }
+.mt-sm { margin-top: 8px; }
+
+/* Quick Notes panel */
+.notes-panel {
+  position: fixed;
+  top: 0; right: 0;
+  width: 320px;
+  height: 100vh;
+  background: var(--bg-card);
+  border-left: 1px solid var(--c-border);
+  box-shadow: -4px 0 20px rgba(0,0,0,0.2);
+  z-index: 90;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.25s ease;
+}
+.notes-panel.open {
+  transform: translateX(0);
+}
+.notes-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  border-bottom: 1px solid var(--c-border-subtle);
+}
+.notes-header h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--c-text-heading);
+}
+.notes-close {
+  background: none;
+  border: none;
+  color: var(--c-text-muted);
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+.notes-close:hover {
+  color: var(--c-text-primary);
+  background: var(--bg-hover);
+}
+.notes-body {
+  flex: 1;
+  padding: 16px;
+}
+.notes-textarea {
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  border: none;
+  color: var(--c-text-primary);
+  font-size: 13px;
+  font-family: inherit;
+  line-height: 1.6;
+  resize: none;
+  outline: none;
+}
+.notes-textarea::placeholder {
+  color: var(--c-text-muted);
+}
+</style>
+</head>
+<body class="light">
+
+<!-- ═══════════════════════════════════════════
+     SIDEBAR
+     ═══════════════════════════════════════════ -->
+<div class="sidebar">
+  <div class="sidebar-logo">
+    <span class="sun">☀</span> TOP 5
+  </div>
+
+  <!-- Main nav -->
+  <div class="sidebar-section">
+    <div class="sidebar-item active" data-view="today" onclick="switchView('today', this)">
+      <span class="sidebar-icon">▶</span>
+      <span>Today</span>
+    </div>
+    <div class="sidebar-item" onclick="alert('Clean View would activate here — minimal fullscreen mode')" title="⌘⇧C">
+      <span class="sidebar-icon">👁</span>
+      <span>Clean view</span>
+    </div>
+    <div class="sidebar-item" onclick="toggleNotes()">
+      <span class="sidebar-icon">📝</span>
+      <span>Quick notes</span>
+    </div>
+  </div>
+
+  <div class="sidebar-divider"></div>
+
+  <!-- Active projects -->
+  <div class="sidebar-section">
+    <div class="sidebar-label">Projects</div>
+    <div class="sidebar-item" data-view="project-cc" onclick="switchView('project-cc', this)">
+      <span class="sidebar-dot" style="background: var(--pc-red)"></span>
+      <span>CC Course</span>
+    </div>
+    <div class="sidebar-item" data-view="project-top5" onclick="switchView('project-top5', this)">
+      <span class="sidebar-dot" style="background: var(--pc-blue)"></span>
+      <span>Top5</span>
+    </div>
+    <div class="sidebar-item" data-view="project-lejek" onclick="switchView('project-lejek', this)">
+      <span class="sidebar-dot" style="background: var(--pc-amber)"></span>
+      <span>Lejek</span>
+    </div>
+    <div class="sidebar-item" data-view="project-sokrat" onclick="switchView('project-sokrat', this)">
+      <span class="sidebar-dot" style="background: var(--pc-purple)"></span>
+      <span>Sokrates</span>
+    </div>
+    <div class="sidebar-item" data-view="project-ai" onclick="switchView('project-ai', this)">
+      <span class="sidebar-dot" style="background: var(--pc-teal)"></span>
+      <span>AI TD</span>
+    </div>
+  </div>
+
+  <!-- Suspended -->
+  <div class="sidebar-divider"></div>
+  <div class="sidebar-section" id="suspended-section">
+    <div class="sidebar-label" style="cursor:pointer" onclick="toggleCollapse('suspended-list')">Suspended <span class="chevron" id="suspended-chevron" style="font-size:9px;margin-left:2px">▸</span></div>
+    <div id="suspended-list" style="display:none">
+      <div class="sidebar-item" style="opacity:0.5">
+        <span class="sidebar-icon">⏸</span>
+        <span>Kamila</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Archived -->
+  <div class="sidebar-section" id="archived-section">
+    <div class="sidebar-label" style="cursor:pointer" onclick="toggleCollapse('archived-list')">Archived <span class="chevron" id="archived-chevron" style="font-size:9px;margin-left:2px">▸</span></div>
+    <div id="archived-list" style="display:none">
+      <div class="sidebar-item" style="opacity:0.5">
+        <span class="sidebar-icon">📦</span>
+        <span>Materiały</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add project -->
+  <div class="sidebar-section">
+    <div class="sidebar-item" style="color: var(--c-text-muted)">
+      <span class="sidebar-icon">+</span>
+      <span>Add project</span>
+    </div>
+  </div>
+
+  <!-- Bottom section -->
+  <div class="sidebar-bottom">
+    <div class="sidebar-divider"></div>
+    <div class="sidebar-section">
+      <div class="sidebar-item" data-view="repeat" onclick="switchView('repeat', this)">
+        <span class="sidebar-icon">↻</span>
+        <span>Repeat</span>
+      </div>
+      <div class="sidebar-item" data-view="stats" onclick="switchView('stats', this)">
+        <span class="sidebar-icon">📊</span>
+        <span>Stats</span>
+      </div>
+      <div class="sidebar-item" onclick="toggleSettings()">
+        <span class="sidebar-icon">⚙</span>
+        <span>Settings</span>
+      </div>
+      <div class="sidebar-divider"></div>
+      <div class="sidebar-item" onclick="toggleTheme()">
+        <span class="sidebar-icon" id="theme-icon">🌙</span>
+        <span id="theme-label">Dark mode</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     MAIN PANEL
+     ═══════════════════════════════════════════ -->
+<div class="main">
+
+  <!-- ═══ TODAY VIEW ═══ -->
+  <div class="view active" id="view-today">
+
+    <!-- ── FOCUS (hero, 1 task) ── -->
+    <div class="section-label">
+      <span style="color: #3b82f6">●</span> Focus
+    </div>
+
+    <div class="focus-card">
+      <div class="focus-dot"></div>
+      <div class="task-checkbox"></div>
+      <div class="task-content">
+        <div class="task-title">Fix auth token refresh</div>
+        <div class="task-meta">
+          <span class="dot" style="background: var(--pc-blue)"></span>
+          Top5
+        </div>
+      </div>
+      <span class="focus-timer">12:34</span>
+      <div class="task-actions">
+        <button class="task-action-btn btn-focus" title="Stop focus">■</button>
+      </div>
+    </div>
+
+    <!-- ── IN PROGRESS (wlicza się w limit 5) ── -->
+    <div class="section-label mt-section">
+      <span style="color: #f59e0b">●</span> In Progress
+    </div>
+
+    <div class="task-card in-progress">
+      <div class="task-checkbox"></div>
+      <div class="task-content">
+        <div class="task-title">Design landing page</div>
+        <div class="task-meta">
+          <span class="dot" style="background: var(--pc-red)"></span>
+          CC Course · 25m
+        </div>
+      </div>
+      <div class="task-actions">
+        <button class="task-action-btn btn-progress" title="Stop">■</button>
+        <button class="task-action-btn btn-focus" title="Focus">▶</button>
+      </div>
+    </div>
+
+    <!-- ── UP NEXT (reszta do limitu 5) ── -->
+    <div class="section-label mt-section">Up Next</div>
+
+    <!-- 3/5: standalone quick task (bez projektu) -->
+    <div class="task-card">
+      <div class="task-checkbox"></div>
+      <div class="task-content">
+        <div class="task-title">Odpowiedź na maila Kuby</div>
+        <div class="task-meta">
+          <span class="task-source">quick task</span>
+        </div>
+      </div>
+      <div class="task-actions">
+        <button class="task-action-btn btn-progress" title="In progress">▶</button>
+        <button class="task-action-btn btn-focus" title="Focus">▶</button>
+      </div>
+    </div>
+
+    <!-- 4/5: pinned z Lejek -->
+    <div class="task-card">
+      <div class="task-checkbox"></div>
+      <div class="task-content">
+        <div class="task-title">Przygotuj materiały na warsztaty</div>
+        <div class="task-meta">
+          <span class="dot" style="background: var(--pc-amber)"></span>
+          Lejek
+        </div>
+      </div>
+      <div class="task-actions">
+        <button class="task-action-btn btn-progress" title="In progress">▶</button>
+        <button class="task-action-btn btn-focus" title="Focus">▶</button>
+      </div>
+    </div>
+
+    <!-- 5/5: pinned z CC Course -->
+    <div class="task-card">
+      <div class="task-checkbox"></div>
+      <div class="task-content">
+        <div class="task-title">Nagrać intro do modułu 3</div>
+        <div class="task-meta">
+          <span class="dot" style="background: var(--pc-red)"></span>
+          CC Course
+        </div>
+      </div>
+      <div class="task-actions">
+        <button class="task-action-btn btn-progress" title="In progress">▶</button>
+        <button class="task-action-btn btn-focus" title="Focus">▶</button>
+      </div>
+    </div>
+
+    <!-- ── Repeating proposals (poza limitem) ── -->
+    <div class="section-label mt-section">
+      <span style="opacity:0.5">↻</span> Repeating
+    </div>
+
+    <div class="proposal-card">
+      <span class="repeat-icon">↻</span>
+      <span class="title">Morning standup</span>
+      <button class="proposal-btn accept">✓</button>
+      <button class="proposal-btn dismiss">✕</button>
+    </div>
+
+    <div class="proposal-card">
+      <span class="repeat-icon">↻</span>
+      <span class="title">Review pull requests</span>
+      <button class="proposal-btn accept">✓</button>
+      <button class="proposal-btn dismiss">✕</button>
+    </div>
+
+    <!-- ── Overflow: taski poza limitem 5 ── -->
+    <div class="limit-indicator">limit 5</div>
+
+    <div class="overflow-section">
+      <div class="done-toggle" onclick="toggleDone(this)">
+        <span style="opacity:0.4">⋯</span>
+        <span>Beyond limit (3)</span>
+        <span class="chevron">▸</span>
+      </div>
+      <div class="done-list">
+        <!-- overflow: pinned z Sokrates -->
+        <div class="task-card">
+          <div class="task-checkbox"></div>
+          <div class="task-content">
+            <div class="task-title">Deploy prototype do Sokrates</div>
+            <div class="task-meta">
+              <span class="dot" style="background: var(--pc-purple)"></span>
+              Sokrates
+            </div>
+          </div>
+        </div>
+        <!-- overflow: pinned z Top5 -->
+        <div class="task-card">
+          <div class="task-checkbox"></div>
+          <div class="task-content">
+            <div class="task-title">Write API docs for v2</div>
+            <div class="task-meta">
+              <span class="dot" style="background: var(--pc-blue)"></span>
+              Top5 · 12m
+            </div>
+          </div>
+        </div>
+        <!-- overflow: standalone quick task -->
+        <div class="task-card">
+          <div class="task-checkbox"></div>
+          <div class="task-content">
+            <div class="task-title">Zamówić nowy kabel USB-C</div>
+            <div class="task-meta">
+              <span class="task-source">quick task</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Done today ── -->
+    <div class="mt-sm">
+      <div class="done-toggle" onclick="toggleDone(this)">
+        <span class="done-check">✓</span>
+        <span>Done today (3)</span>
+        <span class="chevron">▸</span>
+      </div>
+      <div class="done-list">
+        <div class="task-card" style="background: var(--bg-done); border-color: transparent">
+          <div class="task-checkbox checked"></div>
+          <div class="task-content">
+            <div class="task-title completed">Setup CI pipeline</div>
+            <div class="task-meta">
+              <span class="dot" style="background: var(--pc-teal)"></span>
+              AI TD · 45m
+            </div>
+          </div>
+        </div>
+        <div class="task-card" style="background: var(--bg-done); border-color: transparent">
+          <div class="task-checkbox checked"></div>
+          <div class="task-content">
+            <div class="task-title completed">Sprawdzić maile</div>
+            <div class="task-meta">
+              <span class="task-source">quick task</span>
+            </div>
+          </div>
+        </div>
+        <div class="task-card" style="background: var(--bg-done); border-color: transparent">
+          <div class="task-checkbox checked"></div>
+          <div class="task-content">
+            <div class="task-title completed">Morning standup</div>
+            <div class="task-meta" style="opacity:0.5">
+              <span>↻</span> Daily
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add task -->
+    <button class="add-task-btn">
+      <span class="plus">+</span> Add task
+    </button>
+  </div>
+
+  <!-- ═══ PROJECT: CC Course ═══ -->
+  <div class="view" id="view-project-cc">
+    <div class="project-header">
+      <div class="project-color-bar" style="background: var(--pc-red)"></div>
+      <div class="project-header-content">
+        <h2>CC Course</h2>
+        <div class="desc">Focus management course — tworzenie i nagrywanie materiałów</div>
+        <div class="project-stats">
+          <span>59m tracked</span>
+          <span>·</span>
+          <span>5 tasks</span>
+          <span>·</span>
+          <span>2 pinned</span>
+        </div>
+      </div>
+      <div class="project-actions-bar">
+        <span class="project-action-icon" title="Edit" onclick="toggleEditProject()">✏</span>
+        <span class="project-action-icon" title="Suspend">⏸</span>
+      </div>
+    </div>
+
+    <div class="quick-links">
+      <span class="quick-link">VS Code</span>
+      <span class="quick-link">Terminal</span>
+      <span class="quick-link">Figma</span>
+    </div>
+
+    <div class="task-card">
+      <div class="task-checkbox"></div>
+      <div class="task-content">
+        <div class="task-title">Design landing page</div>
+      </div>
+      <span class="pin-icon">📌</span>
+      <div class="task-actions">
+        <button class="task-action-btn btn-focus">▶</button>
+      </div>
+    </div>
+
+    <div class="task-card">
+      <div class="task-checkbox"></div>
+      <div class="task-content">
+        <div class="task-title">Nagrać intro do modułu 3</div>
+      </div>
+      <span class="pin-icon">📌</span>
+      <div class="task-actions">
+        <button class="task-action-btn btn-focus">▶</button>
+      </div>
+    </div>
+
+    <div class="task-card">
+      <div class="task-checkbox"></div>
+      <div class="task-content">
+        <div class="task-title">Lekcja na piątek</div>
+      </div>
+      <button class="pin-action" title="Pin to Today">📌</button>
+      <div class="task-actions">
+        <button class="task-action-btn btn-focus">▶</button>
+      </div>
+    </div>
+
+    <div class="task-card">
+      <div class="task-checkbox"></div>
+      <div class="task-content">
+        <div class="task-title">Lekcja na poniedziałek</div>
+      </div>
+      <button class="pin-action" title="Pin to Today">📌</button>
+      <div class="task-actions">
+        <button class="task-action-btn btn-focus">▶</button>
+      </div>
+    </div>
+
+    <div class="task-card">
+      <div class="task-checkbox"></div>
+      <div class="task-content">
+        <div class="task-title">Edycja wideo moduł 2</div>
+      </div>
+      <button class="pin-action" title="Pin to Today">📌</button>
+      <div class="task-actions">
+        <button class="task-action-btn btn-focus">▶</button>
+      </div>
+    </div>
+
+    <button class="add-task-btn">
+      <span class="plus">+</span> Add task
+    </button>
+
+    <!-- Done -->
+    <div class="mt-section">
+      <div class="done-toggle" onclick="toggleDone(this)">
+        <span class="done-check">✓</span>
+        <span>Done (2)</span>
+        <span class="chevron">▸</span>
+      </div>
+      <div class="done-list">
+        <div class="task-card" style="background: var(--bg-done); border-color: transparent">
+          <div class="task-checkbox checked"></div>
+          <div class="task-content">
+            <div class="task-title completed">Skonfigurować hosting</div>
+          </div>
+        </div>
+        <div class="task-card" style="background: var(--bg-done); border-color: transparent">
+          <div class="task-checkbox checked"></div>
+          <div class="task-content">
+            <div class="task-title completed">Napisać syllabus</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ PROJECT: Top5 ═══ -->
+  <div class="view" id="view-project-top5">
+    <div class="project-header">
+      <div class="project-color-bar" style="background: var(--pc-blue)"></div>
+      <div class="project-header-content">
+        <h2>Top5</h2>
+        <div class="desc">Electron app do zarządzania projektami i taskami</div>
+        <div class="project-stats">
+          <span>2h 15m tracked</span>
+          <span>·</span>
+          <span>4 tasks</span>
+          <span>·</span>
+          <span>2 pinned</span>
+        </div>
+      </div>
+      <div class="project-actions-bar">
+        <span class="project-action-icon" title="Edit" onclick="toggleEditProject()">✏</span>
+        <span class="project-action-icon" title="Suspend">⏸</span>
+      </div>
+    </div>
+
+    <div class="quick-links">
+      <span class="quick-link">VS Code</span>
+      <span class="quick-link">Terminal</span>
+      <span class="quick-link">Browser</span>
+    </div>
+
+    <div class="task-card">
+      <div class="task-checkbox"></div>
+      <div class="task-content">
+        <div class="task-title">Fix auth token refresh</div>
+      </div>
+      <span class="pin-icon">📌</span>
+      <div class="task-actions">
+        <button class="task-action-btn btn-focus">▶</button>
+      </div>
+    </div>
+
+    <div class="task-card">
+      <div class="task-checkbox"></div>
+      <div class="task-content">
+        <div class="task-title">Write API docs for v2</div>
+      </div>
+      <span class="pin-icon">📌</span>
+      <div class="task-actions">
+        <button class="task-action-btn btn-focus">▶</button>
+      </div>
+    </div>
+
+    <div class="task-card">
+      <div class="task-checkbox"></div>
+      <div class="task-content">
+        <div class="task-title">Sidebar UI prototype</div>
+      </div>
+      <button class="pin-action" title="Pin to Today">📌</button>
+      <div class="task-actions">
+        <button class="task-action-btn btn-focus">▶</button>
+      </div>
+    </div>
+
+    <div class="task-card">
+      <div class="task-checkbox"></div>
+      <div class="task-content">
+        <div class="task-title">Refactor store layer</div>
+      </div>
+      <button class="pin-action" title="Pin to Today">📌</button>
+      <div class="task-actions">
+        <button class="task-action-btn btn-focus">▶</button>
+      </div>
+    </div>
+
+    <button class="add-task-btn">
+      <span class="plus">+</span> Add task
+    </button>
+  </div>
+
+  <!-- ═══ PROJECT: Lejek ═══ -->
+  <div class="view" id="view-project-lejek">
+    <div class="project-header">
+      <div class="project-color-bar" style="background: var(--pc-amber)"></div>
+      <div class="project-header-content">
+        <h2>Lejek</h2>
+        <div class="desc">Lejek sprzedażowy — warsztaty i content</div>
+        <div class="project-stats">
+          <span>40m tracked</span>
+          <span>·</span>
+          <span>3 tasks</span>
+          <span>·</span>
+          <span>1 pinned</span>
+        </div>
+      </div>
+      <div class="project-actions-bar">
+        <span class="project-action-icon" title="Edit" onclick="toggleEditProject()">✏</span>
+        <span class="project-action-icon" title="Suspend">⏸</span>
+      </div>
+    </div>
+
+    <div class="task-card">
+      <div class="task-checkbox"></div>
+      <div class="task-content">
+        <div class="task-title">Przygotuj materiały na warsztaty</div>
+      </div>
+      <span class="pin-icon">📌</span>
+      <div class="task-actions">
+        <button class="task-action-btn btn-focus">▶</button>
+      </div>
+    </div>
+
+    <div class="task-card">
+      <div class="task-checkbox"></div>
+      <div class="task-content">
+        <div class="task-title">Napisać post na LinkedIn</div>
+      </div>
+      <button class="pin-action" title="Pin to Today">📌</button>
+      <div class="task-actions">
+        <button class="task-action-btn btn-focus">▶</button>
+      </div>
+    </div>
+
+    <div class="task-card">
+      <div class="task-checkbox"></div>
+      <div class="task-content">
+        <div class="task-title">Analiza konwersji strony</div>
+      </div>
+      <button class="pin-action" title="Pin to Today">📌</button>
+      <div class="task-actions">
+        <button class="task-action-btn btn-focus">▶</button>
+      </div>
+    </div>
+
+    <button class="add-task-btn">
+      <span class="plus">+</span> Add task
+    </button>
+  </div>
+
+  <!-- ═══ PROJECT: Sokrates ═══ -->
+  <div class="view" id="view-project-sokrat">
+    <div class="project-header">
+      <div class="project-color-bar" style="background: var(--pc-purple)"></div>
+      <div class="project-header-content">
+        <h2>Sokrates</h2>
+        <div class="desc">Socratic AI tutor — prototyp i MVP</div>
+        <div class="project-stats">
+          <span>1h 30m tracked</span>
+          <span>·</span>
+          <span>3 tasks</span>
+          <span>·</span>
+          <span>1 pinned</span>
+        </div>
+      </div>
+      <div class="project-actions-bar">
+        <span class="project-action-icon" title="Edit" onclick="toggleEditProject()">✏</span>
+        <span class="project-action-icon" title="Suspend">⏸</span>
+      </div>
+    </div>
+
+    <div class="quick-links">
+      <span class="quick-link">VS Code</span>
+      <span class="quick-link">Vercel</span>
+    </div>
+
+    <div class="task-card">
+      <div class="task-checkbox"></div>
+      <div class="task-content">
+        <div class="task-title">Deploy prototype do Sokrates</div>
+      </div>
+      <span class="pin-icon">📌</span>
+      <div class="task-actions">
+        <button class="task-action-btn btn-focus">▶</button>
+      </div>
+    </div>
+
+    <div class="task-card">
+      <div class="task-checkbox"></div>
+      <div class="task-content">
+        <div class="task-title">Dodać tryb quizowy</div>
+      </div>
+      <button class="pin-action" title="Pin to Today">📌</button>
+      <div class="task-actions">
+        <button class="task-action-btn btn-focus">▶</button>
+      </div>
+    </div>
+
+    <div class="task-card">
+      <div class="task-checkbox"></div>
+      <div class="task-content">
+        <div class="task-title">Prompt engineering — lepsze pytania</div>
+      </div>
+      <button class="pin-action" title="Pin to Today">📌</button>
+      <div class="task-actions">
+        <button class="task-action-btn btn-focus">▶</button>
+      </div>
+    </div>
+
+    <button class="add-task-btn">
+      <span class="plus">+</span> Add task
+    </button>
+  </div>
+
+  <!-- ═══ PROJECT: AI TD ═══ -->
+  <div class="view" id="view-project-ai">
+    <div class="project-header">
+      <div class="project-color-bar" style="background: var(--pc-teal)"></div>
+      <div class="project-header-content">
+        <h2>AI TD</h2>
+        <div class="desc">AI-powered technical documentation generator</div>
+        <div class="project-stats">
+          <span>3h 10m tracked</span>
+          <span>·</span>
+          <span>2 tasks</span>
+          <span>·</span>
+          <span>0 pinned</span>
+        </div>
+      </div>
+      <div class="project-actions-bar">
+        <span class="project-action-icon" title="Edit" onclick="toggleEditProject()">✏</span>
+        <span class="project-action-icon" title="Suspend">⏸</span>
+      </div>
+    </div>
+
+    <div class="quick-links">
+      <span class="quick-link">GitHub</span>
+      <span class="quick-link">Terminal</span>
+    </div>
+
+    <div class="task-card">
+      <div class="task-checkbox"></div>
+      <div class="task-content">
+        <div class="task-title">Testy integracyjne RAG pipeline</div>
+      </div>
+      <button class="pin-action" title="Pin to Today">📌</button>
+      <div class="task-actions">
+        <button class="task-action-btn btn-focus">▶</button>
+      </div>
+    </div>
+
+    <div class="task-card">
+      <div class="task-checkbox"></div>
+      <div class="task-content">
+        <div class="task-title">Optymalizacja embeddingów</div>
+      </div>
+      <button class="pin-action" title="Pin to Today">📌</button>
+      <div class="task-actions">
+        <button class="task-action-btn btn-focus">▶</button>
+      </div>
+    </div>
+
+    <button class="add-task-btn">
+      <span class="plus">+</span> Add task
+    </button>
+
+    <div class="mt-section">
+      <div class="done-toggle" onclick="toggleDone(this)">
+        <span class="done-check">✓</span>
+        <span>Done (1)</span>
+        <span class="chevron">▸</span>
+      </div>
+      <div class="done-list">
+        <div class="task-card" style="background: var(--bg-done); border-color: transparent">
+          <div class="task-checkbox checked"></div>
+          <div class="task-content">
+            <div class="task-title completed">Setup CI pipeline</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ REPEAT VIEW ═══ -->
+  <div class="view" id="view-repeat">
+    <div class="section-label" style="margin-bottom: 16px">
+      <span style="opacity:0.5">↻</span> Repeating Tasks
+    </div>
+
+    <div class="repeat-item" style="cursor:pointer" onclick="toggleRepeatModal('Morning standup')">
+      <span class="icon">↻</span>
+      <span class="title">Morning standup</span>
+      <span class="schedule">Every day</span>
+    </div>
+
+    <div class="repeat-item" style="cursor:pointer" onclick="toggleRepeatModal('Review pull requests')">
+      <span class="icon">↻</span>
+      <span class="title">Review pull requests</span>
+      <span class="schedule">Mon, Wed, Fri</span>
+    </div>
+
+    <div class="repeat-item" style="cursor:pointer" onclick="toggleRepeatModal('Weekly planning')">
+      <span class="icon">↻</span>
+      <span class="title">Weekly planning</span>
+      <span class="schedule">Every Monday</span>
+    </div>
+
+    <div class="repeat-item" style="cursor:pointer" onclick="toggleRepeatModal('Inbox zero')">
+      <span class="icon">↻</span>
+      <span class="title">Inbox zero</span>
+      <span class="schedule">Every day</span>
+    </div>
+
+    <button class="add-task-btn" style="margin-top: 8px" onclick="toggleRepeatModal()">
+      <span class="plus">+</span> Add repeating task
+    </button>
+  </div>
+
+  <!-- ═══ STATS VIEW ═══ -->
+  <div class="view" id="view-stats">
+    <div class="section-label" style="margin-bottom: 16px">
+      <span style="opacity:0.5">📊</span> Statistics
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="number">47</div>
+        <div class="label">Tasks Done</div>
+      </div>
+      <div class="stat-card">
+        <div class="number">8h</div>
+        <div class="label">Focused</div>
+      </div>
+      <div class="stat-card">
+        <div class="number">12</div>
+        <div class="label">Day Streak</div>
+      </div>
+    </div>
+
+    <div class="section-label">This Week</div>
+    <div class="stat-grid" style="grid-template-columns: repeat(5,1fr); margin-bottom: 24px">
+      <div class="stat-card">
+        <div class="number" style="font-size:20px; color: var(--pc-red)">3</div>
+        <div class="label">CC Crs</div>
+      </div>
+      <div class="stat-card">
+        <div class="number" style="font-size:20px; color: var(--pc-blue)">5</div>
+        <div class="label">Top5</div>
+      </div>
+      <div class="stat-card">
+        <div class="number" style="font-size:20px; color: var(--pc-amber)">2</div>
+        <div class="label">Lejek</div>
+      </div>
+      <div class="stat-card">
+        <div class="number" style="font-size:20px; color: var(--pc-purple)">4</div>
+        <div class="label">Sokrat</div>
+      </div>
+      <div class="stat-card">
+        <div class="number" style="font-size:20px; color: var(--pc-teal)">1</div>
+        <div class="label">AI TD</div>
+      </div>
+    </div>
+
+    <div class="section-label">Activity</div>
+    <div class="heatmap-placeholder">
+      Heatmap / activity chart placeholder
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SETTINGS MODAL
+     ═══════════════════════════════════════════ -->
+<div class="modal-overlay" id="settings-modal">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h2>Settings</h2>
+    <div class="modal-row">
+      <label>Theme</label>
+      <span class="value" id="settings-theme">Light</span>
+    </div>
+    <div class="modal-row">
+      <label>Clean view font</label>
+      <span class="value">Caveat</span>
+    </div>
+    <div class="modal-row">
+      <label>Task limit</label>
+      <span class="value">5</span>
+    </div>
+    <div class="modal-row">
+      <label>iCloud sync</label>
+      <span class="value">Enabled</span>
+    </div>
+    <div class="modal-row">
+      <label>Data location</label>
+      <span class="value" style="font-size:11px; opacity:0.6">~/Library/Mobile Documents</span>
+    </div>
+
+    <div style="margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--c-border-subtle)">
+      <div class="done-toggle" onclick="toggleDone(this)" style="font-size:14px; font-weight:600; color:var(--c-text-heading)">
+        Keyboard Shortcuts
+        <span class="chevron">▸</span>
+      </div>
+      <div class="done-list">
+        <div class="modal-row">
+          <label>Clean view</label>
+          <span class="value"><kbd style="padding:2px 6px; border-radius:4px; background:var(--bg-surface); border:1px solid var(--c-border); font-size:11px; font-family:inherit">⌘ Shift C</kbd></span>
+        </div>
+        <div class="modal-row">
+          <label>New task</label>
+          <span class="value"><kbd style="padding:2px 6px; border-radius:4px; background:var(--bg-surface); border:1px solid var(--c-border); font-size:11px; font-family:inherit">N</kbd></span>
+        </div>
+        <div class="modal-row">
+          <label>Focus mode</label>
+          <span class="value"><kbd style="padding:2px 6px; border-radius:4px; background:var(--bg-surface); border:1px solid var(--c-border); font-size:11px; font-family:inherit">⌘ Shift F</kbd></span>
+        </div>
+        <div class="modal-row">
+          <label>Project 1–5</label>
+          <span class="value"><kbd style="padding:2px 6px; border-radius:4px; background:var(--bg-surface); border:1px solid var(--c-border); font-size:11px; font-family:inherit">⌘ 1-5</kbd></span>
+        </div>
+        <div class="modal-row">
+          <label>Quick notes</label>
+          <span class="value"><kbd style="padding:2px 6px; border-radius:4px; background:var(--bg-surface); border:1px solid var(--c-border); font-size:11px; font-family:inherit">⌘ Shift N</kbd></span>
+        </div>
+        <div class="modal-row">
+          <label>Toggle theme</label>
+          <span class="value"><kbd style="padding:2px 6px; border-radius:4px; background:var(--bg-surface); border:1px solid var(--c-border); font-size:11px; font-family:inherit">⌘ Shift T</kbd></span>
+        </div>
+      </div>
+    </div>
+    <button class="modal-close" onclick="toggleSettings()">Close</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     QUICK NOTES PANEL (slide-in)
+     ═══════════════════════════════════════════ -->
+<div class="notes-panel" id="notes-panel">
+  <div class="notes-header">
+    <h3>Quick Notes</h3>
+    <button class="notes-close" onclick="toggleNotes()">✕</button>
+  </div>
+  <div class="notes-body">
+    <textarea class="notes-textarea" placeholder="Szybkie notatki, pomysły, linki...
+
+Markdown supported.">- Sprawdzić nowe API od OpenAI
+- Pomysł: integracja z Raycast
+- Link do artykułu o focus time: https://...
+
+Spotkanie z Kubą — piątek 14:00
+  → omówić roadmapę Q2
+  → budżet na narzędzia</textarea>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     REPEAT TASK MODAL (add / edit)
+     ═══════════════════════════════════════════ -->
+<div class="modal-overlay" id="repeat-modal">
+  <div class="modal" onclick="event.stopPropagation()" style="width: 400px">
+    <h2 id="repeat-modal-title">Add Repeating Task</h2>
+
+    <div class="form-group">
+      <label>Title</label>
+      <input class="form-input" id="repeat-title" placeholder="e.g. Morning standup">
+    </div>
+
+    <div class="form-group">
+      <label>Schedule</label>
+      <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px">
+        <button class="form-btn form-btn-secondary" style="flex:0; padding:5px 10px; font-size:11px" onclick="setScheduleType(this,'daily')">Every day</button>
+        <button class="form-btn form-btn-secondary" style="flex:0; padding:5px 10px; font-size:11px" onclick="setScheduleType(this,'everyN')">Every N days</button>
+        <button class="form-btn form-btn-secondary" style="flex:0; padding:5px 10px; font-size:11px" onclick="setScheduleType(this,'weekdays')">Weekdays</button>
+        <button class="form-btn form-btn-secondary" style="flex:0; padding:5px 10px; font-size:11px" onclick="setScheduleType(this,'custom')">Custom days</button>
+        <button class="form-btn form-btn-secondary" style="flex:0; padding:5px 10px; font-size:11px" onclick="setScheduleType(this,'afterDone')">After done</button>
+      </div>
+      <!-- Every N days -->
+      <div id="schedule-every-n" style="display:none; margin-top: 8px">
+        <div style="display: flex; align-items: center; gap: 8px">
+          <span style="font-size: 13px; color: var(--c-text-secondary)">Every</span>
+          <input class="form-input" type="number" value="3" min="1" max="365" style="width: 60px; text-align: center">
+          <select class="form-input" style="width: auto">
+            <option>days</option>
+            <option>weeks</option>
+          </select>
+        </div>
+      </div>
+      <!-- Custom days picker -->
+      <div id="schedule-days" style="display:none; margin-top: 8px">
+        <div style="display: flex; gap: 4px">
+          <button class="form-btn form-btn-secondary" style="flex:0; padding:4px 8px; font-size:11px; min-width:36px" onclick="this.classList.toggle('form-btn-primary');this.classList.toggle('form-btn-secondary')">Mon</button>
+          <button class="form-btn form-btn-secondary" style="flex:0; padding:4px 8px; font-size:11px; min-width:36px" onclick="this.classList.toggle('form-btn-primary');this.classList.toggle('form-btn-secondary')">Tue</button>
+          <button class="form-btn form-btn-secondary" style="flex:0; padding:4px 8px; font-size:11px; min-width:36px" onclick="this.classList.toggle('form-btn-primary');this.classList.toggle('form-btn-secondary')">Wed</button>
+          <button class="form-btn form-btn-secondary" style="flex:0; padding:4px 8px; font-size:11px; min-width:36px" onclick="this.classList.toggle('form-btn-primary');this.classList.toggle('form-btn-secondary')">Thu</button>
+          <button class="form-btn form-btn-secondary" style="flex:0; padding:4px 8px; font-size:11px; min-width:36px" onclick="this.classList.toggle('form-btn-primary');this.classList.toggle('form-btn-secondary')">Fri</button>
+          <button class="form-btn form-btn-secondary" style="flex:0; padding:4px 8px; font-size:11px; min-width:36px" onclick="this.classList.toggle('form-btn-primary');this.classList.toggle('form-btn-secondary')">Sat</button>
+          <button class="form-btn form-btn-secondary" style="flex:0; padding:4px 8px; font-size:11px; min-width:36px" onclick="this.classList.toggle('form-btn-primary');this.classList.toggle('form-btn-secondary')">Sun</button>
+        </div>
+      </div>
+      <!-- After done info -->
+      <div id="schedule-after-done" style="display:none; margin-top: 8px">
+        <div style="display: flex; align-items: center; gap: 8px">
+          <input class="form-input" type="number" value="1" min="1" max="365" style="width: 60px; text-align: center">
+          <select class="form-input" style="width: auto">
+            <option>days after completion</option>
+            <option>weeks after completion</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>After completion</label>
+      <div style="display: flex; gap: 8px">
+        <button class="form-btn form-btn-primary" style="flex:0; padding:5px 10px; font-size:11px">Remove</button>
+        <button class="form-btn form-btn-secondary" style="flex:0; padding:5px 10px; font-size:11px">Keep</button>
+      </div>
+    </div>
+
+    <div class="form-actions" id="repeat-actions-add">
+      <button class="form-btn form-btn-secondary" onclick="toggleRepeatModal()">Cancel</button>
+      <button class="form-btn form-btn-primary" onclick="toggleRepeatModal()">Add</button>
+    </div>
+    <div class="form-actions" id="repeat-actions-edit" style="display:none">
+      <button class="form-btn form-btn-danger" onclick="toggleRepeatModal()">Delete</button>
+      <button class="form-btn form-btn-secondary" onclick="toggleRepeatModal()">Cancel</button>
+      <button class="form-btn form-btn-primary" onclick="toggleRepeatModal()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     EDIT PROJECT MODAL
+     ═══════════════════════════════════════════ -->
+<div class="modal-overlay" id="edit-project-modal">
+  <div class="modal" onclick="event.stopPropagation()" style="width: 440px">
+    <h2>Edit Project</h2>
+
+    <div class="form-group">
+      <label>Name</label>
+      <input class="form-input" id="edit-name" value="CC Course">
+    </div>
+
+    <div class="form-group">
+      <label>Description</label>
+      <textarea class="form-input form-textarea" id="edit-desc">Focus management course — tworzenie i nagrywanie materiałów</textarea>
+    </div>
+
+    <div class="form-group">
+      <label>Color</label>
+      <div class="form-color-picker">
+        <div class="form-color-dot selected" style="background: var(--pc-red)" onclick="selectColor(this)"></div>
+        <div class="form-color-dot" style="background: var(--pc-orange)" onclick="selectColor(this)"></div>
+        <div class="form-color-dot" style="background: var(--pc-amber)" onclick="selectColor(this)"></div>
+        <div class="form-color-dot" style="background: var(--pc-green)" onclick="selectColor(this)"></div>
+        <div class="form-color-dot" style="background: var(--pc-blue)" onclick="selectColor(this)"></div>
+        <div class="form-color-dot" style="background: var(--pc-purple)" onclick="selectColor(this)"></div>
+        <div class="form-color-dot" style="background: var(--pc-pink)" onclick="selectColor(this)"></div>
+        <div class="form-color-dot" style="background: var(--pc-teal)" onclick="selectColor(this)"></div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Quick Links</label>
+      <div class="form-links-list">
+        <div class="form-link-row">
+          <input class="form-input" value="VS Code" placeholder="Label">
+          <input class="form-input" value="vscode://file/project" placeholder="URL / command">
+          <button class="form-link-remove">✕</button>
+        </div>
+        <div class="form-link-row">
+          <input class="form-input" value="Terminal" placeholder="Label">
+          <input class="form-input" value="iterm://session" placeholder="URL / command">
+          <button class="form-link-remove">✕</button>
+        </div>
+        <div class="form-link-row">
+          <input class="form-input" value="Figma" placeholder="Label">
+          <input class="form-input" value="https://figma.com/..." placeholder="URL / command">
+          <button class="form-link-remove">✕</button>
+        </div>
+      </div>
+      <button class="form-add-link">+ Add link</button>
+    </div>
+
+    <div class="form-actions">
+      <button class="form-btn form-btn-danger" onclick="toggleEditProject()">Archive</button>
+      <button class="form-btn form-btn-secondary" onclick="toggleEditProject()">Cancel</button>
+      <button class="form-btn form-btn-primary" onclick="toggleEditProject()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SCRIPTS
+     ═══════════════════════════════════════════ -->
+<script>
+function switchView(viewId, el) {
+  // Hide all views
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  // Show target
+  const target = document.getElementById('view-' + viewId);
+  if (target) target.classList.add('active');
+  // Update sidebar active state
+  document.querySelectorAll('.sidebar-item').forEach(item => item.classList.remove('active'));
+  if (el) el.classList.add('active');
+}
+
+function toggleTheme() {
+  document.body.classList.toggle('light');
+  const isLight = document.body.classList.contains('light');
+  document.getElementById('theme-icon').textContent = isLight ? '🌙' : '☀';
+  document.getElementById('theme-label').textContent = isLight ? 'Dark mode' : 'Light mode';
+  document.getElementById('settings-theme').textContent = isLight ? 'Light' : 'Dark';
+}
+
+function toggleDone(el) {
+  el.classList.toggle('open');
+  const list = el.nextElementSibling;
+  if (list) list.classList.toggle('open');
+}
+
+function toggleSettings() {
+  const modal = document.getElementById('settings-modal');
+  modal.classList.toggle('open');
+}
+
+function toggleCollapse(id) {
+  const el = document.getElementById(id);
+  const chevronId = id.replace('-list', '-chevron');
+  const chevron = document.getElementById(chevronId);
+  if (el.style.display === 'none') {
+    el.style.display = 'block';
+    if (chevron) chevron.textContent = '▾';
+  } else {
+    el.style.display = 'none';
+    if (chevron) chevron.textContent = '▸';
+  }
+}
+
+function toggleNotes() {
+  document.getElementById('notes-panel').classList.toggle('open');
+}
+
+function toggleRepeatModal(editMode) {
+  const modal = document.getElementById('repeat-modal');
+  const isOpen = modal.classList.contains('open');
+  if (isOpen) {
+    modal.classList.remove('open');
+    return;
+  }
+  if (editMode) {
+    document.getElementById('repeat-modal-title').textContent = 'Edit Repeating Task';
+    document.getElementById('repeat-actions-add').style.display = 'none';
+    document.getElementById('repeat-actions-edit').style.display = 'flex';
+    document.getElementById('repeat-title').value = editMode;
+  } else {
+    document.getElementById('repeat-modal-title').textContent = 'Add Repeating Task';
+    document.getElementById('repeat-actions-add').style.display = 'flex';
+    document.getElementById('repeat-actions-edit').style.display = 'none';
+    document.getElementById('repeat-title').value = '';
+  }
+  modal.classList.add('open');
+}
+
+function setScheduleType(btn, type) {
+  btn.parentElement.querySelectorAll('button').forEach(b => {
+    b.classList.remove('form-btn-primary');
+    b.classList.add('form-btn-secondary');
+  });
+  btn.classList.remove('form-btn-secondary');
+  btn.classList.add('form-btn-primary');
+  document.getElementById('schedule-days').style.display = (type === 'custom') ? 'block' : 'none';
+  document.getElementById('schedule-every-n').style.display = (type === 'everyN') ? 'block' : 'none';
+  document.getElementById('schedule-after-done').style.display = (type === 'afterDone') ? 'block' : 'none';
+}
+
+function toggleEditProject() {
+  document.getElementById('edit-project-modal').classList.toggle('open');
+}
+
+function selectColor(el) {
+  document.querySelectorAll('.form-color-dot').forEach(d => d.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+// Close modals on overlay click
+document.getElementById('settings-modal').addEventListener('click', function(e) {
+  if (e.target === this) toggleSettings();
+});
+document.getElementById('edit-project-modal').addEventListener('click', function(e) {
+  if (e.target === this) toggleEditProject();
+});
+document.getElementById('repeat-modal').addEventListener('click', function(e) {
+  if (e.target === this) toggleRepeatModal();
+});
+
+// Close modals on Escape
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    document.getElementById('settings-modal').classList.remove('open');
+    document.getElementById('edit-project-modal').classList.remove('open');
+    document.getElementById('repeat-modal').classList.remove('open');
+  }
+});
+</script>
+
+</body>
+</html>

@@ -247,7 +247,7 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
         (task.kind === 'quick' && config.focusProjectId === STANDALONE_PROJECT_ID && config.focusTaskId === task.id) ||
         (task.kind === 'pinned' && config.focusProjectId === task.projectId && config.focusTaskId === task.taskId)
       )
-      const textSize = small ? 'text-[18px]' : 'text-[22px]'
+      const textSize = small ? 'text-[15px]' : 'text-[18px]'
 
       return (
         <div
@@ -463,12 +463,12 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
         <div key={`proposal-${rt.id}`} className="group flex items-baseline gap-2.5 py-[6px]" style={{ opacity: 0.45 }}>
           <button
             onClick={() => acceptRepeatingProposal(rt.id)}
-            className="w-5 flex-shrink-0 text-center text-[18px] leading-none transition-opacity hover:opacity-80"
+            className="w-5 flex-shrink-0 text-center text-[15px] leading-none transition-opacity hover:opacity-80"
             title="Accept"
           >
             ↻
           </button>
-          <span className="flex-1 text-[18px] leading-snug truncate block cursor-default">
+          <span className="flex-1 text-[15px] leading-snug truncate block cursor-default">
             {rt.title}
           </span>
           <button
@@ -510,7 +510,7 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
     <div className={cleanView ? '' : 'space-y-1'}>
       {activeTasks.length === 0 && !hasRepeatingSection && !hasCompletedSection ? (
         <div className={`flex flex-col items-center justify-center text-t-secondary ${cleanView ? 'h-16' : 'h-40'}`}>
-          <p className={cleanView ? 'text-[22px]' : 'text-sm'} style={cleanView ? { opacity: 0.25 } : undefined}>
+          <p className={cleanView ? 'text-[18px]' : 'text-sm'} style={cleanView ? { opacity: 0.25 } : undefined}>
             {cleanView ? 'Brak zadań' : 'No quick tasks yet'}
           </p>
           {!cleanView && <p className="text-xs text-t-muted mt-1">Press <kbd className="px-1 py-0.5 rounded bg-surface border border-border text-[10px]">n</kbd> to add a task or pin project tasks</p>}

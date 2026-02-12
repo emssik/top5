@@ -157,8 +157,8 @@ app.whenReady().then(() => {
     const hasRepeating = repeatingActiveCount + proposalCount > 0
     const hasCompleted = completedToday.length > 0
     const separators = (hasRepeating && visibleRegularCount > 0 ? 1 : 0) + (hasCompleted && (visibleRegularCount > 0 || hasRepeating) ? 1 : 0)
-    // Header ≈ 148, each row ≈ 42px, each separator ≈ 20px, bottom padding 12px
-    const height = Math.min(Math.max(totalRows * 42 + separators * 20 + 160, 260), workArea.height)
+    // Header ≈ 130, each row ≈ 34px, each separator ≈ 20px, bottom padding 12px
+    const height = Math.min(Math.max(totalRows * 34 + separators * 20 + 142, 240), workArea.height)
     mainWindow.setMinimumSize(width, 100)
     mainWindow.setBounds({
       x: bounds.x + Math.round((bounds.width - width) / 2),

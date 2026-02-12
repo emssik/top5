@@ -20,8 +20,8 @@ export default function CleanViewHeader() {
 
   return (
     <div className="text-center mb-4">
-      <div className="text-[26px] font-semibold">{dateLabel}</div>
-      <div className="text-[18px] opacity-40 mt-0.5">{timeLabel}</div>
+      <div className="text-[22px] font-semibold">{dateLabel}</div>
+      <div className="text-[15px] opacity-40 mt-0.5">{timeLabel}</div>
       <div className="mt-3 mx-auto w-full h-px opacity-15" style={{ backgroundColor: 'currentColor' }} />
     </div>
   )
