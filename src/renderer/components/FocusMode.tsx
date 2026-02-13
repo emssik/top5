@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useProjects } from '../hooks/useProjects'
+import { useTaskList } from '../hooks/useTaskList'
 import { getActiveLaunchers, launchByType, launcherMeta } from '../utils/launchers'
 import { STANDALONE_PROJECT_ID } from '../utils/constants'
 import type { Task } from '../types'
@@ -24,6 +25,7 @@ const FOCUS_HEIGHT_PICKER = 350
 
 export default function FocusMode() {
   const { projects, quickTasks, config, setFocus } = useProjects()
+  const { activeTasks, repeatingActive } = useTaskList()
   const [remainingMs, setRemainingMs] = useState<number | null>(null)
   const [confirmAction, setConfirmAction] = useState<{ minutes: number; type: 'exit' | 'complete' } | null>(null)
   const [isDev, setIsDev] = useState(false)
@@ -66,25 +68,15 @@ export default function FocusMode() {
     : project?.tasks.find((t) => t.id === config.focusTaskId)
   const contextLabel = isStandalone ? 'Quick Task' : project?.name
 
-  // Build list of available tasks for picker (excluding completed task)
+  // Build picker from visible tasks (same as clean view), excluding just-completed task
   const pickerTasks: PickerTask[] = []
   if (showTaskPicker) {
-    // Quick tasks (standalone)
-    for (const qt of quickTasks) {
-      if (qt.completed) continue
-      const key = `${STANDALONE_PROJECT_ID}:${qt.id}`
+    for (const mt of [...activeTasks, ...repeatingActive]) {
+      const projectId = mt.kind === 'pinned' ? mt.projectId! : STANDALONE_PROJECT_ID
+      const taskId = mt.kind === 'pinned' ? mt.taskId! : mt.id
+      const key = `${projectId}:${taskId}`
       if (key === completedTaskKey) continue
-      pickerTasks.push({ projectId: STANDALONE_PROJECT_ID, taskId: qt.id, title: qt.title })
-    }
-    // Pinned tasks from projects
-    for (const p of projects) {
-      if (p.archivedAt) continue
-      for (const t of p.tasks) {
-        if (!t.isToDoNext || t.completed) continue
-        const key = `${p.id}:${t.id}`
-        if (key === completedTaskKey) continue
-        pickerTasks.push({ projectId: p.id, taskId: t.id, title: t.title, projectName: p.name })
-      }
+      pickerTasks.push({ projectId, taskId, title: mt.title, projectName: mt.projectName })
     }
   }
 

@@ -535,16 +535,16 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
       ) : (
         <div className={cleanView ? '' : 'space-y-1'} onDragEnd={handleDragEnd}>
           {activeTasks.map((t) => renderTask(t))}
-          {hasRepeatingSection && (
+          {hasRepeatingSection && (cleanView ? repeatingActive.length > 0 : true) && (
             <>
               {cleanView && activeTasks.length > 0 && cleanSeparator}
               {repeatingActive.map((t) => renderTask(t, cleanView))}
-              {proposals.map(renderProposal)}
+              {!cleanView && proposals.map(renderProposal)}
             </>
           )}
           {hasCompletedSection && (
             <>
-              {cleanView && (activeTasks.length > 0 || hasRepeatingSection) && cleanSeparator}
+              {cleanView && (activeTasks.length > 0 || repeatingActive.length > 0) && cleanSeparator}
               {completedTasks.map((t) => renderTask(t))}
             </>
           )}

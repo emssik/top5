@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Focus Mode task picker now uses `useTaskList` hook for consistent task list with clean view (same ordering and filtering)
+- Clean view hides repeating section header when no repeating tasks are active
+- Clean view no longer shows repeating task proposals (accept/dismiss UI)
+- Clean view completed section separator only shown when there are actual repeating active tasks (not just proposals)
+
 ### Removed
 
 - `focus_checkin` operation type from activity log — focus check-ins are no longer logged as separate operations
