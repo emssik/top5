@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Hover tooltip on quick task titles showing full text when truncated
+
+### Changed
+
+- README rewritten to reflect current app architecture: sidebar navigation, Today view, configurable project limit, project colors and links, activity log, and updated project structure
+
 ## [1.22.0] - 2026-02-13
 
 ### Changed

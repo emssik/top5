@@ -1,28 +1,31 @@
 # Top5
 
-Desktop app for attention management. Forces a limit of 5 projects, minimizes context-switching friction.
+Desktop app for attention management. Configurable project limit (default 5), minimizes context-switching friction.
 
 ## Features
 
-- **5 project limit** — forces prioritization, no infinite backlog
+- **Project limit** — configurable active project cap (1–20, default 5), forces prioritization
+- **Sidebar navigation** — fixed sidebar with color-coded project dots, collapsible suspended/archived sections, drag-and-drop between states
+- **Today view** — default landing page grouping tasks into Focus, In Progress, Up Next, and Done sections
+- **Project colors** — 8 color options auto-assigned to new projects
+- **Project links** — flexible label+URL pairs supporting vscode://, iterm://, obsidian://, mailto://, http(s):// protocols
 - **Quick tasks** — standalone task list + pinned "To Do Next" tasks from projects, configurable limit (default 5)
-- **Tasks per project** — simple task list with inline editing, completion, time tracking
+- **In-progress status** — mark tasks as in-progress with visual amber indicators
+- **Tasks per project** — full-screen detail view with task list, inline editing, completion, time tracking
 - **Focus mode** — dedicated always-on-top window with countdown timer, launcher buttons, and double-click to copy task title
 - **Focus check-ins** — every 15 min asks if you're still working; tracks time per project and task
-- **Repeating tasks** — recurring task definitions with schedules (daily, specific weekdays, every N days, N days after completion); due tasks appear as proposals below active quick tasks
+- **Repeating tasks** — recurring task definitions with schedules (daily, specific weekdays, every N days, N days after completion); due tasks appear as proposals in Today view
 - **Clean view** — distraction-free notebook style with configurable handwriting font (Caveat, Patrick Hand, Kalam, Architects Daughter) and dot grid background
-- **Compact mode** — always-on-top slim sidebar with project launchers and quick tasks
-- **Work stats** — heatmap of focus time per project (today / 7d / 14d / month / 6m / 12m)
-- **Quick launchers** — one-click open VS Code, iTerm, Obsidian (specific note), browser per project
-- **Native file pickers** — system dialogs for selecting folders and Obsidian notes
-- **Drag-and-drop reordering** — arrange projects and quick tasks by priority
+- **Work stats** — per-project focus time table with selectable time ranges (7d / 14d / month / prev month / 6m / 12m)
+- **Activity log** — persistent operation log tracking task creates/completes/deletes, project events, and focus check-ins
+- **Drag-and-drop** — reorder projects and tasks, move projects between active/suspended/archived states
 - **Project archiving** — archive instead of delete, restore anytime
-- **Project suspend** — temporarily pause projects without archiving, excluded from the 5-project limit
+- **Project suspend** — temporarily pause projects without archiving, excluded from the active limit
 - **Light/dark theme** — warm notebook palette (light) or OLED-friendly dark, persisted across sessions
-- **Quick notes** — global scratchpad
-- **Global shortcuts** — `Cmd+Shift+Space` to toggle app, `Cmd+1-5` to jump to project, all configurable
+- **Quick notes** — global scratchpad in a slide-in panel
+- **Shortcuts** — `Cmd+Shift+Space` (global) to toggle app; `Cmd+1-5` to jump to project, `Cmd+Shift+F` to toggle focus, `Cmd+Shift+N` for quick notes (local, configurable)
 - **Dev mode isolation** — separate data directory in development, preventing dev sessions from modifying production data
-- **Persistent storage** — YAML config + JSONL check-ins, synced via iCloud Drive with daily backups
+- **Persistent storage** — YAML config + JSONL check-ins + JSONL operation log, synced via iCloud Drive with daily backups
 
 ## Stack
 
@@ -52,15 +55,15 @@ See `docs/CODING_GUIDE.md` for coding conventions and patterns used in this proj
 
 ## Keyboard shortcuts
 
-| Shortcut | Action |
-|---|---|
-| `Cmd+Shift+Space` | Toggle app |
-| `Cmd+1..5` | Switch to project (configurable) |
-| `Cmd+Shift+F` | Toggle focus mode (configurable) |
-| `Cmd+Shift+N` | Quick notes (configurable) |
-| `n` | Add quick task / focus add-task input (context-dependent) |
+| Shortcut | Scope | Action |
+|---|---|---|
+| `Cmd+Shift+Space` | Global | Toggle app |
+| `Cmd+1..5` | Local | Switch to project (configurable) |
+| `Cmd+Shift+F` | Local | Toggle focus mode (configurable) |
+| `Cmd+Shift+N` | Local | Quick notes (configurable) |
+| `n` | Local | Add quick task / focus add-task input (context-dependent) |
 
-All shortcuts are configurable in Settings.
+Global shortcuts work system-wide. Local shortcuts work only when the app window is focused. All shortcuts are configurable in Settings.
 
 ## Project structure
 
@@ -71,34 +74,37 @@ src/
     store.ts           # YAML/JSONL storage, iCloud sync, daily backups, IPC handlers
     launchers.ts       # VS Code, iTerm, Obsidian, browser launchers
     focus-window.ts    # Focus mode window, check-in popups, countdown timer, stats window
-    shortcuts.ts       # Global keyboard shortcuts
+    shortcuts.ts       # Global and local keyboard shortcuts
   preload/
     index.ts           # contextBridge IPC api
-    index.d.ts         # TypeScript types for the bridge API
   renderer/
-    App.tsx            # Root — routes between Dashboard and FocusMode
+    App.tsx            # Root — routes between Dashboard, FocusMode, and auxiliary views
     components/
-      Dashboard.tsx      # Main view with tabbed interface (Tasks/Projects/Suspended/Archive)
-      DashboardToolbar.tsx # Top toolbar with view toggles and actions
-      TabBar.tsx         # Reusable tab bar component
+      Dashboard.tsx      # Main layout: sidebar + content panel
+      Sidebar.tsx        # Fixed sidebar with project dots, drag-and-drop, collapsible sections
+      TodayView.tsx      # Default view: Focus, In Progress, Up Next, Done sections
+      ProjectDetailView.tsx # Full-screen project view with tasks, links, metadata
+      ProjectEditor.tsx  # Modal editor with color picker and links management
       ProjectTile.tsx    # Project card with launchers, timer, tasks
-      ProjectEditor.tsx  # Modal editor with native file pickers
       FocusMode.tsx      # Dedicated focus window with countdown and launchers
       CheckInPopup.tsx   # Focus check-in popup (yes/no/a little)
-      CompactBar.tsx     # Compact mode sidebar (260px, always-on-top)
-      StatsView.tsx      # Work stats heatmap across time ranges
+      InlineStatsView.tsx # Work stats table with time range selection
+      StatsView.tsx      # Work stats in dedicated window
+      OperationLogView.tsx # Activity log with date grouping
       TaskList.tsx       # Per-project task CRUD with focus action
       QuickTasksView.tsx # Merged standalone + pinned tasks view
       RepeatingTasksTab.tsx # Repeating task CRUD with schedule picker and reorder
+      RepeatView.tsx     # Repeating tasks wrapped in sidebar layout
       CleanViewHeader.tsx # Header for clean/notebook view mode
-      QuickNotes.tsx     # Global notes modal
-      Settings.tsx       # Shortcut and quick tasks limit configuration
+      QuickNotesPanel.tsx # Slide-in quick notes panel
+      Settings.tsx       # App configuration and shortcuts reference
     hooks/
       useProjects.ts   # Zustand store (single source of truth)
       useTaskList.ts   # Merged task list logic (active, repeating, completed, proposals)
       useTimer.ts      # Live timer hook
     utils/
       checkInTime.ts   # Focus time calculations and formatting
+      projects.ts      # Project normalization (colors, links, migration)
       launchers.ts     # Launcher metadata and dispatch helpers
       constants.ts     # Shared constants and configuration defaults
     types/
@@ -113,6 +119,7 @@ Data lives in iCloud Drive (`~/Library/Mobile Documents/com~apple~CloudDocs/top5
 |---|---|
 | `data.yaml` | Projects, quick tasks, repeating tasks, quick notes, config |
 | `checkins.jsonl` | Focus check-in log (append-only, one JSON per line) |
+| `operations.jsonl` | Activity operation log (task creates/completes/deletes, project events) |
 | `backups/` | Daily auto-backups (max 7 days, skipped if no changes) |
 
 ## License

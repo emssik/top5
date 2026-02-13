@@ -298,6 +298,7 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
                 onDoubleClick={() => !isCompleted && startEditing(task)}
                 className={`${textSize} leading-snug truncate block cursor-default ${isCompleted ? 'line-through' : ''}`}
                 style={{ opacity: isCompleted ? 0.3 : 1 }}
+                title={task.title}
               >
                 {task.title}
               </span>
