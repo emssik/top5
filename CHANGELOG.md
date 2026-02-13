@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.26.0] - 2026-02-13
+
+### Added
+
+- Quick Add window: global overlay (`Cmd+Shift+N`) for rapidly adding tasks, projects, and repeating tasks without opening the main window
+- Three modes in Quick Add: Task (standalone or to a project), Project (with color, description, first task), and Repeating (with full schedule picker)
+- Keyboard-driven workflow: `Tab` to switch modes, `Cmd+1-9` to select project, arrow keys to navigate project list, `Enter` to submit, `Esc` to dismiss
+- `quick-add-window` module managing a frameless, always-on-top, transparent BrowserWindow with hash route `#quick-add`
+- `close-quick-add-window` IPC handler and preload bridge for programmatic window dismissal
+- `QuickAddWindow` renderer component with `TaskPanel`, `ProjectPanel`, and `RepeatPanel` sub-components
+- Pin to Today and In Progress toggles when adding tasks via Quick Add
+
 ### Changed
 
 - Creating a project when active limit is reached now auto-suspends the new project instead of blocking creation with an error

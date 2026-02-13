@@ -1,5 +1,6 @@
 import type { BrowserWindow, GlobalShortcut } from 'electron'
 import { getAppData } from './store'
+import { toggleQuickAddWindow } from './quick-add-window'
 
 interface ParsedAccelerator {
   meta: boolean
@@ -57,6 +58,11 @@ export function registerGlobalShortcut(
       win.show()
       win.focus()
     }
+  })
+
+  const quickAddShortcut = shortcuts['quick-add'] || 'CommandOrControl+Shift+N'
+  globalShortcutModule.register(quickAddShortcut, () => {
+    toggleQuickAddWindow()
   })
 }
 

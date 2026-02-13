@@ -179,6 +179,7 @@ declare global {
       acceptRepeatingProposal: (repeatingTaskId: string) => Promise<QuickTask[]>
       dismissRepeatingProposal: (repeatingTaskId: string) => Promise<void>
       getOperations: (since?: string) => Promise<OperationLogEntry[]>
+      closeQuickAddWindow: () => Promise<void>
       onReloadData: (callback: () => void) => () => void
       onShortcutAction: (callback: (data: ShortcutActionPayload) => void) => () => void
       onCheckInCountdown: (callback: (remainingMs: number) => void) => () => void
