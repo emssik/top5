@@ -212,6 +212,29 @@ export function registerFocusHandlers(
     }
   })
 
+  ipcMain.handle('switch-focus-task', (_event, projectId: string, taskId: string) => {
+    if (!focusWindow || focusWindow.isDestroyed()) return
+
+    const { config } = getAppData()
+    setAppDataKey('config', { ...config, focusProjectId: projectId, focusTaskId: taskId })
+
+    // Reset check-in timer for the new task
+    startCheckInTimer()
+
+    // Notify all windows (focus + main) to reload data
+    for (const win of BrowserWindow.getAllWindows()) {
+      if (!win.isDestroyed()) {
+        win.webContents.send('reload-data')
+      }
+    }
+  })
+
+  ipcMain.handle('resize-focus-window', (_event, width: number, height: number) => {
+    if (!focusWindow || focusWindow.isDestroyed()) return
+    focusWindow.setMinimumSize(width, height)
+    focusWindow.setSize(width, height)
+  })
+
   ipcMain.handle('open-operation-log-window', () => {
     if (operationLogWindow && !operationLogWindow.isDestroyed()) {
       operationLogWindow.focus()

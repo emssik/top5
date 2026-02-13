@@ -7,6 +7,63 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.27.1] - 2026-02-13
+
+### Fixed
+
+- Typed task parameter in Focus Mode completion handler (use `Task` type instead of inline `{ id: string }`)
+
+## [1.27.0] - 2026-02-13
+
+### Added
+
+- Task completion from Focus Mode: checkmark button completes the current task (both quick tasks and pinned project tasks) without leaving focus
+- Next task picker in Focus Mode: after completing a task, a popup lists available quick tasks and pinned project tasks to continue focusing
+- `switch-focus-task` IPC handler to change the focused task, reset the check-in timer, and notify all windows
+- `resize-focus-window` IPC handler to dynamically resize the focus window when the task picker opens/closes
+- `switchFocusTask` and `resizeFocusWindow` preload bridge APIs
+
+### Changed
+
+- Focus Mode confirm dialog generalized to handle both exit and complete actions (save tracked time before completing a task)
+- Focus Mode tooltip hidden while the task picker is open
+
+## [1.26.1] - 2026-02-13
+
+### Changed
+
+- Quick Add task panel now shows suspended projects alongside active ones, allowing task assignment to any non-archived project
+- Removed standalone "Quick task (no project)" option from Quick Add task panel — tasks must now be assigned to a project
+- Quick Add project list scrollable with 240px max height to prevent overflow with many projects
+- Quick Add content area uses `overflow-hidden` instead of vertical scroll to prevent double scrollbars
+- README updated to reflect current features: Quick Add, task/project deletion, monthly schedules, auto-suspend, revised shortcuts and project structure
+
+## [1.26.0] - 2026-02-13
+
+### Added
+
+- Quick Add window: global overlay (`Cmd+Shift+N`) for rapidly adding tasks, projects, and repeating tasks without opening the main window
+- Three modes in Quick Add: Task (standalone or to a project), Project (with color, description, first task), and Repeating (with full schedule picker)
+- Keyboard-driven workflow: `Tab` to switch modes, `Cmd+1-9` to select project, arrow keys to navigate project list, `Enter` to submit, `Esc` to dismiss
+- `quick-add-window` module managing a frameless, always-on-top, transparent BrowserWindow with hash route `#quick-add`
+- `close-quick-add-window` IPC handler and preload bridge for programmatic window dismissal
+- `QuickAddWindow` renderer component with `TaskPanel`, `ProjectPanel`, and `RepeatPanel` sub-components
+- Pin to Today and In Progress toggles when adding tasks via Quick Add
+
+### Changed
+
+- Creating a project when active limit is reached now auto-suspends the new project instead of blocking creation with an error
+- Removed client-side limit guard from Dashboard "Add Project" button and ProjectEditor validation
+- Main store `save-project` handler sets `suspendedAt` on new projects exceeding the active limit instead of silently discarding
+
+## [1.25.0] - 2026-02-13
+
+### Added
+
+- Delete button on individual tasks (both active and completed) in `ProjectDetailView`
+- Delete project action in `ProjectDetailView` header (visible only when project has zero tasks, with confirmation dialog)
+- `onDelete` callback on `ProjectDetailView` to navigate back to Today view after project deletion
+
 ## [1.24.0] - 2026-02-13
 
 ### Removed
