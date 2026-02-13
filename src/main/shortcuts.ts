@@ -60,11 +60,7 @@ export function registerGlobalShortcut(
   })
 }
 
-export function registerLocalShortcuts(
-  win: BrowserWindow,
-  getIsCompactMode: () => boolean,
-  exitCompactMode: () => void
-): void {
+export function registerLocalShortcuts(win: BrowserWindow): void {
   const { config } = getAppData()
   const shortcuts = config?.actionShortcuts || {}
 
@@ -78,10 +74,7 @@ export function registerLocalShortcuts(
     if (!parsed) continue
     bindings.push({
       parsed,
-      handler: () => {
-        if (getIsCompactMode()) exitCompactMode()
-        win.webContents.send('shortcut-action', { action: 'select-project', index: i - 1 })
-      }
+      handler: () => win.webContents.send('shortcut-action', { action: 'select-project', index: i - 1 })
     })
   }
 

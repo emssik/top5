@@ -7,10 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.24.0] - 2026-02-13
+
 ### Removed
 
 - Dead component files from pre-sidebar UI: `CompactBar`, `DashboardToolbar`, `ProjectTile`, `QuickNotes`, `RepeatingTasksTab`, `TabBar`, `TaskList` (replaced by sidebar layout, `ProjectDetailView`, `QuickNotesPanel`, `RepeatView`, and `QuickTasksView`)
 - Unused `useTimer` hook (per-project timer replaced by check-in-based time tracking since v1.4.0)
+- `StatsView` component and stats window (`open-stats-window` IPC handler) — replaced by inline `InlineStatsView` in sidebar layout
+- Compact mode: `enterCompactMode`/`exitCompactMode` IPC handlers, `setCompactMode` Zustand action, and `isCompactMode` main process state
+- Separate new-project window: `open-new-project-window`/`close-new-project-window` IPC handlers — project creation now uses inline `ProjectEditor` modal
+- `updateProjectTimer` IPC handler (dead since v1.4.0 timer removal)
+- `pickFolder` and `pickObsidianNote` IPC handlers (replaced by project links system in v1.20.0)
+- Compact mode guard from `enter-clean-view` handler and shortcut select-project handler
 
 ## [1.23.0] - 2026-02-13
 

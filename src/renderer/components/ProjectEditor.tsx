@@ -45,10 +45,6 @@ export default function ProjectEditor({ project, onClose }: Props) {
   })
 
   const handleCancel = () => {
-    if (isCreateMode && !onClose) {
-      window.api.closeNewProjectWindow()
-      return
-    }
     onClose?.()
   }
 
@@ -88,12 +84,7 @@ export default function ProjectEditor({ project, onClose }: Props) {
       })
 
       await window.api.saveProject(newProject)
-
-      if (onClose) {
-        onClose()
-      } else {
-        window.api.closeNewProjectWindow()
-      }
+      onClose?.()
       return
     }
 

@@ -24,7 +24,6 @@ interface ProjectsState {
   saveConfig: (config: AppConfig) => Promise<void>
   reorderProjects: (orderedIds: string[]) => Promise<void>
   setFocus: (projectId: string | null, taskId: string | null) => Promise<void>
-  setCompactMode: (enabled: boolean) => Promise<void>
   saveQuickTask: (task: QuickTask) => Promise<void>
   removeQuickTask: (id: string) => Promise<void>
   completeQuickTask: (id: string) => Promise<void>
@@ -153,19 +152,6 @@ export const useProjects = create<ProjectsState>((set, get) => ({
       await window.api.enterFocusMode()
     } else {
       await window.api.exitFocusMode()
-    }
-  },
-
-  setCompactMode: async (enabled: boolean) => {
-    const { config } = get()
-    const newConfig = { ...config, compactMode: enabled }
-    await window.api.saveConfig(newConfig)
-    set({ config: newConfig })
-
-    if (enabled) {
-      await window.api.enterCompactMode()
-    } else {
-      await window.api.exitCompactMode()
     }
   },
 

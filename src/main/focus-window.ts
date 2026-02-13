@@ -7,9 +7,7 @@ import { getAppData, setAppDataKey } from './store'
 
 let focusWindow: BrowserWindow | null = null
 let checkInWindow: BrowserWindow | null = null
-let statsWindow: BrowserWindow | null = null
 let operationLogWindow: BrowserWindow | null = null
-let newProjectWindow: BrowserWindow | null = null
 let checkInTimeout: ReturnType<typeof setTimeout> | null = null
 let countdownInterval: ReturnType<typeof setInterval> | null = null
 let checkInDeadline: number = 0
@@ -212,74 +210,6 @@ export function registerFocusHandlers(
     if (focusWindow && !focusWindow.isDestroyed()) {
       startCheckInTimer()
     }
-  })
-
-  ipcMain.handle('open-new-project-window', () => {
-    if (newProjectWindow && !newProjectWindow.isDestroyed()) {
-      newProjectWindow.focus()
-      return
-    }
-
-    newProjectWindow = new BrowserWindow({
-      width: 500,
-      height: 500,
-      resizable: true,
-      title: 'New Project',
-      webPreferences: {
-        preload: join(__dirname, '../preload/index.js'),
-        sandbox: false
-      }
-    })
-
-    if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-      newProjectWindow.loadURL(process.env['ELECTRON_RENDERER_URL'] + '#new-project')
-    } else {
-      newProjectWindow.loadFile(join(__dirname, '../renderer/index.html'), { hash: 'new-project' })
-    }
-
-    newProjectWindow.on('closed', () => {
-      newProjectWindow = null
-      const mainWin = getMainWindow()
-      if (mainWin && !mainWin.isDestroyed()) {
-        mainWin.webContents.send('reload-data')
-      }
-    })
-  })
-
-  ipcMain.handle('close-new-project-window', () => {
-    if (newProjectWindow && !newProjectWindow.isDestroyed()) {
-      newProjectWindow.close()
-      newProjectWindow = null
-    }
-  })
-
-  ipcMain.handle('open-stats-window', () => {
-    if (statsWindow && !statsWindow.isDestroyed()) {
-      statsWindow.close()
-      statsWindow = null
-      return
-    }
-
-    statsWindow = new BrowserWindow({
-      width: 600,
-      height: 500,
-      resizable: true,
-      title: 'Work Stats',
-      webPreferences: {
-        preload: join(__dirname, '../preload/index.js'),
-        sandbox: false
-      }
-    })
-
-    if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-      statsWindow.loadURL(process.env['ELECTRON_RENDERER_URL'] + '#stats')
-    } else {
-      statsWindow.loadFile(join(__dirname, '../renderer/index.html'), { hash: 'stats' })
-    }
-
-    statsWindow.on('closed', () => {
-      statsWindow = null
-    })
   })
 
   ipcMain.handle('open-operation-log-window', () => {

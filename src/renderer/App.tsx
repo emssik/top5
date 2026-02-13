@@ -3,19 +3,15 @@ import { useProjects } from './hooks/useProjects'
 import Dashboard from './components/Dashboard'
 import FocusMode from './components/FocusMode'
 import CheckInPopup from './components/CheckInPopup'
-import StatsView from './components/StatsView'
 import OperationLogView from './components/OperationLogView'
-import ProjectEditor from './components/ProjectEditor'
 
 export default function App() {
-  const { loaded, loadData, config, saveConfig } = useProjects()
+  const { loaded, loadData, config } = useProjects()
   const windowHash = window.location.hash
   const isFocusWindow = windowHash === '#focus'
   const isCheckInWindow = windowHash === '#checkin'
-  const isStatsWindow = windowHash === '#stats'
   const isOperationLogWindow = windowHash === '#operation-log'
-  const isNewProjectWindow = windowHash === '#new-project'
-  const isAuxWindow = isCheckInWindow || isStatsWindow || isOperationLogWindow || isNewProjectWindow
+  const isAuxWindow = isCheckInWindow || isOperationLogWindow
   const isMainOrFocus = !isAuxWindow
 
   // Separate windows with hash routing — apply theme from stored config.
@@ -60,21 +56,9 @@ export default function App() {
     }
   }, [isMainOrFocus, config.theme])
 
-  useEffect(() => {
-    if (!isMainOrFocus) return
-    if (!config.compactMode) return
-    saveConfig({ ...config, compactMode: false })
-  }, [config, isMainOrFocus, saveConfig])
-
   if (isFocusWindow) return loaded ? <FocusMode /> : null
   if (isCheckInWindow) return <CheckInPopup />
-  if (isStatsWindow) return <StatsView />
   if (isOperationLogWindow) return <OperationLogView />
-  if (isNewProjectWindow) return (
-    <div className="h-screen bg-base text-t-primary p-6 flex items-center justify-center">
-      <ProjectEditor />
-    </div>
-  )
 
   if (!loaded) {
     return (

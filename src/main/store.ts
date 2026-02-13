@@ -1,4 +1,4 @@
-import { dialog, app, BrowserWindow } from 'electron'
+import { app, BrowserWindow } from 'electron'
 import type { IpcMain } from 'electron'
 import {
   existsSync,
@@ -15,7 +15,7 @@ import {
 } from 'fs'
 import { createHash } from 'crypto'
 import { platform } from 'os'
-import { dirname, basename, relative, join } from 'path'
+import { dirname, basename, join } from 'path'
 import { homedir } from 'os'
 import yaml from 'js-yaml'
 
@@ -725,21 +725,6 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
     setData('config', config)
   })
 
-  ipcMain.handle(
-    'update-project-timer',
-    (_event, projectId: string, totalTimeMs: number, timerStartedAt: string | null) => {
-      const data = getData()
-      const projects = [...data.projects]
-      const project = projects.find((p) => p.id === projectId)
-      if (project) {
-        project.totalTimeMs = totalTimeMs
-        project.timerStartedAt = timerStartedAt
-        setData('projects', projects)
-      }
-      return projects
-    }
-  )
-
   ipcMain.handle('archive-project', (_event, projectId: string) => {
     const data = getData()
     const projects = [...data.projects]
@@ -815,14 +800,6 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
     return { projects }
   })
 
-  ipcMain.handle('pick-folder', async () => {
-    const result = await dialog.showOpenDialog({
-      properties: ['openDirectory']
-    })
-    if (result.canceled) return null
-    return result.filePaths[0]
-  })
-
   ipcMain.handle('save-focus-checkin', (_event, checkIn: unknown) => {
     const normalized = toFocusCheckIn(checkIn)
     if (!normalized) return loadCheckIns()
@@ -844,37 +821,6 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
       return checkIns.filter((c) => c.taskId === taskId)
     }
     return checkIns
-  })
-
-  ipcMain.handle('pick-obsidian-note', async () => {
-    const result = await dialog.showOpenDialog({
-      properties: ['openFile'],
-      filters: [{ name: 'Markdown', extensions: ['md'] }]
-    })
-    if (result.canceled) return null
-
-    const filePath = result.filePaths[0]
-
-    // Walk up to find .obsidian folder (vault root)
-    let dir = dirname(filePath)
-    let vaultRoot: string | null = null
-    while (dir !== dirname(dir)) {
-      if (existsSync(join(dir, '.obsidian'))) {
-        vaultRoot = dir
-        break
-      }
-      dir = dirname(dir)
-    }
-
-    if (!vaultRoot) {
-      return { path: filePath, uri: null }
-    }
-
-    const vaultName = basename(vaultRoot)
-    const relativePath = relative(vaultRoot, filePath).replace(/\.md$/, '')
-
-    const uri = `obsidian://open?vault=${encodeURIComponent(vaultName)}&file=${encodeURIComponent(relativePath)}`
-    return { path: filePath, uri }
   })
 
   // --- Quick Tasks ---

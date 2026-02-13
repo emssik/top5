@@ -8,7 +8,6 @@ import { registerGlobalShortcut, registerLocalShortcuts } from './shortcuts'
 
 let mainWindow: BrowserWindow | null = null
 let savedBounds: Electron.Rectangle | null = null
-let isCompactMode = false
 
 function isAllowedExternalUrl(url: string): boolean {
   try {
@@ -17,19 +16,6 @@ function isAllowedExternalUrl(url: string): boolean {
   } catch {
     return false
   }
-}
-
-function exitCompactMode(): void {
-  if (!mainWindow || !isCompactMode) return
-  isCompactMode = false
-  mainWindow.setAlwaysOnTop(false)
-  mainWindow.setResizable(true)
-  mainWindow.setMinimumSize(600, 400)
-  if (savedBounds) {
-    mainWindow.setBounds(savedBounds)
-    savedBounds = null
-  }
-  mainWindow.webContents.send('shortcut-action', { action: 'exit-compact-mode' })
 }
 
 function createWindow(): void {
@@ -93,37 +79,10 @@ app.whenReady().then(() => {
   registerFocusHandlers(ipcMain, () => mainWindow)
   registerGlobalShortcut(globalShortcut, () => mainWindow)
   createWindow()
-  registerLocalShortcuts(mainWindow!, () => isCompactMode, exitCompactMode)
-
-  ipcMain.handle('enter-compact-mode', () => {
-    if (!mainWindow || isCompactMode) return
-    savedBounds = mainWindow.getBounds()
-    isCompactMode = true
-    const bounds = mainWindow.getBounds()
-    const display = screen.getDisplayNearestPoint({ x: bounds.x, y: bounds.y })
-    const workArea = display.workArea
-    const barWidth = 260
-    // ~56px per project row + 60px for titlebar/expand button
-    const data = getAppData()
-    const activeCount = data.projects.filter((project) => !project.archivedAt).length
-    const barHeight = Math.min(Math.max(activeCount * 56 + 60, 150), workArea.height)
-    mainWindow.setMinimumSize(barWidth, 100)
-    mainWindow.setBounds({
-      x: workArea.x + workArea.width - barWidth,
-      y: workArea.y,
-      width: barWidth,
-      height: barHeight
-    })
-    mainWindow.setResizable(false)
-    mainWindow.setAlwaysOnTop(true)
-  })
-
-  ipcMain.handle('exit-compact-mode', () => {
-    exitCompactMode()
-  })
+  registerLocalShortcuts(mainWindow!)
 
   ipcMain.handle('enter-clean-view', () => {
-    if (!mainWindow || isCompactMode) return
+    if (!mainWindow) return
     // Only save bounds if not already in clean view (avoid overwriting on startup restore)
     if (!savedBounds) {
       savedBounds = mainWindow.getBounds()
