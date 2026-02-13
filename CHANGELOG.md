@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Creating a project when active limit is reached now auto-suspends the new project instead of blocking creation with an error
+- Removed client-side limit guard from Dashboard "Add Project" button and ProjectEditor validation
+- Main store `save-project` handler sets `suspendedAt` on new projects exceeding the active limit instead of silently discarding
+
 ## [1.25.0] - 2026-02-13
 
 ### Added

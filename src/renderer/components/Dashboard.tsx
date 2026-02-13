@@ -199,11 +199,6 @@ export default function Dashboard() {
         onToggleSettings={() => setShowSettings(true)}
         onToggleTheme={toggleTheme}
         onAddProject={() => {
-          if (activeProjects.length >= activeProjectsLimit) {
-            setRestoreError(`Cannot add project: active projects limit (${activeProjectsLimit}) reached.`)
-            setTimeout(() => setRestoreError(null), 3000)
-            return
-          }
           setEditorProjectId(null)
           setShowEditor(true)
         }}

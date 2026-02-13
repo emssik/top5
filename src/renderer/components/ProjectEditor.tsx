@@ -57,10 +57,7 @@ export default function ProjectEditor({ project, onClose }: Props) {
     if (isCreateMode) {
       const activeCount = normalizedProjects.filter((item) => !item.archivedAt && !item.suspendedAt).length
       const activeLimit = config.activeProjectsLimit ?? 5
-      if (activeCount >= activeLimit) {
-        alert(`Cannot add project: active projects limit (${activeLimit}) reached.`)
-        return
-      }
+      const overLimit = activeCount >= activeLimit
 
       const newProject: Project = normalizeProject({
         id: nanoid(),
@@ -80,7 +77,7 @@ export default function ProjectEditor({ project, onClose }: Props) {
         color: form.color,
         tasks: [],
         archivedAt: null,
-        suspendedAt: null
+        suspendedAt: overLimit ? new Date().toISOString() : null
       })
 
       await window.api.saveProject(newProject)

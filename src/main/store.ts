@@ -658,7 +658,7 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
       const activeCount = projects.filter((p) => !p.archivedAt && !p.suspendedAt).length
       const activeLimit = getActiveProjectsLimit(data.config)
       if (!normalizedProject.archivedAt && !normalizedProject.suspendedAt && activeCount >= activeLimit) {
-        return projects
+        normalizedProject.suspendedAt = new Date().toISOString()
       }
       normalizedProject.order = activeCount
       projects.push(normalizedProject)
