@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Clean view hides repeating section header when no repeating tasks are active
 - Clean view no longer shows repeating task proposals (accept/dismiss UI)
 - Clean view completed section separator only shown when there are actual repeating active tasks (not just proposals)
+- Pinned tasks in Project Detail View now appear above unpinned tasks, sorted by pin order
+- Newly pinned tasks are assigned the next order position so they appear at the end of the pinned group
+- Pin icon in Project Detail View is now always clickable — click to unpin an already-pinned task (previously pinned tasks showed a static icon)
 
 ### Removed
 

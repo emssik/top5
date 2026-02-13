@@ -23,7 +23,12 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
   const draggedTaskId = useRef<string | null>(null)
   const [dragOverTaskId, setDragOverTaskId] = useState<string | null>(null)
 
-  const activeTasks = useMemo(() => project.tasks.filter((task) => !task.completed), [project.tasks])
+  const activeTasks = useMemo(() => {
+    const active = project.tasks.filter((task) => !task.completed)
+    const pinned = active.filter((task) => task.isToDoNext).sort((a, b) => (a.toDoNextOrder ?? 999) - (b.toDoNextOrder ?? 999))
+    const unpinned = active.filter((task) => !task.isToDoNext)
+    return [...pinned, ...unpinned]
+  }, [project.tasks])
   const doneTasks = useMemo(() => project.tasks.filter((task) => task.completed), [project.tasks])
   const pinnedCount = useMemo(() => activeTasks.filter((task) => task.isToDoNext).length, [activeTasks])
   const projectMinutes = useMemo(() => calcProjectTime(focusCheckIns, project.id), [focusCheckIns, project.id])
@@ -205,11 +210,7 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
           </div>
         ) : (
           <>
-            {isPinned ? (
-              <span className="pin-icon">📌</span>
-            ) : (
-              <button className="pin-action" onClick={() => toggleTaskToDoNext(project.id, task.id)} title="Pin to Today">📌</button>
-            )}
+            <button className={isPinned ? 'pin-icon' : 'pin-action'} onClick={() => toggleTaskToDoNext(project.id, task.id)} title={isPinned ? 'Unpin' : 'Pin to Today'}>📌</button>
             <div className="task-actions">
               <button className="task-action-btn btn-focus" onClick={() => setFocus(project.id, task.id)} title="Focus">▶</button>
               <button className="task-action-btn btn-remove" onClick={() => removeTask(task.id)} title="Delete">×</button>

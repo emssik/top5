@@ -1052,6 +1052,10 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
     const task = project.tasks.find((t) => t.id === taskId)
     if (task) {
       task.isToDoNext = !task.isToDoNext
+      if (task.isToDoNext) {
+        const maxOrder = Math.max(0, ...project.tasks.filter((t) => t.isToDoNext && t.id !== taskId).map((t) => t.toDoNextOrder ?? 999))
+        task.toDoNextOrder = maxOrder + 1
+      }
       setData('projects', projects)
       notifyAllWindows()
     }
