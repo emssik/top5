@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.27.0] - 2026-02-13
+
+### Added
+
+- Task completion from Focus Mode: checkmark button completes the current task (both quick tasks and pinned project tasks) without leaving focus
+- Next task picker in Focus Mode: after completing a task, a popup lists available quick tasks and pinned project tasks to continue focusing
+- `switch-focus-task` IPC handler to change the focused task, reset the check-in timer, and notify all windows
+- `resize-focus-window` IPC handler to dynamically resize the focus window when the task picker opens/closes
+- `switchFocusTask` and `resizeFocusWindow` preload bridge APIs
+
+### Changed
+
+- Focus Mode confirm dialog generalized to handle both exit and complete actions (save tracked time before completing a task)
+- Focus Mode tooltip hidden while the task picker is open
+
 ## [1.26.1] - 2026-02-13
 
 ### Changed

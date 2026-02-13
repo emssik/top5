@@ -179,6 +179,8 @@ declare global {
       acceptRepeatingProposal: (repeatingTaskId: string) => Promise<QuickTask[]>
       dismissRepeatingProposal: (repeatingTaskId: string) => Promise<void>
       getOperations: (since?: string) => Promise<OperationLogEntry[]>
+      switchFocusTask: (projectId: string, taskId: string) => Promise<void>
+      resizeFocusWindow: (width: number, height: number) => Promise<void>
       closeQuickAddWindow: () => Promise<void>
       onReloadData: (callback: () => void) => () => void
       onShortcutAction: (callback: (data: ShortcutActionPayload) => void) => () => void

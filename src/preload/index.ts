@@ -50,6 +50,8 @@ export const api = {
   acceptRepeatingProposal: (repeatingTaskId: string) => ipcRenderer.invoke('accept-repeating-proposal', repeatingTaskId),
   dismissRepeatingProposal: (repeatingTaskId: string) => ipcRenderer.invoke('dismiss-repeating-proposal', repeatingTaskId),
   getOperations: (since?: string): Promise<OperationLogEntry[]> => ipcRenderer.invoke('get-operations', since),
+  switchFocusTask: (projectId: string, taskId: string) => ipcRenderer.invoke('switch-focus-task', projectId, taskId),
+  resizeFocusWindow: (width: number, height: number) => ipcRenderer.invoke('resize-focus-window', width, height),
   closeQuickAddWindow: () => ipcRenderer.invoke('close-quick-add-window'),
   onReloadData: (callback: () => void) => {
     ipcRenderer.on('reload-data', callback)
