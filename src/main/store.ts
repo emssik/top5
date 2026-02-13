@@ -127,7 +127,7 @@ type OperationType =
   | 'quick_task_created' | 'quick_task_completed' | 'quick_task_uncompleted' | 'quick_task_deleted'
   | 'project_created' | 'project_updated' | 'project_archived' | 'project_unarchived'
   | 'project_suspended' | 'project_unsuspended' | 'project_deleted'
-  | 'focus_started' | 'focus_checkin'
+  | 'focus_started'
 
 interface OperationLogEntry {
   id: string
@@ -804,14 +804,6 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
     const normalized = toFocusCheckIn(checkIn)
     if (!normalized) return loadCheckIns()
     appendCheckIn(normalized)
-    const data = getData()
-    const project = data.projects.find((p) => p.id === normalized.projectId)
-    appendOperation({
-      type: 'focus_checkin',
-      projectId: normalized.projectId,
-      projectName: project?.name,
-      details: `Response: ${normalized.response}`
-    })
     return loadCheckIns()
   })
 

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- `focus_checkin` operation type from activity log — focus check-ins are no longer logged as separate operations
+
 ## [1.27.1] - 2026-02-13
 
 ### Fixed

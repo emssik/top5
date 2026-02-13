@@ -108,7 +108,7 @@ export type OperationType =
   | 'quick_task_created' | 'quick_task_completed' | 'quick_task_uncompleted' | 'quick_task_deleted'
   | 'project_created' | 'project_updated' | 'project_archived' | 'project_unarchived'
   | 'project_suspended' | 'project_unsuspended' | 'project_deleted'
-  | 'focus_started' | 'focus_checkin'
+  | 'focus_started'
 
 export interface OperationLogEntry {
   id: string

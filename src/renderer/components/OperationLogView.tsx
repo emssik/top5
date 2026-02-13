@@ -26,8 +26,7 @@ const typeColors: Record<OperationType, string> = {
   project_suspended: '#f59e0b',
   project_unsuspended: '#22c55e',
   project_deleted: '#ef4444',
-  focus_started: '#a855f7',
-  focus_checkin: '#a855f7'
+  focus_started: '#a855f7'
 }
 
 function describeOperation(entry: OperationLogEntry): string {
@@ -51,7 +50,6 @@ function describeOperation(entry: OperationLogEntry): string {
     case 'project_unsuspended': return `Resumed project ${entry.projectName ?? ''}`
     case 'project_deleted': return `Deleted project ${entry.projectName ?? ''}`
     case 'focus_started': return `Started focus${project}`
-    case 'focus_checkin': return `Focus check-in${project}`
     default: return entry.type
   }
 }
