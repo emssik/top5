@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.26.1] - 2026-02-13
+
+### Changed
+
+- Quick Add task panel now shows suspended projects alongside active ones, allowing task assignment to any non-archived project
+- Removed standalone "Quick task (no project)" option from Quick Add task panel — tasks must now be assigned to a project
+- Quick Add project list scrollable with 240px max height to prevent overflow with many projects
+- Quick Add content area uses `overflow-hidden` instead of vertical scroll to prevent double scrollbars
+- README updated to reflect current features: Quick Add, task/project deletion, monthly schedules, auto-suspend, revised shortcuts and project structure
+
 ## [1.26.0] - 2026-02-13
 
 ### Added

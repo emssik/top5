@@ -38,7 +38,7 @@ export default function QuickAddWindow() {
       } else {
         document.documentElement.removeAttribute('data-theme')
       }
-      const active = data.projects.filter((p) => !p.archivedAt && !p.suspendedAt)
+      const active = data.projects.filter((p) => !p.archivedAt)
       setProjects(active)
       setColor(firstAvailableProjectColor(active))
       setLoaded(true)
@@ -300,7 +300,7 @@ export default function QuickAddWindow() {
         <div className="h-px bg-b-subtle mx-[18px]" />
 
         {/* Content panels */}
-        <div className="px-[18px] py-3 min-h-[60px] flex-1 overflow-y-auto">
+        <div className="px-[18px] py-3 min-h-[60px] flex-1 overflow-hidden">
           {mode === 'task' && (
             <TaskPanel
               projects={projects}
@@ -394,24 +394,7 @@ function TaskPanel({
         <div className="text-[10px] font-semibold uppercase tracking-wider text-t-muted mb-2">
           Add to
         </div>
-        <div className="flex flex-col gap-[2px]">
-          {/* Standalone option */}
-          <button
-            className={`flex items-center gap-[10px] px-[10px] py-[7px] rounded-[7px] transition-all border-[1.5px] text-left ${
-              !selectedProjectId
-                ? 'bg-surface border-border'
-                : 'border-transparent hover:bg-hover'
-            }`}
-            onClick={() => onSelectProject(null)}
-          >
-            <span className="w-2 h-2 flex items-center justify-center text-[11px] text-t-muted">{'\u2610'}</span>
-            <span className="text-[13px] text-t-secondary flex-1">Quick task (no project)</span>
-            {!selectedProjectId && <span className="text-xs" style={{ color: 'var(--pc-blue)' }}>✓</span>}
-          </button>
-
-          {/* Divider after standalone */}
-          {projects.length > 0 && <div className="h-px bg-b-subtle mx-1 my-1" />}
-
+        <div className="flex flex-col gap-[2px] max-h-[240px] overflow-y-auto">
           {projects.map((project, i) => (
             <button
               key={project.id}
