@@ -1,0 +1,1151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Top5 — Quick Add</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --pc-red: #ef4444;
+  --pc-orange: #f97316;
+  --pc-amber: #f59e0b;
+  --pc-green: #22c55e;
+  --pc-blue: #3b82f6;
+  --pc-purple: #a855f7;
+  --pc-pink: #ec4899;
+  --pc-teal: #14b8a6;
+}
+
+/* Dark theme (default) */
+body {
+  --bg-base: #0a0a0a;
+  --bg-card: #171717;
+  --bg-surface: #262626;
+  --bg-elevated: #1e1e1e;
+  --c-border: #404040;
+  --c-border-subtle: #262626;
+  --c-text-primary: #f5f5f5;
+  --c-text-heading: #e5e5e5;
+  --c-text-secondary: #a3a3a3;
+  --c-text-muted: #525252;
+  --bg-hover: #2a2a2a;
+  --shadow-window: 0 25px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06);
+  --shadow-dropdown: 0 8px 30px rgba(0,0,0,0.4);
+}
+
+/* Light theme */
+body.light {
+  --bg-base: #faf4e8;
+  --bg-card: #fdf8ef;
+  --bg-surface: #f0e8d8;
+  --bg-elevated: #f5eedf;
+  --c-border: #d4c9a8;
+  --c-border-subtle: #e8dfc8;
+  --c-text-primary: #3c3836;
+  --c-text-heading: #2e2a26;
+  --c-text-secondary: #6b6258;
+  --c-text-muted: #b0a68e;
+  --bg-hover: #ebe3d2;
+  --shadow-window: 0 25px 60px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.08);
+  --shadow-dropdown: 0 8px 30px rgba(0,0,0,0.1);
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  background: rgba(0,0,0,0.4);
+  height: 100vh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 120px;
+}
+
+body.light {
+  background: rgba(0,0,0,0.2);
+}
+
+/* ═══════════════════════════════════════════
+   QUICK ADD WINDOW
+   ═══════════════════════════════════════════ */
+.quick-add {
+  width: 520px;
+  background: var(--bg-card);
+  border-radius: 14px;
+  box-shadow: var(--shadow-window);
+  overflow: hidden;
+  animation: slideIn 0.15s ease-out;
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ── Top input area ── */
+.qa-input-area {
+  padding: 16px 18px 12px;
+}
+
+.qa-input-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.qa-icon {
+  font-size: 18px;
+  color: var(--c-text-muted);
+  flex-shrink: 0;
+  width: 24px;
+  text-align: center;
+}
+
+.qa-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: 17px;
+  font-family: inherit;
+  color: var(--c-text-primary);
+  outline: none;
+  font-weight: 400;
+  letter-spacing: -0.2px;
+}
+
+.qa-input::placeholder {
+  color: var(--c-text-muted);
+}
+
+.qa-kbd {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--bg-surface);
+  border: 1px solid var(--c-border-subtle);
+  color: var(--c-text-muted);
+  font-family: inherit;
+  flex-shrink: 0;
+}
+
+/* ── Mode tabs ── */
+.qa-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 0 18px;
+  margin-bottom: 12px;
+}
+
+.qa-tab {
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--c-text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.qa-tab:hover {
+  color: var(--c-text-secondary);
+  background: var(--bg-surface);
+}
+
+.qa-tab.active {
+  color: var(--c-text-primary);
+  background: var(--bg-surface);
+  font-weight: 500;
+}
+
+.qa-tab .tab-icon {
+  font-size: 11px;
+  opacity: 0.6;
+}
+
+.qa-tab .tab-kbd {
+  font-size: 9px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: var(--bg-hover);
+  color: var(--c-text-muted);
+  margin-left: 2px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.qa-tab:hover .tab-kbd,
+.qa-tab.active .tab-kbd {
+  opacity: 1;
+}
+
+/* ── Divider ── */
+.qa-divider {
+  height: 1px;
+  background: var(--c-border-subtle);
+  margin: 0 18px;
+}
+
+/* ── Content area ── */
+.qa-content {
+  padding: 12px 18px 16px;
+  min-height: 60px;
+}
+
+.qa-panel {
+  display: none;
+}
+
+.qa-panel.active {
+  display: block;
+}
+
+/* ── Project selector ── */
+.qa-project-selector {
+  margin-bottom: 12px;
+}
+
+.qa-project-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--c-text-muted);
+  margin-bottom: 8px;
+}
+
+.qa-project-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.qa-project-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: all 0.12s;
+  border: 1.5px solid transparent;
+}
+
+.qa-project-item:hover {
+  background: var(--bg-hover);
+}
+
+.qa-project-item.selected {
+  background: var(--bg-surface);
+  border-color: var(--c-border);
+}
+
+.qa-project-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.qa-project-name {
+  font-size: 13px;
+  color: var(--c-text-primary);
+  flex: 1;
+}
+
+.qa-project-tasks {
+  font-size: 11px;
+  color: var(--c-text-muted);
+}
+
+.qa-project-check {
+  font-size: 12px;
+  color: var(--pc-blue);
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+
+.qa-project-item.selected .qa-project-check {
+  opacity: 1;
+}
+
+.qa-project-shortcut {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--c-text-muted);
+  font-variant-numeric: tabular-nums;
+  width: 18px;
+  flex-shrink: 0;
+  text-align: center;
+}
+
+.qa-project-item.selected .qa-project-shortcut {
+  color: var(--pc-blue);
+}
+
+/* Quick task (no project) option */
+.qa-project-item.standalone {
+  border-bottom: 1px solid var(--c-border-subtle);
+  margin-bottom: 4px;
+  padding-bottom: 9px;
+}
+
+.qa-standalone-icon {
+  width: 8px;
+  height: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: var(--c-text-muted);
+}
+
+/* ── Options row ── */
+.qa-options-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.qa-option-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  color: var(--c-text-muted);
+  background: var(--bg-surface);
+  border: 1px solid var(--c-border-subtle);
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+
+.qa-option-chip:hover {
+  color: var(--c-text-secondary);
+  border-color: var(--c-border);
+}
+
+.qa-option-chip.active {
+  color: var(--pc-blue);
+  border-color: rgba(59,130,246,0.3);
+  background: rgba(59,130,246,0.08);
+}
+
+.qa-option-chip .chip-icon {
+  font-size: 10px;
+}
+
+/* ── Footer ── */
+.qa-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 18px;
+  background: var(--bg-elevated);
+  border-top: 1px solid var(--c-border-subtle);
+}
+
+.qa-footer-hints {
+  display: flex;
+  gap: 14px;
+}
+
+.qa-footer-hint {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--c-text-muted);
+}
+
+.qa-footer-hint kbd {
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: var(--bg-surface);
+  border: 1px solid var(--c-border-subtle);
+  font-family: inherit;
+}
+
+.qa-submit-btn {
+  padding: 5px 14px;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+  background: rgba(59,130,246,0.15);
+  color: #60a5fa;
+  border: 1px solid rgba(59,130,246,0.3);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.qa-submit-btn:hover {
+  background: rgba(59,130,246,0.25);
+}
+
+.qa-submit-btn kbd {
+  font-size: 9px;
+  padding: 0 3px;
+  border-radius: 2px;
+  background: rgba(59,130,246,0.2);
+  font-family: inherit;
+  border: none;
+}
+
+/* ═══════════════════════════════════════════
+   NEW PROJECT PANEL
+   ═══════════════════════════════════════════ */
+.qa-form-row {
+  margin-bottom: 12px;
+}
+
+.qa-form-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--c-text-muted);
+  margin-bottom: 5px;
+}
+
+.qa-form-input {
+  width: 100%;
+  padding: 7px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--c-border);
+  background: var(--bg-surface);
+  color: var(--c-text-primary);
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.qa-form-input:focus {
+  border-color: var(--c-text-secondary);
+}
+
+.qa-form-textarea {
+  resize: vertical;
+  min-height: 44px;
+  max-height: 100px;
+}
+
+.qa-color-picker {
+  display: flex;
+  gap: 6px;
+}
+
+.qa-color-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all 0.15s;
+}
+
+.qa-color-dot:hover {
+  transform: scale(1.15);
+}
+
+.qa-color-dot.selected {
+  border-color: var(--c-text-primary);
+  box-shadow: 0 0 0 2px var(--bg-card);
+}
+
+/* ═══════════════════════════════════════════
+   REPEAT PANEL
+   ═══════════════════════════════════════════ */
+.qa-schedule-chips {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.qa-schedule-chip {
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  color: var(--c-text-secondary);
+  background: var(--bg-surface);
+  border: 1px solid var(--c-border-subtle);
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+
+.qa-schedule-chip:hover {
+  border-color: var(--c-border);
+  color: var(--c-text-primary);
+}
+
+.qa-schedule-chip.active {
+  background: rgba(59,130,246,0.1);
+  color: #60a5fa;
+  border-color: rgba(59,130,246,0.3);
+}
+
+.qa-weekday-picker {
+  display: flex;
+  gap: 3px;
+  margin-top: 8px;
+}
+
+.qa-weekday {
+  width: 34px;
+  height: 28px;
+  border-radius: 5px;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-surface);
+  border: 1px solid var(--c-border-subtle);
+  color: var(--c-text-secondary);
+  cursor: pointer;
+  transition: all 0.12s;
+  font-family: inherit;
+}
+
+.qa-weekday:hover {
+  border-color: var(--c-border);
+  color: var(--c-text-primary);
+}
+
+.qa-weekday.active {
+  background: rgba(59,130,246,0.15);
+  color: #60a5fa;
+  border-color: rgba(59,130,246,0.3);
+}
+
+.qa-interval-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.qa-interval-input {
+  width: 52px;
+  padding: 5px 8px;
+  border-radius: 5px;
+  border: 1px solid var(--c-border);
+  background: var(--bg-surface);
+  color: var(--c-text-primary);
+  font-size: 13px;
+  font-family: inherit;
+  text-align: center;
+  outline: none;
+}
+
+.qa-interval-input:focus {
+  border-color: var(--c-text-secondary);
+}
+
+.qa-interval-label {
+  font-size: 12px;
+  color: var(--c-text-secondary);
+}
+
+/* ═══════════════════════════════════════════
+   TOAST / SUCCESS FEEDBACK
+   ═══════════════════════════════════════════ */
+.qa-success {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px;
+  font-size: 14px;
+  color: var(--pc-green);
+}
+
+.qa-success.visible {
+  display: flex;
+}
+
+.qa-success .check {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(34,197,94,0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+
+/* ═══════════════════════════════════════════
+   THEME TOGGLE (demo only)
+   ═══════════════════════════════════════════ */
+.theme-toggle {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--c-border);
+  background: var(--bg-card);
+  color: var(--c-text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+  z-index: 999;
+}
+
+.theme-toggle:hover {
+  background: var(--bg-surface);
+  color: var(--c-text-primary);
+}
+
+/* ═══════════════════════════════════════════
+   TRANSITION HELPERS
+   ═══════════════════════════════════════════ */
+.qa-panel {
+  animation: fadePanel 0.12s ease-out;
+}
+
+@keyframes fadePanel {
+  from { opacity: 0; transform: translateY(3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Subtle selected project indicator in input area */
+.qa-selected-badge {
+  display: none;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px 3px 6px;
+  border-radius: 5px;
+  background: var(--bg-surface);
+  border: 1px solid var(--c-border-subtle);
+  font-size: 11px;
+  color: var(--c-text-secondary);
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.qa-selected-badge:hover {
+  border-color: var(--c-border);
+}
+
+.qa-selected-badge .badge-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.qa-selected-badge .badge-x {
+  font-size: 9px;
+  color: var(--c-text-muted);
+  margin-left: 2px;
+}
+
+.qa-selected-badge.visible {
+  display: flex;
+}
+</style>
+</head>
+<body class="light">
+
+<!-- ═══════════════════════════════════════════
+     QUICK ADD WINDOW
+     ═══════════════════════════════════════════ -->
+<div class="quick-add" id="quickAdd">
+
+  <!-- Input area -->
+  <div class="qa-input-area">
+    <div class="qa-input-row">
+      <span class="qa-icon" id="inputIcon">+</span>
+      <input
+        class="qa-input"
+        id="mainInput"
+        placeholder="Add a task..."
+        autofocus
+        spellcheck="false"
+      >
+      <span class="qa-selected-badge" id="selectedBadge" onclick="clearProject()">
+        <span class="badge-dot" id="badgeDot"></span>
+        <span id="badgeName"></span>
+        <span class="badge-x">✕</span>
+      </span>
+      <span class="qa-kbd">esc</span>
+    </div>
+  </div>
+
+  <!-- Mode tabs -->
+  <div class="qa-tabs" id="modeTabs">
+    <button class="qa-tab active" data-mode="task" onclick="switchMode('task', this)">
+      <span class="tab-icon">+</span>
+      Task
+    </button>
+    <button class="qa-tab" data-mode="project" onclick="switchMode('project', this)">
+      <span class="tab-icon">◻</span>
+      Project
+    </button>
+    <button class="qa-tab" data-mode="repeat" onclick="switchMode('repeat', this)">
+      <span class="tab-icon">↻</span>
+      Repeating
+    </button>
+  </div>
+
+  <div class="qa-divider"></div>
+
+  <!-- ═══ TASK PANEL ═══ -->
+  <div class="qa-panel active" id="panel-task">
+    <div class="qa-content">
+      <div class="qa-project-selector">
+        <div class="qa-project-label">Add to</div>
+        <div class="qa-project-list">
+          <div class="qa-project-item standalone selected" data-project="standalone" data-color="" onclick="selectProject(this)">
+            <span class="qa-standalone-icon">☐</span>
+            <span class="qa-project-name" style="color: var(--c-text-secondary)">Quick task (no project)</span>
+            <span class="qa-project-check">✓</span>
+          </div>
+          <div class="qa-project-item" data-project="cc" data-color="var(--pc-red)" data-num="1" onclick="selectProject(this)">
+            <span class="qa-project-shortcut">⌘1</span>
+            <span class="qa-project-dot" style="background: var(--pc-red)"></span>
+            <span class="qa-project-name">CC Course</span>
+            <span class="qa-project-tasks">5 tasks</span>
+            <span class="qa-project-check">✓</span>
+          </div>
+          <div class="qa-project-item" data-project="top5" data-color="var(--pc-blue)" data-num="2" onclick="selectProject(this)">
+            <span class="qa-project-shortcut">⌘2</span>
+            <span class="qa-project-dot" style="background: var(--pc-blue)"></span>
+            <span class="qa-project-name">Top5</span>
+            <span class="qa-project-tasks">4 tasks</span>
+            <span class="qa-project-check">✓</span>
+          </div>
+          <div class="qa-project-item" data-project="lejek" data-color="var(--pc-amber)" data-num="3" onclick="selectProject(this)">
+            <span class="qa-project-shortcut">⌘3</span>
+            <span class="qa-project-dot" style="background: var(--pc-amber)"></span>
+            <span class="qa-project-name">Lejek</span>
+            <span class="qa-project-tasks">3 tasks</span>
+            <span class="qa-project-check">✓</span>
+          </div>
+          <div class="qa-project-item" data-project="sokrat" data-color="var(--pc-purple)" data-num="4" onclick="selectProject(this)">
+            <span class="qa-project-shortcut">⌘4</span>
+            <span class="qa-project-dot" style="background: var(--pc-purple)"></span>
+            <span class="qa-project-name">Sokrates</span>
+            <span class="qa-project-tasks">3 tasks</span>
+            <span class="qa-project-check">✓</span>
+          </div>
+          <div class="qa-project-item" data-project="ai" data-color="var(--pc-teal)" data-num="5" onclick="selectProject(this)">
+            <span class="qa-project-shortcut">⌘5</span>
+            <span class="qa-project-dot" style="background: var(--pc-teal)"></span>
+            <span class="qa-project-name">AI TD</span>
+            <span class="qa-project-tasks">2 tasks</span>
+            <span class="qa-project-check">✓</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="qa-options-row">
+        <button class="qa-option-chip" onclick="this.classList.toggle('active')" title="Pin to Today view">
+          <span class="chip-icon">📌</span> Pin to Today
+        </button>
+        <button class="qa-option-chip" onclick="this.classList.toggle('active')" title="Mark as in progress">
+          <span class="chip-icon">▶</span> In Progress
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ PROJECT PANEL ═══ -->
+  <div class="qa-panel" id="panel-project">
+    <div class="qa-content">
+      <div class="qa-form-row">
+        <div class="qa-form-label">Description</div>
+        <textarea class="qa-form-input qa-form-textarea" placeholder="Optional description..."></textarea>
+      </div>
+
+      <div class="qa-form-row">
+        <div class="qa-form-label">Color</div>
+        <div class="qa-color-picker">
+          <div class="qa-color-dot" style="background: var(--pc-red)" onclick="selectColorDot(this)"></div>
+          <div class="qa-color-dot" style="background: var(--pc-orange)" onclick="selectColorDot(this)"></div>
+          <div class="qa-color-dot" style="background: var(--pc-amber)" onclick="selectColorDot(this)"></div>
+          <div class="qa-color-dot selected" style="background: var(--pc-green)" onclick="selectColorDot(this)"></div>
+          <div class="qa-color-dot" style="background: var(--pc-blue)" onclick="selectColorDot(this)"></div>
+          <div class="qa-color-dot" style="background: var(--pc-purple)" onclick="selectColorDot(this)"></div>
+          <div class="qa-color-dot" style="background: var(--pc-pink)" onclick="selectColorDot(this)"></div>
+          <div class="qa-color-dot" style="background: var(--pc-teal)" onclick="selectColorDot(this)"></div>
+        </div>
+      </div>
+
+      <div class="qa-form-row" style="margin-bottom: 0">
+        <div class="qa-form-label">First task <span style="font-weight: 400; text-transform: none; letter-spacing: 0; opacity: 0.6">(optional)</span></div>
+        <input class="qa-form-input" placeholder="e.g. Setup project repo">
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ REPEAT PANEL ═══ -->
+  <div class="qa-panel" id="panel-repeat">
+    <div class="qa-content">
+      <div class="qa-form-row">
+        <div class="qa-form-label">Schedule</div>
+        <div class="qa-schedule-chips">
+          <button class="qa-schedule-chip active" onclick="selectSchedule(this, 'daily')">Every day</button>
+          <button class="qa-schedule-chip" onclick="selectSchedule(this, 'weekdays')">Weekdays</button>
+          <button class="qa-schedule-chip" onclick="selectSchedule(this, 'weekly')">Weekly</button>
+          <button class="qa-schedule-chip" onclick="selectSchedule(this, 'interval')">Every N days</button>
+          <button class="qa-schedule-chip" onclick="selectSchedule(this, 'monthly')">Monthly</button>
+          <button class="qa-schedule-chip" onclick="selectSchedule(this, 'afterDone')">After done</button>
+        </div>
+
+        <!-- Weekday sub-picker -->
+        <div class="qa-weekday-picker" id="weekdayPicker" style="display: none">
+          <button class="qa-weekday active" onclick="this.classList.toggle('active')">Mon</button>
+          <button class="qa-weekday" onclick="this.classList.toggle('active')">Tue</button>
+          <button class="qa-weekday" onclick="this.classList.toggle('active')">Wed</button>
+          <button class="qa-weekday" onclick="this.classList.toggle('active')">Thu</button>
+          <button class="qa-weekday" onclick="this.classList.toggle('active')">Fri</button>
+          <button class="qa-weekday" onclick="this.classList.toggle('active')">Sat</button>
+          <button class="qa-weekday" onclick="this.classList.toggle('active')">Sun</button>
+        </div>
+
+        <!-- Interval sub-picker -->
+        <div class="qa-interval-row" id="intervalPicker" style="display: none">
+          <span class="qa-interval-label">Every</span>
+          <input class="qa-interval-input" type="number" value="3" min="1" max="365">
+          <span class="qa-interval-label">days</span>
+        </div>
+
+        <!-- After done sub-picker -->
+        <div class="qa-interval-row" id="afterDonePicker" style="display: none">
+          <input class="qa-interval-input" type="number" value="1" min="1" max="365">
+          <span class="qa-interval-label">days after completion</span>
+        </div>
+
+        <!-- Monthly sub-picker -->
+        <div class="qa-interval-row" id="monthlyPicker" style="display: none">
+          <span class="qa-interval-label">Day</span>
+          <input class="qa-interval-input" type="number" value="1" min="1" max="31">
+          <span class="qa-interval-label">of every month</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Success state (replaces content after submit) -->
+  <div class="qa-success" id="successState">
+    <span class="check">✓</span>
+    <span id="successMsg">Task added!</span>
+  </div>
+
+  <!-- Footer -->
+  <div class="qa-footer" id="qaFooter">
+    <div class="qa-footer-hints">
+      <span class="qa-footer-hint">
+        <kbd>Tab</kbd> switch mode
+      </span>
+      <span class="qa-footer-hint">
+        <kbd>⌘1-5</kbd> project
+      </span>
+    </div>
+    <button class="qa-submit-btn" id="submitBtn" onclick="submitAction()">
+      Add <kbd>⏎</kbd>
+    </button>
+  </div>
+</div>
+
+<!-- Theme toggle (demo only) -->
+<button class="theme-toggle" onclick="toggleTheme()">
+  <span id="themeIcon">🌙</span> Toggle theme
+</button>
+
+<script>
+// ═══════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════
+let currentMode = 'task';
+let selectedProjectEl = document.querySelector('.qa-project-item.standalone');
+let hashPending = false;
+
+// Detect '#' typed in main input to prepare for #1-#5 project shortcut
+document.getElementById('mainInput').addEventListener('input', function(e) {
+  if (currentMode === 'task' && this.value.endsWith('#')) {
+    hashPending = true;
+  } else {
+    hashPending = false;
+  }
+});
+
+// ═══════════════════════════════════════════
+// MODE SWITCHING
+// ═══════════════════════════════════════════
+function switchMode(mode, tab) {
+  currentMode = mode;
+
+  // Update tabs
+  document.querySelectorAll('.qa-tab').forEach(t => t.classList.remove('active'));
+  if (tab) tab.classList.add('active');
+  else document.querySelector(`.qa-tab[data-mode="${mode}"]`).classList.add('active');
+
+  // Update panels
+  document.querySelectorAll('.qa-panel').forEach(p => p.classList.remove('active'));
+  const panel = document.getElementById('panel-' + mode);
+  if (panel) {
+    panel.classList.add('active');
+    // Re-trigger animation
+    panel.style.animation = 'none';
+    panel.offsetHeight;
+    panel.style.animation = '';
+  }
+
+  // Update input
+  const input = document.getElementById('mainInput');
+  const icon = document.getElementById('inputIcon');
+  const badge = document.getElementById('selectedBadge');
+  const submitBtn = document.getElementById('submitBtn');
+
+  switch(mode) {
+    case 'task':
+      input.placeholder = 'Add a task...';
+      icon.textContent = '+';
+      submitBtn.innerHTML = 'Add <kbd>⏎</kbd>';
+      break;
+    case 'project':
+      input.placeholder = 'Project name...';
+      icon.textContent = '◻';
+      badge.classList.remove('visible');
+      submitBtn.innerHTML = 'Create <kbd>⏎</kbd>';
+      break;
+    case 'repeat':
+      input.placeholder = 'Repeating task name...';
+      icon.textContent = '↻';
+      badge.classList.remove('visible');
+      submitBtn.innerHTML = 'Add <kbd>⏎</kbd>';
+      break;
+  }
+
+  // Hide success if visible
+  document.getElementById('successState').classList.remove('visible');
+
+  input.focus();
+}
+
+// ═══════════════════════════════════════════
+// PROJECT SELECTION
+// ═══════════════════════════════════════════
+function selectProject(el) {
+  document.querySelectorAll('.qa-project-item').forEach(p => p.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedProjectEl = el;
+
+  const badge = document.getElementById('selectedBadge');
+  const isStandalone = el.dataset.project === 'standalone';
+
+  if (!isStandalone) {
+    const name = el.querySelector('.qa-project-name').textContent;
+    const color = el.dataset.color;
+    document.getElementById('badgeDot').style.background = color;
+    document.getElementById('badgeName').textContent = name;
+    badge.classList.add('visible');
+  } else {
+    badge.classList.remove('visible');
+  }
+
+  document.getElementById('mainInput').focus();
+}
+
+function clearProject() {
+  document.querySelectorAll('.qa-project-item').forEach(p => p.classList.remove('selected'));
+  const standalone = document.querySelector('.qa-project-item.standalone');
+  standalone.classList.add('selected');
+  selectedProjectEl = standalone;
+  document.getElementById('selectedBadge').classList.remove('visible');
+  document.getElementById('mainInput').focus();
+}
+
+// ═══════════════════════════════════════════
+// SCHEDULE SELECTION (Repeat panel)
+// ═══════════════════════════════════════════
+function selectSchedule(chip, type) {
+  document.querySelectorAll('.qa-schedule-chip').forEach(c => c.classList.remove('active'));
+  chip.classList.add('active');
+
+  // Hide all sub-pickers
+  document.getElementById('weekdayPicker').style.display = 'none';
+  document.getElementById('intervalPicker').style.display = 'none';
+  document.getElementById('afterDonePicker').style.display = 'none';
+  document.getElementById('monthlyPicker').style.display = 'none';
+
+  // Show relevant sub-picker
+  if (type === 'weekly') {
+    document.getElementById('weekdayPicker').style.display = 'flex';
+  } else if (type === 'interval') {
+    document.getElementById('intervalPicker').style.display = 'flex';
+  } else if (type === 'afterDone') {
+    document.getElementById('afterDonePicker').style.display = 'flex';
+  } else if (type === 'monthly') {
+    document.getElementById('monthlyPicker').style.display = 'flex';
+  }
+}
+
+// ═══════════════════════════════════════════
+// COLOR PICKER
+// ═══════════════════════════════════════════
+function selectColorDot(el) {
+  document.querySelectorAll('.qa-color-dot').forEach(d => d.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+// ═══════════════════════════════════════════
+// SUBMIT
+// ═══════════════════════════════════════════
+function submitAction() {
+  const input = document.getElementById('mainInput');
+  const value = input.value.trim();
+  if (!value) {
+    input.focus();
+    input.style.outline = '2px solid rgba(239,68,68,0.4)';
+    setTimeout(() => input.style.outline = '', 600);
+    return;
+  }
+
+  // Show success
+  const successEl = document.getElementById('successState');
+  const msg = document.getElementById('successMsg');
+
+  switch(currentMode) {
+    case 'task':
+      const proj = selectedProjectEl.querySelector('.qa-project-name').textContent;
+      if (selectedProjectEl.dataset.project === 'standalone') {
+        msg.textContent = `Quick task added: "${value}"`;
+      } else {
+        msg.textContent = `Task added to ${proj}`;
+      }
+      break;
+    case 'project':
+      msg.textContent = `Project "${value}" created!`;
+      break;
+    case 'repeat':
+      msg.textContent = `Repeating task "${value}" created!`;
+      break;
+  }
+
+  // Hide content, show success
+  document.querySelectorAll('.qa-panel').forEach(p => p.classList.remove('active'));
+  successEl.classList.add('visible');
+
+  // Reset after delay
+  setTimeout(() => {
+    input.value = '';
+    successEl.classList.remove('visible');
+    document.getElementById('panel-' + currentMode).classList.add('active');
+    input.focus();
+  }, 1200);
+}
+
+// ═══════════════════════════════════════════
+// KEYBOARD SHORTCUTS
+// ═══════════════════════════════════════════
+document.addEventListener('keydown', function(e) {
+  // Enter to submit
+  if (e.key === 'Enter' && !e.metaKey && !e.ctrlKey && document.activeElement.tagName !== 'TEXTAREA') {
+    e.preventDefault();
+    submitAction();
+    return;
+  }
+
+  // Tab to switch modes
+  if (e.key === 'Tab' && !e.shiftKey) {
+    e.preventDefault();
+    const modes = ['task', 'project', 'repeat'];
+    const idx = modes.indexOf(currentMode);
+    const next = modes[(idx + 1) % modes.length];
+    switchMode(next);
+    return;
+  }
+
+  // Shift+Tab to switch modes backwards
+  if (e.key === 'Tab' && e.shiftKey) {
+    e.preventDefault();
+    const modes = ['task', 'project', 'repeat'];
+    const idx = modes.indexOf(currentMode);
+    const prev = modes[(idx - 1 + modes.length) % modes.length];
+    switchMode(prev);
+    return;
+  }
+
+  // Cmd+1-5 to select project
+  if (e.metaKey && e.key >= '1' && e.key <= '9') {
+    e.preventDefault();
+    if (currentMode !== 'task') switchMode('task');
+    const target = document.querySelector(`.qa-project-item[data-num="${e.key}"]`);
+    if (target) selectProject(target);
+    return;
+  }
+
+  // Cmd+0 to clear project (back to quick task)
+  if (e.metaKey && e.key === '0') {
+    e.preventDefault();
+    if (currentMode !== 'task') switchMode('task');
+    clearProject();
+    return;
+  }
+
+  // #1-#5 to select project (in task mode) — detect # then digit
+  if (currentMode === 'task' && e.key >= '1' && e.key <= '9' && hashPending) {
+    e.preventDefault();
+    hashPending = false;
+    // Remove the '#' that was just typed
+    const inp = document.getElementById('mainInput');
+    inp.value = inp.value.replace(/#$/, '');
+    const target = document.querySelector(`.qa-project-item[data-num="${e.key}"]`);
+    if (target) selectProject(target);
+    return;
+  }
+  hashPending = false;
+
+  // #0 to go back to quick task
+  // (handled above via hashPending)
+
+  // Arrow up/down to navigate projects (in task mode)
+  if (currentMode === 'task' && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+    e.preventDefault();
+    const items = [...document.querySelectorAll('.qa-project-item')];
+    const currentIdx = items.indexOf(selectedProjectEl);
+    let nextIdx;
+    if (e.key === 'ArrowDown') {
+      nextIdx = Math.min(currentIdx + 1, items.length - 1);
+    } else {
+      nextIdx = Math.max(currentIdx - 1, 0);
+    }
+    selectProject(items[nextIdx]);
+    return;
+  }
+});
+
+// ═══════════════════════════════════════════
+// THEME TOGGLE (demo only)
+// ═══════════════════════════════════════════
+function toggleTheme() {
+  document.body.classList.toggle('light');
+  document.getElementById('themeIcon').textContent =
+    document.body.classList.contains('light') ? '☀' : '🌙';
+}
+</script>
+
+</body>
+</html>
