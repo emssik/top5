@@ -148,7 +148,6 @@ declare global {
       unsuspendProject: (id: string) => Promise<{ projects: Project[] } | { error: string }>
       saveQuickNotes: (notes: string) => Promise<void>
       saveConfig: (config: AppConfig) => Promise<void>
-      updateProjectTimer: (projectId: string, totalTimeMs: number, timerStartedAt: string | null) => Promise<void>
       launchVscode: (path: string) => Promise<void>
       launchIterm: (path: string) => Promise<void>
       launchObsidian: (vault: string) => Promise<void>
@@ -160,17 +159,10 @@ declare global {
       saveFocusCheckIn: (checkIn: FocusCheckIn) => Promise<void>
       getFocusCheckIns: (taskId?: string) => Promise<FocusCheckIn[]>
       dismissCheckIn: () => Promise<void>
-      openStatsWindow: () => Promise<void>
       openOperationLogWindow: () => Promise<void>
-      openNewProjectWindow: () => Promise<void>
-      closeNewProjectWindow: () => Promise<void>
-      enterCompactMode: () => Promise<void>
-      exitCompactMode: () => Promise<void>
       enterCleanView: () => Promise<void>
       exitCleanView: () => Promise<void>
       setTrafficLightsVisible: (visible: boolean) => Promise<void>
-      pickFolder: () => Promise<string | null>
-      pickObsidianNote: () => Promise<{ uri?: string; path: string } | null>
       saveQuickTask: (task: QuickTask) => Promise<QuickTask[]>
       removeQuickTask: (id: string) => Promise<QuickTask[]>
       completeQuickTask: (id: string) => Promise<QuickTask[]>
