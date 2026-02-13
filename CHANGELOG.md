@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.27.1] - 2026-02-13
+
+### Fixed
+
+- Typed task parameter in Focus Mode completion handler (use `Task` type instead of inline `{ id: string }`)
+
 ## [1.27.0] - 2026-02-13
 
 ### Added

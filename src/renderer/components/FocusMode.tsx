@@ -2,6 +2,7 @@ import { useEffect, useState, useRef, useCallback } from 'react'
 import { useProjects } from '../hooks/useProjects'
 import { getActiveLaunchers, launchByType, launcherMeta } from '../utils/launchers'
 import { STANDALONE_PROJECT_ID } from '../utils/constants'
+import type { Task } from '../types'
 
 function formatCountdown(ms: number): string {
   const totalSec = Math.ceil(ms / 1000)
@@ -97,7 +98,7 @@ export default function FocusMode() {
       const { projects: freshProjects } = await window.api.getAppData()
       const freshProject = freshProjects.find((p: { id: string }) => p.id === config.focusProjectId)
       if (freshProject) {
-        const updatedTasks = freshProject.tasks.map((t: { id: string }) =>
+        const updatedTasks = freshProject.tasks.map((t: Task) =>
           t.id === config.focusTaskId
             ? { ...t, completed: true, completedAt: new Date().toISOString(), inProgress: false }
             : t
