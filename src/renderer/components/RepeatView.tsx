@@ -3,7 +3,8 @@ import { nanoid } from 'nanoid'
 import { useProjects } from '../hooks/useProjects'
 import type { RepeatSchedule, RepeatingTask } from '../types'
 
-type ScheduleMode = 'daily' | 'everyN' | 'weekdays' | 'custom' | 'afterDone'
+type ScheduleMode = 'daily' | 'weekly' | 'interval' | 'monthly'
+type MonthlySubMode = 'day' | 'nthWeekday' | 'everyN'
 
 type ModalState =
   | { open: false }
@@ -12,29 +13,37 @@ type ModalState =
 const WEEKDAY_DEFAULT = [1, 2, 3, 4, 5]
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
+const ORDINAL = ['1st', '2nd', '3rd', '4th', '5th']
+const WEEKDAY_NAMES_FULL = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
 function formatSchedule(schedule: RepeatSchedule): string {
   if (schedule.type === 'daily') return 'Every day'
   if (schedule.type === 'interval') return `Every ${schedule.days} days`
-  if (schedule.type === 'afterCompletion') return `${schedule.days} days after done`
+  if (schedule.type === 'afterCompletion') return `${schedule.days}d after done`
   if (schedule.type === 'weekdays') {
     const normalized = [...schedule.days].sort((a, b) => a - b)
     const isWorkWeek = normalized.length === 5 && WEEKDAY_DEFAULT.every((day, index) => day === normalized[index])
     if (isWorkWeek) return 'Weekdays'
     return normalized.map((day) => DAY_LABELS[(day + 6) % 7]).join(', ')
   }
+  if (schedule.type === 'monthlyDay') return `${schedule.day}. of month`
+  if (schedule.type === 'monthlyNthWeekday') return `${ORDINAL[schedule.week - 1]} ${WEEKDAY_NAMES_FULL[schedule.weekday]}`
+  if (schedule.type === 'everyNMonths') return `Every ${schedule.months} mo, day ${schedule.day}`
   return 'Custom'
 }
 
 function scheduleToMode(schedule: RepeatSchedule): ScheduleMode {
   if (schedule.type === 'daily') return 'daily'
-  if (schedule.type === 'interval') return 'everyN'
-  if (schedule.type === 'afterCompletion') return 'afterDone'
-  if (schedule.type === 'weekdays') {
-    const normalized = [...schedule.days].sort((a, b) => a - b)
-    const isWorkWeek = normalized.length === 5 && WEEKDAY_DEFAULT.every((day, index) => day === normalized[index])
-    return isWorkWeek ? 'weekdays' : 'custom'
-  }
+  if (schedule.type === 'interval' || schedule.type === 'afterCompletion') return 'interval'
+  if (schedule.type === 'weekdays') return 'weekly'
+  if (schedule.type === 'monthlyDay' || schedule.type === 'monthlyNthWeekday' || schedule.type === 'everyNMonths') return 'monthly'
   return 'daily'
+}
+
+function scheduleToMonthlySubMode(schedule: RepeatSchedule): MonthlySubMode {
+  if (schedule.type === 'monthlyNthWeekday') return 'nthWeekday'
+  if (schedule.type === 'everyNMonths') return 'everyN'
+  return 'day'
 }
 
 export default function RepeatView() {
@@ -43,22 +52,46 @@ export default function RepeatView() {
   const [title, setTitle] = useState('')
   const [mode, setMode] = useState<ScheduleMode>('daily')
   const [everyN, setEveryN] = useState(3)
+  const [afterCompletion, setAfterCompletion] = useState(false)
   const [customDays, setCustomDays] = useState<number[]>([1, 2, 3, 4, 5])
+  const [monthDay, setMonthDay] = useState(1)
+  const [monthlySubMode, setMonthlySubMode] = useState<MonthlySubMode>('day')
+  const [nthWeek, setNthWeek] = useState(1)
+  const [nthWeekday, setNthWeekday] = useState(1)
+  const [everyMonths, setEveryMonths] = useState(3)
+  const [startDate, setStartDate] = useState<string | null>(null)
+  const [endDate, setEndDate] = useState<string | null>(null)
+  const [showDateRange, setShowDateRange] = useState(false)
 
   const sorted = useMemo(() => [...repeatingTasks].sort((a, b) => a.order - b.order), [repeatingTasks])
 
-  const openCreate = () => {
-    setModal({ open: true, task: null })
+  const resetForm = () => {
     setTitle('')
     setMode('daily')
     setEveryN(3)
+    setAfterCompletion(false)
     setCustomDays([1, 2, 3, 4, 5])
+    setMonthDay(1)
+    setMonthlySubMode('day')
+    setNthWeek(1)
+    setNthWeekday(1)
+    setEveryMonths(3)
+    setStartDate(null)
+    setEndDate(null)
+    setShowDateRange(false)
+  }
+
+  const openCreate = () => {
+    resetForm()
+    setModal({ open: true, task: null })
   }
 
   const openEdit = (task: RepeatingTask) => {
     setModal({ open: true, task })
     setTitle(task.title)
     setMode(scheduleToMode(task.schedule))
+    setMonthlySubMode(scheduleToMonthlySubMode(task.schedule))
+    setAfterCompletion(task.schedule.type === 'afterCompletion')
 
     if (task.schedule.type === 'interval' || task.schedule.type === 'afterCompletion') {
       setEveryN(task.schedule.days)
@@ -71,16 +104,46 @@ export default function RepeatView() {
     } else {
       setCustomDays([1, 2, 3, 4, 5])
     }
+
+    if (task.schedule.type === 'monthlyDay') {
+      setMonthDay(task.schedule.day)
+    } else if (task.schedule.type === 'everyNMonths') {
+      setMonthDay(task.schedule.day)
+      setEveryMonths(task.schedule.months)
+    } else {
+      setMonthDay(new Date().getDate())
+      setEveryMonths(3)
+    }
+
+    if (task.schedule.type === 'monthlyNthWeekday') {
+      setNthWeek(task.schedule.week)
+      setNthWeekday(task.schedule.weekday)
+    } else {
+      setNthWeek(1)
+      setNthWeekday(1)
+    }
+
+    const hasDateRange = !!(task.startDate || task.endDate)
+    setStartDate(task.startDate || null)
+    setEndDate(task.endDate || null)
+    setShowDateRange(hasDateRange)
   }
 
   const closeModal = () => setModal({ open: false })
 
   const buildSchedule = (): RepeatSchedule => {
     if (mode === 'daily') return { type: 'daily' }
-    if (mode === 'everyN') return { type: 'interval', days: Math.max(1, everyN) }
-    if (mode === 'afterDone') return { type: 'afterCompletion', days: Math.max(1, everyN) }
-    if (mode === 'weekdays') return { type: 'weekdays', days: [1, 2, 3, 4, 5] }
-    return { type: 'weekdays', days: customDays.length > 0 ? [...customDays].sort((a, b) => a - b) : [1] }
+    if (mode === 'weekly') return { type: 'weekdays', days: customDays.length > 0 ? [...customDays].sort((a, b) => a - b) : [1] }
+    if (mode === 'interval') {
+      const days = Math.max(1, everyN)
+      return afterCompletion ? { type: 'afterCompletion', days } : { type: 'interval', days }
+    }
+    if (mode === 'monthly') {
+      if (monthlySubMode === 'nthWeekday') return { type: 'monthlyNthWeekday', week: nthWeek, weekday: nthWeekday }
+      if (monthlySubMode === 'everyN') return { type: 'everyNMonths', months: Math.max(1, everyMonths), day: Math.max(1, Math.min(31, monthDay)) }
+      return { type: 'monthlyDay', day: Math.max(1, Math.min(31, monthDay)) }
+    }
+    return { type: 'daily' }
   }
 
   const save = async () => {
@@ -93,7 +156,9 @@ export default function RepeatView() {
       ? {
         ...task,
         title: trimmedTitle,
-        schedule: buildSchedule()
+        schedule: buildSchedule(),
+        startDate,
+        endDate
       }
       : {
         id: nanoid(),
@@ -104,7 +169,9 @@ export default function RepeatView() {
         order: sorted.length,
         acceptedCount: 0,
         dismissedCount: 0,
-        completedCount: 0
+        completedCount: 0,
+        startDate,
+        endDate
       }
 
     await saveRepeatingTask(payload)
@@ -138,7 +205,7 @@ export default function RepeatView() {
 
       <div className={`modal-overlay ${modal.open ? 'open' : ''}`} onClick={closeModal}>
         {modal.open && (
-          <div className="modal" style={{ width: 400 }} onClick={(event) => event.stopPropagation()}>
+          <div className="modal" style={{ width: 380 }} onClick={(event) => event.stopPropagation()}>
             <h2>{modal.task ? 'Edit Repeating Task' : 'Add Repeating Task'}</h2>
 
             <div className="form-group">
@@ -148,34 +215,28 @@ export default function RepeatView() {
 
             <div className="form-group">
               <label>Schedule</label>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
-                <button className={`form-btn ${mode === 'daily' ? 'form-btn-primary' : 'form-btn-secondary'}`} style={{ flex: 0, padding: '5px 10px', fontSize: 11 }} onClick={() => setMode('daily')}>Every day</button>
-                <button className={`form-btn ${mode === 'everyN' ? 'form-btn-primary' : 'form-btn-secondary'}`} style={{ flex: 0, padding: '5px 10px', fontSize: 11 }} onClick={() => setMode('everyN')}>Every N days</button>
-                <button className={`form-btn ${mode === 'weekdays' ? 'form-btn-primary' : 'form-btn-secondary'}`} style={{ flex: 0, padding: '5px 10px', fontSize: 11 }} onClick={() => setMode('weekdays')}>Weekdays</button>
-                <button className={`form-btn ${mode === 'custom' ? 'form-btn-primary' : 'form-btn-secondary'}`} style={{ flex: 0, padding: '5px 10px', fontSize: 11 }} onClick={() => setMode('custom')}>Custom days</button>
-                <button className={`form-btn ${mode === 'afterDone' ? 'form-btn-primary' : 'form-btn-secondary'}`} style={{ flex: 0, padding: '5px 10px', fontSize: 11 }} onClick={() => setMode('afterDone')}>After done</button>
+              {/* Main tabs — 4 categories */}
+              <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+                {([
+                  ['daily', 'Daily'],
+                  ['weekly', 'Weekly'],
+                  ['interval', 'Interval'],
+                  ['monthly', 'Monthly']
+                ] as [ScheduleMode, string][]).map(([key, label]) => (
+                  <button
+                    key={key}
+                    className={`form-btn ${mode === key ? 'form-btn-primary' : 'form-btn-secondary'}`}
+                    style={{ flex: 1, padding: '6px 0', fontSize: 12 }}
+                    onClick={() => setMode(key)}
+                  >
+                    {label}
+                  </button>
+                ))}
               </div>
 
-              {(mode === 'everyN' || mode === 'afterDone') && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 13, color: 'var(--c-text-secondary)' }}>{mode === 'everyN' ? 'Every' : 'Wait'}</span>
-                  <input
-                    className="form-input"
-                    type="number"
-                    value={everyN}
-                    min={1}
-                    style={{ width: 60, textAlign: 'center' }}
-                    onChange={(event) => setEveryN(Math.max(1, Number(event.target.value) || 1))}
-                  />
-                  <select className="form-input" style={{ width: 'auto' }}>
-                    <option>{mode === 'everyN' ? 'days' : 'days after completion'}</option>
-                    <option>{mode === 'everyN' ? 'weeks' : 'weeks after completion'}</option>
-                  </select>
-                </div>
-              )}
-
-              {mode === 'custom' && (
-                <div style={{ display: 'flex', gap: 4, marginTop: 8 }}>
+              {/* Weekly — weekday picker */}
+              {mode === 'weekly' && (
+                <div style={{ display: 'flex', gap: 4 }}>
                   {DAY_LABELS.map((label, index) => {
                     const day = (index + 1) % 7
                     const selected = customDays.includes(day)
@@ -183,7 +244,7 @@ export default function RepeatView() {
                       <button
                         key={label}
                         className={`form-btn ${selected ? 'form-btn-primary' : 'form-btn-secondary'}`}
-                        style={{ flex: 0, padding: '4px 8px', fontSize: 11, minWidth: 36 }}
+                        style={{ flex: 1, padding: '5px 0', fontSize: 11, minWidth: 0 }}
                         onClick={() => {
                           setCustomDays((prev) => {
                             if (prev.includes(day)) {
@@ -200,15 +261,178 @@ export default function RepeatView() {
                   })}
                 </div>
               )}
+
+              {/* Interval — every N days + from start / after completion toggle */}
+              {mode === 'interval' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 13, color: 'var(--c-text-secondary)' }}>Every</span>
+                    <input
+                      className="form-input"
+                      type="number"
+                      value={everyN}
+                      min={1}
+                      style={{ width: 56, textAlign: 'center' }}
+                      onChange={(event) => setEveryN(Math.max(1, Number(event.target.value) || 1))}
+                    />
+                    <span style={{ fontSize: 13, color: 'var(--c-text-secondary)' }}>days</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button
+                      className={`form-btn ${!afterCompletion ? 'form-btn-primary' : 'form-btn-secondary'}`}
+                      style={{ flex: 1, padding: '4px 0', fontSize: 11 }}
+                      onClick={() => setAfterCompletion(false)}
+                    >
+                      From start
+                    </button>
+                    <button
+                      className={`form-btn ${afterCompletion ? 'form-btn-primary' : 'form-btn-secondary'}`}
+                      style={{ flex: 1, padding: '4px 0', fontSize: 11 }}
+                      onClick={() => setAfterCompletion(true)}
+                    >
+                      After completion
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Monthly — sub-mode selector + config */}
+              {mode === 'monthly' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    {([
+                      ['day', 'Day of month'],
+                      ['nthWeekday', 'Nth weekday'],
+                      ['everyN', 'Every N mo.']
+                    ] as [MonthlySubMode, string][]).map(([key, label]) => (
+                      <button
+                        key={key}
+                        className={`form-btn ${monthlySubMode === key ? 'form-btn-primary' : 'form-btn-secondary'}`}
+                        style={{ flex: 1, padding: '4px 0', fontSize: 11 }}
+                        onClick={() => setMonthlySubMode(key)}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {monthlySubMode === 'day' && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 13, color: 'var(--c-text-secondary)' }}>On day</span>
+                      <input
+                        className="form-input"
+                        type="number"
+                        value={monthDay}
+                        min={1}
+                        max={31}
+                        style={{ width: 56, textAlign: 'center' }}
+                        onChange={(event) => setMonthDay(Math.max(1, Math.min(31, Number(event.target.value) || 1)))}
+                      />
+                      <span style={{ fontSize: 13, color: 'var(--c-text-secondary)' }}>every month</span>
+                    </div>
+                  )}
+
+                  {monthlySubMode === 'nthWeekday' && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <select
+                        className="form-input"
+                        style={{ width: 'auto' }}
+                        value={nthWeek}
+                        onChange={(event) => setNthWeek(Number(event.target.value))}
+                      >
+                        {ORDINAL.map((label, i) => (
+                          <option key={i} value={i + 1}>{label}</option>
+                        ))}
+                      </select>
+                      <select
+                        className="form-input"
+                        style={{ width: 'auto' }}
+                        value={nthWeekday}
+                        onChange={(event) => setNthWeekday(Number(event.target.value))}
+                      >
+                        {WEEKDAY_NAMES_FULL.map((name, i) => (
+                          <option key={i} value={i}>{name}</option>
+                        ))}
+                      </select>
+                      <span style={{ fontSize: 13, color: 'var(--c-text-secondary)' }}>every month</span>
+                    </div>
+                  )}
+
+                  {monthlySubMode === 'everyN' && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 13, color: 'var(--c-text-secondary)' }}>Day</span>
+                      <input
+                        className="form-input"
+                        type="number"
+                        value={monthDay}
+                        min={1}
+                        max={31}
+                        style={{ width: 56, textAlign: 'center' }}
+                        onChange={(event) => setMonthDay(Math.max(1, Math.min(31, Number(event.target.value) || 1)))}
+                      />
+                      <span style={{ fontSize: 13, color: 'var(--c-text-secondary)' }}>every</span>
+                      <input
+                        className="form-input"
+                        type="number"
+                        value={everyMonths}
+                        min={1}
+                        style={{ width: 56, textAlign: 'center' }}
+                        onChange={(event) => setEveryMonths(Math.max(1, Number(event.target.value) || 1))}
+                      />
+                      <span style={{ fontSize: 13, color: 'var(--c-text-secondary)' }}>months</span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
-            <div className="form-group">
-              <label>After completion</label>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button className="form-btn form-btn-primary" style={{ flex: 0, padding: '5px 10px', fontSize: 11 }}>Remove</button>
-                <button className="form-btn form-btn-secondary" style={{ flex: 0, padding: '5px 10px', fontSize: 11 }}>Keep</button>
+            {/* Collapsible date range */}
+            {!showDateRange ? (
+              <button
+                onClick={() => setShowDateRange(true)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--c-text-muted)',
+                  fontSize: 12,
+                  cursor: 'pointer',
+                  padding: '2px 0',
+                  marginBottom: 14
+                }}
+              >
+                + Set date range
+              </button>
+            ) : (
+              <div className="form-group">
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <label style={{ margin: 0 }}>Date range</label>
+                  <button
+                    onClick={() => { setShowDateRange(false); setStartDate(null); setEndDate(null) }}
+                    style={{ background: 'none', border: 'none', color: 'var(--c-text-muted)', fontSize: 11, cursor: 'pointer' }}
+                  >
+                    Remove
+                  </button>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 12, color: 'var(--c-text-secondary)' }}>From</span>
+                  <input
+                    className="form-input"
+                    type="date"
+                    value={startDate || ''}
+                    style={{ width: 'auto', flex: 1, fontSize: 12 }}
+                    onChange={(event) => setStartDate(event.target.value || null)}
+                  />
+                  <span style={{ fontSize: 12, color: 'var(--c-text-secondary)' }}>to</span>
+                  <input
+                    className="form-input"
+                    type="date"
+                    value={endDate || ''}
+                    style={{ width: 'auto', flex: 1, fontSize: 12 }}
+                    onChange={(event) => setEndDate(event.target.value || null)}
+                  />
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="form-actions">
               {modal.task && <button className="form-btn form-btn-danger" onClick={deleteTask}>Delete</button>}

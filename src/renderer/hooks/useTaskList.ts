@@ -42,6 +42,22 @@ function isScheduleDueToday(schedule: RepeatSchedule, createdAt: string, lastCom
     if (!lastCompletedAt) return true
     return daysSince(lastCompletedAt) >= schedule.days
   }
+  if (schedule.type === 'monthlyDay') {
+    return new Date().getDate() === schedule.day
+  }
+  if (schedule.type === 'monthlyNthWeekday') {
+    const today = new Date()
+    if (today.getDay() !== schedule.weekday) return false
+    const weekOfMonth = Math.ceil(today.getDate() / 7)
+    return weekOfMonth === schedule.week
+  }
+  if (schedule.type === 'everyNMonths') {
+    const today = new Date()
+    if (today.getDate() !== schedule.day) return false
+    const created = new Date(createdAt)
+    const monthsDiff = (today.getFullYear() - created.getFullYear()) * 12 + (today.getMonth() - created.getMonth())
+    return monthsDiff % schedule.months === 0
+  }
   return false
 }
 
@@ -92,6 +108,8 @@ export function useTaskList(): TaskListData {
     const todayDismissed = dismissedRepeatingDate === today ? dismissedRepeating : []
     return repeatingTasks
       .filter((rt) => {
+        if (rt.startDate && today < rt.startDate) return false
+        if (rt.endDate && today > rt.endDate) return false
         if (!isScheduleDueToday(rt.schedule, rt.createdAt, rt.lastCompletedAt)) return false
         if (todayDismissed.includes(rt.id)) return false
         if (quickTasks.some((qt) => qt.repeatingTaskId === rt.id && !qt.completed)) return false

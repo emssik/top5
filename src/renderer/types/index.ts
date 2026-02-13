@@ -14,6 +14,9 @@ export type RepeatSchedule =
   | { type: 'weekdays'; days: number[] }
   | { type: 'interval'; days: number }
   | { type: 'afterCompletion'; days: number }
+  | { type: 'monthlyDay'; day: number }
+  | { type: 'monthlyNthWeekday'; week: number; weekday: number }
+  | { type: 'everyNMonths'; months: number; day: number }
 
 export interface RepeatingTask {
   id: string
@@ -25,6 +28,8 @@ export interface RepeatingTask {
   acceptedCount: number
   dismissedCount: number
   completedCount: number
+  startDate?: string | null
+  endDate?: string | null
 }
 
 export interface QuickTask {

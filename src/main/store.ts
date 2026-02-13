@@ -35,6 +35,9 @@ type RepeatSchedule =
   | { type: 'weekdays'; days: number[] }
   | { type: 'interval'; days: number }
   | { type: 'afterCompletion'; days: number }
+  | { type: 'monthlyDay'; day: number }
+  | { type: 'monthlyNthWeekday'; week: number; weekday: number }
+  | { type: 'everyNMonths'; months: number; day: number }
 
 interface RepeatingTask {
   id: string
@@ -46,6 +49,8 @@ interface RepeatingTask {
   acceptedCount: number
   dismissedCount: number
   completedCount: number
+  startDate?: string | null
+  endDate?: string | null
 }
 
 interface QuickTask {
@@ -396,6 +401,9 @@ function isValidRepeatSchedule(value: unknown): value is RepeatSchedule {
   if (type === 'daily') return true
   if (type === 'weekdays') return Array.isArray(value.days) && value.days.every((d: unknown) => typeof d === 'number')
   if (type === 'interval' || type === 'afterCompletion') return typeof value.days === 'number' && value.days > 0
+  if (type === 'monthlyDay') return typeof value.day === 'number' && value.day >= 1 && value.day <= 31
+  if (type === 'monthlyNthWeekday') return typeof value.week === 'number' && value.week >= 1 && value.week <= 5 && typeof value.weekday === 'number' && value.weekday >= 0 && value.weekday <= 6
+  if (type === 'everyNMonths') return typeof value.months === 'number' && value.months >= 1 && typeof value.day === 'number' && value.day >= 1 && value.day <= 31
   return false
 }
 

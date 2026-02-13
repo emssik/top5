@@ -3,14 +3,19 @@ import { nanoid } from 'nanoid'
 import { useProjects } from '../hooks/useProjects'
 import type { RepeatingTask, RepeatSchedule } from '../types'
 
+const WEEKDAY_NAMES_FULL = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+const ORDINAL = ['1st', '2nd', '3rd', '4th', '5th']
+
 function formatSchedule(schedule: RepeatSchedule): string {
   if (schedule.type === 'daily') return 'Daily'
   if (schedule.type === 'weekdays') {
-    const names = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-    return schedule.days.map((d) => names[d]).join(', ')
+    return schedule.days.map((d) => WEEKDAY_NAMES_FULL[d]).join(', ')
   }
   if (schedule.type === 'interval') return `Every ${schedule.days}d`
   if (schedule.type === 'afterCompletion') return `${schedule.days}d after done`
+  if (schedule.type === 'monthlyDay') return `${schedule.day}. of month`
+  if (schedule.type === 'monthlyNthWeekday') return `${ORDINAL[schedule.week - 1]} ${WEEKDAY_NAMES_FULL[schedule.weekday]}`
+  if (schedule.type === 'everyNMonths') return `Every ${schedule.months}mo, ${schedule.day}.`
   return '?'
 }
 
@@ -22,25 +27,35 @@ function SchedulePicker({ schedule, onChange }: { schedule: RepeatSchedule; onCh
   const activeType = schedule.type
   const days = (schedule.type === 'interval' || schedule.type === 'afterCompletion') ? schedule.days : 3
   const weekdays = schedule.type === 'weekdays' ? schedule.days : [1, 2, 3, 4, 5]
+  const monthlyDay = schedule.type === 'monthlyDay' ? schedule.day : (schedule.type === 'everyNMonths' ? schedule.day : 1)
+  const nthWeek = schedule.type === 'monthlyNthWeekday' ? schedule.week : 1
+  const nthWeekday = schedule.type === 'monthlyNthWeekday' ? schedule.weekday : 1
+  const everyNMonths = schedule.type === 'everyNMonths' ? schedule.months : 3
 
   const setType = (type: ScheduleType) => {
     if (type === 'daily') onChange({ type: 'daily' })
     else if (type === 'weekdays') onChange({ type: 'weekdays', days: weekdays })
     else if (type === 'interval') onChange({ type: 'interval', days })
     else if (type === 'afterCompletion') onChange({ type: 'afterCompletion', days })
+    else if (type === 'monthlyDay') onChange({ type: 'monthlyDay', day: monthlyDay })
+    else if (type === 'monthlyNthWeekday') onChange({ type: 'monthlyNthWeekday', week: nthWeek, weekday: nthWeekday })
+    else if (type === 'everyNMonths') onChange({ type: 'everyNMonths', months: everyNMonths, day: monthlyDay })
   }
 
   const tabs: { type: ScheduleType; label: string }[] = [
     { type: 'daily', label: 'Daily' },
     { type: 'weekdays', label: 'Days' },
     { type: 'interval', label: 'Every N' },
-    { type: 'afterCompletion', label: 'After done' }
+    { type: 'afterCompletion', label: 'After done' },
+    { type: 'monthlyDay', label: 'Monthly' },
+    { type: 'monthlyNthWeekday', label: 'Nth day' },
+    { type: 'everyNMonths', label: 'N mo.' }
   ]
 
   return (
     <div className="space-y-2">
       {/* Type tabs */}
-      <div className="flex gap-1">
+      <div className="flex gap-1 flex-wrap">
         {tabs.map((t) => (
           <button
             key={t.type}
@@ -110,6 +125,116 @@ function SchedulePicker({ schedule, onChange }: { schedule: RepeatSchedule; onCh
           </span>
         </div>
       )}
+
+      {/* Monthly day picker */}
+      {activeType === 'monthlyDay' && (
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-t-muted">Day</span>
+          <input
+            type="number"
+            min="1"
+            max="31"
+            value={monthlyDay}
+            onChange={(e) => {
+              const v = Math.max(1, Math.min(31, parseInt(e.target.value) || 1))
+              onChange({ type: 'monthlyDay', day: v })
+            }}
+            className="w-14 text-xs px-1.5 py-1 rounded bg-base border border-border text-t-primary focus:outline-none focus:border-t-secondary"
+          />
+          <span className="text-xs text-t-muted">of every month</span>
+        </div>
+      )}
+
+      {/* Nth weekday picker */}
+      {activeType === 'monthlyNthWeekday' && (
+        <div className="flex items-center gap-2">
+          <select
+            value={nthWeek}
+            onChange={(e) => onChange({ type: 'monthlyNthWeekday', week: parseInt(e.target.value), weekday: nthWeekday })}
+            className="text-xs px-1.5 py-1 rounded bg-base border border-border text-t-primary focus:outline-none focus:border-t-secondary"
+          >
+            {ORDINAL.map((label, i) => (
+              <option key={i} value={i + 1}>{label}</option>
+            ))}
+          </select>
+          <select
+            value={nthWeekday}
+            onChange={(e) => onChange({ type: 'monthlyNthWeekday', week: nthWeek, weekday: parseInt(e.target.value) })}
+            className="text-xs px-1.5 py-1 rounded bg-base border border-border text-t-primary focus:outline-none focus:border-t-secondary"
+          >
+            {WEEKDAY_NAMES_FULL.map((name, i) => (
+              <option key={i} value={i}>{name}</option>
+            ))}
+          </select>
+          <span className="text-xs text-t-muted">of every month</span>
+        </div>
+      )}
+
+      {/* Every N months picker */}
+      {activeType === 'everyNMonths' && (
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-t-muted">Every</span>
+          <input
+            type="number"
+            min="1"
+            value={everyNMonths}
+            onChange={(e) => {
+              const v = Math.max(1, parseInt(e.target.value) || 1)
+              onChange({ type: 'everyNMonths', months: v, day: monthlyDay })
+            }}
+            className="w-14 text-xs px-1.5 py-1 rounded bg-base border border-border text-t-primary focus:outline-none focus:border-t-secondary"
+          />
+          <span className="text-xs text-t-muted">months, day</span>
+          <input
+            type="number"
+            min="1"
+            max="31"
+            value={monthlyDay}
+            onChange={(e) => {
+              const v = Math.max(1, Math.min(31, parseInt(e.target.value) || 1))
+              onChange({ type: 'everyNMonths', months: everyNMonths, day: v })
+            }}
+            className="w-14 text-xs px-1.5 py-1 rounded bg-base border border-border text-t-primary focus:outline-none focus:border-t-secondary"
+          />
+        </div>
+      )}
+    </div>
+  )
+}
+
+function DateRangePicker({ startDate, endDate, onChange }: {
+  startDate?: string | null
+  endDate?: string | null
+  onChange: (start: string | null, end: string | null) => void
+}) {
+  return (
+    <div className="flex items-center gap-3">
+      <div className="flex items-center gap-1.5">
+        <span className="text-[11px] text-t-muted">From</span>
+        <input
+          type="date"
+          value={startDate || ''}
+          onChange={(e) => onChange(e.target.value || null, endDate || null)}
+          className="text-[11px] px-1.5 py-0.5 rounded bg-base border border-border text-t-primary focus:outline-none focus:border-t-secondary"
+        />
+      </div>
+      <div className="flex items-center gap-1.5">
+        <span className="text-[11px] text-t-muted">Until</span>
+        <input
+          type="date"
+          value={endDate || ''}
+          onChange={(e) => onChange(startDate || null, e.target.value || null)}
+          className="text-[11px] px-1.5 py-0.5 rounded bg-base border border-border text-t-primary focus:outline-none focus:border-t-secondary"
+        />
+      </div>
+      {(startDate || endDate) && (
+        <button
+          onClick={() => onChange(null, null)}
+          className="text-[10px] text-t-muted hover:text-t-secondary transition-colors"
+        >
+          Clear
+        </button>
+      )}
     </div>
   )
 }
@@ -118,6 +243,8 @@ export default function RepeatingTasksTab() {
   const { repeatingTasks, saveRepeatingTask, removeRepeatingTask, reorderRepeatingTasks } = useProjects()
   const [newTitle, setNewTitle] = useState('')
   const [newSchedule, setNewSchedule] = useState<RepeatSchedule>({ type: 'daily' })
+  const [newStartDate, setNewStartDate] = useState<string | null>(null)
+  const [newEndDate, setNewEndDate] = useState<string | null>(null)
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingTitle, setEditingTitle] = useState('')
@@ -158,11 +285,15 @@ export default function RepeatingTasksTab() {
       order: repeatingTasks.length,
       acceptedCount: 0,
       dismissedCount: 0,
-      completedCount: 0
+      completedCount: 0,
+      startDate: newStartDate,
+      endDate: newEndDate
     }
     await saveRepeatingTask(task)
     setNewTitle('')
     setNewSchedule({ type: 'daily' })
+    setNewStartDate(null)
+    setNewEndDate(null)
     setShowAddForm(false)
   }
 
@@ -280,12 +411,20 @@ export default function RepeatingTasksTab() {
               </div>
 
               {schedulePickerId === task.id && (
-                <div className="ml-7 mt-1 mb-2 p-2.5 rounded-lg bg-surface border border-border">
+                <div className="ml-7 mt-1 mb-2 p-2.5 rounded-lg bg-surface border border-border space-y-2">
                   <SchedulePicker
                     schedule={task.schedule}
                     onChange={(schedule) => {
                       const fresh = useProjects.getState().repeatingTasks.find((t) => t.id === task.id)
                       if (fresh) saveRepeatingTask({ ...fresh, schedule })
+                    }}
+                  />
+                  <DateRangePicker
+                    startDate={task.startDate}
+                    endDate={task.endDate}
+                    onChange={(startDate, endDate) => {
+                      const fresh = useProjects.getState().repeatingTasks.find((t) => t.id === task.id)
+                      if (fresh) saveRepeatingTask({ ...fresh, startDate, endDate })
                     }}
                   />
                 </div>
@@ -307,12 +446,17 @@ export default function RepeatingTasksTab() {
               onChange={(e) => setNewTitle(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && newTitle.trim()) addTask()
-                if (e.key === 'Escape') { setShowAddForm(false); setNewTitle(''); setNewSchedule({ type: 'daily' }) }
+                if (e.key === 'Escape') { setShowAddForm(false); setNewTitle(''); setNewSchedule({ type: 'daily' }); setNewStartDate(null); setNewEndDate(null) }
               }}
               placeholder="Task name..."
               className="w-full px-3 py-1.5 rounded-lg bg-surface border border-border text-t-primary text-sm placeholder:text-t-muted focus:outline-none focus:border-t-secondary"
             />
             <SchedulePicker schedule={newSchedule} onChange={setNewSchedule} />
+            <DateRangePicker
+              startDate={newStartDate}
+              endDate={newEndDate}
+              onChange={(s, e) => { setNewStartDate(s); setNewEndDate(e) }}
+            />
             <div className="flex gap-2">
               <button
                 onClick={addTask}
@@ -322,7 +466,7 @@ export default function RepeatingTasksTab() {
                 Add
               </button>
               <button
-                onClick={() => { setShowAddForm(false); setNewTitle(''); setNewSchedule({ type: 'daily' }) }}
+                onClick={() => { setShowAddForm(false); setNewTitle(''); setNewSchedule({ type: 'daily' }); setNewStartDate(null); setNewEndDate(null) }}
                 className="px-3 py-1 rounded-lg bg-surface hover:bg-hover text-t-muted text-xs transition-colors"
               >
                 Cancel

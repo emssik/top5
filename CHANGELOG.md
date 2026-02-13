@@ -5,14 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.23.0] - 2026-02-13
 
 ### Added
 
+- Monthly repeat schedules: day-of-month (`monthlyDay`), Nth weekday (`monthlyNthWeekday`), and every-N-months (`everyNMonths`) schedule types
+- Date range support for repeating tasks: optional `startDate` and `endDate` fields to limit when a task is proposed
+- `DateRangePicker` component in `RepeatingTasksTab` for inline date range editing
+- Collapsible "Set date range" section in `RepeatView` modal
 - Hover tooltip on quick task titles showing full text when truncated
 
 ### Changed
 
+- Schedule picker in `RepeatView` redesigned into four main categories (Daily, Weekly, Interval, Monthly) with sub-modes for monthly and interval types
+- Schedule picker in `RepeatingTasksTab` extended with Monthly, Nth weekday, and Every-N-months tabs
+- `isScheduleDueToday` logic in `useTaskList` now handles monthly schedule types and respects `startDate`/`endDate` bounds
+- `RepeatSchedule` type extended with `monthlyDay`, `monthlyNthWeekday`, and `everyNMonths` variants (both main and renderer)
+- `RepeatingTask` type extended with optional `startDate` and `endDate` fields (both main and renderer)
+- Validation in `isValidRepeatSchedule` (main store) covers new monthly schedule types
 - README rewritten to reflect current app architecture: sidebar navigation, Today view, configurable project limit, project colors and links, activity log, and updated project structure
 
 ## [1.22.0] - 2026-02-13
