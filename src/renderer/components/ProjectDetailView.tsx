@@ -8,10 +8,11 @@ import { projectColorValue, normalizeProjectLinks, openProjectLink } from '../ut
 interface Props {
   project: Project
   onEdit: () => void
+  onDelete: () => void
 }
 
-export default function ProjectDetailView({ project, onEdit }: Props) {
-  const { saveProject, setFocus, toggleTaskToDoNext, focusCheckIns, suspendProject, unsuspendProject } = useProjects()
+export default function ProjectDetailView({ project, onEdit, onDelete }: Props) {
+  const { saveProject, deleteProject, setFocus, toggleTaskToDoNext, focusCheckIns, suspendProject, unsuspendProject } = useProjects()
 
   const [newTaskTitle, setNewTaskTitle] = useState('')
   const [showAddInput, setShowAddInput] = useState(false)
@@ -57,6 +58,18 @@ export default function ProjectDetailView({ project, onEdit }: Props) {
     await updateTasks([...project.tasks, task])
     setNewTaskTitle('')
     setShowAddInput(false)
+  }
+
+  const removeTask = async (taskId: string) => {
+    const nextTasks = project.tasks.filter((task) => task.id !== taskId)
+    await updateTasks(nextTasks)
+  }
+
+  const handleDeleteProject = async () => {
+    if (project.tasks.length > 0) return
+    if (!confirm(`Delete project "${project.name || 'Untitled'}"?`)) return
+    await deleteProject(project.id)
+    onDelete()
   }
 
   const saveEdit = async () => {
@@ -186,7 +199,11 @@ export default function ProjectDetailView({ project, onEdit }: Props) {
           )}
         </div>
 
-        {done ? null : (
+        {done ? (
+          <div className="task-actions">
+            <button className="task-action-btn btn-remove" onClick={() => removeTask(task.id)} title="Delete">×</button>
+          </div>
+        ) : (
           <>
             {isPinned ? (
               <span className="pin-icon">📌</span>
@@ -195,6 +212,7 @@ export default function ProjectDetailView({ project, onEdit }: Props) {
             )}
             <div className="task-actions">
               <button className="task-action-btn btn-focus" onClick={() => setFocus(project.id, task.id)} title="Focus">▶</button>
+              <button className="task-action-btn btn-remove" onClick={() => removeTask(task.id)} title="Delete">×</button>
             </div>
           </>
         )}
@@ -231,6 +249,9 @@ export default function ProjectDetailView({ project, onEdit }: Props) {
             <span className="project-action-icon" title="Unsuspend" onClick={handleUnsuspend}>▲</span>
           ) : (
             <span className="project-action-icon" title="Suspend" onClick={() => suspendProject(project.id)}>⏸</span>
+          )}
+          {project.tasks.length === 0 && (
+            <span className="project-action-icon" title="Delete project" onClick={handleDeleteProject}>🗑</span>
           )}
         </div>
       </div>

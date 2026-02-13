@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.25.0] - 2026-02-13
+
+### Added
+
+- Delete button on individual tasks (both active and completed) in `ProjectDetailView`
+- Delete project action in `ProjectDetailView` header (visible only when project has zero tasks, with confirmation dialog)
+- `onDelete` callback on `ProjectDetailView` to navigate back to Today view after project deletion
+
 ## [1.24.0] - 2026-02-13
 
 ### Removed

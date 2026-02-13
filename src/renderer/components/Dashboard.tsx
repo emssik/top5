@@ -239,6 +239,7 @@ export default function Dashboard() {
                 setEditorProjectId(selectedProject.id)
                 setShowEditor(true)
               }}
+              onDelete={() => setActiveView('today')}
             />
           )}
         </div>
