@@ -30,6 +30,7 @@ export interface TaskListData {
   overflowTasks: MergedTask[]
   allActiveTasks: MergedTask[]
   limit: number
+  configLimit: number
   activeSlots: number
   hasRepeatingSection: boolean
   hasCompletedSection: boolean
@@ -47,8 +48,10 @@ function isRepeating(task: { repeatingTaskId?: string | null }): boolean {
  * @param opts.excludeFocus — when true, the focus task is returned separately
  *   and excluded from activeTasks (used by TodayView which renders focus in its own section).
  *   When false/omitted, focus task stays in activeTasks (used by clean view).
+ * @param opts.limitAdjust — offset added to config limit for the visual split (default 0).
+ *   Used by TodayView to allow free drag between sections without changing the config.
  */
-export function useTaskList(opts?: { excludeFocus?: boolean }): TaskListData {
+export function useTaskList(opts?: { excludeFocus?: boolean; limitAdjust?: number }): TaskListData {
   const {
     quickTasks,
     projects,
@@ -59,7 +62,8 @@ export function useTaskList(opts?: { excludeFocus?: boolean }): TaskListData {
     winsLock
   } = useProjects()
 
-  const limit = config.quickTasksLimit ?? 5
+  const configLimit = config.quickTasksLimit ?? 5
+  const limit = Math.max(1, configLimit + (opts?.limitAdjust ?? 0))
   const today = new Date().toISOString().slice(0, 10)
   const isLocked = winsLock?.locked ?? false
   const excludeFocus = opts?.excludeFocus ?? false
@@ -241,6 +245,7 @@ export function useTaskList(opts?: { excludeFocus?: boolean }): TaskListData {
     overflowTasks: overflow,
     allActiveTasks,
     limit,
+    configLimit,
     activeSlots,
     hasRepeatingSection,
     hasCompletedSection,

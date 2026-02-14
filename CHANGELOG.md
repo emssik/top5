@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.36.0] - 2026-02-14
+
+### Added
+
+- Cross-section drag-and-drop: drag tasks between "above limit" and "overflow" sections in Today view
+- Zone-based drop targets on the limit indicator and overflow header for intuitive cross-section moves
+- `drag-over-zone` CSS highlight style for drop target feedback (blue border glow)
+- `limitAdjust` mechanism in `useTaskList` hook: visual split adjusts on cross-section drag without changing the persisted config limit
+
+### Changed
+
+- `useTaskList` hook now accepts `limitAdjust` option and returns `configLimit` alongside the effective `limit`
+- Limit indicator bar always rendered (previously conditionally shown based on overflow presence)
+- Limit indicator and overflow header act as drag-and-drop zones with visual feedback
+
 ## [1.35.0] - 2026-02-14
 
 ### Added

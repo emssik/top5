@@ -58,6 +58,8 @@ export default function TodayView() {
     loadWinsLock
   } = useProjects()
 
+  const [limitAdjust, setLimitAdjust] = useState(0)
+
   const {
     focusTask,
     inProgressTasks,
@@ -67,10 +69,10 @@ export default function TodayView() {
     proposals,
     overflowTasks,
     allActiveTasks,
-    limit,
+    configLimit,
     isLocked,
     lockedTaskIds
-  } = useTaskList({ excludeFocus: true })
+  } = useTaskList({ excludeFocus: true, limitAdjust })
 
   const [showAddInput, setShowAddInput] = useState(false)
   const [newTitle, setNewTitle] = useState('')
@@ -85,6 +87,7 @@ export default function TodayView() {
   const addInputRef = useRef<HTMLInputElement | null>(null)
   const draggedId = useRef<string | null>(null)
   const [dragOverId, setDragOverId] = useState<string | null>(null)
+  const [dragOverZone, setDragOverZone] = useState<'top' | 'overflow' | null>(null)
   const [showLossBanner, setShowLossBanner] = useState(false)
   const prevLockedRef = useRef(winsLock?.locked ?? false)
 
@@ -337,6 +340,7 @@ export default function TodayView() {
   const clearDragState = () => {
     draggedId.current = null
     setDragOverId(null)
+    setDragOverZone(null)
   }
 
   const handleDragStart = (id: string) => {
@@ -352,6 +356,13 @@ export default function TodayView() {
   const handleDrop = async (targetId: string) => {
     if (!draggedId.current || draggedId.current === targetId) return
 
+    // Detect cross-section drag (above-limit ↔ overflow)
+    const overflowIds = new Set(overflowTasks.map((t) => t.id))
+    const draggedInOverflow = overflowIds.has(draggedId.current)
+    const targetInOverflow = overflowIds.has(targetId)
+    const draggedTask = allActiveTasks.find((t) => t.id === draggedId.current)
+    const isCrossSection = draggedTask && !isRepeatingEntry(draggedTask) && draggedInOverflow !== targetInOverflow
+
     const ids = allActiveTasks.map((task) => task.id)
     const fromIndex = ids.indexOf(draggedId.current)
     const toIndex = ids.indexOf(targetId)
@@ -365,6 +376,18 @@ export default function TodayView() {
 
     const taskById = new Map(allActiveTasks.map((task) => [task.id, task]))
     const reordered = ids.map((id, order) => ({ ...taskById.get(id)!, order }))
+
+    // Adjust visual split when dragging between sections
+    if (isCrossSection) {
+      if (draggedInOverflow) {
+        // Only expand if below config limit (limitAdjust < 0 means we removed some earlier)
+        if (limitAdjust < 0) setLimitAdjust((prev) => prev + 1)
+        // At limit (limitAdjust >= 0): no adjust → reorder naturally swaps last task out
+      } else {
+        // Always allow shrinking (top → overflow)
+        setLimitAdjust((prev) => prev - 1)
+      }
+    }
 
     const orderedQuickIds = reordered
       .filter((task) => task.kind === 'quick')
@@ -382,6 +405,66 @@ export default function TodayView() {
         taskId: task.taskId!,
         order: task.order
       }))
+
+    if (pinnedUpdates.length > 0) {
+      await window.api.reorderPinnedTasks(pinnedUpdates)
+    }
+
+    clearDragState()
+  }
+
+  const handleZoneDragOver = (event: React.DragEvent, zone: 'top' | 'overflow') => {
+    event.preventDefault()
+    if (!draggedId.current) return
+    setDragOverZone(zone)
+  }
+
+  const handleDropOnZone = async (zone: 'top' | 'overflow') => {
+    if (!draggedId.current) return
+
+    const overflowIds = new Set(overflowTasks.map((t) => t.id))
+    const draggedInOverflow = overflowIds.has(draggedId.current)
+    const draggedTask = allActiveTasks.find((t) => t.id === draggedId.current)
+
+    // Only cross-section drops on non-repeating tasks
+    if (!draggedTask || isRepeatingEntry(draggedTask)) { clearDragState(); return }
+    if (zone === 'top' && !draggedInOverflow) { clearDragState(); return }
+    if (zone === 'overflow' && draggedInOverflow) { clearDragState(); return }
+
+    const ids = allActiveTasks.map((t) => t.id)
+    const fromIndex = ids.indexOf(draggedId.current)
+    if (fromIndex === -1) { clearDragState(); return }
+
+    ids.splice(fromIndex, 1)
+
+    // Insert at the limit boundary (before first remaining overflow task)
+    const firstOverflow = overflowTasks.find((t) => t.id !== draggedId.current)
+    const insertPos = firstOverflow ? ids.indexOf(firstOverflow.id) : ids.length
+    ids.splice(insertPos, 0, draggedId.current)
+
+    const taskById = new Map(allActiveTasks.map((t) => [t.id, t]))
+    const reordered = ids.map((id, order) => ({ ...taskById.get(id)!, order }))
+
+    if (zone === 'top') {
+      // Only expand if below config limit
+      if (limitAdjust < 0) setLimitAdjust((prev) => prev + 1)
+      // At limit: reorder inserts at boundary, naturally pushing last task to overflow (swap)
+    } else {
+      setLimitAdjust((prev) => prev - 1)
+    }
+
+    const orderedQuickIds = reordered
+      .filter((t) => t.kind === 'quick')
+      .sort((a, b) => a.order - b.order)
+      .map((t) => t.id)
+
+    if (orderedQuickIds.length > 0) {
+      await reorderQuickTasks(orderedQuickIds)
+    }
+
+    const pinnedUpdates = reordered
+      .filter((t) => t.kind === 'pinned' && t.projectId && t.taskId)
+      .map((t) => ({ projectId: t.projectId!, taskId: t.taskId!, order: t.order }))
 
     if (pinnedUpdates.length > 0) {
       await window.api.reorderPinnedTasks(pinnedUpdates)
@@ -672,35 +755,38 @@ export default function TodayView() {
         </>
       )}
 
-      {overflowTasks.length > 0 && (
-        <>
-          <div className="limit-indicator">
-            {!isLocked && lockableTasks.length > 0 && (
-              <button className="wins-lock-btn" onClick={handleLock} title="Lock tasks for today's challenge">
-                &#x1f513;
-              </button>
-            )}
-            <span>limit {limit}</span>
-          </div>
-          <div className="overflow-section">
-            <div className={`done-toggle ${showOverflow ? 'open' : ''}`} onClick={() => setShowOverflow((value) => !value)}>
-              <span style={{ opacity: 0.4 }}>⋯</span>
-              <span>Beyond limit ({overflowTasks.length})</span>
-              <span className="chevron">▸</span>
-            </div>
-            <div className={`done-list ${showOverflow ? 'open' : ''}`}>
-              {overflowTasks.map((task) => renderTask(task, 'overflow'))}
-            </div>
-          </div>
-        </>
-      )}
-
-      {!overflowTasks.length && !isLocked && lockableTasks.length > 0 && (
-        <div className="limit-indicator">
+      <div
+        className={`limit-indicator ${dragOverZone ? 'drag-over-zone' : ''}`}
+        onDragOver={(e) => handleZoneDragOver(e, overflowTasks.length > 0 ? 'top' : 'overflow')}
+        onDragLeave={() => setDragOverZone(null)}
+        onDrop={() => handleDropOnZone(overflowTasks.length > 0 ? 'top' : 'overflow')}
+        onDragEnd={clearDragState}
+      >
+        {!isLocked && lockableTasks.length > 0 && (
           <button className="wins-lock-btn" onClick={handleLock} title="Lock tasks for today's challenge">
             &#x1f513;
           </button>
-          <span>limit {limit}</span>
+        )}
+        <span>limit {configLimit}</span>
+      </div>
+
+      {overflowTasks.length > 0 && (
+        <div className="overflow-section">
+          <div
+            className={`done-toggle ${showOverflow ? 'open' : ''} ${dragOverZone === 'overflow' ? 'drag-over-zone' : ''}`}
+            onClick={() => setShowOverflow((value) => !value)}
+            onDragOver={(e) => handleZoneDragOver(e, 'overflow')}
+            onDragLeave={() => setDragOverZone(null)}
+            onDrop={() => handleDropOnZone('overflow')}
+            onDragEnd={clearDragState}
+          >
+            <span style={{ opacity: 0.4 }}>⋯</span>
+            <span>Beyond limit ({overflowTasks.length})</span>
+            <span className="chevron">▸</span>
+          </div>
+          <div className={`done-list ${showOverflow ? 'open' : ''}`}>
+            {overflowTasks.map((task) => renderTask(task, 'overflow'))}
+          </div>
         </div>
       )}
 
