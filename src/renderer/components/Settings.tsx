@@ -225,6 +225,16 @@ export default function Settings({ open, onClose }: Props) {
           </div>
         </div>
 
+        <div style={{ marginTop: 16, borderTop: '1px solid var(--c-border-subtle)', paddingTop: 12 }}>
+          <button
+            className="form-btn form-btn-secondary"
+            style={{ padding: '4px 12px', fontSize: 12 }}
+            onClick={() => window.api.openDevTools()}
+          >
+            Open DevTools
+          </button>
+        </div>
+
         <div className="form-actions">
           <button className="form-btn form-btn-secondary" onClick={onClose}>Cancel</button>
           <button className="form-btn form-btn-primary" onClick={handleSave}>Save</button>

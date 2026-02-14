@@ -39,6 +39,7 @@ declare global {
       launchObsidian: (vault: string) => Promise<void>
       launchBrowser: (url: string) => Promise<void>
       openExternal: (url: string) => Promise<void>
+      openDevTools: () => Promise<void>
       enterFocusMode: () => Promise<void>
       exitFocusMode: () => Promise<void>
       getFocusUnsavedMs: () => Promise<number>

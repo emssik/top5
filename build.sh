@@ -26,7 +26,7 @@ if [ "$1" = "--release" ]; then
 else
   echo "🔨 Building Top5 (quick)..."
   npm run build
-  CSC_IDENTITY_AUTO_DISCOVERY=false npx electron-builder --mac --dir
+  CSC_IDENTITY_AUTO_DISCOVERY=false npx electron-builder --mac --dir -c.mac.identity=null
   touch dist/.metadata_never_index
 
   APP="dist/mac-arm64/Top5.app"
@@ -35,7 +35,11 @@ else
     exit 1
   fi
 
-  echo "✅ Ready: $APP"
-  echo "📦 Opening app..."
-  open "$APP"
+  echo "📦 Installing to /Applications..."
+  pkill -f "Top5.app" 2>/dev/null || true
+  sleep 1
+  rm -rf /Applications/Top5.app
+  cp -R "$APP" /Applications/Top5.app
+  echo "✅ Installed. Opening..."
+  open /Applications/Top5.app
 fi

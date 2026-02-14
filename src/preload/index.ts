@@ -53,6 +53,7 @@ export const api = {
   switchFocusTask: (projectId: string, taskId: string) => ipcRenderer.invoke('switch-focus-task', projectId, taskId),
   resizeFocusWindow: (width: number, height: number) => ipcRenderer.invoke('resize-focus-window', width, height),
   closeQuickAddWindow: () => ipcRenderer.invoke('close-quick-add-window'),
+  openDevTools: () => ipcRenderer.invoke('open-dev-tools'),
   getApiConfig: (): Promise<ApiConfig> => ipcRenderer.invoke('get-api-config'),
   saveApiConfig: (config: Partial<ApiConfig>): Promise<ApiConfig> => ipcRenderer.invoke('save-api-config', config),
   onReloadData: (callback: () => void) => {

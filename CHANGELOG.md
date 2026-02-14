@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.33.0] - 2026-02-14
+
+### Added
+
+- DevTools button in Settings for opening Chrome DevTools in detached mode
+- `open-dev-tools` IPC handler and `openDevTools` preload bridge API
+
+### Changed
+
+- Build script (`build.sh`): kills running Top5 instance before install, copies app to `/Applications/`, uses `-c.mac.identity=null` to skip code signing
+
+### Fixed
+
+- Stale focus state on startup: `focusProjectId` and `focusTaskId` are now cleared when the app launches, preventing ghost focus indicators from previous sessions
+
 ## [1.32.0] - 2026-02-14
 
 ### Changed
