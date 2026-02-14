@@ -13,7 +13,11 @@ export type {
   OperationLogEntry,
   AppData,
   ApiConfig,
-  ApiConfigPublic
+  ApiConfigPublic,
+  LockedTaskRef,
+  WinsLockState,
+  WinEntry,
+  StreakStats
 } from '../../shared/types'
 
 interface ShortcutActionPayload {
@@ -71,6 +75,11 @@ declare global {
       closeQuickAddWindow: () => Promise<void>
       getApiConfig: () => Promise<import('../../shared/types').ApiConfig>
       saveApiConfig: (config: Partial<import('../../shared/types').ApiConfig>) => Promise<import('../../shared/types').ApiConfig>
+      winsLock: (tasks: import('../../shared/types').LockedTaskRef[]) => Promise<import('../../shared/types').WinsLockState>
+      winsUnlock: () => Promise<import('../../shared/types').WinsLockState>
+      winsGetLockState: () => Promise<import('../../shared/types').WinsLockState | null>
+      winsGetHistory: () => Promise<import('../../shared/types').WinEntry[]>
+      winsGetStreaks: () => Promise<import('../../shared/types').StreakStats>
       onReloadData: (callback: () => void) => () => void
       onShortcutAction: (callback: (data: ShortcutActionPayload) => void) => () => void
       onCheckInCountdown: (callback: (remainingMs: number) => void) => () => void

@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { IpcRendererEvent } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
-import type { AppConfig, FocusCheckIn, OperationLogEntry, Project, QuickTask, RepeatingTask, ApiConfig } from '../shared/types'
+import type { AppConfig, FocusCheckIn, OperationLogEntry, Project, QuickTask, RepeatingTask, ApiConfig, LockedTaskRef, WinsLockState, WinEntry, StreakStats } from '../shared/types'
 
 interface ShortcutActionPayload {
   action: string
@@ -56,6 +56,11 @@ export const api = {
   openDevTools: () => ipcRenderer.invoke('open-dev-tools'),
   getApiConfig: (): Promise<ApiConfig> => ipcRenderer.invoke('get-api-config'),
   saveApiConfig: (config: Partial<ApiConfig>): Promise<ApiConfig> => ipcRenderer.invoke('save-api-config', config),
+  winsLock: (tasks: LockedTaskRef[]): Promise<WinsLockState> => ipcRenderer.invoke('wins-lock', tasks),
+  winsUnlock: (): Promise<WinsLockState> => ipcRenderer.invoke('wins-unlock'),
+  winsGetLockState: (): Promise<WinsLockState | null> => ipcRenderer.invoke('wins-get-lock-state'),
+  winsGetHistory: (): Promise<WinEntry[]> => ipcRenderer.invoke('wins-get-history'),
+  winsGetStreaks: (): Promise<StreakStats> => ipcRenderer.invoke('wins-get-streaks'),
   onReloadData: (callback: () => void) => {
     ipcRenderer.on('reload-data', callback)
     return () => ipcRenderer.removeListener('reload-data', callback)

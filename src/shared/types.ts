@@ -136,6 +136,42 @@ export interface ApiConfigPublic {
   port: number
 }
 
+export interface LockedTaskRef {
+  kind: 'quick' | 'pinned'
+  quickTaskId?: string
+  projectId?: string
+  taskId?: string
+}
+
+export interface WinsLockState {
+  locked: boolean
+  lockedAt: string | null
+  deadline: string | null
+  lockedTasks: LockedTaskRef[]
+}
+
+export interface WinEntry {
+  id: string
+  date: string
+  lockedAt: string
+  resolvedAt: string
+  result: 'win' | 'loss'
+  taskCount: number
+  completedCount: number
+}
+
+export interface StreakStats {
+  currentDayStreak: number
+  currentWeekStreak: number
+  currentMonthStreak: number
+  totalWins: number
+  totalLosses: number
+  thisWeekWins: number
+  thisWeekLosses: number
+  thisMonthWins: number
+  thisMonthLosses: number
+}
+
 export interface AppData {
   projects: Project[]
   quickTasks: QuickTask[]
@@ -146,4 +182,5 @@ export interface AppData {
   dismissedRepeatingDate: string
   apiConfig?: ApiConfigPublic
   nextQuickTaskNumber?: number
+  winsLock?: WinsLockState
 }

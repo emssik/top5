@@ -1212,3 +1212,351 @@ body {
 .notes-textarea::placeholder {
   color: var(--c-text-muted);
 }
+
+/* 5 Wins */
+.wins-lock-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: #fbbf24;
+}
+
+.wins-lock-icon {
+  font-size: 14px;
+}
+
+.wins-lock-progress {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.wins-lock-deadline {
+  margin-left: auto;
+  font-size: 12px;
+  opacity: 0.7;
+  font-variant-numeric: tabular-nums;
+}
+
+.wins-unlock-btn {
+  background: none;
+  border: none;
+  color: #fbbf24;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  opacity: 0.5;
+  transition: opacity 0.15s;
+}
+
+.wins-unlock-btn:hover {
+  opacity: 1;
+}
+
+.wins-lock-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  padding: 0 4px;
+  opacity: 0.4;
+  transition: opacity 0.15s;
+}
+
+.wins-lock-btn:hover {
+  opacity: 0.8;
+}
+
+.task-card.wins-locked {
+  border-left: 3px solid rgba(245, 158, 11, 0.35);
+}
+
+.task-card.wins-locked.in-progress {
+  border-left: 3px solid var(--pc-amber);
+}
+
+/* 30-day wins strip */
+.wins-30d-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding: 6px 0;
+}
+
+.wins-30d-streak {
+  font-size: 12px;
+  font-weight: 600;
+  color: #fbbf24;
+  white-space: nowrap;
+  letter-spacing: -0.02em;
+}
+
+.wins-30d-dots {
+  display: flex;
+  gap: 2px;
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.wins-30d-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--bg-surface);
+  opacity: 0.25;
+  flex-shrink: 0;
+}
+
+.wins-30d-dot.win {
+  background: #4ade80;
+  opacity: 0.7;
+}
+
+.wins-30d-dot.loss {
+  background: #f87171;
+  opacity: 0.6;
+}
+
+/* Victory celebration overlay */
+.wins-victory-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  animation: wins-overlay-in 0.3s ease;
+  cursor: pointer;
+}
+
+.wins-victory-card {
+  text-align: center;
+  padding: 32px 48px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(250, 204, 21, 0.1));
+  border: 1px solid rgba(34, 197, 94, 0.25);
+  animation: wins-card-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.wins-victory-trophy {
+  font-size: 56px;
+  line-height: 1;
+  margin-bottom: 12px;
+  animation: wins-trophy-bounce 0.6s ease 0.2s both;
+}
+
+.wins-victory-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #4ade80;
+  letter-spacing: -0.02em;
+  margin-bottom: 4px;
+}
+
+.wins-victory-sub {
+  font-size: 14px;
+  color: var(--c-text-secondary);
+  opacity: 0.7;
+}
+
+.wins-victory-streak {
+  margin-top: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fbbf24;
+  padding: 4px 12px;
+  border-radius: 99px;
+  background: rgba(250, 204, 21, 0.1);
+  display: inline-block;
+}
+
+@keyframes wins-overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes wins-card-in {
+  from { opacity: 0; transform: scale(0.8); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes wins-trophy-bounce {
+  0% { transform: scale(0) rotate(-10deg); }
+  60% { transform: scale(1.2) rotate(5deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+
+/* Loss overlay */
+.wins-loss-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(4px);
+  animation: wins-overlay-in 0.3s ease;
+  cursor: pointer;
+}
+
+.wins-loss-card {
+  text-align: center;
+  padding: 32px 48px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.08), rgba(250, 204, 21, 0.06));
+  border: 1px solid rgba(239, 68, 68, 0.15);
+  animation: wins-card-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.wins-loss-emoji {
+  font-size: 48px;
+  line-height: 1;
+  margin-bottom: 12px;
+}
+
+.wins-loss-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--c-text-primary);
+  opacity: 0.8;
+  margin-bottom: 4px;
+}
+
+.wins-loss-sub {
+  font-size: 14px;
+  color: var(--c-text-secondary);
+  opacity: 0.6;
+}
+
+/* Post-win encouragement banner */
+.wins-day-won-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: rgba(250, 204, 21, 0.06);
+  border: 1px solid rgba(250, 204, 21, 0.12);
+  margin-top: 12px;
+  animation: wins-fade-in 0.3s ease;
+}
+
+.wins-day-won-icon {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.wins-day-won-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #fbbf24;
+  margin-bottom: 2px;
+}
+
+.wins-day-won-sub {
+  font-size: 12px;
+  color: var(--c-text-secondary);
+  opacity: 0.5;
+}
+
+/* Post-loss encouragement banner */
+.wins-day-lost-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: rgba(239, 68, 68, 0.04);
+  border: 1px solid rgba(239, 68, 68, 0.1);
+  margin-bottom: 10px;
+  animation: wins-fade-in 0.3s ease;
+}
+
+.wins-day-lost-icon {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.wins-day-lost-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--c-text-primary);
+  opacity: 0.7;
+  margin-bottom: 2px;
+}
+
+.wins-day-lost-sub {
+  font-size: 12px;
+  color: var(--c-text-secondary);
+  opacity: 0.5;
+}
+
+@keyframes wins-fade-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Wins stats calendar */
+.wins-calendar {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+  margin-top: 8px;
+}
+
+.wins-cal-day {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 3px;
+  font-size: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--c-text-muted);
+}
+
+.wins-cal-day.win {
+  background: rgba(34, 197, 94, 0.25);
+  color: #4ade80;
+}
+
+.wins-cal-day.loss {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+}
+
+.wins-cal-day.empty {
+  background: var(--bg-surface);
+}
+
+.wins-cal-day.future {
+  opacity: 0.2;
+}
+
+.wins-summary {
+  display: flex;
+  gap: 16px;
+  font-size: 12px;
+  color: var(--c-text-secondary);
+  margin-top: 8px;
+}
+
+.wins-summary .win-count {
+  color: #4ade80;
+  font-weight: 600;
+}
+
+.wins-summary .loss-count {
+  color: #f87171;
+  font-weight: 600;
+}

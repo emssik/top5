@@ -23,6 +23,7 @@ import { normalizeRepeatSchedule } from '../shared/schedule'
 import * as projectService from './service/projects'
 import * as quickTaskService from './service/quick-tasks'
 import * as repeatingTaskService from './service/repeating-tasks'
+import * as winsService from './service/wins'
 import type {
   Task,
   RepeatSchedule,
@@ -36,11 +37,15 @@ import type {
   OperationLogEntry,
   AppData,
   ApiConfig,
-  ApiConfigPublic
+  ApiConfigPublic,
+  LockedTaskRef,
+  WinsLockState,
+  WinEntry,
+  StreakStats
 } from '../shared/types'
 
 // Re-export types for convenience
-export type { Task, RepeatSchedule, RepeatingTask, QuickTask, ProjectColor, ProjectLink, Project, AppConfig, FocusCheckIn, OperationLogEntry, AppData, ApiConfig, ApiConfigPublic }
+export type { Task, RepeatSchedule, RepeatingTask, QuickTask, ProjectColor, ProjectLink, Project, AppConfig, FocusCheckIn, OperationLogEntry, AppData, ApiConfig, ApiConfigPublic, LockedTaskRef, WinsLockState, WinEntry, StreakStats }
 
 const defaultData: AppData = {
   projects: [],
@@ -144,6 +149,10 @@ function ensureDataDir(): string {
 }
 
 const CONFIG_DIR = ensureDataDir()
+
+export function getConfigDir(): string {
+  return CONFIG_DIR
+}
 const DATA_FILE = join(CONFIG_DIR, 'data.yaml')
 const CHECKINS_FILE = join(CONFIG_DIR, 'checkins.jsonl')
 const OPERATIONS_FILE = join(CONFIG_DIR, 'operations.jsonl')
@@ -452,7 +461,8 @@ function dailyBackup(): void {
   if (existing.some((f) => f.startsWith(backupPrefix))) return
 
   // Collect files to backup and check if anything changed since last backup
-  const filesToBackup = [DATA_FILE, CHECKINS_FILE, OPERATIONS_FILE].filter((f) => existsSync(f))
+  const WINS_FILE = join(CONFIG_DIR, 'wins.jsonl')
+  const filesToBackup = [DATA_FILE, CHECKINS_FILE, OPERATIONS_FILE, WINS_FILE].filter((f) => existsSync(f))
   if (filesToBackup.length === 0) return
 
   // Hash current content
@@ -729,7 +739,8 @@ function loadData(): AppData {
       dismissedRepeatingDate: dismissedRepeatingDate === today ? today : '',
       config,
       apiConfig: getApiConfigPublic(),
-      nextQuickTaskNumber: typeof parsed?.nextQuickTaskNumber === 'number' ? parsed.nextQuickTaskNumber : undefined
+      nextQuickTaskNumber: typeof parsed?.nextQuickTaskNumber === 'number' ? parsed.nextQuickTaskNumber : undefined,
+      winsLock: isRecord(parsed?.winsLock) ? parsed.winsLock as WinsLockState : undefined
     }
 
     if (migrateTaskNumbers(data)) {
@@ -872,6 +883,7 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
       ? projectService.updateProject(project.id, project)
       : projectService.createProject(project)
     if (isServiceError(result)) return getData().projects
+    if (winsService.checkWinCondition()) notifyAllWindows()
     notifyAllWindows()
     return result
   })
@@ -970,6 +982,7 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
     if (typeof id !== 'string') return getData().quickTasks
     const result = quickTaskService.completeQuickTask(id)
     if (isServiceError(result)) return getData().quickTasks
+    if (winsService.checkWinCondition()) notifyAllWindows()
     notifyAllWindows()
     return result
   })
@@ -1065,4 +1078,38 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
     notifyAllWindows()
     return result
   })
+
+  // --- Wins ---
+
+  ipcMain.handle('wins-lock', (_event, tasks: unknown) => {
+    if (!Array.isArray(tasks)) return getData().winsLock ?? null
+    const refs: LockedTaskRef[] = tasks.filter(
+      (t): t is LockedTaskRef => isRecord(t) && (t.kind === 'quick' || t.kind === 'pinned')
+    )
+    return winsService.lockTasks(refs)
+  })
+
+  ipcMain.handle('wins-unlock', () => {
+    return winsService.unlockTasks()
+  })
+
+  ipcMain.handle('wins-get-lock-state', () => {
+    return getData().winsLock ?? null
+  })
+
+  ipcMain.handle('wins-get-history', () => {
+    return winsService.loadWinHistory()
+  })
+
+  ipcMain.handle('wins-get-streaks', () => {
+    return winsService.getStreaks()
+  })
+
+  // Deadline check on start + periodic
+  winsService.checkDeadline()
+  setInterval(() => {
+    if (winsService.checkDeadline()) {
+      notifyAllWindows()
+    }
+  }, 60_000)
 }

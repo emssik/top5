@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { Project, QuickTask, AppConfig, FocusCheckIn, RepeatingTask } from '../types'
+import type { Project, QuickTask, AppConfig, FocusCheckIn, RepeatingTask, LockedTaskRef, WinsLockState } from '../types'
 import { assignMissingProjectColors, normalizeProject } from '../utils/projects'
 
 interface ProjectsState {
@@ -11,6 +11,7 @@ interface ProjectsState {
   repeatingTasks: RepeatingTask[]
   dismissedRepeating: string[]
   dismissedRepeatingDate: string
+  winsLock: WinsLockState | null
   loaded: boolean
 
   loadData: () => Promise<void>
@@ -37,6 +38,9 @@ interface ProjectsState {
   reorderRepeatingTasks: (orderedIds: string[]) => Promise<void>
   acceptRepeatingProposal: (repeatingTaskId: string) => Promise<void>
   dismissRepeatingProposal: (repeatingTaskId: string) => Promise<void>
+  lockWinsTasks: (tasks: LockedTaskRef[]) => Promise<void>
+  unlockWinsTasks: () => Promise<void>
+  loadWinsLock: () => Promise<void>
 }
 
 export const useProjects = create<ProjectsState>((set, get) => ({
@@ -59,6 +63,7 @@ export const useProjects = create<ProjectsState>((set, get) => ({
   repeatingTasks: [],
   dismissedRepeating: [],
   dismissedRepeatingDate: '',
+  winsLock: null,
   loaded: false,
 
   // Normalize project shape (links/color) when data comes from main process.
@@ -79,6 +84,7 @@ export const useProjects = create<ProjectsState>((set, get) => ({
         repeatingTasks: data.repeatingTasks ?? [],
         dismissedRepeating: data.dismissedRepeating ?? [],
         dismissedRepeatingDate: data.dismissedRepeatingDate ?? '',
+        winsLock: data.winsLock ?? null,
         loaded: true
       })
     } catch (error) {
@@ -223,5 +229,20 @@ export const useProjects = create<ProjectsState>((set, get) => ({
       dismissedRepeating: [...dismissedRepeating, repeatingTaskId],
       dismissedRepeatingDate: today
     })
+  },
+
+  lockWinsTasks: async (tasks: LockedTaskRef[]) => {
+    const lockState = await window.api.winsLock(tasks)
+    set({ winsLock: lockState })
+  },
+
+  unlockWinsTasks: async () => {
+    const lockState = await window.api.winsUnlock()
+    set({ winsLock: lockState })
+  },
+
+  loadWinsLock: async () => {
+    const lockState = await window.api.winsGetLockState()
+    set({ winsLock: lockState })
   }
 }))

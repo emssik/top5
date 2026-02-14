@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **5 Wins** gamification system: lock today's tasks, earn wins by completing them before deadline
+- Wins lock/unlock mechanism with automatic deadline calculation (end of day or next day based on lock time)
+- Win/loss tracking persisted in `wins.jsonl` with full history
+- Streak stats engine (`src/shared/wins.ts`): day, week, and month streaks with win/loss counters
+- Wins service layer (`src/main/service/wins.ts`) with lock, unlock, deadline check, and history
+- IPC handlers: `wins-lock`, `wins-unlock`, `wins-get-lock-state`, `wins-get-history`, `wins-get-streaks`
+- Preload bridge and type declarations for all wins IPC methods
+- Lock bar UI in TodayView and QuickTasksView showing progress, countdown, and unlock button
+- 30-day win/loss dot strip visualization in TodayView
+- Victory celebration overlay (trophy animation) on completing all locked tasks
+- Loss banner overlay when deadline expires with incomplete tasks
+- Wins calendar (monthly grid) and streak summary in InlineStatsView (Stats panel)
+- Post-win encouragement state showing streak continuation prompt
+- `wins.jsonl` included in daily backup rotation
+
+### Changed
+
+- `useTaskList` hook: extracted shared logic from TodayView, added `excludeFocus` option, returns focus/inProgress/upNext splits and lock state
+- TodayView refactored to use `useTaskList` hook instead of inline task merging logic
+- `AppData` type extended with `winsLock` field (`WinsLockState`)
+- Zustand store (`useProjects`) extended with `winsLock` state and `lockWinsTasks`/`unlockWinsTasks`/`loadWinsLock` actions
+- Periodic deadline check runs every 60 seconds in main process
+- Task completion handlers (`save-project`, `complete-quick-task`) now trigger win condition check
+
 ## [1.34.0] - 2026-02-14
 
 ### Added

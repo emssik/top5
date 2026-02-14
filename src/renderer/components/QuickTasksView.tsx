@@ -4,7 +4,7 @@ import { useProjects } from '../hooks/useProjects'
 import { useTaskList } from '../hooks/useTaskList'
 import type { MergedTask } from '../hooks/useTaskList'
 import { calcTaskTime, calcQuickTaskTime, formatCheckInTime } from '../utils/checkInTime'
-import type { QuickTask, RepeatingTask } from '../types'
+import type { QuickTask, RepeatingTask, WinEntry } from '../types'
 import { STANDALONE_PROJECT_ID } from '../utils/constants'
 import TaskIdBadge from './TaskIdBadge'
 
@@ -18,6 +18,7 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
     quickTasks,
     config,
     focusCheckIns,
+    winsLock,
     saveProject,
     saveQuickTask,
     removeQuickTask,
@@ -33,13 +34,15 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
 
   const {
     activeTasks, repeatingActive, completedTasks, proposals,
-    overflowTasks, allActiveTasks,
+    overflowTasks, allActiveTasks, isLocked,
     hasRepeatingSection, hasCompletedSection
   } = useTaskList()
 
   const [newTitle, setNewTitle] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingTitle, setEditingTitle] = useState('')
+  const [showWinCelebration, setShowWinCelebration] = useState(false)
+  const [winHistory, setWinHistory] = useState<WinEntry[]>([])
   const editingIdRef = useRef<string | null>(null)
   const editingTitleRef = useRef('')
   const editingProjectIdRef = useRef<string | undefined>(undefined)
@@ -48,6 +51,35 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
   const addInputRef = useRef<HTMLInputElement>(null)
   const draggedId = useRef<string | null>(null)
   const [dragOverId, setDragOverId] = useState<string | null>(null)
+  const prevLockedRef = useRef(winsLock?.locked ?? false)
+
+  const [showLossBanner, setShowLossBanner] = useState(false)
+
+  // Detect lock cleared: win or loss
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined
+    if (prevLockedRef.current && !isLocked) {
+      window.api.winsGetHistory().then((history) => {
+        setWinHistory(history)
+        const today = new Date().toISOString().slice(0, 10)
+        const todayEntry = history.find((e) => e.date === today)
+        if (todayEntry?.result === 'win') {
+          setShowWinCelebration(true)
+          timer = setTimeout(() => setShowWinCelebration(false), 5000)
+        } else if (todayEntry?.result === 'loss') {
+          setShowLossBanner(true)
+          timer = setTimeout(() => setShowLossBanner(false), 6000)
+        }
+      }).catch(() => {})
+    }
+    prevLockedRef.current = isLocked
+    return () => { if (timer) clearTimeout(timer) }
+  }, [isLocked])
+
+  // Load win history for post-win encouragement
+  useEffect(() => {
+    window.api.winsGetHistory().then(setWinHistory).catch(() => {})
+  }, [isLocked])
 
   // Separator for clean view
   const cleanSeparator = <div className="my-1.5 border-t border-current" style={{ opacity: 0.08 }} />
@@ -510,9 +542,59 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
     )
   }
 
+  // Check if today was already won (for encouragement)
+  const todayWon = winHistory.some((e) => e.date === new Date().toISOString().slice(0, 10) && e.result === 'win')
+  const currentStreak = (() => {
+    if (winHistory.length === 0) return 0
+    const byDate = new Map(winHistory.map((e) => [e.date, e.result]))
+    const today = new Date()
+    let streak = 0
+    for (let i = 0; i < 365; i++) {
+      const d = new Date(today)
+      d.setDate(d.getDate() - i)
+      const r = byDate.get(d.toISOString().slice(0, 10))
+      if (r === 'win') streak++
+      else if (r === 'loss') break
+      else if (streak > 0) break
+    }
+    return streak
+  })()
+
   return (
     <div className={cleanView ? '' : 'space-y-1'}>
-      {activeTasks.length === 0 && !hasRepeatingSection && !hasCompletedSection ? (
+      {showWinCelebration && (
+        <div className="wins-victory-overlay" onClick={() => setShowWinCelebration(false)}>
+          <div className="wins-victory-card">
+            <div className="wins-victory-trophy">🏆</div>
+            <div className="wins-victory-title">Victory!</div>
+            <div className="wins-victory-sub">Wszystkie zadania wykonane</div>
+            {currentStreak > 1 && (
+              <div className="wins-victory-streak">seria {currentStreak} dni</div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {showLossBanner && (
+        <div className="wins-loss-overlay" onClick={() => setShowLossBanner(false)}>
+          <div className="wins-loss-card">
+            <div className="wins-loss-emoji">💪</div>
+            <div className="wins-loss-title">Nie tym razem</div>
+            <div className="wins-loss-sub">Nie przejmuj się, jutro będzie lepiej!</div>
+          </div>
+        </div>
+      )}
+
+      {!isLocked && todayWon && activeTasks.length === 0 && !hasRepeatingSection ? (
+        <div className={`flex flex-col items-center justify-center ${cleanView ? 'py-6' : 'h-40'}`}>
+          <p className={cleanView ? 'text-[20px]' : 'text-base'} style={{ opacity: 0.6 }}>
+            🏆 Wygrana!
+          </p>
+          <p className={cleanView ? 'text-[15px] mt-2' : 'text-sm mt-1'} style={{ opacity: 0.3 }}>
+            Dodaj nowe zadania i zablokuj je, by utrzymać serię
+          </p>
+        </div>
+      ) : activeTasks.length === 0 && !hasRepeatingSection && !hasCompletedSection ? (
         <div className={`flex flex-col items-center justify-center text-t-secondary ${cleanView ? 'h-16' : 'h-40'}`}>
           <p className={cleanView ? 'text-[18px]' : 'text-sm'} style={cleanView ? { opacity: 0.25 } : undefined}>
             {cleanView ? 'Brak zadań' : 'No quick tasks yet'}
