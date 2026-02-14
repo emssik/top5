@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.29.0] - 2026-02-14
+
+### Added
+
+- Inline editing in Today view: double-click any task (regular or focused) to edit its title in place
+- `.inline-edit-input` CSS class for seamless inline editing appearance (transparent background, inherited font)
+
+### Changed
+
+- Operation Log descriptions now capitalize "Project" for consistency (e.g. "Created Project X" instead of "Created project X")
+- Operation Log search filter now matches against the full rendered description instead of raw field values, improving search accuracy
+
+### Fixed
+
+- Focus check-in interval restored to production value (15 minutes) from debug value (30 seconds)
+
 ## [1.28.0] - 2026-02-14
 
 ### Added

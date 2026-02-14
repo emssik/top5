@@ -93,6 +93,12 @@ export default function TodayView() {
   const [showDone, setShowDone] = useState(false)
   const [showOverflow, setShowOverflow] = useState(false)
   const [focusTick, setFocusTick] = useState(0)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editingTitle, setEditingTitle] = useState('')
+  const editingKindRef = useRef<'quick' | 'pinned' | null>(null)
+  const editingQuickTaskIdRef = useRef<string | undefined>(undefined)
+  const editingProjectIdRef = useRef<string | undefined>(undefined)
+  const editingTaskIdRef = useRef<string | undefined>(undefined)
   const addInputRef = useRef<HTMLInputElement | null>(null)
   const draggedId = useRef<string | null>(null)
   const [dragOverId, setDragOverId] = useState<string | null>(null)
@@ -360,6 +366,37 @@ export default function TodayView() {
     await setFocus(null, null)
   }
 
+  const startEditing = (task: ActiveTask) => {
+    editingKindRef.current = task.kind
+    editingQuickTaskIdRef.current = task.quickTaskId
+    editingProjectIdRef.current = task.projectId
+    editingTaskIdRef.current = task.taskId
+    setEditingId(task.id)
+    setEditingTitle(task.title)
+  }
+
+  const saveEdit = async () => {
+    const title = editingTitle.trim()
+    const kind = editingKindRef.current
+    setEditingId(null)
+    if (!title || !kind) return
+
+    if (kind === 'quick') {
+      const quickTaskId = editingQuickTaskIdRef.current
+      if (!quickTaskId) return
+      const qt = quickTasks.find((t) => t.id === quickTaskId)
+      if (qt) await saveQuickTask({ ...qt, title })
+    } else {
+      const projectId = editingProjectIdRef.current
+      const taskId = editingTaskIdRef.current
+      if (!projectId || !taskId) return
+      const project = useProjects.getState().projects.find((p) => p.id === projectId)
+      if (!project) return
+      const tasks = project.tasks.map((t) => (t.id === taskId ? { ...t, title } : t))
+      await saveProject({ ...project, tasks })
+    }
+  }
+
   const clearDragState = () => {
     draggedId.current = null
     setDragOverId(null)
@@ -470,10 +507,24 @@ export default function TodayView() {
       >
         <button className="task-checkbox" onClick={() => completeTask(task)} />
         <div className="task-content">
-          <div className="task-title">
-            {task.repeatingTaskId && <span style={{ opacity: 0.6, marginRight: 4 }}>↻</span>}
-            {task.title}
-          </div>
+          {editingId === task.id ? (
+            <input
+              autoFocus
+              className="inline-edit-input"
+              value={editingTitle}
+              onChange={(e) => setEditingTitle(e.target.value)}
+              onBlur={saveEdit}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') saveEdit()
+                if (e.key === 'Escape') setEditingId(null)
+              }}
+            />
+          ) : (
+            <div className="task-title" onDoubleClick={() => startEditing(task)}>
+              {task.repeatingTaskId && <span style={{ opacity: 0.6, marginRight: 4 }}>↻</span>}
+              {task.title}
+            </div>
+          )}
           {renderMeta(task)}
         </div>
         {canShowActions && (
@@ -533,7 +584,21 @@ export default function TodayView() {
             <div className="focus-dot" />
             <button className="task-checkbox" onClick={() => completeTask(focusTask)} />
             <div className="task-content">
-              <div className="task-title">{focusTask.title}</div>
+              {editingId === focusTask.id ? (
+                <input
+                  autoFocus
+                  className="inline-edit-input"
+                  value={editingTitle}
+                  onChange={(e) => setEditingTitle(e.target.value)}
+                  onBlur={saveEdit}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') saveEdit()
+                    if (e.key === 'Escape') setEditingId(null)
+                  }}
+                />
+              ) : (
+                <div className="task-title" onDoubleClick={() => startEditing(focusTask)}>{focusTask.title}</div>
+              )}
               {renderMeta(focusTask)}
             </div>
             <span className="focus-timer">{focusTimer}</span>

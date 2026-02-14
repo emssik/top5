@@ -15,7 +15,7 @@ let lastCheckInAt: number = 0
 let focusStartedAt: number = 0
 let focusTaskInfo: { projectId?: string; projectName?: string; taskTitle?: string } = {}
 
-const CHECK_IN_INTERVAL_MS = 30 * 1000 // TODO: revert to 15 * 60 * 1000
+const CHECK_IN_INTERVAL_MS = 15 * 60 * 1000
 
 export function getFocusWindow(): BrowserWindow | null {
   return focusWindow

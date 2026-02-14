@@ -30,7 +30,7 @@ const typeColors: Record<OperationType, string> = {
 }
 
 function describeOperation(entry: OperationLogEntry): string {
-  const project = entry.projectName ? ` in ${entry.projectName}` : ''
+  const project = entry.projectName ? ` in Project ${entry.projectName}` : ''
   const task = entry.taskTitle ? `"${entry.taskTitle}"` : ''
   const details = entry.details ? ` (${entry.details})` : ''
 
@@ -43,13 +43,13 @@ function describeOperation(entry: OperationLogEntry): string {
     case 'quick_task_completed': return `Completed quick task ${task}${details}`
     case 'quick_task_uncompleted': return `Reopened quick task ${task}`
     case 'quick_task_deleted': return `Deleted quick task ${task}`
-    case 'project_created': return `Created project ${entry.projectName ?? ''}`
-    case 'project_updated': return `Updated project ${entry.projectName ?? ''}`
-    case 'project_archived': return `Archived project ${entry.projectName ?? ''}`
-    case 'project_unarchived': return `Unarchived project ${entry.projectName ?? ''}`
-    case 'project_suspended': return `Suspended project ${entry.projectName ?? ''}`
-    case 'project_unsuspended': return `Resumed project ${entry.projectName ?? ''}`
-    case 'project_deleted': return `Deleted project ${entry.projectName ?? ''}`
+    case 'project_created': return `Created Project ${entry.projectName ?? ''}`
+    case 'project_updated': return `Updated Project ${entry.projectName ?? ''}`
+    case 'project_archived': return `Archived Project ${entry.projectName ?? ''}`
+    case 'project_unarchived': return `Unarchived Project ${entry.projectName ?? ''}`
+    case 'project_suspended': return `Suspended Project ${entry.projectName ?? ''}`
+    case 'project_unsuspended': return `Resumed Project ${entry.projectName ?? ''}`
+    case 'project_deleted': return `Deleted Project ${entry.projectName ?? ''}`
     case 'focus_started': return `Focus started: ${task || entry.projectName || 'task'}${project}`
     case 'focus_ended': return `Focus ended: ${task || entry.projectName || 'task'}${details}`
     default: return entry.type
@@ -116,8 +116,8 @@ export default function OperationLogView() {
         if (categoryFilter === 'project' && !op.type.startsWith('project_')) return false
         if (categoryFilter === 'focus' && !op.type.startsWith('focus_')) return false
         if (q) {
-          const text = `${op.taskTitle ?? ''} ${op.projectName ?? ''} ${op.type}`.toLowerCase()
-          if (!text.includes(q)) return false
+          const desc = describeOperation(op).toLowerCase()
+          if (!desc.includes(q)) return false
         }
         return true
       })
