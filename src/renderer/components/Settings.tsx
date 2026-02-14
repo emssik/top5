@@ -86,7 +86,15 @@ export default function Settings({ open, onClose }: Props) {
   return (
     <div className="modal-overlay open" onClick={onClose}>
       <div className="modal" style={{ width: 440 }} onClick={(event) => event.stopPropagation()}>
-        <h2>Settings</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+          <h2>Settings</h2>
+          <span
+            style={{ fontSize: 12, opacity: 0.45, cursor: 'pointer' }}
+            onClick={() => window.api.openDevTools()}
+          >
+            DevTools
+          </span>
+        </div>
 
         <div className="modal-row">
           <label>Theme</label>
@@ -223,16 +231,6 @@ export default function Settings({ open, onClose }: Props) {
               </div>
             ))}
           </div>
-        </div>
-
-        <div style={{ marginTop: 16, borderTop: '1px solid var(--c-border-subtle)', paddingTop: 12 }}>
-          <button
-            className="form-btn form-btn-secondary"
-            style={{ padding: '4px 12px', fontSize: 12 }}
-            onClick={() => window.api.openDevTools()}
-          >
-            Open DevTools
-          </button>
         </div>
 
         <div className="form-actions">
