@@ -156,9 +156,14 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
         key={task.id}
         className={`task-card ${done ? 'done-card' : ''} ${done ? '' : 'draggable-task'} ${isDragOver ? 'drag-over' : ''}`}
         draggable={!done}
-        onDragStart={() => {
+        onDragStart={(event) => {
           if (done) return
           draggedTaskId.current = task.id
+          event.dataTransfer.setData('application/top5-task', JSON.stringify({
+            kind: 'project',
+            projectId: project.id,
+            taskId: task.id
+          }))
         }}
         onDragOver={(event) => {
           if (done) return

@@ -343,8 +343,15 @@ export default function TodayView() {
     setDragOverZone(null)
   }
 
-  const handleDragStart = (id: string) => {
-    draggedId.current = id
+  const handleDragStart = (event: React.DragEvent, task: MergedTask) => {
+    draggedId.current = task.id
+    if (task.kind === 'pinned' && task.projectId && task.taskId) {
+      event.dataTransfer.setData('application/top5-task', JSON.stringify({
+        kind: task.kind,
+        projectId: task.projectId,
+        taskId: task.taskId
+      }))
+    }
   }
 
   const handleDragOver = (event: React.DragEvent, id: string) => {
@@ -521,7 +528,7 @@ export default function TodayView() {
         key={task.id}
         className={`task-card draggable-task ${task.inProgress ? 'in-progress' : ''} ${isDragOver ? 'drag-over' : ''} ${locked ? 'wins-locked' : ''}`}
         draggable={!isLocked}
-        onDragStart={() => handleDragStart(task.id)}
+        onDragStart={(event) => handleDragStart(event, task)}
         onDragOver={(event) => handleDragOver(event, task.id)}
         onDrop={() => handleDrop(task.id)}
         onDragEnd={clearDragState}

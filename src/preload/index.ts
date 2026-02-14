@@ -43,6 +43,7 @@ export const api = {
   reorderProjects: (orderedIds: string[]) => ipcRenderer.invoke('reorder-projects', orderedIds),
   reorderPinnedTasks: (updates: { projectId: string; taskId: string; order: number }[]) => ipcRenderer.invoke('reorder-pinned-tasks', updates),
   toggleTaskInProgress: (projectId: string, taskId: string) => ipcRenderer.invoke('toggle-task-in-progress', projectId, taskId),
+  moveTaskToProject: (fromProjectId: string, toProjectId: string, taskId: string) => ipcRenderer.invoke('move-task-to-project', fromProjectId, toProjectId, taskId),
   toggleTaskToDoNext: (projectId: string, taskId: string) => ipcRenderer.invoke('toggle-task-to-do-next', projectId, taskId),
   saveRepeatingTask: (task: RepeatingTask) => ipcRenderer.invoke('save-repeating-task', task),
   removeRepeatingTask: (id: string) => ipcRenderer.invoke('remove-repeating-task', id),

@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.39.0] - 2026-02-15
+
+### Added
+
+- Move task between projects via drag-and-drop: drag a task from ProjectDetailView or TodayView onto any project in the Sidebar to reassign it
+- `moveTaskToProject` service function with task number reassignment, pin/progress state reset, and operation logging
+- `move-task-to-project` IPC handler, preload bridge, and Zustand store action
+- `task_moved` operation type logged in activity log with source project details
+- Sidebar drop targets on both active and suspended project items for task moves
+- `application/top5-task` drag data transfer format carrying projectId and taskId
+
+### Changed
+
+- ProjectDetailView drag-start now sets `application/top5-task` data transfer alongside internal reorder drag
+- TodayView drag-start sets `application/top5-task` data for pinned tasks, enabling cross-project moves from Today
+- Sidebar active and suspended item drag-over handlers detect task drags and show drop feedback independently of project reorder drags
+
 ## [1.38.0] - 2026-02-15
 
 ### Changed

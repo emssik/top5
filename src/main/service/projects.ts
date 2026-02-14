@@ -244,6 +244,47 @@ export function toggleTaskInProgress(projectId: string, taskId: string): Project
   return projects
 }
 
+export function moveTaskToProject(fromProjectId: string, toProjectId: string, taskId: string): Project[] | ServiceError {
+  if (fromProjectId === toProjectId) return { error: 'validation' }
+  const data = getData()
+  const projects = [...data.projects]
+  const fromProject = projects.find((p) => p.id === fromProjectId)
+  if (!fromProject) return { error: 'not_found' }
+  const toProject = projects.find((p) => p.id === toProjectId)
+  if (!toProject) return { error: 'not_found' }
+  const taskIndex = fromProject.tasks.findIndex((t) => t.id === taskId)
+  if (taskIndex < 0) return { error: 'not_found' }
+
+  const [task] = fromProject.tasks.splice(taskIndex, 1)
+
+  // Assign new task number in target project
+  const nextNum = toProject.nextTaskNumber ?? 1
+  task.taskNumber = nextNum
+  toProject.nextTaskNumber = nextNum + 1
+
+  // Clear pin state — user can re-pin manually
+  task.isToDoNext = false
+  task.toDoNextOrder = undefined
+  task.inProgress = false
+
+  toProject.tasks.push(task)
+
+  const nextProjects = assignMissingProjectColors(projects.map(normalizeProject))
+  setData('projects', nextProjects)
+
+  const toCode = toProject.code
+  const tc = formatTaskId(task.taskNumber, toCode) || undefined
+  appendOperation({
+    type: 'task_moved',
+    projectId: toProjectId,
+    projectName: toProject.name,
+    taskTitle: task.title,
+    taskCode: tc,
+    details: `from ${fromProject.name}`
+  })
+  return nextProjects
+}
+
 export function toggleTaskToDoNext(projectId: string, taskId: string): Project[] | ServiceError {
   const data = getData()
   const projects = [...data.projects]

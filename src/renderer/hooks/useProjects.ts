@@ -32,6 +32,7 @@ interface ProjectsState {
   reorderQuickTasks: (orderedIds: string[]) => Promise<void>
   toggleQuickTaskInProgress: (id: string) => Promise<void>
   toggleTaskInProgress: (projectId: string, taskId: string) => Promise<void>
+  moveTaskToProject: (fromProjectId: string, toProjectId: string, taskId: string) => Promise<void>
   toggleTaskToDoNext: (projectId: string, taskId: string) => Promise<void>
   saveRepeatingTask: (task: RepeatingTask) => Promise<void>
   removeRepeatingTask: (id: string) => Promise<void>
@@ -193,6 +194,11 @@ export const useProjects = create<ProjectsState>((set, get) => ({
 
   toggleTaskInProgress: async (projectId: string, taskId: string) => {
     const updated = await window.api.toggleTaskInProgress(projectId, taskId)
+    set({ projects: assignMissingProjectColors((updated ?? []).map(normalizeProject)) })
+  },
+
+  moveTaskToProject: async (fromProjectId: string, toProjectId: string, taskId: string) => {
+    const updated = await window.api.moveTaskToProject(fromProjectId, toProjectId, taskId)
     set({ projects: assignMissingProjectColors((updated ?? []).map(normalizeProject)) })
   },
 

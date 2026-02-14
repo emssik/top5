@@ -25,6 +25,7 @@ const typeColors: Record<OperationType, string> = {
   project_suspended: '#f59e0b',
   project_unsuspended: '#22c55e',
   project_deleted: '#ef4444',
+  task_moved: '#8b5cf6',
   focus_started: '#a855f7',
   focus_ended: '#a855f7',
   wins_day_won: '#4ade80',
@@ -46,6 +47,7 @@ function describeOperation(entry: OperationLogEntry): string {
     case 'task_completed': return `Completed task ${task}${project}${details}`
     case 'task_uncompleted': return `Reopened task ${task}${project}`
     case 'task_deleted': return `Deleted task ${task}${project}`
+    case 'task_moved': return `Moved task ${task} to Project ${entry.projectName ?? ''}${details}`
     case 'quick_task_created': return `Created quick task ${task}`
     case 'quick_task_completed': return `Completed quick task ${task}${details}`
     case 'quick_task_uncompleted': return `Reopened quick task ${task}`

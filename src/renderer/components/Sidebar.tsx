@@ -29,6 +29,7 @@ interface Props {
   onUnsuspendProject: (projectId: string, targetIndex?: number) => void | Promise<void>
   onSuspendProject: (projectId: string) => void | Promise<void>
   onArchiveProject: (projectId: string) => void | Promise<void>
+  onMoveTaskToProject: (fromProjectId: string, toProjectId: string, taskId: string) => void | Promise<void>
 }
 
 function SidebarItem({
@@ -94,7 +95,8 @@ export default function Sidebar({
   onReorderActiveProjects,
   onUnsuspendProject,
   onSuspendProject,
-  onArchiveProject
+  onArchiveProject,
+  onMoveTaskToProject
 }: Props) {
   const themeIcon = theme === 'light' ? '🌙' : '☀'
   const themeLabel = theme === 'light' ? 'Dark mode' : 'Light mode'
@@ -191,8 +193,29 @@ export default function Sidebar({
     clearDragState()
   }
 
-  // --- Active item drop: accepts reorder from active, insert from suspended & archived ---
+  // --- Task drop helper: handles task drops on any project item ---
+  const isTaskDrag = (event: React.DragEvent) => event.dataTransfer.types.includes('application/top5-task')
+
+  const handleTaskDropOnProject = (event: React.DragEvent, projectId: string): boolean => {
+    const taskData = event.dataTransfer.getData('application/top5-task')
+    if (!taskData) return false
+    try {
+      const { projectId: fromProjectId, taskId } = JSON.parse(taskData)
+      if (fromProjectId && taskId && fromProjectId !== projectId) {
+        onMoveTaskToProject(fromProjectId, projectId, taskId)
+      }
+    } catch { /* ignore parse errors */ }
+    clearDragState()
+    return true
+  }
+
+  // --- Active item drop: accepts reorder from active, insert from suspended & archived, or task move ---
   const handleActiveItemDragOver = (event: React.DragEvent, projectId: string) => {
+    if (isTaskDrag(event)) {
+      event.preventDefault()
+      setDragOverProjectId(projectId)
+      return
+    }
     if (!draggedId) return
     if (dragSource !== 'active' && dragSource !== 'suspended' && dragSource !== 'archived') return
     event.preventDefault()
@@ -202,6 +225,8 @@ export default function Sidebar({
 
   const handleActiveItemDrop = (event: React.DragEvent, projectId: string) => {
     event.preventDefault()
+    if (handleTaskDropOnProject(event, projectId)) return
+
     if (!draggedId || draggedId === projectId) return
     if (dragSource === 'active') {
       const ordered = moveInList(activeProjects.map((item) => item.id), draggedId, projectId)
@@ -295,9 +320,20 @@ export default function Sidebar({
               draggable
               onDragStart={() => handleDragStart(project.id, 'suspended')}
               onDragEnd={clearDragState}
-              onDragOver={handleSuspendDragOver}
+              onDragOver={(event) => {
+                if (isTaskDrag(event)) {
+                  event.preventDefault()
+                  setDragOverProjectId(project.id)
+                  return
+                }
+                handleSuspendDragOver(event)
+              }}
+              onDragLeave={() => {
+                if (dragOverProjectId === project.id) setDragOverProjectId(null)
+              }}
               onDrop={(event) => {
                 event.preventDefault()
+                if (handleTaskDropOnProject(event, project.id)) return
                 handleSuspendDrop()
               }}
             >
@@ -307,6 +343,7 @@ export default function Sidebar({
                 label={project.name || 'Untitled Project'}
                 faded
                 onClick={() => onSelectView(`project-${project.id}`)}
+                className={dragOverProjectId === project.id ? 'drag-over' : undefined}
               />
             </div>
           ))}

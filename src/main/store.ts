@@ -1071,6 +1071,14 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
     return result
   })
 
+  ipcMain.handle('move-task-to-project', (_event, fromProjectId: string, toProjectId: string, taskId: string) => {
+    if (typeof fromProjectId !== 'string' || typeof toProjectId !== 'string' || typeof taskId !== 'string') return getData().projects
+    const result = projectService.moveTaskToProject(fromProjectId, toProjectId, taskId)
+    if (isServiceError(result)) return getData().projects
+    notifyAllWindows()
+    return result
+  })
+
   ipcMain.handle('toggle-task-to-do-next', (_event, projectId: string, taskId: string) => {
     if (typeof projectId !== 'string' || typeof taskId !== 'string') return getData().projects
     const result = projectService.toggleTaskToDoNext(projectId, taskId)

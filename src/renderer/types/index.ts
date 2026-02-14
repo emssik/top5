@@ -63,6 +63,7 @@ declare global {
       reorderProjects: (orderedIds: string[]) => Promise<import('../../shared/types').Project[]>
       reorderPinnedTasks: (updates: { projectId: string; taskId: string; order: number }[]) => Promise<void>
       toggleTaskInProgress: (projectId: string, taskId: string) => Promise<import('../../shared/types').Project[]>
+      moveTaskToProject: (fromProjectId: string, toProjectId: string, taskId: string) => Promise<import('../../shared/types').Project[]>
       toggleTaskToDoNext: (projectId: string, taskId: string) => Promise<import('../../shared/types').Project[]>
       saveRepeatingTask: (task: import('../../shared/types').RepeatingTask) => Promise<import('../../shared/types').RepeatingTask[]>
       removeRepeatingTask: (id: string) => Promise<import('../../shared/types').RepeatingTask[]>

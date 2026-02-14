@@ -13,7 +13,7 @@ import RepeatView from './RepeatView'
 import InlineStatsView from './InlineStatsView'
 
 export default function Dashboard() {
-  const { projects, config, saveConfig, saveProject, archiveProject, unarchiveProject, unsuspendProject, suspendProject, reorderProjects } = useProjects()
+  const { projects, config, saveConfig, saveProject, archiveProject, unarchiveProject, unsuspendProject, suspendProject, reorderProjects, moveTaskToProject } = useProjects()
   const cleanView = config.cleanView ?? false
   const activeProjectsLimit = config.activeProjectsLimit ?? 5
 
@@ -226,6 +226,7 @@ export default function Dashboard() {
         onUnsuspendProject={handleUnsuspendDrop}
         onSuspendProject={handleSuspendDrop}
         onArchiveProject={handleArchiveDrop}
+        onMoveTaskToProject={moveTaskToProject}
         activeProjectsLimit={activeProjectsLimit}
       />
 
