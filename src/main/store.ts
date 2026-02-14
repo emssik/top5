@@ -11,13 +11,15 @@ import {
   renameSync,
   readdirSync,
   unlinkSync,
-  copyFileSync
+  copyFileSync,
+  rmSync
 } from 'fs'
 import { createHash } from 'crypto'
 import { platform } from 'os'
 import { dirname, basename, join } from 'path'
 import { homedir } from 'os'
 import yaml from 'js-yaml'
+import { normalizeRepeatSchedule } from '../shared/schedule'
 
 interface Task {
   id: string
@@ -194,19 +196,38 @@ function ensureDataDir(): string {
     // Create real dir in iCloud
     mkdirSync(ICLOUD_DIR, { recursive: true })
 
-    // Migrate: if ~/.config/top5 is a real directory (not symlink), move contents to iCloud
+    // Migrate: if ~/.config/top5 is a real directory (not symlink), move known files to iCloud.
     if (existsSync(SYMLINK_PATH) && !lstatSync(SYMLINK_PATH).isSymbolicLink()) {
-      const files = ['data.yaml', 'checkins.jsonl']
+      const files = ['data.yaml', 'checkins.jsonl', 'operations.jsonl']
+      let migrationOk = true
       for (const f of files) {
         const src = join(SYMLINK_PATH, f)
         const dst = join(ICLOUD_DIR, f)
-        if (existsSync(src) && !existsSync(dst)) {
+        if (!existsSync(src) || existsSync(dst)) continue
+        try {
           renameSync(src, dst)
+        } catch {
+          try {
+            copyFileSync(src, dst)
+          } catch {
+            migrationOk = false
+          }
+        }
+        if (!existsSync(dst)) {
+          migrationOk = false
         }
       }
-      // Remove old dir (should be empty now) and create symlink
-      const { rmSync } = require('fs')
-      rmSync(SYMLINK_PATH, { recursive: true })
+
+      // Remove legacy directory only when known files are migrated and directory is empty.
+      if (migrationOk) {
+        try {
+          if (readdirSync(SYMLINK_PATH).length === 0) {
+            rmSync(SYMLINK_PATH, { recursive: true, force: true })
+          }
+        } catch {
+          // Keep legacy directory on any error to avoid data loss.
+        }
+      }
     }
 
     // Create symlink if missing
@@ -234,6 +255,18 @@ const BACKUP_DIR = join(CONFIG_DIR, 'backups')
 const MAX_BACKUPS = 7
 const VALID_CHECK_IN_RESPONSES = new Set<FocusCheckIn['response']>(['yes', 'no', 'a_little'])
 const PROJECT_COLORS: ProjectColor[] = ['red', 'orange', 'amber', 'green', 'blue', 'purple', 'pink', 'teal']
+const ALLOWED_CONFIG_SHORTCUT_ACTIONS = new Set([
+  'toggle-app',
+  'quick-add',
+  'project-1',
+  'project-2',
+  'project-3',
+  'project-4',
+  'project-5',
+  'toggle-focus',
+  'quick-notes'
+])
+const ACCELERATOR_PART_PATTERN = /^[A-Za-z0-9]+$/
 const LAUNCHER_LINK_META = {
   vscode: 'VS Code',
   iterm: 'Terminal',
@@ -378,14 +411,86 @@ function getActiveProjectsLimit(config: AppConfig): number {
   return Math.max(1, Math.min(20, config.activeProjectsLimit ?? 5))
 }
 
+function isValidAccelerator(value: unknown): value is string {
+  if (typeof value !== 'string') return false
+  const trimmed = value.trim()
+  if (trimmed.length === 0 || trimmed.length > 80) return false
+  const parts = trimmed.split('+').map((part) => part.trim()).filter(Boolean)
+  if (parts.length === 0) return false
+
+  let hasKey = false
+  for (const part of parts) {
+    const lower = part.toLowerCase()
+    const isModifier = lower === 'commandorcontrol' || lower === 'cmdorctrl' || lower === 'shift' || lower === 'alt' || lower === 'option' || lower === 'ctrl' || lower === 'control' || lower === 'cmd' || lower === 'command'
+    if (isModifier) continue
+    if (hasKey || !ACCELERATOR_PART_PATTERN.test(part)) return false
+    hasKey = true
+  }
+  return hasKey
+}
+
+function isValidActionShortcuts(value: unknown): value is Record<string, string> {
+  if (!isRecord(value)) return false
+  for (const [key, shortcut] of Object.entries(value)) {
+    if (!ALLOWED_CONFIG_SHORTCUT_ACTIONS.has(key)) return false
+    if (!isValidAccelerator(shortcut)) return false
+  }
+  return true
+}
+
+function normalizeActionShortcuts(value: unknown): Record<string, string> {
+  const next = { ...defaultData.config.actionShortcuts }
+  if (!isRecord(value)) return next
+  for (const action of ALLOWED_CONFIG_SHORTCUT_ACTIONS) {
+    const candidate = value[action]
+    if (isValidAccelerator(candidate)) {
+      next[action] = candidate.trim()
+    }
+  }
+  return next
+}
+
+function normalizeAppConfig(value: unknown): AppConfig {
+  if (!isRecord(value)) return { ...defaultData.config }
+  return {
+    globalShortcut: isValidAccelerator(value.globalShortcut) ? value.globalShortcut.trim() : defaultData.config.globalShortcut,
+    actionShortcuts: normalizeActionShortcuts(value.actionShortcuts),
+    focusTaskId: typeof value.focusTaskId === 'string' || value.focusTaskId === null ? value.focusTaskId : null,
+    focusProjectId: typeof value.focusProjectId === 'string' || value.focusProjectId === null ? value.focusProjectId : null,
+    compactMode: typeof value.compactMode === 'boolean' ? value.compactMode : defaultData.config.compactMode,
+    cleanView: typeof value.cleanView === 'boolean' ? value.cleanView : defaultData.config.cleanView,
+    theme: value.theme === 'light' || value.theme === 'dark' ? value.theme : defaultData.config.theme,
+    quickTasksLimit: typeof value.quickTasksLimit === 'number' ? Math.max(1, Math.min(20, value.quickTasksLimit)) : defaultData.config.quickTasksLimit,
+    activeProjectsLimit: typeof value.activeProjectsLimit === 'number' ? Math.max(1, Math.min(20, value.activeProjectsLimit)) : defaultData.config.activeProjectsLimit,
+    cleanViewFont: typeof value.cleanViewFont === 'string' && value.cleanViewFont.trim().length > 0
+      ? value.cleanViewFont.trim().slice(0, 64)
+      : defaultData.config.cleanViewFont
+  }
+}
+
 function isValidAppConfig(value: unknown): value is AppConfig {
   if (!isRecord(value)) return false
-  const { globalShortcut, actionShortcuts, theme, quickTasksLimit, activeProjectsLimit } = value
-  if (typeof globalShortcut !== 'string') return false
-  if (!isRecord(actionShortcuts)) return false
+  const {
+    globalShortcut,
+    actionShortcuts,
+    theme,
+    quickTasksLimit,
+    activeProjectsLimit,
+    focusTaskId,
+    focusProjectId,
+    compactMode,
+    cleanView,
+    cleanViewFont
+  } = value
+  if (!isValidAccelerator(globalShortcut)) return false
+  if (!isValidActionShortcuts(actionShortcuts)) return false
   if (theme !== 'light' && theme !== 'dark') return false
   if (typeof quickTasksLimit !== 'number' || quickTasksLimit < 1 || quickTasksLimit > 20) return false
   if (typeof activeProjectsLimit !== 'number' || activeProjectsLimit < 1 || activeProjectsLimit > 20) return false
+  if (!(typeof focusTaskId === 'string' || focusTaskId === null)) return false
+  if (!(typeof focusProjectId === 'string' || focusProjectId === null)) return false
+  if (typeof compactMode !== 'boolean' || typeof cleanView !== 'boolean') return false
+  if (typeof cleanViewFont !== 'string' || cleanViewFont.trim().length === 0 || cleanViewFont.length > 64) return false
   return true
 }
 
@@ -399,7 +504,13 @@ function isValidRepeatSchedule(value: unknown): value is RepeatSchedule {
   if (!isRecord(value)) return false
   const { type } = value
   if (type === 'daily') return true
-  if (type === 'weekdays') return Array.isArray(value.days) && value.days.every((d: unknown) => typeof d === 'number')
+  if (type === 'weekdays') {
+    return (
+      Array.isArray(value.days) &&
+      value.days.length > 0 &&
+      value.days.every((d: unknown) => typeof d === 'number' && Number.isFinite(d) && d >= 0 && d <= 7)
+    )
+  }
   if (type === 'interval' || type === 'afterCompletion') return typeof value.days === 'number' && value.days > 0
   if (type === 'monthlyDay') return typeof value.day === 'number' && value.day >= 1 && value.day <= 31
   if (type === 'monthlyNthWeekday') return typeof value.week === 'number' && value.week >= 1 && value.week <= 5 && typeof value.weekday === 'number' && value.weekday >= 0 && value.weekday <= 6
@@ -411,6 +522,13 @@ function isValidRepeatingTask(value: unknown): value is RepeatingTask {
   if (!isRecord(value)) return false
   const { id, title, schedule, order } = value
   return typeof id === 'string' && typeof title === 'string' && typeof order === 'number' && isValidRepeatSchedule(schedule)
+}
+
+function normalizeRepeatingTask(task: RepeatingTask): RepeatingTask {
+  return {
+    ...task,
+    schedule: normalizeRepeatSchedule(task.schedule)
+  }
 }
 
 function dailyBackup(): void {
@@ -457,13 +575,32 @@ function dailyBackup(): void {
 
 // --- JSONL check-ins ---
 
-function appendCheckIn(checkIn: FocusCheckIn): void {
-  mkdirSync(CONFIG_DIR, { recursive: true })
-  appendFileSync(CHECKINS_FILE, JSON.stringify(checkIn) + '\n', 'utf-8')
+let cachedCheckIns: FocusCheckIn[] | null = null
+let taskMinutesById: Map<string, number> | null = null
+
+function checkInMinutes(checkIn: FocusCheckIn): number {
+  if (typeof checkIn.minutes === 'number' && checkIn.minutes >= 0) return checkIn.minutes
+  if (checkIn.response === 'yes') return 15
+  if (checkIn.response === 'a_little') return 7
+  return 0
 }
 
-export function loadCheckIns(): FocusCheckIn[] {
-  if (!existsSync(CHECKINS_FILE)) return []
+function rebuildCheckInCaches(checkIns: FocusCheckIn[]): void {
+  cachedCheckIns = checkIns
+  const perTask = new Map<string, number>()
+  for (const checkIn of checkIns) {
+    perTask.set(checkIn.taskId, (perTask.get(checkIn.taskId) ?? 0) + checkInMinutes(checkIn))
+  }
+  taskMinutesById = perTask
+}
+
+function ensureCheckInCaches(): void {
+  if (cachedCheckIns && taskMinutesById) return
+  if (!existsSync(CHECKINS_FILE)) {
+    rebuildCheckInCaches([])
+    return
+  }
+
   try {
     const raw = readFileSync(CHECKINS_FILE, 'utf-8')
     const parsed: FocusCheckIn[] = []
@@ -476,16 +613,28 @@ export function loadCheckIns(): FocusCheckIn[] {
         // Ignore malformed lines and continue loading valid entries.
       }
     }
-    return parsed
+    rebuildCheckInCaches(parsed)
   } catch {
-    return []
+    rebuildCheckInCaches([])
   }
 }
 
+function appendCheckIn(checkIn: FocusCheckIn): void {
+  ensureCheckInCaches()
+  mkdirSync(CONFIG_DIR, { recursive: true })
+  appendFileSync(CHECKINS_FILE, JSON.stringify(checkIn) + '\n', 'utf-8')
+  cachedCheckIns!.push(checkIn)
+  taskMinutesById!.set(checkIn.taskId, (taskMinutesById!.get(checkIn.taskId) ?? 0) + checkInMinutes(checkIn))
+}
+
+export function loadCheckIns(): FocusCheckIn[] {
+  ensureCheckInCaches()
+  return [...(cachedCheckIns ?? [])]
+}
+
 function taskTimeMinutes(taskId: string): number {
-  return loadCheckIns()
-    .filter((c) => c.taskId === taskId)
-    .reduce((sum, c) => sum + (c.minutes ?? (c.response === 'yes' ? 15 : c.response === 'a_little' ? 7 : 0)), 0)
+  ensureCheckInCaches()
+  return taskMinutesById?.get(taskId) ?? 0
 }
 
 // --- Operation log ---
@@ -562,14 +711,17 @@ function loadData(): AppData {
     const today = new Date().toISOString().slice(0, 10)
     const dismissedRepeatingDate = parsed?.dismissedRepeatingDate ?? ''
     const projects = assignMissingProjectColors((parsed?.projects ?? defaultData.projects).map(normalizeProject))
+    const config = normalizeAppConfig(parsed?.config ?? {})
     return {
       projects,
       quickTasks: parsed?.quickTasks ?? [],
       quickNotes: parsed?.quickNotes ?? defaultData.quickNotes,
-      repeatingTasks: parsed?.repeatingTasks ?? [],
+      repeatingTasks: (parsed?.repeatingTasks ?? [])
+        .filter(isValidRepeatingTask)
+        .map(normalizeRepeatingTask),
       dismissedRepeating: dismissedRepeatingDate === today ? (parsed?.dismissedRepeating ?? []) : [],
       dismissedRepeatingDate: dismissedRepeatingDate === today ? today : '',
-      config: { ...defaultData.config, ...parsed?.config }
+      config
     }
   } catch {
     return { ...defaultData }
@@ -594,7 +746,7 @@ function migrateFromElectronStore(): void {
       repeatingTasks: [],
       dismissedRepeating: [],
       dismissedRepeatingDate: '',
-      config: { ...defaultData.config, ...parsed.config }
+      config: normalizeAppConfig(parsed.config ?? {})
     }
     saveData(data)
   } catch {
@@ -729,7 +881,7 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
 
   ipcMain.handle('save-config', (_event, config: unknown) => {
     if (!isValidAppConfig(config)) return
-    setData('config', config)
+    setData('config', normalizeAppConfig(config))
   })
 
   ipcMain.handle('archive-project', (_event, projectId: string) => {
@@ -962,12 +1114,13 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
     if (!isValidRepeatingTask(task)) return
     const data = getData()
     const repeatingTasks = [...data.repeatingTasks]
+    const normalizedTask = normalizeRepeatingTask(task)
     const index = repeatingTasks.findIndex((t) => t.id === task.id)
     if (index >= 0) {
-      repeatingTasks[index] = task
+      repeatingTasks[index] = normalizedTask
     } else {
-      task.order = repeatingTasks.length
-      repeatingTasks.push(task)
+      normalizedTask.order = repeatingTasks.length
+      repeatingTasks.push(normalizedTask)
     }
     setData('repeatingTasks', repeatingTasks)
     notifyAllWindows()

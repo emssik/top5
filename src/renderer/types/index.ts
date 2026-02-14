@@ -156,7 +156,7 @@ declare global {
       enterFocusMode: () => Promise<void>
       exitFocusMode: () => Promise<void>
       getFocusUnsavedMs: () => Promise<number>
-      saveFocusCheckIn: (checkIn: FocusCheckIn) => Promise<void>
+      saveFocusCheckIn: (checkIn: FocusCheckIn) => Promise<FocusCheckIn[]>
       getFocusCheckIns: (taskId?: string) => Promise<FocusCheckIn[]>
       dismissCheckIn: () => Promise<void>
       openOperationLogWindow: (filter?: string) => Promise<void>

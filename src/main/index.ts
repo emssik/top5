@@ -6,6 +6,7 @@ import { registerLauncherHandlers } from './launchers'
 import { registerFocusHandlers } from './focus-window'
 import { registerGlobalShortcut, registerLocalShortcuts } from './shortcuts'
 import { registerQuickAddHandlers } from './quick-add-window'
+import { getRepeatingTaskProposals } from '../shared/schedule'
 
 let mainWindow: BrowserWindow | null = null
 let savedBounds: Electron.Rectangle | null = null
@@ -108,14 +109,12 @@ app.whenReady().then(() => {
     const repeatingActiveCount = activeQuick.filter((t) => t.repeatingTaskId).length
     const activeSlots = Math.max(0, limit - regularCompleted.length)
     const visibleRegularCount = Math.min(regularActiveCount, activeSlots)
-    // Proposals: approximate count (slightly overcount is safe — window can scroll)
-    const rts: any[] = data.repeatingTasks ?? []
-    const dismissed: string[] = data.dismissedRepeatingDate === today ? (data.dismissedRepeating ?? []) : []
-    const proposalCount = rts.filter((rt) =>
-      !dismissed.includes(rt.id) &&
-      !qts.some((qt) => qt.repeatingTaskId === rt.id && !qt.completed) &&
-      !qts.some((qt) => qt.repeatingTaskId === rt.id && qt.completed && qt.completedAt?.startsWith(today))
-    ).length
+    const proposalCount = getRepeatingTaskProposals({
+      repeatingTasks: data.repeatingTasks ?? [],
+      quickTasks: qts,
+      dismissedRepeating: data.dismissedRepeating ?? [],
+      dismissedRepeatingDate: data.dismissedRepeatingDate ?? ''
+    }).length
     const totalRows = visibleRegularCount + repeatingActiveCount + proposalCount + completedToday.length
     // Separators: only when preceding section has content
     const hasRepeating = repeatingActiveCount + proposalCount > 0
@@ -148,9 +147,9 @@ app.whenReady().then(() => {
     }
   })
 
-  ipcMain.handle('set-traffic-lights-visible', () => {
+  ipcMain.handle('set-traffic-lights-visible', (_event, visible: unknown) => {
     if (!mainWindow || process.platform !== 'darwin') return
-    mainWindow.setWindowButtonVisibility(false)
+    mainWindow.setWindowButtonVisibility(Boolean(visible))
   })
 
   app.on('activate', () => {

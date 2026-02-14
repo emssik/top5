@@ -2,11 +2,14 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { nanoid } from 'nanoid'
 import type { Project, ProjectColor, QuickTask, RepeatSchedule, RepeatingTask, AppData } from '../types'
 import { PROJECT_COLORS, projectColorValue, firstAvailableProjectColor } from '../utils/projects'
+import { sortWeekdays } from '../../shared/schedule'
+import { buildQuickAddSchedule } from '../../shared/quick-add'
 
 type Mode = 'task' | 'project' | 'repeat'
 type ScheduleType = 'daily' | 'weekdays' | 'weekly' | 'interval' | 'monthly' | 'afterDone'
 
 const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+const WEEKDAY_VALUES = [1, 2, 3, 4, 5, 6, 0]
 
 export default function QuickAddWindow() {
   const [mode, setMode] = useState<Mode>('task')
@@ -51,20 +54,13 @@ export default function QuickAddWindow() {
   }, [mode, loaded])
 
   const buildSchedule = useCallback((): RepeatSchedule => {
-    switch (scheduleType) {
-      case 'daily':
-        return { type: 'daily' }
-      case 'weekdays':
-        return { type: 'weekdays', days: weekdays.length > 0 ? weekdays : [1] }
-      case 'weekly':
-        return { type: 'weekdays', days: weekdays.length > 0 ? weekdays : [1] }
-      case 'interval':
-        return { type: 'interval', days: Math.max(1, intervalDays) }
-      case 'monthly':
-        return { type: 'monthlyDay', day: Math.max(1, Math.min(31, monthlyDay)) }
-      case 'afterDone':
-        return { type: 'afterCompletion', days: Math.max(1, afterDoneDays) }
-    }
+    return buildQuickAddSchedule({
+      scheduleType,
+      weekdays,
+      intervalDays,
+      monthlyDay,
+      afterDoneDays
+    }) as RepeatSchedule
   }, [scheduleType, weekdays, intervalDays, monthlyDay, afterDoneDays])
 
   const handleSubmit = useCallback(async () => {
@@ -551,7 +547,7 @@ function RepeatPanel({
     onWeekdaysChange(
       weekdays.includes(day)
         ? weekdays.filter((d) => d !== day)
-        : [...weekdays, day].sort()
+        : sortWeekdays([...weekdays, day])
     )
   }
 
@@ -588,9 +584,9 @@ function RepeatPanel({
       {(scheduleType === 'weekly' || scheduleType === 'weekdays') && (
         <div className="flex gap-[3px] mt-2">
           {WEEKDAY_LABELS.map((label, i) => {
-            const day = i + 1
+            const day = WEEKDAY_VALUES[i]
             const isActive = scheduleType === 'weekdays'
-              ? day >= 1 && day <= 5
+              ? i < 5
               : weekdays.includes(day)
             return (
               <button

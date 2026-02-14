@@ -2,7 +2,7 @@ import { spawn } from 'child_process'
 import { shell } from 'electron'
 import type { IpcMain } from 'electron'
 
-const ALLOWED_BROWSER_PROTOCOLS = new Set(['http:', 'https:'])
+const ALLOWED_BROWSER_PROTOCOLS = new Set(['http:', 'https:', 'mailto:'])
 const ALLOWED_OBSIDIAN_COMMANDS = new Set(['open', 'vault'])
 const ALLOWED_EXTERNAL_PROTOCOLS = new Set([
   'http:',

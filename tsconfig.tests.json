@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.node.json",
+  "include": ["src/shared/**/*.ts", "tests/**/*.ts"],
+  "compilerOptions": {
+    "composite": false,
+    "noEmit": false,
+    "outDir": ".tmp-tests",
+    "rootDir": ".",
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "declaration": false,
+    "sourceMap": false,
+    "types": ["node"]
+  }
+}

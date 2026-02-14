@@ -131,7 +131,12 @@ export function openProjectLink(link: ProjectLink): void {
     return
   }
 
-  if (value.startsWith('http://') || value.startsWith('https://') || value.startsWith('mailto:')) {
+  if (value.startsWith('mailto:')) {
+    window.api.openExternal(value)
+    return
+  }
+
+  if (value.startsWith('http://') || value.startsWith('https://')) {
     window.api.launchBrowser(value)
     return
   }

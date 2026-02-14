@@ -1,11 +1,12 @@
 {
   "name": "top5",
-  "version": "1.29.0",
+  "version": "1.30.0",
   "description": "Focus management app - limit yourself to 5 projects",
   "main": "./out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",
     "clean": "find src -name '*.js' -not -name 'electron.vite.config.js' -delete && rm -f tsconfig.node.tsbuildinfo tsconfig.web.tsbuildinfo",
+    "test": "rm -rf .tmp-tests && tsc -p tsconfig.tests.json && node --test .tmp-tests/tests && rm -rf .tmp-tests",
     "typecheck": "tsc --build",
     "build": "npm run clean && npm run typecheck && electron-vite build",
     "start": "electron-vite preview",
