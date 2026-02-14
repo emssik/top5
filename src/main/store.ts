@@ -207,6 +207,10 @@ function isValidTask(value: unknown): value is Task {
   return typeof value.id === 'string' && typeof value.title === 'string' && typeof value.completed === 'boolean'
 }
 
+export function isValidProjectCode(code: string): boolean {
+  return /^[A-Z0-9]{2,6}$/.test(code)
+}
+
 export function isValidProject(value: unknown): value is Project {
   if (!isRecord(value)) return false
   const { id, name, order, tasks } = value
@@ -217,6 +221,9 @@ export function isValidProject(value: unknown): value is Project {
     for (const link of value.links) {
       if (!isRecord(link) || typeof link.label !== 'string' || typeof link.url !== 'string') return false
     }
+  }
+  if (value.code !== undefined && typeof value.code === 'string' && value.code.length > 0) {
+    if (!isValidProjectCode(value.code)) return false
   }
   return true
 }
@@ -658,6 +665,42 @@ function getApiConfigPublic(): ApiConfigPublic {
   return { enabled: cfg.enabled, port: cfg.port }
 }
 
+// --- Task number migration ---
+
+function migrateTaskNumbers(data: AppData): boolean {
+  let changed = false
+
+  for (const project of data.projects) {
+    const unnumbered = project.tasks
+      .filter((t) => t.taskNumber == null)
+      .sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''))
+
+    if (unnumbered.length === 0) continue
+
+    let next = project.nextTaskNumber ?? 1
+    for (const task of unnumbered) {
+      task.taskNumber = next++
+      changed = true
+    }
+    project.nextTaskNumber = next
+  }
+
+  const unnumberedQuick = data.quickTasks
+    .filter((t) => t.taskNumber == null)
+    .sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''))
+
+  if (unnumberedQuick.length > 0) {
+    let next = data.nextQuickTaskNumber ?? 1
+    for (const task of unnumberedQuick) {
+      task.taskNumber = next++
+      changed = true
+    }
+    data.nextQuickTaskNumber = next
+  }
+
+  return changed
+}
+
 // --- Data persistence ---
 
 function loadData(): AppData {
@@ -675,7 +718,7 @@ function loadData(): AppData {
     const dismissedRepeatingDate = parsed?.dismissedRepeatingDate ?? ''
     const projects = assignMissingProjectColors((parsed?.projects ?? defaultData.projects).map(normalizeProject))
     const config = normalizeAppConfig(parsed?.config ?? {})
-    return {
+    const data: AppData = {
       projects,
       quickTasks: parsed?.quickTasks ?? [],
       quickNotes: parsed?.quickNotes ?? defaultData.quickNotes,
@@ -685,8 +728,15 @@ function loadData(): AppData {
       dismissedRepeating: dismissedRepeatingDate === today ? (parsed?.dismissedRepeating ?? []) : [],
       dismissedRepeatingDate: dismissedRepeatingDate === today ? today : '',
       config,
-      apiConfig: getApiConfigPublic()
+      apiConfig: getApiConfigPublic(),
+      nextQuickTaskNumber: typeof parsed?.nextQuickTaskNumber === 'number' ? parsed.nextQuickTaskNumber : undefined
     }
+
+    if (migrateTaskNumbers(data)) {
+      saveData(data)
+    }
+
+    return data
   } catch {
     return { ...defaultData }
   }

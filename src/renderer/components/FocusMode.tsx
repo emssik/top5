@@ -4,6 +4,7 @@ import { useTaskList } from '../hooks/useTaskList'
 import { getActiveLaunchers, launchByType, launcherMeta } from '../utils/launchers'
 import { STANDALONE_PROJECT_ID } from '../utils/constants'
 import type { Task } from '../types'
+import { formatTaskId, formatQuickTaskId } from '../../shared/taskId'
 
 function formatCountdown(ms: number): string {
   const totalSec = Math.ceil(ms / 1000)
@@ -17,6 +18,8 @@ interface PickerTask {
   taskId: string
   title: string
   projectName?: string
+  projectCode?: string
+  taskNumber?: number
 }
 
 const FOCUS_WIDTH = 420
@@ -67,6 +70,9 @@ export default function FocusMode() {
     ? quickTasks.find((t) => t.id === config.focusTaskId)
     : project?.tasks.find((t) => t.id === config.focusTaskId)
   const contextLabel = isStandalone ? 'Quick Task' : project?.name
+  const focusTaskId = isStandalone
+    ? formatQuickTaskId(task?.taskNumber)
+    : formatTaskId(task?.taskNumber, project?.code)
 
   // Build picker from visible tasks (same as clean view), excluding just-completed task
   const pickerTasks: PickerTask[] = []
@@ -76,7 +82,7 @@ export default function FocusMode() {
       const taskId = mt.kind === 'pinned' ? mt.taskId! : mt.id
       const key = `${projectId}:${taskId}`
       if (key === completedTaskKey) continue
-      pickerTasks.push({ projectId, taskId, title: mt.title, projectName: mt.projectName })
+      pickerTasks.push({ projectId, taskId, title: mt.title, projectName: mt.projectName, projectCode: mt.projectCode, taskNumber: mt.taskNumber })
     }
   }
 
@@ -219,6 +225,7 @@ export default function FocusMode() {
         <div className="flex-1 min-w-0 flex items-center gap-1.5" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
           <span className="text-[11px] text-blue-400/70 flex-shrink-0">{contextLabel}</span>
           <span className="text-[10px] text-t-muted flex-shrink-0">/</span>
+          {focusTaskId && <span className="text-[10px] text-t-muted flex-shrink-0" style={{ fontFamily: 'monospace', opacity: 0.5 }}>{focusTaskId}</span>}
           <span
             className="text-[13px] font-semibold truncate text-t-primary cursor-default"
             onDoubleClick={() => {
@@ -296,6 +303,11 @@ export default function FocusMode() {
                 >
                   {pt.projectName && (
                     <span className="text-[10px] text-blue-400/70 flex-shrink-0">{pt.projectName}</span>
+                  )}
+                  {pt.taskNumber != null && (
+                    <span className="text-[10px] text-t-muted flex-shrink-0" style={{ fontFamily: 'monospace', opacity: 0.5 }}>
+                      {pt.projectCode ? formatTaskId(pt.taskNumber, pt.projectCode) : formatQuickTaskId(pt.taskNumber)}
+                    </span>
                   )}
                   <span className="text-[12px] text-t-primary truncate">{pt.title}</span>
                 </button>

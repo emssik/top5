@@ -6,13 +6,14 @@ import Settings from './Settings'
 import CleanViewHeader from './CleanViewHeader'
 import QuickTasksView from './QuickTasksView'
 import ProjectEditor from './ProjectEditor'
+import ProjectCodeMigration from './ProjectCodeMigration'
 import TodayView from './TodayView'
 import ProjectDetailView from './ProjectDetailView'
 import RepeatView from './RepeatView'
 import InlineStatsView from './InlineStatsView'
 
 export default function Dashboard() {
-  const { projects, config, saveConfig, archiveProject, unarchiveProject, unsuspendProject, suspendProject, reorderProjects } = useProjects()
+  const { projects, config, saveConfig, saveProject, archiveProject, unarchiveProject, unsuspendProject, suspendProject, reorderProjects } = useProjects()
   const cleanView = config.cleanView ?? false
   const activeProjectsLimit = config.activeProjectsLimit ?? 5
 
@@ -155,6 +156,21 @@ export default function Dashboard() {
     const cleanup = window.api.onShortcutAction(handleShortcutAction)
     return cleanup
   }, [handleShortcutAction])
+
+  const needsCodeMigration = projects.length > 0 && projects.some((p) => !p.code)
+
+  const handleCodeMigration = async (codes: Record<string, string>) => {
+    for (const p of projects) {
+      const code = codes[p.id]
+      if (code && code !== p.code) {
+        await saveProject({ ...p, code })
+      }
+    }
+  }
+
+  if (needsCodeMigration) {
+    return <ProjectCodeMigration projects={projects} onSave={handleCodeMigration} />
+  }
 
   if (cleanView) {
     return (

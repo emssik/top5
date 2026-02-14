@@ -31,7 +31,8 @@ const typeColors: Record<OperationType, string> = {
 
 function describeOperation(entry: OperationLogEntry): string {
   const project = entry.projectName ? ` in Project ${entry.projectName}` : ''
-  const task = entry.taskTitle ? `"${entry.taskTitle}"` : ''
+  const code = entry.taskCode ? `[${entry.taskCode}] ` : ''
+  const task = entry.taskTitle ? `${code}"${entry.taskTitle}"` : ''
   const details = entry.details ? ` (${entry.details})` : ''
 
   switch (entry.type) {

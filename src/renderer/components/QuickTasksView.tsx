@@ -6,6 +6,7 @@ import type { MergedTask } from '../hooks/useTaskList'
 import { calcTaskTime, calcQuickTaskTime, formatCheckInTime } from '../utils/checkInTime'
 import type { QuickTask, RepeatingTask } from '../types'
 import { STANDALONE_PROJECT_ID } from '../utils/constants'
+import TaskIdBadge from './TaskIdBadge'
 
 interface Props {
   showAll?: boolean
@@ -362,6 +363,7 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
           </button>
           <div className="flex-1 min-w-0">
             <span className="text-sm text-t-muted line-through truncate block">
+              <TaskIdBadge taskNumber={task.taskNumber} projectCode={task.projectCode} kind={task.kind} />
               {task.title}
             </span>
             {task.kind === 'pinned' && task.projectName && (
@@ -419,6 +421,7 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
                 className="text-sm text-t-primary truncate block cursor-default"
               >
                 {task.repeatingTaskId && <span className="text-t-muted mr-1" style={{ opacity: 0.5 }}>↻</span>}
+                <TaskIdBadge taskNumber={task.taskNumber} projectCode={task.projectCode} kind={task.kind} />
                 {task.title}
               </span>
               {task.kind === 'pinned' && task.projectName && (

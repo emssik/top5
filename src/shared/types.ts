@@ -7,6 +7,7 @@ export interface Task {
   isToDoNext?: boolean
   toDoNextOrder?: number
   inProgress?: boolean
+  taskNumber?: number
 }
 
 export type RepeatSchedule =
@@ -41,6 +42,7 @@ export interface QuickTask {
   order: number
   repeatingTaskId?: string | null
   inProgress?: boolean
+  taskNumber?: number
 }
 
 export type ProjectColor =
@@ -79,6 +81,8 @@ export interface Project {
   tasks: Task[]
   archivedAt: string | null
   suspendedAt: string | null
+  code?: string
+  nextTaskNumber?: number
 }
 
 export interface AppConfig {
@@ -117,6 +121,7 @@ export interface OperationLogEntry {
   projectId?: string
   projectName?: string
   taskTitle?: string
+  taskCode?: string
   details?: string
 }
 
@@ -140,4 +145,5 @@ export interface AppData {
   dismissedRepeating: string[]
   dismissedRepeatingDate: string
   apiConfig?: ApiConfigPublic
+  nextQuickTaskNumber?: number
 }

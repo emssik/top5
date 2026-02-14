@@ -11,7 +11,9 @@ export interface MergedTask {
   completed?: boolean
   projectId?: string
   projectName?: string
+  projectCode?: string
   taskId?: string
+  taskNumber?: number
   repeatingTaskId?: string | null
   inProgress?: boolean
 }
@@ -56,7 +58,9 @@ export function useTaskList(): TaskListData {
           order: t.toDoNextOrder ?? 999,
           projectId: p.id,
           projectName: p.name,
+          projectCode: p.code,
           taskId: t.id,
+          taskNumber: t.taskNumber,
           inProgress: t.inProgress
         }))
     )
@@ -66,6 +70,7 @@ export function useTaskList(): TaskListData {
     id: t.id,
     title: t.title,
     order: t.order,
+    taskNumber: t.taskNumber,
     repeatingTaskId: t.repeatingTaskId,
     inProgress: t.inProgress
   }))
@@ -89,6 +94,7 @@ export function useTaskList(): TaskListData {
       title: t.title,
       order: t.order,
       completed: true,
+      taskNumber: t.taskNumber,
       repeatingTaskId: t.repeatingTaskId
     }))
 
@@ -105,7 +111,9 @@ export function useTaskList(): TaskListData {
           completed: true,
           projectId: p.id,
           projectName: p.name,
-          taskId: t.id
+          projectCode: p.code,
+          taskId: t.id,
+          taskNumber: t.taskNumber
         }))
     )
 
