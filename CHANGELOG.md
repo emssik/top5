@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.32.0] - 2026-02-14
+
+### Changed
+
+- Electron upgraded from v28 to v40
+- electron-vite upgraded from v2 to v5
+- electron-builder upgraded from v24 to v26
+- `@electron-toolkit/utils` upgraded from v3 to v4
+- `@electron-toolkit/tsconfig` upgraded from v1 to v2
+- `@electron-toolkit/preload` upgraded from v3.0.0 to v3.0.2
+- Build script (`build.sh`) reworked: default quick build (unpacked `.app`, no signing) for daily use; `--release` flag for full DMG with signing
+- Removed `@ts-expect-error` workaround in `electron.vite.config.ts` (no longer needed with updated toolchain)
+- README updated with HTTP API feature, Fastify in stack section, API docs link, and `api/`/`service/` directory tree
+
 ## [1.31.0] - 2026-02-14
 
 ### Added
