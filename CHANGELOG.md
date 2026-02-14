@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- HTTP API server powered by Fastify, bound to `127.0.0.1` only, with Bearer token authentication
+- API routes for projects (CRUD, archive/unarchive, suspend/unsuspend, tasks), quick tasks (CRUD, complete/uncomplete, reorder), and repeating tasks (CRUD, reorder)
+- Health endpoint (`GET /api/v1/health`) exempt from authentication
+- API configuration stored in `data.yaml` under `apiConfig` (enabled, apiKey, port) with default port `15055`
+- `TOP5_API_PORT` environment variable override for API server port
+- Service layer (`src/main/service/`) extracting business logic from IPC handlers: `projects.ts`, `quick-tasks.ts`, `repeating-tasks.ts`
+- Unified type definitions in `src/shared/types.ts` as single source of truth for main, renderer, and API
+- `ApiConfig` and `ApiConfigPublic` types for full and sanitized API configuration
+- `get-api-config` and `save-api-config` IPC handlers with preload bridge for renderer access
+- HTTP API section in Settings UI: toggle enable/disable, view port, show/copy/regenerate API key
+- API test suite (`tests/api/`) with 34 vitest tests covering auth, health, projects, quick tasks, and repeating tasks
+- `npm run test:api` script using vitest with Electron mock
+- `vitest.config.ts` with Electron module alias for test isolation
+
+### Changed
+
+- Renderer types (`src/renderer/types/index.ts`) now re-export from `src/shared/types.ts` instead of defining types locally
+- Main store (`src/main/store.ts`) imports types from `src/shared/types.ts` and delegates to service layer, reducing file size significantly
+- Preload bridge imports types from `src/shared/types.ts` instead of renderer types
+
 ## [1.30.0] - 2026-02-14
 
 ### Added

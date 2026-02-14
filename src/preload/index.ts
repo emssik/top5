@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { IpcRendererEvent } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
-import type { AppConfig, FocusCheckIn, OperationLogEntry, Project, QuickTask, RepeatingTask } from '../renderer/types'
+import type { AppConfig, FocusCheckIn, OperationLogEntry, Project, QuickTask, RepeatingTask, ApiConfig } from '../shared/types'
 
 interface ShortcutActionPayload {
   action: string
@@ -53,6 +53,8 @@ export const api = {
   switchFocusTask: (projectId: string, taskId: string) => ipcRenderer.invoke('switch-focus-task', projectId, taskId),
   resizeFocusWindow: (width: number, height: number) => ipcRenderer.invoke('resize-focus-window', width, height),
   closeQuickAddWindow: () => ipcRenderer.invoke('close-quick-add-window'),
+  getApiConfig: (): Promise<ApiConfig> => ipcRenderer.invoke('get-api-config'),
+  saveApiConfig: (config: Partial<ApiConfig>): Promise<ApiConfig> => ipcRenderer.invoke('save-api-config', config),
   onReloadData: (callback: () => void) => {
     ipcRenderer.on('reload-data', callback)
     return () => ipcRenderer.removeListener('reload-data', callback)

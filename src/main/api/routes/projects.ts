@@ -1,0 +1,102 @@
+import type { FastifyInstance } from 'fastify'
+import { notifyAllWindows } from '../../store'
+import * as projectService from '../../service/projects'
+
+function errorToStatus(error: string): number {
+  if (error === 'not_found') return 404
+  if (error === 'active_limit') return 409
+  return 400
+}
+
+function isError(result: unknown): result is { error: string } {
+  return typeof result === 'object' && result !== null && 'error' in result
+}
+
+export function registerProjectRoutes(fastify: FastifyInstance): void {
+  fastify.get('/api/v1/projects', async () => {
+    return { ok: true, data: projectService.getProjects() }
+  })
+
+  fastify.get<{ Params: { id: string } }>('/api/v1/projects/:id', async (request, reply) => {
+    const result = projectService.getProject(request.params.id)
+    if (isError(result)) return reply.status(404).send({ ok: false, error: result.error })
+    return { ok: true, data: result }
+  })
+
+  fastify.post('/api/v1/projects', async (request, reply) => {
+    const result = projectService.createProject(request.body)
+    if (isError(result)) return reply.status(400).send({ ok: false, error: result.error })
+    notifyAllWindows()
+    return reply.status(201).send({ ok: true, data: result })
+  })
+
+  fastify.put<{ Params: { id: string } }>('/api/v1/projects/:id', async (request, reply) => {
+    const result = projectService.updateProject(request.params.id, request.body)
+    if (isError(result)) return reply.status(errorToStatus(result.error)).send({ ok: false, error: result.error })
+    notifyAllWindows()
+    return { ok: true, data: result }
+  })
+
+  fastify.delete<{ Params: { id: string } }>('/api/v1/projects/:id', async (request, reply) => {
+    const result = projectService.deleteProject(request.params.id)
+    if (isError(result)) return reply.status(404).send({ ok: false, error: result.error })
+    notifyAllWindows()
+    return { ok: true, data: result }
+  })
+
+  fastify.post<{ Params: { id: string } }>('/api/v1/projects/:id/archive', async (request, reply) => {
+    const result = projectService.archiveProject(request.params.id)
+    if (isError(result)) return reply.status(404).send({ ok: false, error: result.error })
+    notifyAllWindows()
+    return { ok: true, data: result }
+  })
+
+  fastify.post<{ Params: { id: string } }>('/api/v1/projects/:id/unarchive', async (request, reply) => {
+    const result = projectService.unarchiveProject(request.params.id)
+    if (isError(result)) return reply.status(errorToStatus(result.error)).send({ ok: false, error: result.error })
+    notifyAllWindows()
+    return { ok: true, data: result }
+  })
+
+  fastify.post<{ Params: { id: string } }>('/api/v1/projects/:id/suspend', async (request, reply) => {
+    const result = projectService.suspendProject(request.params.id)
+    if (isError(result)) return reply.status(404).send({ ok: false, error: result.error })
+    notifyAllWindows()
+    return { ok: true, data: result }
+  })
+
+  fastify.post<{ Params: { id: string } }>('/api/v1/projects/:id/unsuspend', async (request, reply) => {
+    const result = projectService.unsuspendProject(request.params.id)
+    if (isError(result)) return reply.status(errorToStatus(result.error)).send({ ok: false, error: result.error })
+    notifyAllWindows()
+    return { ok: true, data: result }
+  })
+
+  fastify.put('/api/v1/projects/reorder', async (request, reply) => {
+    const result = projectService.reorderProjects(request.body)
+    if (isError(result)) return reply.status(400).send({ ok: false, error: result.error })
+    notifyAllWindows()
+    return { ok: true, data: result }
+  })
+
+  fastify.post<{ Params: { pid: string; tid: string } }>('/api/v1/projects/:pid/tasks/:tid/toggle-in-progress', async (request, reply) => {
+    const result = projectService.toggleTaskInProgress(request.params.pid, request.params.tid)
+    if (isError(result)) return reply.status(404).send({ ok: false, error: result.error })
+    notifyAllWindows()
+    return { ok: true, data: result }
+  })
+
+  fastify.post<{ Params: { pid: string; tid: string } }>('/api/v1/projects/:pid/tasks/:tid/toggle-to-do-next', async (request, reply) => {
+    const result = projectService.toggleTaskToDoNext(request.params.pid, request.params.tid)
+    if (isError(result)) return reply.status(404).send({ ok: false, error: result.error })
+    notifyAllWindows()
+    return { ok: true, data: result }
+  })
+
+  fastify.put('/api/v1/projects/pinned-tasks/reorder', async (request, reply) => {
+    const result = projectService.reorderPinnedTasks(request.body)
+    if (isError(result)) return reply.status(400).send({ ok: false, error: result.error })
+    notifyAllWindows()
+    return { ok: true, data: result }
+  })
+}

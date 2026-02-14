@@ -14,142 +14,33 @@ import {
   copyFileSync,
   rmSync
 } from 'fs'
-import { createHash } from 'crypto'
+import { createHash, randomUUID } from 'crypto'
 import { platform } from 'os'
 import { dirname, basename, join } from 'path'
 import { homedir } from 'os'
 import yaml from 'js-yaml'
 import { normalizeRepeatSchedule } from '../shared/schedule'
+import * as projectService from './service/projects'
+import * as quickTaskService from './service/quick-tasks'
+import * as repeatingTaskService from './service/repeating-tasks'
+import type {
+  Task,
+  RepeatSchedule,
+  RepeatingTask,
+  QuickTask,
+  ProjectColor,
+  ProjectLink,
+  Project,
+  AppConfig,
+  FocusCheckIn,
+  OperationLogEntry,
+  AppData,
+  ApiConfig,
+  ApiConfigPublic
+} from '../shared/types'
 
-interface Task {
-  id: string
-  title: string
-  completed: boolean
-  createdAt: string
-  completedAt?: string | null
-  isToDoNext?: boolean
-  toDoNextOrder?: number
-  inProgress?: boolean
-}
-
-type RepeatSchedule =
-  | { type: 'daily' }
-  | { type: 'weekdays'; days: number[] }
-  | { type: 'interval'; days: number }
-  | { type: 'afterCompletion'; days: number }
-  | { type: 'monthlyDay'; day: number }
-  | { type: 'monthlyNthWeekday'; week: number; weekday: number }
-  | { type: 'everyNMonths'; months: number; day: number }
-
-interface RepeatingTask {
-  id: string
-  title: string
-  schedule: RepeatSchedule
-  createdAt: string
-  lastCompletedAt: string | null
-  order: number
-  acceptedCount: number
-  dismissedCount: number
-  completedCount: number
-  startDate?: string | null
-  endDate?: string | null
-}
-
-interface QuickTask {
-  id: string
-  title: string
-  completed: boolean
-  createdAt: string
-  completedAt: string | null
-  order: number
-  repeatingTaskId?: string | null
-  inProgress?: boolean
-}
-
-type ProjectColor =
-  | 'red'
-  | 'orange'
-  | 'amber'
-  | 'green'
-  | 'blue'
-  | 'purple'
-  | 'pink'
-  | 'teal'
-
-interface ProjectLink {
-  label: string
-  url: string
-}
-
-interface Project {
-  id: string
-  name: string
-  description: string
-  order: number
-  deadline: string | null
-  totalTimeMs: number
-  timerStartedAt: string | null
-  launchers?: {
-    vscode: string | null
-    iterm: string | null
-    obsidian: string | null
-    browser: string | null
-  }
-  links?: ProjectLink[]
-  color?: ProjectColor
-  tasks: Task[]
-  archivedAt: string | null
-  suspendedAt: string | null
-}
-
-interface AppConfig {
-  globalShortcut: string
-  actionShortcuts: Record<string, string>
-  focusTaskId: string | null
-  focusProjectId: string | null
-  compactMode: boolean
-  cleanView: boolean
-  theme: 'light' | 'dark'
-  quickTasksLimit: number
-  activeProjectsLimit: number
-  cleanViewFont: string
-}
-
-interface FocusCheckIn {
-  id: string
-  projectId: string
-  taskId: string
-  timestamp: string
-  response: 'yes' | 'no' | 'a_little'
-  minutes?: number
-}
-
-type OperationType =
-  | 'task_created' | 'task_completed' | 'task_uncompleted' | 'task_deleted'
-  | 'quick_task_created' | 'quick_task_completed' | 'quick_task_uncompleted' | 'quick_task_deleted'
-  | 'project_created' | 'project_updated' | 'project_archived' | 'project_unarchived'
-  | 'project_suspended' | 'project_unsuspended' | 'project_deleted'
-  | 'focus_started' | 'focus_ended'
-
-interface OperationLogEntry {
-  id: string
-  timestamp: string
-  type: OperationType
-  projectId?: string
-  projectName?: string
-  taskTitle?: string
-  details?: string
-}
-
-interface AppData {
-  projects: Project[]
-  quickTasks: QuickTask[]
-  quickNotes: string
-  config: AppConfig
-  repeatingTasks: RepeatingTask[]
-  dismissedRepeating: string[]
-  dismissedRepeatingDate: string
-}
+// Re-export types for convenience
+export type { Task, RepeatSchedule, RepeatingTask, QuickTask, ProjectColor, ProjectLink, Project, AppConfig, FocusCheckIn, OperationLogEntry, AppData, ApiConfig, ApiConfigPublic }
 
 const defaultData: AppData = {
   projects: [],
@@ -181,11 +72,19 @@ const defaultData: AppData = {
   }
 }
 
+const DEFAULT_API_PORT = 15055
+
 export const IS_DEV = process.env.NODE_ENV === 'development' || process.env.TOP5_DEV === '1'
 const ICLOUD_DIR = join(homedir(), 'Library', 'Mobile Documents', 'com~apple~CloudDocs', 'top5')
 const SYMLINK_PATH = join(homedir(), '.config', IS_DEV ? 'top5-dev' : 'top5')
 
 function ensureDataDir(): string {
+  // Test/override: explicit data directory
+  if (process.env.TOP5_DATA_DIR) {
+    mkdirSync(process.env.TOP5_DATA_DIR, { recursive: true })
+    return process.env.TOP5_DATA_DIR
+  }
+
   // Dev mode: always use local directory, no iCloud sync
   if (IS_DEV) {
     mkdirSync(SYMLINK_PATH, { recursive: true })
@@ -274,8 +173,12 @@ const LAUNCHER_LINK_META = {
   browser: 'Browser'
 } as const
 
-function isRecord(value: unknown): value is Record<string, unknown> {
+export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
+}
+
+function isServiceError(result: unknown): result is { error: string } {
+  return isRecord(result) && typeof result.error === 'string'
 }
 
 function toFocusCheckIn(value: unknown): FocusCheckIn | null {
@@ -304,7 +207,7 @@ function isValidTask(value: unknown): value is Task {
   return typeof value.id === 'string' && typeof value.title === 'string' && typeof value.completed === 'boolean'
 }
 
-function isValidProject(value: unknown): value is Project {
+export function isValidProject(value: unknown): value is Project {
   if (!isRecord(value)) return false
   const { id, name, order, tasks } = value
   if (typeof id !== 'string' || typeof name !== 'string' || typeof order !== 'number') return false
@@ -382,7 +285,7 @@ function mergeLaunchersFromLinks(launchers: NonNullable<Project['launchers']>, l
   return next
 }
 
-function normalizeProject(project: Project): Project {
+export function normalizeProject(project: Project): Project {
   const launchers = normalizeLaunchers(project.launchers)
   const links = normalizeLinks(project.links)
   const normalizedLinks = links.length > 0 ? links : launchersToLinks(launchers)
@@ -394,7 +297,7 @@ function normalizeProject(project: Project): Project {
   }
 }
 
-function assignMissingProjectColors(projects: Project[]): Project[] {
+export function assignMissingProjectColors(projects: Project[]): Project[] {
   const used = new Set(projects.map((project) => project.color).filter(isProjectColor))
   const available = PROJECT_COLORS.filter((color) => !used.has(color))
 
@@ -407,7 +310,7 @@ function assignMissingProjectColors(projects: Project[]): Project[] {
   })
 }
 
-function getActiveProjectsLimit(config: AppConfig): number {
+export function getActiveProjectsLimit(config: AppConfig): number {
   return Math.max(1, Math.min(20, config.activeProjectsLimit ?? 5))
 }
 
@@ -494,13 +397,13 @@ function isValidAppConfig(value: unknown): value is AppConfig {
   return true
 }
 
-function isValidQuickTask(value: unknown): value is QuickTask {
+export function isValidQuickTask(value: unknown): value is QuickTask {
   if (!isRecord(value)) return false
   const { id, title, completed, order } = value
   return typeof id === 'string' && typeof title === 'string' && typeof completed === 'boolean' && typeof order === 'number'
 }
 
-function isValidRepeatSchedule(value: unknown): value is RepeatSchedule {
+export function isValidRepeatSchedule(value: unknown): value is RepeatSchedule {
   if (!isRecord(value)) return false
   const { type } = value
   if (type === 'daily') return true
@@ -518,7 +421,7 @@ function isValidRepeatSchedule(value: unknown): value is RepeatSchedule {
   return false
 }
 
-function isValidRepeatingTask(value: unknown): value is RepeatingTask {
+export function isValidRepeatingTask(value: unknown): value is RepeatingTask {
   if (!isRecord(value)) return false
   const { id, title, schedule, order } = value
   return typeof id === 'string' && typeof title === 'string' && typeof order === 'number' && isValidRepeatSchedule(schedule)
@@ -632,7 +535,7 @@ export function loadCheckIns(): FocusCheckIn[] {
   return [...(cachedCheckIns ?? [])]
 }
 
-function taskTimeMinutes(taskId: string): number {
+export function taskTimeMinutes(taskId: string): number {
   ensureCheckInCaches()
   return taskMinutesById?.get(taskId) ?? 0
 }
@@ -641,7 +544,7 @@ function taskTimeMinutes(taskId: string): number {
 
 export function appendOperation(entry: Omit<OperationLogEntry, 'id' | 'timestamp'>): void {
   const full: OperationLogEntry = {
-    id: require('crypto').randomUUID().slice(0, 21),
+    id: randomUUID().slice(0, 21),
     timestamp: new Date().toISOString(),
     ...entry
   }
@@ -697,6 +600,66 @@ function migrateCheckInsToJsonl(): void {
   }
 }
 
+// --- ApiConfig ---
+
+let cachedApiConfig: ApiConfig | null = null
+
+function loadApiConfig(): ApiConfig {
+  if (cachedApiConfig) return cachedApiConfig
+  if (!existsSync(DATA_FILE)) {
+    cachedApiConfig = { enabled: false, apiKey: '', port: DEFAULT_API_PORT }
+    return cachedApiConfig
+  }
+  try {
+    const raw = readFileSync(DATA_FILE, 'utf-8')
+    const parsed = yaml.load(raw) as any
+    const cfg = parsed?.apiConfig
+    if (cfg && isRecord(cfg)) {
+      cachedApiConfig = {
+        enabled: typeof cfg.enabled === 'boolean' ? cfg.enabled : false,
+        apiKey: typeof cfg.apiKey === 'string' ? cfg.apiKey : '',
+        port: typeof cfg.port === 'number' ? cfg.port : DEFAULT_API_PORT
+      }
+    } else {
+      cachedApiConfig = { enabled: false, apiKey: '', port: DEFAULT_API_PORT }
+    }
+  } catch {
+    cachedApiConfig = { enabled: false, apiKey: '', port: DEFAULT_API_PORT }
+  }
+  return cachedApiConfig
+}
+
+function saveApiConfigToFile(config: ApiConfig): void {
+  cachedApiConfig = config
+  // Read full YAML, update apiConfig field, write back
+  let parsed: any = {}
+  if (existsSync(DATA_FILE)) {
+    try {
+      parsed = yaml.load(readFileSync(DATA_FILE, 'utf-8')) ?? {}
+    } catch {
+      parsed = {}
+    }
+  }
+  parsed.apiConfig = config
+  mkdirSync(CONFIG_DIR, { recursive: true })
+  writeFileSync(DATA_FILE, yaml.dump(parsed, { lineWidth: 120, noRefs: true }), 'utf-8')
+}
+
+export function getApiConfig(): ApiConfig {
+  return loadApiConfig()
+}
+
+export function saveApiConfig(config: ApiConfig): void {
+  saveApiConfigToFile(config)
+}
+
+function getApiConfigPublic(): ApiConfigPublic {
+  const cfg = loadApiConfig()
+  return { enabled: cfg.enabled, port: cfg.port }
+}
+
+// --- Data persistence ---
+
 function loadData(): AppData {
   if (!existsSync(DATA_FILE)) {
     migrateFromElectronStore()
@@ -721,7 +684,8 @@ function loadData(): AppData {
         .map(normalizeRepeatingTask),
       dismissedRepeating: dismissedRepeatingDate === today ? (parsed?.dismissedRepeating ?? []) : [],
       dismissedRepeatingDate: dismissedRepeatingDate === today ? today : '',
-      config
+      config,
+      apiConfig: getApiConfigPublic()
     }
   } catch {
     return { ...defaultData }
@@ -730,7 +694,21 @@ function loadData(): AppData {
 
 function saveData(data: AppData): void {
   mkdirSync(CONFIG_DIR, { recursive: true })
-  writeFileSync(DATA_FILE, yaml.dump(data, { lineWidth: 120, noRefs: true }), 'utf-8')
+  // Preserve apiConfig in YAML (full version with key) — don't overwrite it from AppData
+  const toSave: any = { ...data }
+  delete toSave.apiConfig // Don't save the public version; full apiConfig is managed separately
+  // Merge with existing apiConfig in file
+  if (existsSync(DATA_FILE)) {
+    try {
+      const existing = yaml.load(readFileSync(DATA_FILE, 'utf-8')) as any
+      if (existing?.apiConfig) {
+        toSave.apiConfig = existing.apiConfig
+      }
+    } catch {
+      // ignore
+    }
+  }
+  writeFileSync(DATA_FILE, yaml.dump(toSave, { lineWidth: 120, noRefs: true }), 'utf-8')
 }
 
 function migrateFromElectronStore(): void {
@@ -757,12 +735,12 @@ function migrateFromElectronStore(): void {
 // In-memory cache
 let cachedData: AppData | null = null
 
-function getData(): AppData {
+export function getData(): AppData {
   if (!cachedData) cachedData = loadData()
   return cachedData
 }
 
-function setData(key: keyof AppData, value: AppData[keyof AppData]): void {
+export function setData(key: keyof AppData, value: AppData[keyof AppData]): void {
   const data = getData()
   ;(data as any)[key] = value
   cachedData = data
@@ -770,14 +748,15 @@ function setData(key: keyof AppData, value: AppData[keyof AppData]): void {
 }
 
 export function getAppData(): AppData {
-  return getData()
+  const data = getData()
+  return { ...data, apiConfig: getApiConfigPublic() }
 }
 
 export function setAppDataKey(key: keyof AppData, value: AppData[keyof AppData]): void {
   setData(key, value)
 }
 
-function notifyAllWindows(): void {
+export function notifyAllWindows(): void {
   for (const win of BrowserWindow.getAllWindows()) {
     if (!win.isDestroyed()) {
       win.webContents.send('reload-data')
@@ -794,85 +773,64 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
   })
 
   ipcMain.handle('get-app-data', () => {
-    return getData()
+    return getAppData()
   })
 
   ipcMain.handle('get-operations', (_event, since?: string) => {
     return loadOperations(since)
   })
 
-  ipcMain.handle('save-project', (_event, project: unknown) => {
-    if (!isValidProject(project)) return getData().projects
-    const data = getData()
-    const projects = [...data.projects]
-    const normalizedProject = normalizeProject(project)
-    const index = projects.findIndex((p) => p.id === project.id)
-    const isNew = index < 0
-    const oldProject = index >= 0 ? projects[index] : null
-    if (index >= 0) {
-      projects[index] = normalizedProject
-    } else {
-      // Assign order for new projects based on current active count
-      const activeCount = projects.filter((p) => !p.archivedAt && !p.suspendedAt).length
-      const activeLimit = getActiveProjectsLimit(data.config)
-      if (!normalizedProject.archivedAt && !normalizedProject.suspendedAt && activeCount >= activeLimit) {
-        normalizedProject.suspendedAt = new Date().toISOString()
-      }
-      normalizedProject.order = activeCount
-      projects.push(normalizedProject)
+  // --- API Config ---
+
+  ipcMain.handle('get-api-config', () => {
+    return getApiConfig()
+  })
+
+  ipcMain.handle('save-api-config', (_event, config: unknown) => {
+    if (!isRecord(config)) return
+    const current = getApiConfig()
+    const next: ApiConfig = {
+      enabled: typeof config.enabled === 'boolean' ? config.enabled : current.enabled,
+      apiKey: typeof config.apiKey === 'string' ? config.apiKey : current.apiKey,
+      port: typeof config.port === 'number' ? config.port : current.port
     }
-    const nextProjects = assignMissingProjectColors(projects.map(normalizeProject))
-    setData('projects', nextProjects)
-
-    if (isNew) {
-      appendOperation({ type: 'project_created', projectId: project.id, projectName: project.name })
-    } else if (oldProject) {
-      // Detect task-level changes
-      const oldTaskMap = new Map(oldProject.tasks.map((t) => [t.id, t]))
-      const newTaskMap = new Map(project.tasks.map((t: Task) => [t.id, t]))
-
-      for (const t of project.tasks as Task[]) {
-        const old = oldTaskMap.get(t.id)
-        if (!old) {
-          appendOperation({ type: 'task_created', projectId: project.id, projectName: project.name, taskTitle: t.title })
-        } else if (t.completed && !old.completed) {
-          const mins = taskTimeMinutes(t.id)
-          appendOperation({ type: 'task_completed', projectId: project.id, projectName: project.name, taskTitle: t.title, ...(mins > 0 && { details: `${mins}min` }) })
-        } else if (!t.completed && old.completed) {
-          appendOperation({ type: 'task_uncompleted', projectId: project.id, projectName: project.name, taskTitle: t.title })
-        }
-      }
-
-      for (const t of oldProject.tasks) {
-        if (!newTaskMap.has(t.id)) {
-          appendOperation({ type: 'task_deleted', projectId: project.id, projectName: project.name, taskTitle: t.title })
-        }
-      }
-
-      // Log project-level update only if no task changes were logged and something else changed
-      const hasTaskChanges = project.tasks.length !== oldProject.tasks.length ||
-        (project.tasks as Task[]).some((t) => {
-          const old = oldTaskMap.get(t.id)
-          return !old || t.completed !== old.completed
-        })
-      if (!hasTaskChanges && (project.name !== oldProject.name || project.description !== oldProject.description)) {
-        appendOperation({ type: 'project_updated', projectId: project.id, projectName: project.name })
-      }
+    // Generate key on first enable if empty
+    if (next.enabled && !next.apiKey) {
+      next.apiKey = 'top5_' + randomUUID()
     }
-
+    saveApiConfig(next)
     notifyAllWindows()
-    return nextProjects
+    // Restart API server to apply config changes (enable/disable/port/key)
+    // Dynamic import to avoid circular dependency (server.ts imports from store.ts)
+    import('./api/server').then(({ restartApiServer, stopApiServer }) => {
+      if (next.enabled) {
+        restartApiServer().catch((err: unknown) => console.error('[API] Restart failed:', err))
+      } else {
+        stopApiServer().catch((err: unknown) => console.error('[API] Stop failed:', err))
+      }
+    })
+    return next
+  })
+
+  // --- Projects --- (thin IPC adapters → service/projects.ts)
+
+  ipcMain.handle('save-project', (_event, project: unknown) => {
+    // IPC does upsert (backward compat with UI)
+    if (!isValidProject(project)) return getData().projects
+    const exists = getData().projects.some((p) => p.id === project.id)
+    const result = exists
+      ? projectService.updateProject(project.id, project)
+      : projectService.createProject(project)
+    if (isServiceError(result)) return getData().projects
+    notifyAllWindows()
+    return result
   })
 
   ipcMain.handle('delete-project', (_event, projectId: string) => {
-    const data = getData()
-    const deleted = data.projects.find((p) => p.id === projectId)
-    const projects = data.projects.filter((p) => p.id !== projectId)
-    setData('projects', projects)
-    if (deleted) {
-      appendOperation({ type: 'project_deleted', projectId, projectName: deleted.name })
-    }
-    return projects
+    if (typeof projectId !== 'string') return getData().projects
+    const result = projectService.deleteProject(projectId)
+    if (isServiceError(result)) return getData().projects
+    return result
   })
 
   ipcMain.handle('save-quick-notes', (_event, notes: string) => {
@@ -885,78 +843,45 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
   })
 
   ipcMain.handle('archive-project', (_event, projectId: string) => {
-    const data = getData()
-    const projects = [...data.projects]
-    const project = projects.find((p) => p.id === projectId)
-    if (project) {
-      // Stop timer if running
-      if (project.timerStartedAt) {
-        const elapsed = Date.now() - new Date(project.timerStartedAt).getTime()
-        project.totalTimeMs += elapsed
-        project.timerStartedAt = null
-      }
-      project.archivedAt = new Date().toISOString()
-      setData('projects', projects)
-      appendOperation({ type: 'project_archived', projectId, projectName: project.name })
-    }
-    return projects
+    if (typeof projectId !== 'string') return getData().projects
+    const result = projectService.archiveProject(projectId)
+    if (isServiceError(result)) return getData().projects
+    return result
   })
 
   ipcMain.handle('unarchive-project', (_event, projectId: string) => {
-    const data = getData()
-    const projects = [...data.projects]
-    const activeLimit = getActiveProjectsLimit(data.config)
-    const activeProjects = projects.filter((p) => !p.archivedAt && !p.suspendedAt)
-    if (activeProjects.length >= activeLimit) {
-      return { error: `Cannot restore: ${activeLimit} active projects already. Archive or suspend one first.` }
+    if (typeof projectId !== 'string') return { projects: getData().projects }
+    const result = projectService.unarchiveProject(projectId)
+    if (isServiceError(result)) {
+      if (result.error === 'active_limit') {
+        const limit = getActiveProjectsLimit(getData().config)
+        return { error: `Cannot restore: ${limit} active projects already. Archive or suspend one first.` }
+      }
+      return { projects: getData().projects }
     }
-    const project = projects.find((p) => p.id === projectId)
-    if (project) {
-      project.archivedAt = null
-      project.suspendedAt = null
-      // Assign next available order
-      const usedOrders = activeProjects.map((p) => p.order)
-      let nextOrder = 0
-      while (usedOrders.includes(nextOrder)) nextOrder++
-      project.order = nextOrder
-      setData('projects', projects)
-      appendOperation({ type: 'project_unarchived', projectId, projectName: project.name })
-    }
-    return { projects }
+    notifyAllWindows()
+    return result
   })
 
   ipcMain.handle('suspend-project', (_event, projectId: string) => {
-    const data = getData()
-    const projects = [...data.projects]
-    const project = projects.find((p) => p.id === projectId)
-    if (project) {
-      project.suspendedAt = new Date().toISOString()
-      setData('projects', projects)
-      appendOperation({ type: 'project_suspended', projectId, projectName: project.name })
-    }
-    return projects
+    if (typeof projectId !== 'string') return getData().projects
+    const result = projectService.suspendProject(projectId)
+    if (isServiceError(result)) return getData().projects
+    return result
   })
 
   ipcMain.handle('unsuspend-project', (_event, projectId: string) => {
-    const data = getData()
-    const projects = [...data.projects]
-    const activeLimit = getActiveProjectsLimit(data.config)
-    const activeProjects = projects.filter((p) => !p.archivedAt && !p.suspendedAt)
-    if (activeProjects.length >= activeLimit) {
-      return { error: `Cannot restore: ${activeLimit} active projects already. Archive or suspend one first.` }
+    if (typeof projectId !== 'string') return { projects: getData().projects }
+    const result = projectService.unsuspendProject(projectId)
+    if (isServiceError(result)) {
+      if (result.error === 'active_limit') {
+        const limit = getActiveProjectsLimit(getData().config)
+        return { error: `Cannot restore: ${limit} active projects already. Archive or suspend one first.` }
+      }
+      return { projects: getData().projects }
     }
-    const project = projects.find((p) => p.id === projectId)
-    if (project) {
-      project.suspendedAt = null
-      // Assign next available order
-      const usedOrders = activeProjects.map((p) => p.order)
-      let nextOrder = 0
-      while (usedOrders.includes(nextOrder)) nextOrder++
-      project.order = nextOrder
-      setData('projects', projects)
-      appendOperation({ type: 'project_unsuspended', projectId, projectName: project.name })
-    }
-    return { projects }
+    notifyAllWindows()
+    return result
   })
 
   ipcMain.handle('save-focus-checkin', (_event, checkIn: unknown) => {
@@ -974,252 +899,120 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
     return checkIns
   })
 
-  // --- Quick Tasks ---
+  // --- Quick Tasks --- (thin IPC adapters → service/quick-tasks.ts)
 
   ipcMain.handle('save-quick-task', (_event, task: unknown) => {
-    if (!isValidQuickTask(task)) return
-    const data = getData()
-    const quickTasks = [...data.quickTasks]
-    const qt = task
-    const index = quickTasks.findIndex((t) => t.id === qt.id)
-    const isNew = index < 0
-    if (index >= 0) {
-      quickTasks[index] = qt
-    } else {
-      qt.order = quickTasks.filter((t) => !t.completed).length
-      quickTasks.push(qt)
-    }
-    setData('quickTasks', quickTasks)
-    if (isNew) {
-      appendOperation({ type: 'quick_task_created', taskTitle: qt.title })
-    }
+    const result = quickTaskService.saveQuickTask(task)
+    if (isServiceError(result)) return getData().quickTasks
     notifyAllWindows()
-    return quickTasks
+    return result
   })
 
   ipcMain.handle('remove-quick-task', (_event, id: string) => {
-    if (typeof id !== 'string') return
-    const data = getData()
-    const removed = data.quickTasks.find((t) => t.id === id)
-    const quickTasks = data.quickTasks.filter((t) => t.id !== id)
-    setData('quickTasks', quickTasks)
-    if (removed) {
-      appendOperation({ type: 'quick_task_deleted', taskTitle: removed.title })
-    }
+    if (typeof id !== 'string') return getData().quickTasks
+    const result = quickTaskService.removeQuickTask(id)
+    if (isServiceError(result)) return getData().quickTasks
     notifyAllWindows()
-    return quickTasks
+    return result
   })
 
   ipcMain.handle('complete-quick-task', (_event, id: string) => {
-    if (typeof id !== 'string') return
-    const data = getData()
-    const quickTasks = [...data.quickTasks]
-    const task = quickTasks.find((t) => t.id === id)
-    if (task) {
-      task.completed = true
-      task.completedAt = new Date().toISOString()
-      task.inProgress = false
-      setData('quickTasks', quickTasks)
-      const mins = taskTimeMinutes(task.id)
-      appendOperation({ type: 'quick_task_completed', taskTitle: task.title, ...(mins > 0 && { details: `${mins}min` }) })
-      // Update repeating task stats and lastCompletedAt
-      if (task.repeatingTaskId) {
-        const repeatingTasks = [...data.repeatingTasks]
-        const rt = repeatingTasks.find((r) => r.id === task.repeatingTaskId)
-        if (rt) {
-          rt.completedCount = (rt.completedCount || 0) + 1
-          if (rt.schedule.type === 'afterCompletion') {
-            rt.lastCompletedAt = task.completedAt
-          }
-          setData('repeatingTasks', repeatingTasks)
-        }
-      }
-      notifyAllWindows()
-    }
-    return quickTasks
+    if (typeof id !== 'string') return getData().quickTasks
+    const result = quickTaskService.completeQuickTask(id)
+    if (isServiceError(result)) return getData().quickTasks
+    notifyAllWindows()
+    return result
   })
 
   ipcMain.handle('uncomplete-quick-task', (_event, id: string) => {
-    if (typeof id !== 'string') return
-    const data = getData()
-    const quickTasks = [...data.quickTasks]
-    const task = quickTasks.find((t) => t.id === id)
-    if (task) {
-      task.completed = false
-      task.completedAt = null
-      task.order = quickTasks.filter((t) => !t.completed).length
-      setData('quickTasks', quickTasks)
-      appendOperation({ type: 'quick_task_uncompleted', taskTitle: task.title })
-      notifyAllWindows()
-    }
-    return quickTasks
+    if (typeof id !== 'string') return getData().quickTasks
+    const result = quickTaskService.uncompleteQuickTask(id)
+    if (isServiceError(result)) return getData().quickTasks
+    notifyAllWindows()
+    return result
   })
 
   ipcMain.handle('reorder-quick-tasks', (_event, orderedIds: string[]) => {
-    if (!Array.isArray(orderedIds)) return
-    const data = getData()
-    const quickTasks = [...data.quickTasks]
-    for (let i = 0; i < orderedIds.length; i++) {
-      const task = quickTasks.find((t) => t.id === orderedIds[i])
-      if (task) task.order = i
-    }
-    setData('quickTasks', quickTasks)
-    return quickTasks
+    const result = quickTaskService.reorderQuickTasks(orderedIds)
+    if (isServiceError(result)) return getData().quickTasks
+    return result
   })
 
   ipcMain.handle('toggle-quick-task-in-progress', (_event, id: string) => {
-    if (typeof id !== 'string') return
-    const data = getData()
-    const quickTasks = [...data.quickTasks]
-    const task = quickTasks.find((t) => t.id === id)
-    if (task && !task.completed) {
-      task.inProgress = !task.inProgress
-      setData('quickTasks', quickTasks)
-      notifyAllWindows()
-    }
-    return quickTasks
+    if (typeof id !== 'string') return getData().quickTasks
+    const result = quickTaskService.toggleQuickTaskInProgress(id)
+    if (isServiceError(result)) return getData().quickTasks
+    notifyAllWindows()
+    return result
   })
+
+  // --- Projects: reorder & toggle --- (thin IPC adapters → service/projects.ts)
 
   ipcMain.handle('reorder-projects', (_event, orderedIds: string[]) => {
-    if (!Array.isArray(orderedIds)) return
-    const data = getData()
-    const projects = [...data.projects]
-    for (let i = 0; i < orderedIds.length; i++) {
-      const project = projects.find((p) => p.id === orderedIds[i])
-      if (project) project.order = i
-    }
-    setData('projects', projects)
+    const result = projectService.reorderProjects(orderedIds)
+    if (isServiceError(result)) return getData().projects
     notifyAllWindows()
-    return projects
+    return result
   })
 
-  ipcMain.handle('reorder-pinned-tasks', (_event, updates: { projectId: string; taskId: string; order: number }[]) => {
-    if (!Array.isArray(updates)) return
-    const data = getData()
-    const projects = [...data.projects]
-    for (const { projectId, taskId, order } of updates) {
-      const project = projects.find((p) => p.id === projectId)
-      if (!project) continue
-      const task = project.tasks.find((t) => t.id === taskId)
-      if (task) task.toDoNextOrder = order
-    }
-    setData('projects', projects)
+  ipcMain.handle('reorder-pinned-tasks', (_event, updates: unknown) => {
+    const result = projectService.reorderPinnedTasks(updates)
+    if (isServiceError(result)) return getData().projects
     notifyAllWindows()
-    return projects
+    return result
   })
 
-  // --- Repeating Tasks ---
+  // --- Repeating Tasks --- (thin IPC adapters → service/repeating-tasks.ts)
 
   ipcMain.handle('save-repeating-task', (_event, task: unknown) => {
-    if (!isValidRepeatingTask(task)) return
-    const data = getData()
-    const repeatingTasks = [...data.repeatingTasks]
-    const normalizedTask = normalizeRepeatingTask(task)
-    const index = repeatingTasks.findIndex((t) => t.id === task.id)
-    if (index >= 0) {
-      repeatingTasks[index] = normalizedTask
-    } else {
-      normalizedTask.order = repeatingTasks.length
-      repeatingTasks.push(normalizedTask)
-    }
-    setData('repeatingTasks', repeatingTasks)
+    const result = repeatingTaskService.saveRepeatingTask(task)
+    if (isServiceError(result)) return getData().repeatingTasks
     notifyAllWindows()
-    return repeatingTasks
+    return result
   })
 
   ipcMain.handle('remove-repeating-task', (_event, id: string) => {
-    if (typeof id !== 'string') return
-    const data = getData()
-    const repeatingTasks = data.repeatingTasks.filter((t) => t.id !== id)
-    setData('repeatingTasks', repeatingTasks)
+    if (typeof id !== 'string') return getData().repeatingTasks
+    const result = repeatingTaskService.removeRepeatingTask(id)
+    if (isServiceError(result)) return getData().repeatingTasks
     notifyAllWindows()
-    return repeatingTasks
+    return result
   })
 
   ipcMain.handle('reorder-repeating-tasks', (_event, orderedIds: string[]) => {
-    if (!Array.isArray(orderedIds)) return
-    const data = getData()
-    const repeatingTasks = [...data.repeatingTasks]
-    for (let i = 0; i < orderedIds.length; i++) {
-      const task = repeatingTasks.find((t) => t.id === orderedIds[i])
-      if (task) task.order = i
-    }
-    setData('repeatingTasks', repeatingTasks)
-    return repeatingTasks
+    const result = repeatingTaskService.reorderRepeatingTasks(orderedIds)
+    if (isServiceError(result)) return getData().repeatingTasks
+    return result
   })
 
   ipcMain.handle('accept-repeating-proposal', (_event, repeatingTaskId: string) => {
-    if (typeof repeatingTaskId !== 'string') return
-    const data = getData()
-    const repeatingTasks = [...data.repeatingTasks]
-    const rt = repeatingTasks.find((t) => t.id === repeatingTaskId)
-    if (!rt) return data.quickTasks
-    const quickTasks = [...data.quickTasks]
-    const newTask: QuickTask = {
-      id: require('crypto').randomUUID().slice(0, 21),
-      title: rt.title,
-      completed: false,
-      createdAt: new Date().toISOString(),
-      completedAt: null,
-      order: quickTasks.filter((t) => !t.completed).length,
-      repeatingTaskId
-    }
-    quickTasks.push(newTask)
-    setData('quickTasks', quickTasks)
-    rt.acceptedCount = (rt.acceptedCount || 0) + 1
-    setData('repeatingTasks', repeatingTasks)
+    if (typeof repeatingTaskId !== 'string') return getData().quickTasks
+    const result = repeatingTaskService.acceptRepeatingProposal(repeatingTaskId)
+    if (isServiceError(result)) return getData().quickTasks
     notifyAllWindows()
-    return quickTasks
+    return result.quickTasks
   })
 
   ipcMain.handle('dismiss-repeating-proposal', (_event, repeatingTaskId: string) => {
     if (typeof repeatingTaskId !== 'string') return
-    const data = getData()
-    const today = new Date().toISOString().slice(0, 10)
-    const dismissed = data.dismissedRepeatingDate === today ? [...data.dismissedRepeating] : []
-    if (!dismissed.includes(repeatingTaskId)) dismissed.push(repeatingTaskId)
-    setData('dismissedRepeating', dismissed)
-    setData('dismissedRepeatingDate', today)
-    const repeatingTasks = [...data.repeatingTasks]
-    const rt = repeatingTasks.find((t) => t.id === repeatingTaskId)
-    if (rt) {
-      rt.dismissedCount = (rt.dismissedCount || 0) + 1
-      setData('repeatingTasks', repeatingTasks)
-    }
+    const result = repeatingTaskService.dismissRepeatingProposal(repeatingTaskId)
+    if (isServiceError(result)) return
     notifyAllWindows()
   })
 
   ipcMain.handle('toggle-task-in-progress', (_event, projectId: string, taskId: string) => {
-    if (typeof projectId !== 'string' || typeof taskId !== 'string') return
-    const data = getData()
-    const projects = [...data.projects]
-    const project = projects.find((p) => p.id === projectId)
-    if (!project) return projects
-    const task = project.tasks.find((t) => t.id === taskId)
-    if (task && !task.completed) {
-      task.inProgress = !task.inProgress
-      setData('projects', projects)
-      notifyAllWindows()
-    }
-    return projects
+    if (typeof projectId !== 'string' || typeof taskId !== 'string') return getData().projects
+    const result = projectService.toggleTaskInProgress(projectId, taskId)
+    if (isServiceError(result)) return getData().projects
+    notifyAllWindows()
+    return result
   })
 
   ipcMain.handle('toggle-task-to-do-next', (_event, projectId: string, taskId: string) => {
-    if (typeof projectId !== 'string' || typeof taskId !== 'string') return
-    const data = getData()
-    const projects = [...data.projects]
-    const project = projects.find((p) => p.id === projectId)
-    if (!project) return projects
-    const task = project.tasks.find((t) => t.id === taskId)
-    if (task) {
-      task.isToDoNext = !task.isToDoNext
-      if (task.isToDoNext) {
-        const maxOrder = Math.max(0, ...project.tasks.filter((t) => t.isToDoNext && t.id !== taskId).map((t) => t.toDoNextOrder ?? 999))
-        task.toDoNextOrder = maxOrder + 1
-      }
-      setData('projects', projects)
-      notifyAllWindows()
-    }
-    return projects
+    if (typeof projectId !== 'string' || typeof taskId !== 'string') return getData().projects
+    const result = projectService.toggleTaskToDoNext(projectId, taskId)
+    if (isServiceError(result)) return getData().projects
+    notifyAllWindows()
+    return result
   })
 }
