@@ -3,6 +3,8 @@
 W projekcie jest krótki przewodnik zasad kodowania:
 
 - `docs/CODING_GUIDE.md`
+- `AGENTS.md`
+- `CLOUD.md`
 
 Przeczytaj go przed większymi zmianami.
 
