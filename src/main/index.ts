@@ -7,6 +7,7 @@ import { registerFocusHandlers } from './focus-window'
 import { registerGlobalShortcut, registerLocalShortcuts } from './shortcuts'
 import { registerQuickAddHandlers } from './quick-add-window'
 import { getRepeatingTaskProposals } from '../shared/schedule'
+import { startApiServer } from './api/server'
 
 let mainWindow: BrowserWindow | null = null
 let savedBounds: Electron.Rectangle | null = null
@@ -83,6 +84,9 @@ app.whenReady().then(() => {
   registerGlobalShortcut(globalShortcut, () => mainWindow)
   createWindow()
   registerLocalShortcuts(mainWindow!)
+
+  // Start HTTP API server (if enabled in config)
+  startApiServer().catch((err) => console.error('[API] Start failed:', err))
 
   ipcMain.handle('enter-clean-view', () => {
     if (!mainWindow) return
