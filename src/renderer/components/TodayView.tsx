@@ -39,7 +39,6 @@ export default function TodayView() {
   const {
     projects,
     quickTasks,
-    config,
     focusCheckIns,
     winsLock,
     saveProject,

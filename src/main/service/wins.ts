@@ -3,7 +3,7 @@ import { join } from 'path'
 import { randomUUID } from 'crypto'
 import type { LockedTaskRef, WinsLockState, WinEntry, StreakStats } from '../../shared/types'
 import { calcStreaks } from '../../shared/wins'
-import { getData, setData, getConfigDir } from '../store'
+import { getData, setData, getConfigDir, appendOperation } from '../store'
 
 const WINS_FILE_NAME = 'wins.jsonl'
 
@@ -118,6 +118,10 @@ function resolveDay(result: 'win' | 'loss', lock: WinsLockState, completedCount:
     completedCount
   }
 
+  // Compute streaks BEFORE appending (to detect milestone transitions)
+  const historyBefore = loadWinHistory()
+  const streaksBefore = calcStreaks(historyBefore)
+
   const filePath = winsFilePath()
   mkdirSync(getConfigDir(), { recursive: true })
   appendFileSync(filePath, JSON.stringify(entry) + '\n', 'utf-8')
@@ -125,6 +129,27 @@ function resolveDay(result: 'win' | 'loss', lock: WinsLockState, completedCount:
   // Clear lock
   const empty: WinsLockState = { locked: false, lockedAt: null, deadline: null, lockedTasks: [] }
   setData('winsLock', empty)
+
+  // Log day result
+  appendOperation({
+    type: result === 'win' ? 'wins_day_won' : 'wins_day_lost',
+    details: `${completedCount}/${lock.lockedTasks.length} tasks`
+  })
+
+  // Compute streaks AFTER to detect week/month milestone changes
+  const streaksAfter = calcStreaks([...historyBefore, entry])
+
+  if (streaksAfter.currentWeekStreak > streaksBefore.currentWeekStreak) {
+    appendOperation({ type: 'wins_week_won', details: `Week streak: ${streaksAfter.currentWeekStreak}` })
+  } else if (streaksBefore.currentWeekStreak > 0 && streaksAfter.currentWeekStreak === 0) {
+    appendOperation({ type: 'wins_week_lost' })
+  }
+
+  if (streaksAfter.currentMonthStreak > streaksBefore.currentMonthStreak) {
+    appendOperation({ type: 'wins_month_won', details: `Month streak: ${streaksAfter.currentMonthStreak}` })
+  } else if (streaksBefore.currentMonthStreak > 0 && streaksAfter.currentMonthStreak === 0) {
+    appendOperation({ type: 'wins_month_lost' })
+  }
 }
 
 export function loadWinHistory(): WinEntry[] {

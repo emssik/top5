@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.35.0] - 2026-02-14
+
 ### Added
 
 - **5 Wins** gamification system: lock today's tasks, earn wins by completing them before deadline
@@ -23,6 +25,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Wins calendar (monthly grid) and streak summary in InlineStatsView (Stats panel)
 - Post-win encouragement state showing streak continuation prompt
 - `wins.jsonl` included in daily backup rotation
+- Wins operation logging: day won/lost, week streak won/lost, month streak won/lost events recorded in operation log
+- `wins` category filter in Operation Log view for filtering wins-related events
+- Six new `OperationType` values: `wins_day_won`, `wins_day_lost`, `wins_week_won`, `wins_week_lost`, `wins_month_won`, `wins_month_lost`
 
 ### Changed
 
@@ -32,6 +37,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Zustand store (`useProjects`) extended with `winsLock` state and `lockWinsTasks`/`unlockWinsTasks`/`loadWinsLock` actions
 - Periodic deadline check runs every 60 seconds in main process
 - Task completion handlers (`save-project`, `complete-quick-task`) now trigger win condition check
+- InlineStatsView weekly project cards and Work Stats table headers now show project codes instead of full names
+- InlineStatsView Work Stats table highlights today's row with accent background
+- InlineStatsView today label in daily view uses dot marker (`●`) instead of text
+- Wins calendar grid uses fixed 24px cell size instead of fluid aspect-ratio layout
 
 ## [1.34.0] - 2026-02-14
 

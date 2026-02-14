@@ -113,6 +113,9 @@ export type OperationType =
   | 'project_created' | 'project_updated' | 'project_archived' | 'project_unarchived'
   | 'project_suspended' | 'project_unsuspended' | 'project_deleted'
   | 'focus_started' | 'focus_ended'
+  | 'wins_day_won' | 'wins_day_lost'
+  | 'wins_week_won' | 'wins_week_lost'
+  | 'wins_month_won' | 'wins_month_lost'
 
 export interface OperationLogEntry {
   id: string

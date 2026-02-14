@@ -1509,14 +1509,14 @@ body {
 /* Wins stats calendar */
 .wins-calendar {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, 24px);
   gap: 3px;
   margin-top: 8px;
 }
 
 .wins-cal-day {
-  width: 100%;
-  aspect-ratio: 1;
+  width: 24px;
+  height: 24px;
   border-radius: 3px;
   font-size: 9px;
   display: flex;
