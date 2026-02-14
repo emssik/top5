@@ -1,10 +1,5 @@
 # AGENTS Notes
 
-## Startup
-
-- Read `CLOUD.md` at the beginning of work in this repository.
-- If `CLOUD.md` is missing, continue with best effort and mention it briefly.
-
 ## Project Context
 
 - This is a small project maintained and used by one person.
