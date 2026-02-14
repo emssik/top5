@@ -1,48 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { nanoid } from 'nanoid'
 import { useProjects } from '../hooks/useProjects'
+import { useTaskList } from '../hooks/useTaskList'
+import type { MergedTask } from '../hooks/useTaskList'
 import { calcQuickTaskTime, calcTaskTime, formatCheckInTime } from '../utils/checkInTime'
 import { STANDALONE_PROJECT_ID } from '../utils/constants'
-import type { QuickTask, RepeatingTask } from '../types'
+import type { QuickTask, LockedTaskRef, WinEntry } from '../types'
 import { projectColorValue } from '../utils/projects'
-import { getRepeatingTaskProposals } from '../../shared/schedule'
 import TaskIdBadge from './TaskIdBadge'
-
-interface ActiveTask {
-  kind: 'quick' | 'pinned'
-  id: string
-  title: string
-  order: number
-  quickTaskId?: string
-  projectId?: string
-  projectName?: string
-  projectCode?: string
-  taskId?: string
-  taskNumber?: number
-  inProgress?: boolean
-  repeatingTaskId?: string | null
-}
-
-interface CompletedTask {
-  kind: 'quick' | 'pinned'
-  id: string
-  title: string
-  quickTaskId?: string
-  projectId?: string
-  projectName?: string
-  projectCode?: string
-  taskId?: string
-  taskNumber?: number
-  repeatingTaskId?: string | null
-}
-
-function matchesFocus(task: ActiveTask, focusProjectId: string | null, focusTaskId: string | null): boolean {
-  if (!focusProjectId || !focusTaskId) return false
-  if (task.kind === 'quick') {
-    return focusProjectId === STANDALONE_PROJECT_ID && focusTaskId === task.quickTaskId
-  }
-  return focusProjectId === task.projectId && focusTaskId === task.taskId
-}
 
 function formatFocusTimer(seconds: number): string {
   const mm = Math.floor(seconds / 60)
@@ -54,15 +19,28 @@ function isRepeatingEntry(task: { repeatingTaskId?: string | null }): boolean {
   return Boolean(task.repeatingTaskId)
 }
 
+function formatCountdown(deadline: string): string {
+  const diff = new Date(deadline).getTime() - Date.now()
+  if (diff <= 0) return 'expired'
+  const hours = Math.floor(diff / 3600000)
+  const mins = Math.floor((diff % 3600000) / 60000)
+  if (hours > 0) return `${hours}h ${mins}m`
+  return `${mins}m`
+}
+
+function taskToRef(task: MergedTask): LockedTaskRef {
+  if (task.kind === 'quick') {
+    return { kind: 'quick', quickTaskId: task.id }
+  }
+  return { kind: 'pinned', projectId: task.projectId, taskId: task.taskId }
+}
+
 export default function TodayView() {
   const {
     projects,
     quickTasks,
-    repeatingTasks,
-    dismissedRepeating,
-    dismissedRepeatingDate,
-    config,
     focusCheckIns,
+    winsLock,
     saveProject,
     saveQuickTask,
     removeQuickTask,
@@ -74,8 +52,25 @@ export default function TodayView() {
     toggleTaskToDoNext,
     setFocus,
     acceptRepeatingProposal,
-    dismissRepeatingProposal
+    dismissRepeatingProposal,
+    lockWinsTasks,
+    unlockWinsTasks,
+    loadWinsLock
   } = useProjects()
+
+  const {
+    focusTask,
+    inProgressTasks,
+    upNextTasks,
+    activeTasks,
+    completedTasks: completedToday,
+    proposals,
+    overflowTasks,
+    allActiveTasks,
+    limit,
+    isLocked,
+    lockedTaskIds
+  } = useTaskList({ excludeFocus: true })
 
   const [showAddInput, setShowAddInput] = useState(false)
   const [newTitle, setNewTitle] = useState('')
@@ -84,159 +79,105 @@ export default function TodayView() {
   const [focusTick, setFocusTick] = useState(0)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingTitle, setEditingTitle] = useState('')
-  const editingKindRef = useRef<'quick' | 'pinned' | null>(null)
-  const editingQuickTaskIdRef = useRef<string | undefined>(undefined)
-  const editingProjectIdRef = useRef<string | undefined>(undefined)
-  const editingTaskIdRef = useRef<string | undefined>(undefined)
+  const [showWinCelebration, setShowWinCelebration] = useState(false)
+  const [winHistory, setWinHistory] = useState<WinEntry[]>([])
+  const editingTaskRef = useRef<MergedTask | null>(null)
   const addInputRef = useRef<HTMLInputElement | null>(null)
   const draggedId = useRef<string | null>(null)
   const [dragOverId, setDragOverId] = useState<string | null>(null)
+  const [showLossBanner, setShowLossBanner] = useState(false)
+  const prevLockedRef = useRef(winsLock?.locked ?? false)
 
-  const activeProjects = useMemo(
-    () => projects.filter((project) => !project.archivedAt && !project.suspendedAt),
-    [projects]
-  )
+  // Load win history for 30-day strip
+  useEffect(() => {
+    window.api.winsGetHistory().then(setWinHistory).catch(() => {})
+  }, [isLocked]) // reload after lock changes (win/loss resolved)
 
-  const allActive = useMemo<ActiveTask[]>(() => {
-    const activeQuick = quickTasks
-      .filter((task) => !task.completed)
-      .map((task) => ({
-        kind: 'quick' as const,
-        id: task.id,
-        quickTaskId: task.id,
-        title: task.title,
-        order: task.order,
-        taskNumber: task.taskNumber,
-        inProgress: task.inProgress,
-        repeatingTaskId: task.repeatingTaskId
-      }))
+  // 30-day strip data
+  const last30 = useMemo(() => {
+    if (winHistory.length === 0) return null
+    const byDate = new Map<string, 'win' | 'loss'>()
+    for (const e of winHistory) byDate.set(e.date, e.result)
+    const today = new Date()
+    const days: { date: string; result: 'win' | 'loss' | null }[] = []
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(today)
+      d.setDate(d.getDate() - i)
+      const key = d.toISOString().slice(0, 10)
+      days.push({ date: key, result: byDate.get(key) ?? null })
+    }
+    // Current streak (consecutive wins from today backwards)
+    let streak = 0
+    for (let i = days.length - 1; i >= 0; i--) {
+      if (days[i].result === 'win') streak++
+      else if (days[i].result === 'loss') break
+      else if (streak > 0) break // gap after streak started
+    }
+    return { days, streak }
+  }, [winHistory])
 
-    const pinned = activeProjects.flatMap((project) =>
-      project.tasks
-        .filter((task) => task.isToDoNext && !task.completed)
-        .map((task) => ({
-          kind: 'pinned' as const,
-          id: `pinned-${project.id}-${task.id}`,
-          title: task.title,
-          order: task.toDoNextOrder ?? 999,
-          projectId: project.id,
-          projectName: project.name,
-          projectCode: project.code,
-          taskId: task.id,
-          taskNumber: task.taskNumber,
-          inProgress: task.inProgress
-        }))
-    )
+  function isTaskLocked(task: MergedTask): boolean {
+    if (!isLocked) return false
+    if (task.kind === 'quick') return lockedTaskIds.has(task.id)
+    if (task.kind === 'pinned' && task.taskId) return lockedTaskIds.has(task.taskId)
+    return false
+  }
 
-    return [...activeQuick, ...pinned].sort((a, b) => a.order - b.order)
-  }, [activeProjects, quickTasks])
+  // Detect lock cleared: win or loss
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined
+    if (prevLockedRef.current && !isLocked) {
+      // Check if last entry is win or loss
+      window.api.winsGetHistory().then((history) => {
+        setWinHistory(history)
+        const today = new Date().toISOString().slice(0, 10)
+        const todayEntry = history.find((e) => e.date === today)
+        if (todayEntry?.result === 'win') {
+          setShowWinCelebration(true)
+          timer = setTimeout(() => setShowWinCelebration(false), 5000)
+        } else if (todayEntry?.result === 'loss') {
+          setShowLossBanner(true)
+          timer = setTimeout(() => setShowLossBanner(false), 6000)
+        }
+      }).catch(() => {})
+    }
+    prevLockedRef.current = isLocked
+    return () => { if (timer) clearTimeout(timer) }
+  }, [isLocked])
 
-  const focusTask = useMemo<ActiveTask | null>(() => {
-    const focusProjectId = config.focusProjectId
-    const focusTaskId = config.focusTaskId
-    if (!focusProjectId || !focusTaskId) return null
+  // Countdown tick for deadline display
+  const [, setCountdownTick] = useState(0)
+  useEffect(() => {
+    if (!isLocked || !winsLock?.deadline) return
+    const interval = window.setInterval(() => setCountdownTick((v) => v + 1), 60_000)
+    return () => window.clearInterval(interval)
+  }, [isLocked, winsLock?.deadline])
 
-    if (focusProjectId === STANDALONE_PROJECT_ID) {
-      const quickTask = quickTasks.find((task) => task.id === focusTaskId && !task.completed)
-      if (!quickTask) return null
-      return {
-        kind: 'quick',
-        id: quickTask.id,
-        quickTaskId: quickTask.id,
-        title: quickTask.title,
-        order: quickTask.order,
-        taskNumber: quickTask.taskNumber,
-        inProgress: quickTask.inProgress,
-        repeatingTaskId: quickTask.repeatingTaskId
+  // Tasks that would be locked (within-limit, non-repeating + focus)
+  const lockableTasks = useMemo(() => {
+    const withinLimit = activeTasks.filter((t) => !isRepeatingEntry(t))
+    if (focusTask && !isRepeatingEntry(focusTask)) {
+      return [focusTask, ...withinLimit]
+    }
+    return withinLimit
+  }, [activeTasks, focusTask])
+
+  // Lock progress: how many locked tasks are completed
+  const lockProgress = useMemo(() => {
+    if (!isLocked || !winsLock?.lockedTasks) return { completed: 0, total: 0 }
+    let completed = 0
+    for (const ref of winsLock.lockedTasks) {
+      if (ref.kind === 'quick' && ref.quickTaskId) {
+        const qt = quickTasks.find((t) => t.id === ref.quickTaskId)
+        if (qt?.completed) completed++
+      } else if (ref.kind === 'pinned' && ref.projectId && ref.taskId) {
+        const project = projects.find((p) => p.id === ref.projectId)
+        const task = project?.tasks.find((t) => t.id === ref.taskId)
+        if (task?.completed) completed++
       }
     }
-
-    const project = activeProjects.find((item) => item.id === focusProjectId)
-    const task = project?.tasks.find((item) => item.id === focusTaskId)
-    if (!project || !task || task.completed) return null
-
-    return {
-      kind: 'pinned',
-      id: `focus-${project.id}-${task.id}`,
-      title: task.title,
-      order: task.toDoNextOrder ?? 999,
-      projectId: project.id,
-      projectName: project.name,
-      projectCode: project.code,
-      taskId: task.id,
-      taskNumber: task.taskNumber,
-      inProgress: task.inProgress
-    }
-  }, [activeProjects, config.focusProjectId, config.focusTaskId, quickTasks])
-
-  const proposals = useMemo<RepeatingTask[]>(() => {
-    return getRepeatingTaskProposals({
-      repeatingTasks,
-      quickTasks,
-      dismissedRepeating,
-      dismissedRepeatingDate
-    })
-  }, [dismissedRepeating, dismissedRepeatingDate, quickTasks, repeatingTasks])
-
-  const completedToday = useMemo<CompletedTask[]>(() => {
-    const today = new Date().toISOString().slice(0, 10)
-
-    const completedQuick = quickTasks
-      .filter((task) => task.completed && task.completedAt?.startsWith(today))
-      .map((task) => ({
-        kind: 'quick' as const,
-        id: `done-quick-${task.id}`,
-        quickTaskId: task.id,
-        title: task.title,
-        taskNumber: task.taskNumber,
-        repeatingTaskId: task.repeatingTaskId
-      }))
-
-    const completedPinned = activeProjects.flatMap((project) =>
-      project.tasks
-        .filter((task) => task.isToDoNext && task.completed && task.completedAt?.startsWith(today))
-        .map((task) => ({
-          kind: 'pinned' as const,
-          id: `done-pinned-${project.id}-${task.id}`,
-          title: task.title,
-          projectId: project.id,
-          projectName: project.name,
-          projectCode: project.code,
-          taskId: task.id,
-          taskNumber: task.taskNumber
-        }))
-    )
-
-    return [...completedQuick, ...completedPinned]
-  }, [activeProjects, quickTasks])
-
-  const limit = config.quickTasksLimit ?? 5
-
-  const { inProgressTasks, upNextTasks, overflowTasks } = useMemo(() => {
-    const nonFocused = allActive.filter((task) => !matchesFocus(task, config.focusProjectId, config.focusTaskId))
-    const repeatingActive = nonFocused.filter((task) => isRepeatingEntry(task))
-    const limitedActive = nonFocused.filter((task) => !isRepeatingEntry(task))
-    const orderedLimited = [
-      ...limitedActive.filter((task) => task.inProgress),
-      ...limitedActive.filter((task) => !task.inProgress)
-    ]
-    const completedForLimit = completedToday.filter((task) => !isRepeatingEntry(task)).length
-    const focusConsumesSlot = focusTask ? !isRepeatingEntry(focusTask) : false
-    const slotsForActive = Math.max(0, limit - completedForLimit)
-    const slotsWithoutFocus = Math.max(0, slotsForActive - (focusConsumesSlot ? 1 : 0))
-    const visibleLimited = orderedLimited.slice(0, slotsWithoutFocus)
-    const visibleLimitedIds = new Set(visibleLimited.map((task) => task.id))
-    const visible = [
-      ...repeatingActive,
-      ...limitedActive.filter((task) => visibleLimitedIds.has(task.id))
-    ]
-
-    return {
-      inProgressTasks: visible.filter((task) => task.inProgress),
-      upNextTasks: visible.filter((task) => !task.inProgress),
-      overflowTasks: orderedLimited.slice(slotsWithoutFocus)
-    }
-  }, [allActive, completedToday, config.focusProjectId, config.focusTaskId, focusTask, limit])
+    return { completed, total: winsLock.lockedTasks.length }
+  }, [isLocked, winsLock, quickTasks, projects])
 
   useEffect(() => {
     if (!showAddInput) return
@@ -288,28 +229,29 @@ export default function TodayView() {
     setShowAddInput(false)
   }
 
-  const completeTask = async (task: ActiveTask) => {
-    if (task.kind === 'quick' && task.quickTaskId) {
-      await completeQuickTask(task.quickTaskId)
-      return
+  const completeTask = async (task: MergedTask) => {
+    if (task.kind === 'quick') {
+      await completeQuickTask(task.id)
+    } else if (task.projectId && task.taskId) {
+      const project = projects.find((item) => item.id === task.projectId)
+      if (!project) return
+      const tasks = project.tasks.map((item) => (
+        item.id === task.taskId
+          ? { ...item, completed: true, completedAt: new Date().toISOString(), inProgress: false }
+          : item
+      ))
+      await saveProject({ ...project, tasks })
     }
 
-    if (!task.projectId || !task.taskId) return
-    const project = projects.find((item) => item.id === task.projectId)
-    if (!project) return
-
-    const tasks = project.tasks.map((item) => (
-      item.id === task.taskId
-        ? { ...item, completed: true, completedAt: new Date().toISOString(), inProgress: false }
-        : item
-    ))
-
-    await saveProject({ ...project, tasks })
+    // Check if win condition was met (lock cleared by main process)
+    if (isLocked) {
+      await loadWinsLock()
+    }
   }
 
-  const uncompleteTask = async (task: CompletedTask) => {
-    if (task.kind === 'quick' && task.quickTaskId) {
-      await uncompleteQuickTask(task.quickTaskId)
+  const uncompleteTask = async (task: MergedTask) => {
+    if (task.kind === 'quick') {
+      await uncompleteQuickTask(task.id)
       return
     }
 
@@ -324,9 +266,9 @@ export default function TodayView() {
     await saveProject({ ...project, tasks })
   }
 
-  const removeTask = async (task: ActiveTask | CompletedTask) => {
-    if (task.kind === 'quick' && task.quickTaskId) {
-      await removeQuickTask(task.quickTaskId)
+  const removeTask = async (task: MergedTask) => {
+    if (task.kind === 'quick') {
+      await removeQuickTask(task.id)
       return
     }
 
@@ -334,9 +276,9 @@ export default function TodayView() {
     await toggleTaskToDoNext(task.projectId, task.taskId)
   }
 
-  const toggleInProgress = async (task: ActiveTask) => {
-    if (task.kind === 'quick' && task.quickTaskId) {
-      await toggleQuickTaskInProgress(task.quickTaskId)
+  const toggleInProgress = async (task: MergedTask) => {
+    if (task.kind === 'quick') {
+      await toggleQuickTaskInProgress(task.id)
       return
     }
 
@@ -344,9 +286,9 @@ export default function TodayView() {
     await toggleTaskInProgress(task.projectId, task.taskId)
   }
 
-  const focusOnTask = async (task: ActiveTask) => {
-    if (task.kind === 'quick' && task.quickTaskId) {
-      await setFocus(STANDALONE_PROJECT_ID, task.quickTaskId)
+  const focusOnTask = async (task: MergedTask) => {
+    if (task.kind === 'quick') {
+      await setFocus(STANDALONE_PROJECT_ID, task.id)
       return
     }
 
@@ -358,33 +300,36 @@ export default function TodayView() {
     await setFocus(null, null)
   }
 
-  const startEditing = (task: ActiveTask) => {
-    editingKindRef.current = task.kind
-    editingQuickTaskIdRef.current = task.quickTaskId
-    editingProjectIdRef.current = task.projectId
-    editingTaskIdRef.current = task.taskId
+  const handleLock = async () => {
+    if (lockableTasks.length === 0) return
+    const refs = lockableTasks.map(taskToRef)
+    await lockWinsTasks(refs)
+  }
+
+  const handleUnlock = async () => {
+    await unlockWinsTasks()
+  }
+
+  const startEditing = (task: MergedTask) => {
+    editingTaskRef.current = task
     setEditingId(task.id)
     setEditingTitle(task.title)
   }
 
   const saveEdit = async () => {
+    const task = editingTaskRef.current
     const title = editingTitle.trim()
-    const kind = editingKindRef.current
     setEditingId(null)
-    if (!title || !kind) return
+    editingTaskRef.current = null
+    if (!task || !title) return
 
-    if (kind === 'quick') {
-      const quickTaskId = editingQuickTaskIdRef.current
-      if (!quickTaskId) return
-      const qt = quickTasks.find((t) => t.id === quickTaskId)
+    if (task.kind === 'quick') {
+      const qt = quickTasks.find((t) => t.id === task.id)
       if (qt) await saveQuickTask({ ...qt, title })
-    } else {
-      const projectId = editingProjectIdRef.current
-      const taskId = editingTaskIdRef.current
-      if (!projectId || !taskId) return
-      const project = useProjects.getState().projects.find((p) => p.id === projectId)
+    } else if (task.projectId && task.taskId) {
+      const project = useProjects.getState().projects.find((p) => p.id === task.projectId)
       if (!project) return
-      const tasks = project.tasks.map((t) => (t.id === taskId ? { ...t, title } : t))
+      const tasks = project.tasks.map((t) => (t.id === task.taskId ? { ...t, title } : t))
       await saveProject({ ...project, tasks })
     }
   }
@@ -407,7 +352,7 @@ export default function TodayView() {
   const handleDrop = async (targetId: string) => {
     if (!draggedId.current || draggedId.current === targetId) return
 
-    const ids = allActive.map((task) => task.id)
+    const ids = allActiveTasks.map((task) => task.id)
     const fromIndex = ids.indexOf(draggedId.current)
     const toIndex = ids.indexOf(targetId)
     if (fromIndex === -1 || toIndex === -1) {
@@ -418,13 +363,13 @@ export default function TodayView() {
     ids.splice(fromIndex, 1)
     ids.splice(toIndex, 0, draggedId.current)
 
-    const taskById = new Map(allActive.map((task) => [task.id, task]))
+    const taskById = new Map(allActiveTasks.map((task) => [task.id, task]))
     const reordered = ids.map((id, order) => ({ ...taskById.get(id)!, order }))
 
     const orderedQuickIds = reordered
       .filter((task) => task.kind === 'quick')
       .sort((a, b) => a.order - b.order)
-      .map((task) => task.quickTaskId ?? task.id)
+      .map((task) => task.id)
 
     if (orderedQuickIds.length > 0) {
       await reorderQuickTasks(orderedQuickIds)
@@ -445,9 +390,9 @@ export default function TodayView() {
     clearDragState()
   }
 
-  const getTaskMinutes = (task: ActiveTask | CompletedTask): number => {
-    if (task.kind === 'quick' && task.quickTaskId) {
-      return calcQuickTaskTime(focusCheckIns, task.quickTaskId)
+  const getTaskMinutes = (task: MergedTask): number => {
+    if (task.kind === 'quick') {
+      return calcQuickTaskTime(focusCheckIns, task.id)
     }
     if (task.taskId) {
       return calcTaskTime(focusCheckIns, task.taskId)
@@ -455,7 +400,7 @@ export default function TodayView() {
     return 0
   }
 
-  const renderMeta = (task: ActiveTask | CompletedTask) => {
+  const renderMeta = (task: MergedTask) => {
     if (task.kind === 'pinned' && task.projectId) {
       const project = projects.find((item) => item.id === task.projectId)
       const minutes = getTaskMinutes(task)
@@ -483,15 +428,16 @@ export default function TodayView() {
     )
   }
 
-  const renderTask = (task: ActiveTask, section: 'in-progress' | 'up-next' | 'overflow') => {
+  const renderTask = (task: MergedTask, section: 'in-progress' | 'up-next' | 'overflow') => {
     const canShowActions = section !== 'overflow'
     const isDragOver = dragOverId === task.id && draggedId.current !== task.id
+    const locked = isTaskLocked(task)
 
     return (
       <div
         key={task.id}
-        className={`task-card draggable-task ${task.inProgress ? 'in-progress' : ''} ${isDragOver ? 'drag-over' : ''}`}
-        draggable
+        className={`task-card draggable-task ${task.inProgress ? 'in-progress' : ''} ${isDragOver ? 'drag-over' : ''} ${locked ? 'wins-locked' : ''}`}
+        draggable={!isLocked}
         onDragStart={() => handleDragStart(task.id)}
         onDragOver={(event) => handleDragOver(event, task.id)}
         onDrop={() => handleDrop(task.id)}
@@ -536,7 +482,7 @@ export default function TodayView() {
             >
               ▶
             </button>
-            {(section === 'up-next' || task.repeatingTaskId) && (
+            {!locked && (section === 'up-next' || task.repeatingTaskId) && (
               <button className="task-action-btn btn-remove" title="Remove" onClick={() => removeTask(task)}>✕</button>
             )}
           </div>
@@ -545,7 +491,7 @@ export default function TodayView() {
     )
   }
 
-  const renderDoneTask = (task: CompletedTask) => (
+  const renderDoneTask = (task: MergedTask) => (
     <div key={task.id} className="task-card done-card">
       <button className="task-checkbox checked" onClick={() => uncompleteTask(task)} />
       <div className="task-content">
@@ -556,7 +502,9 @@ export default function TodayView() {
         {renderMeta(task)}
       </div>
       <div className="task-actions">
-        <button className="task-action-btn btn-remove" onClick={() => removeTask(task)} title="Remove">✕</button>
+        {!isTaskLocked(task) && (
+          <button className="task-action-btn btn-remove" onClick={() => removeTask(task)} title="Remove">✕</button>
+        )}
       </div>
     </div>
   )
@@ -570,6 +518,79 @@ export default function TodayView() {
 
   return (
     <div>
+      {showWinCelebration && (
+        <div className="wins-victory-overlay" onClick={() => setShowWinCelebration(false)}>
+          <div className="wins-victory-card">
+            <div className="wins-victory-trophy">🏆</div>
+            <div className="wins-victory-title">Victory!</div>
+            <div className="wins-victory-sub">Wszystkie zadania wykonane</div>
+            {last30 && last30.streak > 1 && (
+              <div className="wins-victory-streak">seria {last30.streak} dni</div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {last30 && !showWinCelebration && !showLossBanner && (
+        <div className="wins-30d-strip">
+          {last30.streak > 0 && (
+            <span className="wins-30d-streak" title="Current win streak">
+              🏆 {last30.streak}
+            </span>
+          )}
+          <div className="wins-30d-dots">
+            {last30.days.map((d) => (
+              <span
+                key={d.date}
+                className={`wins-30d-dot ${d.result === 'win' ? 'win' : d.result === 'loss' ? 'loss' : ''}`}
+                title={d.date}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {!isLocked && !showWinCelebration && !showLossBanner && last30 && last30.days[last30.days.length - 1]?.result === 'win' && lockableTasks.length === 0 && (
+        <div className="wins-day-won-banner">
+          <span className="wins-day-won-icon">🏆</span>
+          <div>
+            <div className="wins-day-won-title">Wygrana!</div>
+            <div className="wins-day-won-sub">Dodaj nowe zadania i zablokuj je, by utrzymać serię</div>
+          </div>
+        </div>
+      )}
+
+      {!isLocked && !showWinCelebration && !showLossBanner && last30 && last30.days[last30.days.length - 1]?.result === 'loss' && (
+        <div className="wins-day-lost-banner">
+          <span className="wins-day-lost-icon">💪</span>
+          <div>
+            <div className="wins-day-lost-title">Nie tym razem</div>
+            <div className="wins-day-lost-sub">Nie przejmuj się — jutro na pewno będzie lepiej!</div>
+          </div>
+        </div>
+      )}
+
+      {showLossBanner && (
+        <div className="wins-loss-overlay" onClick={() => setShowLossBanner(false)}>
+          <div className="wins-loss-card">
+            <div className="wins-loss-emoji">💪</div>
+            <div className="wins-loss-title">Nie tym razem</div>
+            <div className="wins-loss-sub">Nie przejmuj się, jutro będzie lepiej!</div>
+          </div>
+        </div>
+      )}
+
+      {isLocked && winsLock && (
+        <div className="wins-lock-bar">
+          <span className="wins-lock-icon">&#x1f512;</span>
+          <span className="wins-lock-progress">{lockProgress.completed}/{lockProgress.total}</span>
+          {winsLock.deadline && (
+            <span className="wins-lock-deadline">{formatCountdown(winsLock.deadline)}</span>
+          )}
+          <button className="wins-unlock-btn" onClick={handleUnlock} title="Unlock tasks">&#x2715;</button>
+        </div>
+      )}
+
       {focusTask && (
         <>
           <div className="section-label">
@@ -653,7 +674,14 @@ export default function TodayView() {
 
       {overflowTasks.length > 0 && (
         <>
-          <div className="limit-indicator">limit {limit}</div>
+          <div className="limit-indicator">
+            {!isLocked && lockableTasks.length > 0 && (
+              <button className="wins-lock-btn" onClick={handleLock} title="Lock tasks for today's challenge">
+                &#x1f513;
+              </button>
+            )}
+            <span>limit {limit}</span>
+          </div>
           <div className="overflow-section">
             <div className={`done-toggle ${showOverflow ? 'open' : ''}`} onClick={() => setShowOverflow((value) => !value)}>
               <span style={{ opacity: 0.4 }}>⋯</span>
@@ -665,6 +693,15 @@ export default function TodayView() {
             </div>
           </div>
         </>
+      )}
+
+      {!overflowTasks.length && !isLocked && lockableTasks.length > 0 && (
+        <div className="limit-indicator">
+          <button className="wins-lock-btn" onClick={handleLock} title="Lock tasks for today's challenge">
+            &#x1f513;
+          </button>
+          <span>limit {limit}</span>
+        </div>
       )}
 
       {completedToday.length > 0 && (
@@ -680,37 +717,39 @@ export default function TodayView() {
         </div>
       )}
 
-      <div className="today-add-task-wrap">
-        {showAddInput ? (
-          <div className="today-add-input-row">
-            <input
-              ref={addInputRef}
-              className="form-input"
-              placeholder="Add a quick task..."
-              value={newTitle}
-              onChange={(event) => setNewTitle(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') addTask()
-                if (event.key === 'Escape') {
-                  setShowAddInput(false)
-                  setNewTitle('')
-                }
-              }}
-              onBlur={() => {
-                if (!newTitle.trim()) {
-                  setShowAddInput(false)
-                  setNewTitle('')
-                }
-              }}
-            />
-            <button className="task-action-btn btn-focus" onClick={addTask}>Add</button>
-          </div>
-        ) : (
-          <button className="add-task-btn" onClick={() => setShowAddInput(true)}>
-            <span className="plus">+</span> Add task
-          </button>
-        )}
-      </div>
+      {!isLocked && (
+        <div className="today-add-task-wrap">
+          {showAddInput ? (
+            <div className="today-add-input-row">
+              <input
+                ref={addInputRef}
+                className="form-input"
+                placeholder="Add a quick task..."
+                value={newTitle}
+                onChange={(event) => setNewTitle(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') addTask()
+                  if (event.key === 'Escape') {
+                    setShowAddInput(false)
+                    setNewTitle('')
+                  }
+                }}
+                onBlur={() => {
+                  if (!newTitle.trim()) {
+                    setShowAddInput(false)
+                    setNewTitle('')
+                  }
+                }}
+              />
+              <button className="task-action-btn btn-focus" onClick={addTask}>Add</button>
+            </div>
+          ) : (
+            <button className="add-task-btn" onClick={() => setShowAddInput(true)}>
+              <span className="plus">+</span> Add task
+            </button>
+          )}
+        </div>
+      )}
     </div>
   )
 }

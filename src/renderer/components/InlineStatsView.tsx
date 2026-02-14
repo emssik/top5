@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useProjects } from '../hooks/useProjects'
 import { checkInMinutes, formatCheckInTime } from '../utils/checkInTime'
 import { projectColorValue } from '../utils/projects'
 import { STANDALONE_PROJECT_ID } from '../utils/constants'
+import type { WinEntry, StreakStats } from '../types'
 
 type Range = '7d' | '14d' | 'month' | 'prev_month' | '6m' | '12m'
 
@@ -63,7 +64,7 @@ function buildBuckets(range: Range): { keys: string[]; label: (k: string) => str
     const d = new Date(iso + 'T12:00:00')
     const todayStr = dayKey(new Date())
     const base = d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })
-    return iso === todayStr ? `${base}  today` : base
+    return iso === todayStr ? `${base} ●` : base
   }
 
   const formatMonth = (ym: string): string => {
@@ -128,9 +129,63 @@ function buildBuckets(range: Range): { keys: string[]; label: (k: string) => str
   }
 }
 
+function WinsCalendar({ entries }: { entries: WinEntry[] }) {
+  const today = new Date()
+  const year = today.getFullYear()
+  const month = today.getMonth()
+  const firstDay = new Date(year, month, 1)
+  const lastDay = new Date(year, month + 1, 0)
+  const todayDate = today.getDate()
+
+  const byDate = useMemo(() => {
+    const map = new Map<string, 'win' | 'loss'>()
+    for (const e of entries) map.set(e.date, e.result)
+    return map
+  }, [entries])
+
+  // Start offset (Monday-based)
+  const startDow = firstDay.getDay()
+  const offset = startDow === 0 ? 6 : startDow - 1
+
+  const cells: { day: number; result: 'win' | 'loss' | null; future: boolean }[] = []
+  for (let i = 0; i < offset; i++) cells.push({ day: 0, result: null, future: false })
+  for (let d = 1; d <= lastDay.getDate(); d++) {
+    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+    cells.push({
+      day: d,
+      result: byDate.get(dateStr) ?? null,
+      future: d > todayDate
+    })
+  }
+
+  return (
+    <div className="wins-calendar">
+      {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((label, i) => (
+        <div key={`h-${i}`} className="wins-cal-day" style={{ opacity: 0.4 }}>{label}</div>
+      ))}
+      {cells.map((cell, i) => {
+        if (cell.day === 0) return <div key={`e-${i}`} className="wins-cal-day" />
+        const cls = cell.future ? 'future' : cell.result === 'win' ? 'win' : cell.result === 'loss' ? 'loss' : 'empty'
+        return (
+          <div key={`d-${cell.day}`} className={`wins-cal-day ${cls}`}>
+            {cell.day}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 export default function InlineStatsView() {
   const { projects, quickTasks, focusCheckIns } = useProjects()
   const [range, setRange] = useState<Range>('7d')
+  const [streaks, setStreaks] = useState<StreakStats | null>(null)
+  const [winHistory, setWinHistory] = useState<WinEntry[]>([])
+
+  useEffect(() => {
+    window.api.winsGetStreaks().then(setStreaks)
+    window.api.winsGetHistory().then(setWinHistory)
+  }, [])
 
   const activeProjects = useMemo(
     () => projects.filter((project) => !project.archivedAt && !project.suspendedAt).sort((a, b) => a.order - b.order),
@@ -155,6 +210,7 @@ export default function InlineStatsView() {
       return {
         id: project.id,
         name: project.name,
+        code: project.code,
         color: project.color,
         doneThisWeek
       }
@@ -171,7 +227,7 @@ export default function InlineStatsView() {
   // Work Stats table data
   const hasStandaloneCheckIns = focusCheckIns.some((c) => c.projectId === STANDALONE_PROJECT_ID)
   const standaloneEntry = hasStandaloneCheckIns ? { id: STANDALONE_PROJECT_ID, name: 'Quick Tasks', color: undefined as string | undefined } : null
-  const allEntries = [...activeProjects.map((p) => ({ id: p.id, name: p.name, color: p.color })), ...(standaloneEntry ? [standaloneEntry] : [])]
+  const allEntries = [...activeProjects.map((p) => ({ id: p.id, name: p.name, code: p.code, color: p.color })), ...(standaloneEntry ? [{ ...standaloneEntry, code: 'QT' }] : [])]
 
   const { keys, label, bucketFor } = useMemo(() => buildBuckets(range), [range])
   const displayKeys = useMemo(() => [...keys].reverse(), [keys])
@@ -224,7 +280,7 @@ export default function InlineStatsView() {
         </button>
       </div>
 
-      <div className="stat-grid">
+      <div className="stat-grid" style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}>
         <div className="stat-card">
           <div className="number">{stats.tasksDone}</div>
           <div className="label">Tasks Done</div>
@@ -237,14 +293,37 @@ export default function InlineStatsView() {
           <div className="number">{stats.streak}</div>
           <div className="label">Day Streak</div>
         </div>
+        <div className="stat-card">
+          <div className="number" style={{ color: streaks && streaks.currentDayStreak > 0 ? '#4ade80' : undefined }}>
+            {streaks?.currentDayStreak ?? 0}
+          </div>
+          <div className="label">Win Streak</div>
+        </div>
       </div>
+
+      {streaks && (streaks.totalWins > 0 || streaks.totalLosses > 0) && (
+        <>
+          <div className="section-label">5 Wins</div>
+          <div className="stat-card" style={{ marginBottom: 24, padding: 16 }}>
+            <div className="wins-summary">
+              <span>This week: <span className="win-count">{streaks.thisWeekWins}W</span> / <span className="loss-count">{streaks.thisWeekLosses}L</span></span>
+              <span>This month: <span className="win-count">{streaks.thisMonthWins}W</span> / <span className="loss-count">{streaks.thisMonthLosses}L</span></span>
+            </div>
+            <div className="wins-summary" style={{ marginTop: 4 }}>
+              <span>Week streak: {streaks.currentWeekStreak}</span>
+              <span>Month streak: {streaks.currentMonthStreak}</span>
+            </div>
+            <WinsCalendar entries={winHistory} />
+          </div>
+        </>
+      )}
 
       <div className="section-label">This Week</div>
       <div className="stat-grid" style={{ gridTemplateColumns: `repeat(${Math.min(stats.weeklyByProject.length, 5)},1fr)`, marginBottom: 24 }}>
         {stats.weeklyByProject.slice(0, 5).map((project) => (
           <div key={project.id} className="stat-card">
             <div className="number" style={{ fontSize: 20, color: projectColorValue(project.color) }}>{project.doneThisWeek}</div>
-            <div className="label">{project.name || 'Untitled'}</div>
+            <div className="label">{project.code || project.name || 'Untitled'}</div>
           </div>
         ))}
       </div>
@@ -274,7 +353,7 @@ export default function InlineStatsView() {
                 </th>
                 {allEntries.map((e) => (
                   <th key={e.id} className="py-2 px-2 text-t-secondary font-medium text-center truncate max-w-[100px]">
-                    {e.name || 'Untitled'}
+                    {e.code || e.name || 'Untitled'}
                   </th>
                 ))}
               </tr>
@@ -290,9 +369,11 @@ export default function InlineStatsView() {
               </tr>
             </thead>
             <tbody>
-              {displayKeys.map((k) => (
-                <tr key={k} className="border-t border-border-subtle/50">
-                  <td className="py-1.5 pr-3 text-t-secondary whitespace-nowrap sticky left-0 bg-base">
+              {displayKeys.map((k) => {
+                const isToday = k === new Date().toISOString().split('T')[0]
+                return (
+                <tr key={k} className={`border-t border-border-subtle/50 ${isToday ? 'bg-accent-row/40' : ''}`}>
+                  <td className={`py-1.5 pr-3 whitespace-nowrap sticky left-0 ${isToday ? 'text-t-heading font-semibold bg-accent-row/40' : 'text-t-secondary bg-base'}`}>
                     {label(k)}
                   </td>
                   {allEntries.map((e) => {
@@ -306,7 +387,8 @@ export default function InlineStatsView() {
                     )
                   })}
                 </tr>
-              ))}
+                )
+              })}
             </tbody>
           </table>
         </div>

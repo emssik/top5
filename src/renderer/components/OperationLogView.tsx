@@ -26,7 +26,13 @@ const typeColors: Record<OperationType, string> = {
   project_unsuspended: '#22c55e',
   project_deleted: '#ef4444',
   focus_started: '#a855f7',
-  focus_ended: '#a855f7'
+  focus_ended: '#a855f7',
+  wins_day_won: '#4ade80',
+  wins_day_lost: '#f87171',
+  wins_week_won: '#4ade80',
+  wins_week_lost: '#f87171',
+  wins_month_won: '#4ade80',
+  wins_month_lost: '#f87171'
 }
 
 function describeOperation(entry: OperationLogEntry): string {
@@ -53,6 +59,12 @@ function describeOperation(entry: OperationLogEntry): string {
     case 'project_deleted': return `Deleted Project ${entry.projectName ?? ''}`
     case 'focus_started': return `Focus started: ${task || entry.projectName || 'task'}${project}`
     case 'focus_ended': return `Focus ended: ${task || entry.projectName || 'task'}${details}`
+    case 'wins_day_won': return `🏆 Day won!${details}`
+    case 'wins_day_lost': return `Day lost${details}`
+    case 'wins_week_won': return `🏆 Week won!${details}`
+    case 'wins_week_lost': return `Week streak lost`
+    case 'wins_month_won': return `🏆 Month won!${details}`
+    case 'wins_month_lost': return `Month streak lost`
     default: return entry.type
   }
 }
@@ -89,7 +101,7 @@ export default function OperationLogView() {
   const [operations, setOperations] = useState<OperationLogEntry[]>([])
   const [range, setRange] = useState<LogRange>(getInitialFilter() ? '30d' : 'today')
   const [filter, setFilter] = useState(getInitialFilter)
-  const [categoryFilter, setCategoryFilter] = useState<'all' | 'task' | 'project' | 'focus'>('all')
+  const [categoryFilter, setCategoryFilter] = useState<'all' | 'task' | 'project' | 'focus' | 'wins'>('all')
   const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
@@ -116,6 +128,7 @@ export default function OperationLogView() {
         if (categoryFilter === 'task' && !op.type.includes('task')) return false
         if (categoryFilter === 'project' && !op.type.startsWith('project_')) return false
         if (categoryFilter === 'focus' && !op.type.startsWith('focus_')) return false
+        if (categoryFilter === 'wins' && !op.type.startsWith('wins_')) return false
         if (q) {
           const desc = describeOperation(op).toLowerCase()
           if (!desc.includes(q)) return false
@@ -163,7 +176,7 @@ export default function OperationLogView() {
           </select>
         </div>
         <div className="flex items-center gap-1.5 mb-2">
-          {(['all', 'task', 'project', 'focus'] as const).map((cat) => (
+          {(['all', 'task', 'project', 'focus', 'wins'] as const).map((cat) => (
             <button
               key={cat}
               onClick={() => setCategoryFilter(cat)}
@@ -173,7 +186,7 @@ export default function OperationLogView() {
                   : 'bg-surface border border-border text-t-secondary hover:text-t-primary'
               }`}
             >
-              {cat === 'all' ? 'All' : cat === 'task' ? 'Tasks' : cat === 'project' ? 'Projects' : 'Focus'}
+              {cat === 'all' ? 'All' : cat === 'task' ? 'Tasks' : cat === 'project' ? 'Projects' : cat === 'focus' ? 'Focus' : '5 Wins'}
             </button>
           ))}
         </div>
