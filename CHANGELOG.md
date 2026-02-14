@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.38.0] - 2026-02-15
+
+### Changed
+
+- Quick Links editor now uses a dropdown with preset link types (VS Code, iTerm, Obsidian, Browser) instead of a free-text label field
+- Context-sensitive URL placeholder based on selected link type
+- "Custom..." option in dropdown reveals a free-text label input for non-preset link types
+- Default new link label changed from empty to "VS Code"
+
 ## [1.37.0] - 2026-02-14
 
 ### Added

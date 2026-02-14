@@ -25,7 +25,7 @@ interface FormState {
 }
 
 function createDefaultLink(): ProjectLink {
-  return { label: '', url: '' }
+  return { label: 'VS Code', url: '' }
 }
 
 export default function ProjectEditor({ project, onClose }: Props) {
@@ -187,19 +187,42 @@ export default function ProjectEditor({ project, onClose }: Props) {
       <div className="form-group">
         <label>Quick Links</label>
         <div className="form-links-list">
-          {form.links.map((link, index) => (
+          {form.links.map((link, index) => {
+            const LINK_TYPES = [
+              { label: 'VS Code', placeholder: '/path/to/project' },
+              { label: 'iTerm', placeholder: '/path/to/project' },
+              { label: 'Obsidian', placeholder: 'vault name or obsidian:// URI' },
+              { label: 'Browser', placeholder: 'https://...' },
+            ]
+            const isPreset = LINK_TYPES.some((t) => t.label === link.label)
+            const placeholder = LINK_TYPES.find((t) => t.label === link.label)?.placeholder ?? 'URL / path'
+            return (
             <div key={`${index}-${link.label}`} className="form-link-row">
-              <input
+              <select
                 className="form-input"
-                value={link.label}
-                onChange={(e) => updateLink(index, { label: e.target.value })}
-                placeholder="Label"
-              />
+                value={isPreset ? link.label : '__custom__'}
+                onChange={(e) => updateLink(index, { label: e.target.value === '__custom__' ? '' : e.target.value })}
+              >
+                {LINK_TYPES.map((t) => (
+                  <option key={t.label} value={t.label}>{t.label}</option>
+                ))}
+                <option value="__custom__">Custom...</option>
+              </select>
+              {!isPreset && (
+                <input
+                  className="form-input"
+                  value={link.label}
+                  onChange={(e) => updateLink(index, { label: e.target.value })}
+                  placeholder="Label"
+                  style={{ maxWidth: 80 }}
+                />
+              )}
               <input
                 className="form-input"
                 value={link.url}
                 onChange={(e) => updateLink(index, { url: e.target.value })}
-                placeholder="URL / command"
+                placeholder={placeholder}
+                style={{ flex: 1 }}
               />
               <button
                 type="button"
@@ -210,7 +233,8 @@ export default function ProjectEditor({ project, onClose }: Props) {
                 ✕
               </button>
             </div>
-          ))}
+            )
+          })}
         </div>
         <button
           type="button"
