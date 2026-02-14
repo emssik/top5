@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.31.0] - 2026-02-14
+
 ### Added
 
 - HTTP API server powered by Fastify, bound to `127.0.0.1` only, with Bearer token authentication
@@ -22,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - API test suite (`tests/api/`) with 34 vitest tests covering auth, health, projects, quick tasks, and repeating tasks
 - `npm run test:api` script using vitest with Electron mock
 - `vitest.config.ts` with Electron module alias for test isolation
+- API reference documentation (`docs/API.md`) covering all endpoints, data types, and usage examples
 
 ### Changed
 
