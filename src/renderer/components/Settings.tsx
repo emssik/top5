@@ -86,7 +86,15 @@ export default function Settings({ open, onClose }: Props) {
   return (
     <div className="modal-overlay open" onClick={onClose}>
       <div className="modal" style={{ width: 440 }} onClick={(event) => event.stopPropagation()}>
-        <h2>Settings</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+          <h2>Settings</h2>
+          <span
+            style={{ fontSize: 12, opacity: 0.45, cursor: 'pointer' }}
+            onClick={() => window.api.openDevTools()}
+          >
+            DevTools
+          </span>
+        </div>
 
         <div className="modal-row">
           <label>Theme</label>

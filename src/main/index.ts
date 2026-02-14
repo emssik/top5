@@ -1,7 +1,7 @@
 import { app, BrowserWindow, shell, ipcMain, globalShortcut, screen } from 'electron'
 import { join } from 'path'
 import { is, optimizer, electronApp } from '@electron-toolkit/utils'
-import { registerStoreHandlers, getAppData, IS_DEV } from './store'
+import { registerStoreHandlers, getAppData, setAppDataKey, IS_DEV } from './store'
 import { registerLauncherHandlers } from './launchers'
 import { registerFocusHandlers } from './focus-window'
 import { registerGlobalShortcut, registerLocalShortcuts } from './shortcuts'
@@ -78,6 +78,13 @@ app.whenReady().then(() => {
   })
 
   registerStoreHandlers(ipcMain)
+
+  // Clear stale focus state from previous session (no focus window exists at startup)
+  const startupData = getAppData()
+  if (startupData.config.focusProjectId || startupData.config.focusTaskId) {
+    setAppDataKey('config', { ...startupData.config, focusProjectId: null, focusTaskId: null })
+  }
+
   registerLauncherHandlers(ipcMain)
   registerFocusHandlers(ipcMain, () => mainWindow)
   registerQuickAddHandlers(ipcMain)
@@ -149,6 +156,11 @@ app.whenReady().then(() => {
     if (process.platform === 'darwin') {
       mainWindow.setWindowButtonVisibility(false)
     }
+  })
+
+  ipcMain.handle('open-dev-tools', (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (win) win.webContents.openDevTools({ mode: 'detach' })
   })
 
   ipcMain.handle('set-traffic-lights-visible', (_event, visible: unknown) => {
