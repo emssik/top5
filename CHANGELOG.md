@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.34.0] - 2026-02-14
+
+### Added
+
+- Task ID system: every task gets a sequential number displayed as `CODE-N` (project tasks) or `QT-N` (quick tasks)
+- Project codes: unique 2-6 character alphanumeric identifiers per project (e.g. `TOP5`, `API`)
+- `TaskIdBadge` component for consistent task ID display across all views
+- `ProjectCodeMigration` modal: prompts user to assign codes to existing projects on first load
+- Task ID formatting utilities in `src/shared/taskId.ts` (`formatTaskId`, `formatQuickTaskId`)
+- Auto-migration of existing tasks to assign sequential task numbers on data load
+- Project code uniqueness validation in service layer and editor UI
+- Task codes logged in operation log entries (`taskCode` field)
+
+### Changed
+
+- `Project` type: added `code` and `nextTaskNumber` fields
+- `Task` and `QuickTask` types: added `taskNumber` field
+- `AppData` type: added `nextQuickTaskNumber` for global quick task numbering
+- `OperationLogEntry` type: added `taskCode` field
+- Operation log display now shows task codes (e.g. `[TOP5-3] "task title"`)
+- Project editor includes a Code field with inline validation
+- FocusMode, TodayView, QuickTasksView, ProjectDetailView, and Dashboard updated to display task IDs
+- `useTaskList` hook propagates `projectCode` and `taskNumber` through merged task data
+
 ## [1.33.0] - 2026-02-14
 
 ### Added

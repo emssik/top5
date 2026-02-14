@@ -1,4 +1,5 @@
 import type { Project, Task } from '../../shared/types'
+import { formatTaskId } from '../../shared/taskId'
 import {
   getData,
   setData,
@@ -10,7 +11,11 @@ import {
   getActiveProjectsLimit
 } from '../store'
 
-type ServiceError = { error: 'not_found' | 'validation' | 'active_limit' }
+type ServiceError = { error: 'not_found' | 'validation' | 'active_limit' | 'code_duplicate' }
+
+function isCodeUnique(code: string, excludeProjectId: string | null, projects: Project[]): boolean {
+  return !projects.some((p) => p.code === code && p.id !== excludeProjectId)
+}
 
 export function getProjects(): Project[] {
   return getData().projects
@@ -28,6 +33,10 @@ export function createProject(input: unknown): Project[] | ServiceError {
   const projects = [...data.projects]
   const normalizedProject = normalizeProject(input)
 
+  if (normalizedProject.code && !isCodeUnique(normalizedProject.code, null, projects)) {
+    return { error: 'code_duplicate' }
+  }
+
   const activeCount = projects.filter((p) => !p.archivedAt && !p.suspendedAt).length
   const activeLimit = getActiveProjectsLimit(data.config)
   if (!normalizedProject.archivedAt && !normalizedProject.suspendedAt && activeCount >= activeLimit) {
@@ -35,6 +44,14 @@ export function createProject(input: unknown): Project[] | ServiceError {
   }
   normalizedProject.order = activeCount
   projects.push(normalizedProject)
+
+  // Assign task numbers to any tasks created with the project
+  for (const task of normalizedProject.tasks) {
+    if (task.taskNumber == null) {
+      task.taskNumber = normalizedProject.nextTaskNumber ?? 1
+      normalizedProject.nextTaskNumber = (normalizedProject.nextTaskNumber ?? 1) + 1
+    }
+  }
 
   const nextProjects = assignMissingProjectColors(projects.map(normalizeProject))
   setData('projects', nextProjects)
@@ -49,31 +66,54 @@ export function updateProject(id: string, input: unknown): Project[] | ServiceEr
   const index = projects.findIndex((p) => p.id === id)
   if (index < 0) return { error: 'not_found' }
 
+  if (input.code && !isCodeUnique(input.code, id, projects)) {
+    return { error: 'code_duplicate' }
+  }
+
   const oldProject = projects[index]
   const normalizedProject = normalizeProject(input)
+
+  // Assign task numbers to new tasks
+  let nextNum = normalizedProject.nextTaskNumber ?? (oldProject.nextTaskNumber ?? 1)
+  for (const task of normalizedProject.tasks) {
+    if (task.taskNumber == null) {
+      task.taskNumber = nextNum++
+    }
+  }
+  normalizedProject.nextTaskNumber = nextNum
+
+  // Preserve code and nextTaskNumber from old project if not provided
+  if (!normalizedProject.code && oldProject.code) {
+    normalizedProject.code = oldProject.code
+  }
+
   projects[index] = normalizedProject
 
   const nextProjects = assignMissingProjectColors(projects.map(normalizeProject))
   setData('projects', nextProjects)
 
   // Detect task-level changes for operation log
+  const savedProject = nextProjects.find((p) => p.id === id) ?? normalizedProject
   const oldTaskMap = new Map(oldProject.tasks.map((t) => [t.id, t]))
   const newTaskMap = new Map((input.tasks as Task[]).map((t) => [t.id, t]))
+  const code = savedProject.code
 
-  for (const t of input.tasks as Task[]) {
+  for (const t of savedProject.tasks) {
     const old = oldTaskMap.get(t.id)
+    const tc = formatTaskId(t.taskNumber, code) || undefined
     if (!old) {
-      appendOperation({ type: 'task_created', projectId: id, projectName: input.name, taskTitle: t.title })
+      appendOperation({ type: 'task_created', projectId: id, projectName: input.name, taskTitle: t.title, taskCode: tc })
     } else if (t.completed && !old.completed) {
       const mins = taskTimeMinutes(t.id)
-      appendOperation({ type: 'task_completed', projectId: id, projectName: input.name, taskTitle: t.title, ...(mins > 0 && { details: `${mins}min` }) })
+      appendOperation({ type: 'task_completed', projectId: id, projectName: input.name, taskTitle: t.title, taskCode: tc, ...(mins > 0 && { details: `${mins}min` }) })
     } else if (!t.completed && old.completed) {
-      appendOperation({ type: 'task_uncompleted', projectId: id, projectName: input.name, taskTitle: t.title })
+      appendOperation({ type: 'task_uncompleted', projectId: id, projectName: input.name, taskTitle: t.title, taskCode: tc })
     }
   }
   for (const t of oldProject.tasks) {
     if (!newTaskMap.has(t.id)) {
-      appendOperation({ type: 'task_deleted', projectId: id, projectName: input.name, taskTitle: t.title })
+      const tc = formatTaskId(t.taskNumber, code) || undefined
+      appendOperation({ type: 'task_deleted', projectId: id, projectName: input.name, taskTitle: t.title, taskCode: tc })
     }
   }
 

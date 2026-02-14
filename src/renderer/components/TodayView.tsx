@@ -6,6 +6,7 @@ import { STANDALONE_PROJECT_ID } from '../utils/constants'
 import type { QuickTask, RepeatingTask } from '../types'
 import { projectColorValue } from '../utils/projects'
 import { getRepeatingTaskProposals } from '../../shared/schedule'
+import TaskIdBadge from './TaskIdBadge'
 
 interface ActiveTask {
   kind: 'quick' | 'pinned'
@@ -15,7 +16,9 @@ interface ActiveTask {
   quickTaskId?: string
   projectId?: string
   projectName?: string
+  projectCode?: string
   taskId?: string
+  taskNumber?: number
   inProgress?: boolean
   repeatingTaskId?: string | null
 }
@@ -27,7 +30,9 @@ interface CompletedTask {
   quickTaskId?: string
   projectId?: string
   projectName?: string
+  projectCode?: string
   taskId?: string
+  taskNumber?: number
   repeatingTaskId?: string | null
 }
 
@@ -101,6 +106,7 @@ export default function TodayView() {
         quickTaskId: task.id,
         title: task.title,
         order: task.order,
+        taskNumber: task.taskNumber,
         inProgress: task.inProgress,
         repeatingTaskId: task.repeatingTaskId
       }))
@@ -115,7 +121,9 @@ export default function TodayView() {
           order: task.toDoNextOrder ?? 999,
           projectId: project.id,
           projectName: project.name,
+          projectCode: project.code,
           taskId: task.id,
+          taskNumber: task.taskNumber,
           inProgress: task.inProgress
         }))
     )
@@ -137,6 +145,7 @@ export default function TodayView() {
         quickTaskId: quickTask.id,
         title: quickTask.title,
         order: quickTask.order,
+        taskNumber: quickTask.taskNumber,
         inProgress: quickTask.inProgress,
         repeatingTaskId: quickTask.repeatingTaskId
       }
@@ -153,7 +162,9 @@ export default function TodayView() {
       order: task.toDoNextOrder ?? 999,
       projectId: project.id,
       projectName: project.name,
+      projectCode: project.code,
       taskId: task.id,
+      taskNumber: task.taskNumber,
       inProgress: task.inProgress
     }
   }, [activeProjects, config.focusProjectId, config.focusTaskId, quickTasks])
@@ -177,6 +188,7 @@ export default function TodayView() {
         id: `done-quick-${task.id}`,
         quickTaskId: task.id,
         title: task.title,
+        taskNumber: task.taskNumber,
         repeatingTaskId: task.repeatingTaskId
       }))
 
@@ -189,7 +201,9 @@ export default function TodayView() {
           title: task.title,
           projectId: project.id,
           projectName: project.name,
-          taskId: task.id
+          projectCode: project.code,
+          taskId: task.id,
+          taskNumber: task.taskNumber
         }))
     )
 
@@ -500,6 +514,7 @@ export default function TodayView() {
           ) : (
             <div className="task-title" onDoubleClick={() => startEditing(task)}>
               {task.repeatingTaskId && <span style={{ opacity: 0.6, marginRight: 4 }}>↻</span>}
+              <TaskIdBadge taskNumber={task.taskNumber} projectCode={task.projectCode} kind={task.kind} />
               {task.title}
             </div>
           )}
@@ -534,7 +549,10 @@ export default function TodayView() {
     <div key={task.id} className="task-card done-card">
       <button className="task-checkbox checked" onClick={() => uncompleteTask(task)} />
       <div className="task-content">
-        <div className="task-title completed">{task.title}</div>
+        <div className="task-title completed">
+          <TaskIdBadge taskNumber={task.taskNumber} projectCode={task.projectCode} kind={task.kind} />
+          {task.title}
+        </div>
         {renderMeta(task)}
       </div>
       <div className="task-actions">
@@ -575,7 +593,10 @@ export default function TodayView() {
                   }}
                 />
               ) : (
-                <div className="task-title" onDoubleClick={() => startEditing(focusTask)}>{focusTask.title}</div>
+                <div className="task-title" onDoubleClick={() => startEditing(focusTask)}>
+                  <TaskIdBadge taskNumber={focusTask.taskNumber} projectCode={focusTask.projectCode} kind={focusTask.kind} />
+                  {focusTask.title}
+                </div>
               )}
               {renderMeta(focusTask)}
             </div>

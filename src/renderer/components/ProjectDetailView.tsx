@@ -4,6 +4,7 @@ import { useProjects } from '../hooks/useProjects'
 import type { Project, Task } from '../types'
 import { calcProjectTime, calcTaskTime, formatCheckInTime } from '../utils/checkInTime'
 import { projectColorValue, normalizeProjectLinks, openProjectLink } from '../utils/projects'
+import TaskIdBadge from './TaskIdBadge'
 
 interface Props {
   project: Project
@@ -194,6 +195,7 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
             />
           ) : (
             <div className={`task-title ${done ? 'completed' : ''}`} onDoubleClick={() => !done && startEditing(task)}>
+              <TaskIdBadge taskNumber={task.taskNumber} projectCode={project.code} kind="project" />
               {task.title}
             </div>
           )}

@@ -1,4 +1,5 @@
 import type { QuickTask } from '../../shared/types'
+import { formatQuickTaskId } from '../../shared/taskId'
 import {
   getData,
   setData,
@@ -25,9 +26,16 @@ export function saveQuickTask(input: unknown): QuickTask[] | ServiceError {
     input.order = quickTasks.filter((t) => !t.completed).length
     quickTasks.push(input)
   }
+  if (isNew && input.taskNumber == null) {
+    const data2 = getData()
+    const nextNum = data2.nextQuickTaskNumber ?? 1
+    input.taskNumber = nextNum
+    data2.nextQuickTaskNumber = nextNum + 1
+    setData('nextQuickTaskNumber', data2.nextQuickTaskNumber)
+  }
   setData('quickTasks', quickTasks)
   if (isNew) {
-    appendOperation({ type: 'quick_task_created', taskTitle: input.title })
+    appendOperation({ type: 'quick_task_created', taskTitle: input.title, taskCode: formatQuickTaskId(input.taskNumber) || undefined })
   }
   return quickTasks
 }
@@ -38,7 +46,7 @@ export function removeQuickTask(id: string): QuickTask[] | ServiceError {
   if (!removed) return { error: 'not_found' }
   const quickTasks = data.quickTasks.filter((t) => t.id !== id)
   setData('quickTasks', quickTasks)
-  appendOperation({ type: 'quick_task_deleted', taskTitle: removed.title })
+  appendOperation({ type: 'quick_task_deleted', taskTitle: removed.title, taskCode: formatQuickTaskId(removed.taskNumber) || undefined })
   return quickTasks
 }
 
@@ -52,7 +60,7 @@ export function completeQuickTask(id: string): QuickTask[] | ServiceError {
   task.inProgress = false
   setData('quickTasks', quickTasks)
   const mins = taskTimeMinutes(task.id)
-  appendOperation({ type: 'quick_task_completed', taskTitle: task.title, ...(mins > 0 && { details: `${mins}min` }) })
+  appendOperation({ type: 'quick_task_completed', taskTitle: task.title, taskCode: formatQuickTaskId(task.taskNumber) || undefined, ...(mins > 0 && { details: `${mins}min` }) })
   // Update repeating task stats
   if (task.repeatingTaskId) {
     const repeatingTasks = [...data.repeatingTasks]
@@ -77,7 +85,7 @@ export function uncompleteQuickTask(id: string): QuickTask[] | ServiceError {
   task.completedAt = null
   task.order = quickTasks.filter((t) => !t.completed).length
   setData('quickTasks', quickTasks)
-  appendOperation({ type: 'quick_task_uncompleted', taskTitle: task.title })
+  appendOperation({ type: 'quick_task_uncompleted', taskTitle: task.title, taskCode: formatQuickTaskId(task.taskNumber) || undefined })
   return quickTasks
 }
 

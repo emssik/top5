@@ -21,6 +21,7 @@ interface FormState {
   description: string
   color: ProjectColor
   links: ProjectLink[]
+  code: string
 }
 
 function createDefaultLink(): ProjectLink {
@@ -41,8 +42,20 @@ export default function ProjectEditor({ project, onClose }: Props) {
     name: project?.name ?? '',
     description: project?.description ?? '',
     color: defaultColor,
-    links: project ? normalizeProjectLinks(project) : []
+    links: project ? normalizeProjectLinks(project) : [],
+    code: project?.code ?? ''
   })
+
+  const codeError = (() => {
+    const code = form.code.trim()
+    if (!code) return null
+    if (code.length < 2) return 'Min 2 characters'
+    if (code.length > 6) return 'Max 6 characters'
+    if (!/^[A-Z0-9]+$/.test(code)) return 'Only A-Z, 0-9'
+    const duplicate = projects.some((p) => p.code === code && p.id !== project?.id)
+    if (duplicate) return 'Code already used'
+    return null
+  })()
 
   const handleCancel = () => {
     onClose?.()
@@ -50,6 +63,8 @@ export default function ProjectEditor({ project, onClose }: Props) {
 
   const handleSave = async () => {
     const trimmedName = form.name.trim()
+    const trimmedCode = form.code.trim() || undefined
+    if (trimmedCode && codeError) return
     const normalizedLinks = form.links
       .map((link) => ({ label: link.label.trim(), url: link.url.trim() }))
       .filter((link) => link.label.length > 0 && link.url.length > 0)
@@ -75,6 +90,7 @@ export default function ProjectEditor({ project, onClose }: Props) {
         },
         links: normalizedLinks,
         color: form.color,
+        code: trimmedCode,
         tasks: [],
         archivedAt: null,
         suspendedAt: overLimit ? new Date().toISOString() : null
@@ -90,7 +106,8 @@ export default function ProjectEditor({ project, onClose }: Props) {
       name: trimmedName,
       description: form.description.trim(),
       links: normalizedLinks,
-      color: form.color
+      color: form.color,
+      code: trimmedCode
     }))
 
     onClose?.()
@@ -126,6 +143,19 @@ export default function ProjectEditor({ project, onClose }: Props) {
           onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
           placeholder="Project name"
         />
+      </div>
+
+      <div className="form-group">
+        <label>Code</label>
+        <input
+          className="form-input"
+          value={form.code}
+          onChange={(e) => setForm((prev) => ({ ...prev, code: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6) }))}
+          placeholder="e.g. TOP5"
+          maxLength={6}
+          style={{ width: 120, fontFamily: 'monospace', letterSpacing: '0.05em' }}
+        />
+        {codeError && <span style={{ color: '#ef4444', fontSize: 11, marginTop: 2 }}>{codeError}</span>}
       </div>
 
       <div className="form-group">
