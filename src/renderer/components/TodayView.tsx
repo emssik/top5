@@ -3,8 +3,9 @@ import { nanoid } from 'nanoid'
 import { useProjects } from '../hooks/useProjects'
 import { calcQuickTaskTime, calcTaskTime, formatCheckInTime } from '../utils/checkInTime'
 import { STANDALONE_PROJECT_ID } from '../utils/constants'
-import type { QuickTask, RepeatSchedule, RepeatingTask } from '../types'
+import type { QuickTask, RepeatingTask } from '../types'
 import { projectColorValue } from '../utils/projects'
+import { getRepeatingTaskProposals } from '../../shared/schedule'
 
 interface ActiveTask {
   kind: 'quick' | 'pinned'
@@ -28,23 +29,6 @@ interface CompletedTask {
   projectName?: string
   taskId?: string
   repeatingTaskId?: string | null
-}
-
-function daysSince(dateStr: string): number {
-  const date = new Date(dateStr)
-  const now = new Date()
-  return Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24))
-}
-
-function isScheduleDueToday(schedule: RepeatSchedule, createdAt: string, lastCompletedAt: string | null): boolean {
-  if (schedule.type === 'daily') return true
-  if (schedule.type === 'weekdays') return schedule.days.includes(new Date().getDay())
-  if (schedule.type === 'interval') return daysSince(createdAt) % schedule.days === 0
-  if (schedule.type === 'afterCompletion') {
-    if (!lastCompletedAt) return true
-    return daysSince(lastCompletedAt) >= schedule.days
-  }
-  return false
 }
 
 function matchesFocus(task: ActiveTask, focusProjectId: string | null, focusTaskId: string | null): boolean {
@@ -175,18 +159,12 @@ export default function TodayView() {
   }, [activeProjects, config.focusProjectId, config.focusTaskId, quickTasks])
 
   const proposals = useMemo<RepeatingTask[]>(() => {
-    const today = new Date().toISOString().slice(0, 10)
-    const todayDismissed = dismissedRepeatingDate === today ? dismissedRepeating : []
-
-    return repeatingTasks
-      .filter((task) => {
-        if (!isScheduleDueToday(task.schedule, task.createdAt, task.lastCompletedAt)) return false
-        if (todayDismissed.includes(task.id)) return false
-        if (quickTasks.some((quickTask) => quickTask.repeatingTaskId === task.id && !quickTask.completed)) return false
-        if (quickTasks.some((quickTask) => quickTask.repeatingTaskId === task.id && quickTask.completed && quickTask.completedAt?.startsWith(today))) return false
-        return true
-      })
-      .sort((a, b) => a.order - b.order)
+    return getRepeatingTaskProposals({
+      repeatingTasks,
+      quickTasks,
+      dismissedRepeating,
+      dismissedRepeatingDate
+    })
   }, [dismissedRepeating, dismissedRepeatingDate, quickTasks, repeatingTasks])
 
   const completedToday = useMemo<CompletedTask[]>(() => {

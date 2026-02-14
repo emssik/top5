@@ -7,6 +7,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.30.0] - 2026-02-14
+
+### Added
+
+- Shared `src/shared/schedule.ts` module: single source of truth for repeat schedule logic (`isScheduleDueOnDate`, `getRepeatingTaskProposals`, `normalizeWeekdays`, `normalizeRepeatSchedule`, `sortWeekdays`)
+- Shared `src/shared/quick-add.ts` module: `buildQuickAddSchedule` extracted from QuickAddWindow for reuse and testability
+- Unit tests for schedule logic (`tests/schedule.test.ts`) covering weekday normalization, monthly schedules, proposal filtering, and legacy Sunday mapping
+- `npm run test` script using Node.js built-in test runner with TypeScript compilation to `.tmp-tests/`
+- `tsconfig.tests.json` for test compilation configuration
+- Accelerator validation (`isValidAccelerator`) and action shortcut validation (`isValidActionShortcuts`) in main store for IPC input hardening
+- `normalizeAppConfig` function for defensive config normalization on load, migration, and save
+- `normalizeRepeatingTask` function applying schedule normalization on load and save
+- Check-in caching layer (`cachedCheckIns`, `taskMinutesById`) with incremental updates on append, avoiding repeated full file reads
+- `mailto:` protocol added to `ALLOWED_BROWSER_PROTOCOLS` in launchers module
+
+### Changed
+
+- `TodayView`, `useTaskList`, and `main/index.ts` (clean view sizing) all use shared `getRepeatingTaskProposals` instead of duplicated inline filtering logic
+- `QuickAddWindow` uses shared `buildQuickAddSchedule` and `sortWeekdays` instead of inline schedule construction
+- Weekday picker in QuickAddWindow uses `WEEKDAY_VALUES` array mapping UI positions to JS weekday numbers (Mon=1...Sun=0), fixing incorrect day mapping
+- `isValidRepeatSchedule` now validates weekday range (0-7), requires non-empty days array, and checks `Number.isFinite`
+- `isValidAppConfig` expanded to validate all config fields including `focusTaskId`, `focusProjectId`, `compactMode`, `cleanView`, and `cleanViewFont`
+- `save-config` IPC handler applies `normalizeAppConfig` before persisting, ensuring invalid payloads are sanitized
+- `loadData` uses `normalizeAppConfig` and filters/normalizes repeating tasks on load
+- Data migration (`ensureDataDir`) includes `operations.jsonl` in iCloud file migration list
+- Data migration only removes legacy directory when all known files are successfully migrated and directory is empty
+- `set-traffic-lights-visible` IPC handler now respects the `visible` argument instead of always hiding
+- `saveFocusCheckIn` return type in renderer types corrected from `Promise<void>` to `Promise<FocusCheckIn[]>`
+- `openProjectLink` handles `mailto:` via `openExternal` instead of routing through `launchBrowser` (which only accepts http/https)
+- TypeScript configs (`tsconfig.node.json`, `tsconfig.web.json`) updated to include `src/shared/**/*`
+- `CLAUDE.MD` updated with Electron sandbox safety note
+
+### Fixed
+
+- Weekdays schedule in Quick Add: "weekdays" mode now correctly saves Mon-Fri (was saving only `[1]`)
+- Weekly schedule picker correctly maps UI button positions to JS weekday values (Sun=0, Mon=1...Sat=6)
+- Legacy Sunday value `7` normalized to `0` when loading repeating task schedules
+- Data migration no longer silently deletes `operations.jsonl` when migrating to iCloud
+- Data migration uses copy fallback when rename fails (cross-device) and preserves legacy directory on partial migration
+
 ## [1.29.0] - 2026-02-14
 
 ### Added
