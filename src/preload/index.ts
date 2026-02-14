@@ -30,7 +30,7 @@ export const api = {
   saveFocusCheckIn: (checkIn: FocusCheckIn) => ipcRenderer.invoke('save-focus-checkin', checkIn),
   getFocusCheckIns: (taskId?: string) => ipcRenderer.invoke('get-focus-checkins', taskId),
   dismissCheckIn: () => ipcRenderer.invoke('dismiss-checkin'),
-  openOperationLogWindow: () => ipcRenderer.invoke('open-operation-log-window'),
+  openOperationLogWindow: (filter?: string) => ipcRenderer.invoke('open-operation-log-window', filter),
   enterCleanView: () => ipcRenderer.invoke('enter-clean-view'),
   exitCleanView: () => ipcRenderer.invoke('exit-clean-view'),
   setTrafficLightsVisible: (visible: boolean) => ipcRenderer.invoke('set-traffic-lights-visible', visible),
@@ -66,6 +66,11 @@ export const api = {
     const handler = (_event: IpcRendererEvent, remainingMs: number) => callback(remainingMs)
     ipcRenderer.on('checkin-countdown', handler)
     return () => ipcRenderer.removeListener('checkin-countdown', handler)
+  },
+  onCheckInRespond: (callback: (response: 'yes' | 'a_little' | 'no') => void) => {
+    const handler = (_event: IpcRendererEvent, response: 'yes' | 'a_little' | 'no') => callback(response)
+    ipcRenderer.on('checkin-respond', handler)
+    return () => ipcRenderer.removeListener('checkin-respond', handler)
   }
 }
 

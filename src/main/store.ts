@@ -127,7 +127,7 @@ type OperationType =
   | 'quick_task_created' | 'quick_task_completed' | 'quick_task_uncompleted' | 'quick_task_deleted'
   | 'project_created' | 'project_updated' | 'project_archived' | 'project_unarchived'
   | 'project_suspended' | 'project_unsuspended' | 'project_deleted'
-  | 'focus_started'
+  | 'focus_started' | 'focus_ended'
 
 interface OperationLogEntry {
   id: string
@@ -462,7 +462,7 @@ function appendCheckIn(checkIn: FocusCheckIn): void {
   appendFileSync(CHECKINS_FILE, JSON.stringify(checkIn) + '\n', 'utf-8')
 }
 
-function loadCheckIns(): FocusCheckIn[] {
+export function loadCheckIns(): FocusCheckIn[] {
   if (!existsSync(CHECKINS_FILE)) return []
   try {
     const raw = readFileSync(CHECKINS_FILE, 'utf-8')
@@ -482,9 +482,15 @@ function loadCheckIns(): FocusCheckIn[] {
   }
 }
 
+function taskTimeMinutes(taskId: string): number {
+  return loadCheckIns()
+    .filter((c) => c.taskId === taskId)
+    .reduce((sum, c) => sum + (c.minutes ?? (c.response === 'yes' ? 15 : c.response === 'a_little' ? 7 : 0)), 0)
+}
+
 // --- Operation log ---
 
-function appendOperation(entry: Omit<OperationLogEntry, 'id' | 'timestamp'>): void {
+export function appendOperation(entry: Omit<OperationLogEntry, 'id' | 'timestamp'>): void {
   const full: OperationLogEntry = {
     id: require('crypto').randomUUID().slice(0, 21),
     timestamp: new Date().toISOString(),
@@ -678,7 +684,8 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
         if (!old) {
           appendOperation({ type: 'task_created', projectId: project.id, projectName: project.name, taskTitle: t.title })
         } else if (t.completed && !old.completed) {
-          appendOperation({ type: 'task_completed', projectId: project.id, projectName: project.name, taskTitle: t.title })
+          const mins = taskTimeMinutes(t.id)
+          appendOperation({ type: 'task_completed', projectId: project.id, projectName: project.name, taskTitle: t.title, ...(mins > 0 && { details: `${mins}min` }) })
         } else if (!t.completed && old.completed) {
           appendOperation({ type: 'task_uncompleted', projectId: project.id, projectName: project.name, taskTitle: t.title })
         }
@@ -861,7 +868,8 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
       task.completedAt = new Date().toISOString()
       task.inProgress = false
       setData('quickTasks', quickTasks)
-      appendOperation({ type: 'quick_task_completed', taskTitle: task.title })
+      const mins = taskTimeMinutes(task.id)
+      appendOperation({ type: 'quick_task_completed', taskTitle: task.title, ...(mins > 0 && { details: `${mins}min` }) })
       // Update repeating task stats and lastCompletedAt
       if (task.repeatingTaskId) {
         const repeatingTasks = [...data.repeatingTasks]

@@ -1,18 +1,18 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { AppData } from '../types'
 import { STANDALONE_PROJECT_ID } from '../utils/constants'
 
 export default function CheckInPopup() {
   const [taskTitle, setTaskTitle] = useState('')
-  const [projectId, setProjectId] = useState('')
-  const [taskId, setTaskId] = useState('')
+  const projectIdRef = useRef('')
+  const taskIdRef = useRef('')
 
   useEffect(() => {
     window.api.getAppData().then((data: AppData) => {
       const focusPid = data.config.focusProjectId ?? ''
       const focusTid = data.config.focusTaskId ?? ''
-      setProjectId(focusPid)
-      setTaskId(focusTid)
+      projectIdRef.current = focusPid
+      taskIdRef.current = focusTid
 
       if (focusPid === STANDALONE_PROJECT_ID) {
         const qt = (data.quickTasks ?? []).find((t) => t.id === focusTid)
@@ -25,16 +25,22 @@ export default function CheckInPopup() {
     })
   }, [])
 
-  const handleResponse = (response: 'yes' | 'no' | 'a_little') => {
+  const handleResponse = useCallback((response: 'yes' | 'no' | 'a_little') => {
     window.api.saveFocusCheckIn({
       id: crypto.randomUUID(),
-      projectId,
-      taskId,
+      projectId: projectIdRef.current,
+      taskId: taskIdRef.current,
       timestamp: new Date().toISOString(),
       response
     })
     window.api.dismissCheckIn()
-  }
+  }, [])
+
+  useEffect(() => {
+    return window.api.onCheckInRespond((response) => {
+      handleResponse(response)
+    })
+  }, [handleResponse])
 
   return (
     <div className="h-screen flex flex-col items-center justify-center p-4 rounded-xl bg-card/95 border border-border/50 overflow-y-auto">
@@ -48,19 +54,19 @@ export default function CheckInPopup() {
           onClick={() => handleResponse('yes')}
           className="px-4 py-1.5 rounded-lg text-[12px] font-medium bg-emerald-600/80 hover:bg-emerald-500/80 text-white transition-colors"
         >
-          Tak
+          <span className="opacity-50 mr-1">1</span>Tak
         </button>
         <button
           onClick={() => handleResponse('a_little')}
           className="px-4 py-1.5 rounded-lg text-[12px] font-medium bg-amber-600/80 hover:bg-amber-500/80 text-white transition-colors"
         >
-          Trochę
+          <span className="opacity-50 mr-1">2</span>Trochę
         </button>
         <button
           onClick={() => handleResponse('no')}
           className="px-4 py-1.5 rounded-lg text-[12px] font-medium bg-surface/80 hover:bg-hover/80 text-t-heading transition-colors"
         >
-          Nie
+          <span className="opacity-50 mr-1">3</span>Nie
         </button>
       </div>
     </div>

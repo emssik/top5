@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { projectColorValue } from '../utils/projects'
-import type { OperationLogEntry, OperationType, Project } from '../types'
+import type { OperationLogEntry, OperationType } from '../types'
 
 type LogRange = 'today' | '7d' | '30d'
 
@@ -26,20 +25,22 @@ const typeColors: Record<OperationType, string> = {
   project_suspended: '#f59e0b',
   project_unsuspended: '#22c55e',
   project_deleted: '#ef4444',
-  focus_started: '#a855f7'
+  focus_started: '#a855f7',
+  focus_ended: '#a855f7'
 }
 
 function describeOperation(entry: OperationLogEntry): string {
   const project = entry.projectName ? ` in ${entry.projectName}` : ''
   const task = entry.taskTitle ? `"${entry.taskTitle}"` : ''
+  const details = entry.details ? ` (${entry.details})` : ''
 
   switch (entry.type) {
     case 'task_created': return `Created task ${task}${project}`
-    case 'task_completed': return `Completed task ${task}${project}`
+    case 'task_completed': return `Completed task ${task}${project}${details}`
     case 'task_uncompleted': return `Reopened task ${task}${project}`
     case 'task_deleted': return `Deleted task ${task}${project}`
     case 'quick_task_created': return `Created quick task ${task}`
-    case 'quick_task_completed': return `Completed quick task ${task}`
+    case 'quick_task_completed': return `Completed quick task ${task}${details}`
     case 'quick_task_uncompleted': return `Reopened quick task ${task}`
     case 'quick_task_deleted': return `Deleted quick task ${task}`
     case 'project_created': return `Created project ${entry.projectName ?? ''}`
@@ -49,35 +50,15 @@ function describeOperation(entry: OperationLogEntry): string {
     case 'project_suspended': return `Suspended project ${entry.projectName ?? ''}`
     case 'project_unsuspended': return `Resumed project ${entry.projectName ?? ''}`
     case 'project_deleted': return `Deleted project ${entry.projectName ?? ''}`
-    case 'focus_started': return `Started focus${project}`
+    case 'focus_started': return `Focus started: ${task || entry.projectName || 'task'}${project}`
+    case 'focus_ended': return `Focus ended: ${task || entry.projectName || 'task'}${details}`
     default: return entry.type
   }
 }
 
 function formatRelativeTime(iso: string): string {
   const date = new Date(iso)
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffMin = Math.floor(diffMs / 60000)
-  const diffHrs = Math.floor(diffMin / 60)
-
-  const today = now.toISOString().slice(0, 10)
-  const entryDay = iso.slice(0, 10)
-  const time = date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
-
-  if (entryDay === today) {
-    if (diffMin < 1) return 'just now'
-    if (diffMin < 60) return `${diffMin}m ago`
-    return `${diffHrs}h ago`
-  }
-
-  const yesterday = new Date(now)
-  yesterday.setDate(yesterday.getDate() - 1)
-  if (entryDay === yesterday.toISOString().slice(0, 10)) {
-    return `yesterday ${time}`
-  }
-
-  return `${date.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })} ${time}`
+  return date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
 }
 
 function dayLabel(iso: string): string {
@@ -95,20 +76,24 @@ function dayLabel(iso: string): string {
   return date.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })
 }
 
+function getInitialFilter(): string {
+  const hash = window.location.hash
+  const qIdx = hash.indexOf('?')
+  if (qIdx < 0) return ''
+  const params = new URLSearchParams(hash.slice(qIdx + 1))
+  return params.get('filter') ?? ''
+}
+
 export default function OperationLogView() {
   const [operations, setOperations] = useState<OperationLogEntry[]>([])
-  const [projects, setProjects] = useState<Project[]>([])
-  const [range, setRange] = useState<LogRange>('today')
-  const [filter, setFilter] = useState('')
+  const [range, setRange] = useState<LogRange>(getInitialFilter() ? '30d' : 'today')
+  const [filter, setFilter] = useState(getInitialFilter)
+  const [categoryFilter, setCategoryFilter] = useState<'all' | 'task' | 'project' | 'focus'>('all')
   const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
-    Promise.all([
-      window.api.getOperations(),
-      window.api.getAppData()
-    ]).then(([ops, data]) => {
+    window.api.getOperations().then((ops) => {
       setOperations(ops ?? [])
-      setProjects(data.projects ?? [])
       setLoaded(true)
     })
   }, [])
@@ -127,6 +112,9 @@ export default function OperationLogView() {
     return operations
       .filter((op) => {
         if (new Date(op.timestamp).getTime() < since.getTime()) return false
+        if (categoryFilter === 'task' && !op.type.includes('task')) return false
+        if (categoryFilter === 'project' && !op.type.startsWith('project_')) return false
+        if (categoryFilter === 'focus' && !op.type.startsWith('focus_')) return false
         if (q) {
           const text = `${op.taskTitle ?? ''} ${op.projectName ?? ''} ${op.type}`.toLowerCase()
           if (!text.includes(q)) return false
@@ -134,7 +122,7 @@ export default function OperationLogView() {
         return true
       })
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-  }, [operations, range, filter])
+  }, [operations, range, filter, categoryFilter])
 
   const grouped = useMemo(() => {
     const groups: { day: string; entries: OperationLogEntry[] }[] = []
@@ -149,14 +137,6 @@ export default function OperationLogView() {
     }
     return groups
   }, [filtered])
-
-  const projectColorMap = useMemo(() => {
-    const map: Record<string, string | undefined> = {}
-    for (const p of projects) {
-      map[p.id] = p.color
-    }
-    return map
-  }, [projects])
 
   if (!loaded) {
     return (
@@ -180,6 +160,21 @@ export default function OperationLogView() {
               <option key={r.key} value={r.key}>{r.label}</option>
             ))}
           </select>
+        </div>
+        <div className="flex items-center gap-1.5 mb-2">
+          {(['all', 'task', 'project', 'focus'] as const).map((cat) => (
+            <button
+              key={cat}
+              onClick={() => setCategoryFilter(cat)}
+              className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors ${
+                categoryFilter === cat
+                  ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                  : 'bg-surface border border-border text-t-secondary hover:text-t-primary'
+              }`}
+            >
+              {cat === 'all' ? 'All' : cat === 'task' ? 'Tasks' : cat === 'project' ? 'Projects' : 'Focus'}
+            </button>
+          ))}
         </div>
         <input
           type="text"
@@ -207,17 +202,11 @@ export default function OperationLogView() {
                         className="inline-block w-2 h-2 rounded-full mt-1 shrink-0"
                         style={{ backgroundColor: typeColors[entry.type] }}
                       />
-                      <span className="text-t-secondary shrink-0 w-[80px]">
+                      <span className="text-t-secondary shrink-0 whitespace-nowrap">
                         {formatRelativeTime(entry.timestamp)}
                       </span>
                       <span className="text-t-primary">
                         {describeOperation(entry)}
-                        {entry.projectId && projectColorMap[entry.projectId] && (
-                          <span
-                            className="inline-block w-2 h-2 rounded-full ml-1.5 align-middle"
-                            style={{ backgroundColor: projectColorValue(projectColorMap[entry.projectId]) }}
-                          />
-                        )}
                       </span>
                     </div>
                   ))}

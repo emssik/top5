@@ -241,6 +241,11 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
             <span>{project.tasks.length} tasks</span>
             <span>·</span>
             <span>{pinnedCount} pinned</span>
+            <span>·</span>
+            <span
+              className="cursor-pointer hover:text-t-primary transition-colors"
+              onClick={() => window.api.openOperationLogWindow(project.name)}
+            >activity</span>
           </div>
         </div>
 

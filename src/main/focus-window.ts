@@ -1,9 +1,9 @@
-import { BrowserWindow, screen } from 'electron'
+import { BrowserWindow, globalShortcut, screen } from 'electron'
 import { join } from 'path'
 import { execFile } from 'child_process'
 import { is } from '@electron-toolkit/utils'
 import type { IpcMain } from 'electron'
-import { getAppData, setAppDataKey } from './store'
+import { appendOperation, getAppData, loadCheckIns, setAppDataKey } from './store'
 
 let focusWindow: BrowserWindow | null = null
 let checkInWindow: BrowserWindow | null = null
@@ -12,8 +12,10 @@ let checkInTimeout: ReturnType<typeof setTimeout> | null = null
 let countdownInterval: ReturnType<typeof setInterval> | null = null
 let checkInDeadline: number = 0
 let lastCheckInAt: number = 0
+let focusStartedAt: number = 0
+let focusTaskInfo: { projectId?: string; projectName?: string; taskTitle?: string } = {}
 
-const CHECK_IN_INTERVAL_MS = 15 * 60 * 1000
+const CHECK_IN_INTERVAL_MS = 30 * 1000 // TODO: revert to 15 * 60 * 1000
 
 export function getFocusWindow(): BrowserWindow | null {
   return focusWindow
@@ -59,6 +61,28 @@ function clearCheckInTimer(): void {
 function playCheckInSound(): void {
   // Play macOS system notification sound
   execFile('afplay', ['/System/Library/Sounds/Tink.aiff'])
+}
+
+const CHECKIN_SHORTCUT_KEYS = ['1', '2', '3'] as const
+const CHECKIN_RESPONSES: Record<string, 'yes' | 'a_little' | 'no'> = {
+  '1': 'yes',
+  '2': 'a_little',
+  '3': 'no'
+}
+
+function registerCheckInShortcuts(): void {
+  for (const key of CHECKIN_SHORTCUT_KEYS) {
+    globalShortcut.register(key, () => {
+      if (!checkInWindow || checkInWindow.isDestroyed()) return
+      checkInWindow.webContents.send('checkin-respond', CHECKIN_RESPONSES[key])
+    })
+  }
+}
+
+function unregisterCheckInShortcuts(): void {
+  for (const key of CHECKIN_SHORTCUT_KEYS) {
+    globalShortcut.unregister(key)
+  }
 }
 
 function showCheckInPopup(): void {
@@ -108,15 +132,35 @@ function showCheckInPopup(): void {
   }
 
   checkInWindow.on('closed', () => {
+    unregisterCheckInShortcuts()
     checkInWindow = null
   })
+
+  registerCheckInShortcuts()
 }
 
 function closeCheckInPopup(): void {
+  unregisterCheckInShortcuts()
   if (checkInWindow && !checkInWindow.isDestroyed()) {
     checkInWindow.close()
     checkInWindow = null
   }
+}
+
+function resolveFocusTask(): { projectId?: string; projectName?: string; taskTitle?: string } {
+  const { config, projects, quickTasks } = getAppData()
+  const pid = config.focusProjectId
+  const tid = config.focusTaskId
+  if (!pid || !tid) return {}
+
+  if (pid === '__standalone__') {
+    const qt = (quickTasks ?? []).find((t) => t.id === tid)
+    return { taskTitle: qt?.title }
+  }
+
+  const project = projects.find((p) => p.id === pid)
+  const task = project?.tasks.find((t) => t.id === tid)
+  return { projectId: pid, projectName: project?.name, taskTitle: task?.title }
 }
 
 export function registerFocusHandlers(
@@ -173,11 +217,25 @@ export function registerFocusHandlers(
       focusWindow = null
     })
 
+    focusStartedAt = Date.now()
+    focusTaskInfo = resolveFocusTask()
+    appendOperation({ type: 'focus_started', ...focusTaskInfo })
+
     startCheckInTimer()
   })
 
   ipcMain.handle('exit-focus-mode', () => {
     const mainWin = getMainWindow()
+
+    // Log focus end with reported (check-in) time
+    const reportedMinutes = focusStartedAt
+      ? loadCheckIns()
+          .filter((c) => new Date(c.timestamp).getTime() >= focusStartedAt)
+          .reduce((sum, c) => sum + (c.minutes ?? (c.response === 'yes' ? 15 : c.response === 'a_little' ? 7 : 0)), 0)
+      : 0
+    appendOperation({ type: 'focus_ended', ...focusTaskInfo, details: `${reportedMinutes}min` })
+    focusStartedAt = 0
+    focusTaskInfo = {}
 
     // Clear focus state in store before showing main window
     const { config } = getAppData()
@@ -217,6 +275,7 @@ export function registerFocusHandlers(
 
     const { config } = getAppData()
     setAppDataKey('config', { ...config, focusProjectId: projectId, focusTaskId: taskId })
+    focusTaskInfo = resolveFocusTask()
 
     // Reset check-in timer for the new task
     startCheckInTimer()
@@ -235,11 +294,15 @@ export function registerFocusHandlers(
     focusWindow.setSize(width, height)
   })
 
-  ipcMain.handle('open-operation-log-window', () => {
+  ipcMain.handle('open-operation-log-window', (_event, filter?: string) => {
     if (operationLogWindow && !operationLogWindow.isDestroyed()) {
-      operationLogWindow.focus()
-      return
+      operationLogWindow.close()
+      operationLogWindow = null
     }
+
+    const hash = filter
+      ? `operation-log?filter=${encodeURIComponent(filter)}`
+      : 'operation-log'
 
     operationLogWindow = new BrowserWindow({
       width: 520,
@@ -253,9 +316,9 @@ export function registerFocusHandlers(
     })
 
     if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-      operationLogWindow.loadURL(process.env['ELECTRON_RENDERER_URL'] + '#operation-log')
+      operationLogWindow.loadURL(process.env['ELECTRON_RENDERER_URL'] + '#' + hash)
     } else {
-      operationLogWindow.loadFile(join(__dirname, '../renderer/index.html'), { hash: 'operation-log' })
+      operationLogWindow.loadFile(join(__dirname, '../renderer/index.html'), { hash })
     }
 
     operationLogWindow.on('closed', () => {

@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.28.0] - 2026-02-14
+
+### Added
+
+- Focus session tracking: `focus_started` and `focus_ended` operations now log task/project context and total reported focus time
+- Keyboard shortcuts for check-in responses: press `1` (Yes), `2` (A little), `3` (No) to respond without clicking — shortcuts shown as hints on buttons
+- `onCheckInRespond` preload API for global shortcut-driven check-in responses via IPC
+- Category filter buttons (All / Tasks / Projects / Focus) in Operation Log view
+- URL-based filter parameter for Operation Log window — open pre-filtered via `openOperationLogWindow(filter)`
+- "Activity" link in Project Detail View header to open the operation log filtered by project name
+- Focus time (`Xmin`) shown in task completion log entries (both quick tasks and project tasks)
+- `taskTimeMinutes` helper in main store to calculate accumulated focus time per task from check-in data
+- `loadCheckIns` and `appendOperation` exported from main store for use in focus-window module
+
 ### Changed
 
 - Focus Mode task picker now uses `useTaskList` hook for consistent task list with clean view (same ordering and filtering)
@@ -16,10 +30,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Pinned tasks in Project Detail View now appear above unpinned tasks, sorted by pin order
 - Newly pinned tasks are assigned the next order position so they appear at the end of the pinned group
 - Pin icon in Project Detail View is now always clickable — click to unpin an already-pinned task (previously pinned tasks showed a static icon)
+- Operation Log time column simplified to show only `HH:MM` time (removed relative "ago" format)
+- Operation Log no longer fetches project data or renders project color dots — streamlined to text-only entries
+- Check-in popup uses refs instead of state for projectId/taskId to avoid stale closures in IPC callback
+- Operation Log window re-creates on each open (closes previous instance) to support changing filter parameters
 
 ### Removed
 
 - `focus_checkin` operation type from activity log — focus check-ins are no longer logged as separate operations
+- Project color dots from Operation Log entries
 
 ## [1.27.1] - 2026-02-13
 

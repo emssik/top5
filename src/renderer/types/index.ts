@@ -108,7 +108,7 @@ export type OperationType =
   | 'quick_task_created' | 'quick_task_completed' | 'quick_task_uncompleted' | 'quick_task_deleted'
   | 'project_created' | 'project_updated' | 'project_archived' | 'project_unarchived'
   | 'project_suspended' | 'project_unsuspended' | 'project_deleted'
-  | 'focus_started'
+  | 'focus_started' | 'focus_ended'
 
 export interface OperationLogEntry {
   id: string
@@ -159,7 +159,7 @@ declare global {
       saveFocusCheckIn: (checkIn: FocusCheckIn) => Promise<void>
       getFocusCheckIns: (taskId?: string) => Promise<FocusCheckIn[]>
       dismissCheckIn: () => Promise<void>
-      openOperationLogWindow: () => Promise<void>
+      openOperationLogWindow: (filter?: string) => Promise<void>
       enterCleanView: () => Promise<void>
       exitCleanView: () => Promise<void>
       setTrafficLightsVisible: (visible: boolean) => Promise<void>
@@ -185,6 +185,7 @@ declare global {
       onReloadData: (callback: () => void) => () => void
       onShortcutAction: (callback: (data: ShortcutActionPayload) => void) => () => void
       onCheckInCountdown: (callback: (remainingMs: number) => void) => () => void
+      onCheckInRespond: (callback: (response: 'yes' | 'a_little' | 'no') => void) => () => void
     }
   }
 }

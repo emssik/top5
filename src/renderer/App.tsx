@@ -11,7 +11,7 @@ export default function App() {
   const windowHash = window.location.hash
   const isFocusWindow = windowHash === '#focus'
   const isCheckInWindow = windowHash === '#checkin'
-  const isOperationLogWindow = windowHash === '#operation-log'
+  const isOperationLogWindow = windowHash.startsWith('#operation-log')
   const isQuickAddWindow = windowHash === '#quick-add'
   const isAuxWindow = isCheckInWindow || isOperationLogWindow || isQuickAddWindow
   const isMainOrFocus = !isAuxWindow
