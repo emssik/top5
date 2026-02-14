@@ -1,6 +1,8 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import type { Project } from '../types'
 import { projectColorValue } from '../utils/projects'
+import { checkInMinutes, formatCheckInTime } from '../utils/checkInTime'
+import { useProjects } from '../hooks/useProjects'
 
 type DragSource = 'active' | 'suspended' | 'archived'
 
@@ -96,6 +98,15 @@ export default function Sidebar({
 }: Props) {
   const themeIcon = theme === 'light' ? '🌙' : '☀'
   const themeLabel = theme === 'light' ? 'Dark mode' : 'Light mode'
+  const focusCheckIns = useProjects((s) => s.focusCheckIns)
+  const todayTime = useMemo(() => {
+    const today = new Date().toISOString().slice(0, 10)
+    const mins = focusCheckIns
+      .filter((c) => c.timestamp.startsWith(today))
+      .reduce((sum, c) => sum + checkInMinutes(c), 0)
+    return mins > 0 ? formatCheckInTime(mins) : ''
+  }, [focusCheckIns])
+
   const [draggedId, setDraggedId] = useState<string | null>(null)
   const [dragSource, setDragSource] = useState<DragSource | null>(null)
   const [dragOverProjectId, setDragOverProjectId] = useState<string | null>(null)
@@ -213,7 +224,7 @@ export default function Sidebar({
       </div>
 
       <div className="sidebar-section">
-        <SidebarItem active={activeView === 'today'} icon="▶" label="Today" onClick={() => onSelectView('today')} />
+        <SidebarItem active={activeView === 'today'} icon="▶" label={todayTime ? `Today (${todayTime})` : 'Today'} onClick={() => onSelectView('today')} />
         <SidebarItem icon="👁" label="Clean view" onClick={onToggleCleanView} />
         <SidebarItem icon="📝" label="Quick notes" onClick={onToggleNotes} />
       </div>

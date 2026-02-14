@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.37.0] - 2026-02-14
+
+### Added
+
+- Today's total focus time displayed next to "Today" label in sidebar (e.g. "Today (1h 25min)")
+
 ## [1.36.0] - 2026-02-14
 
 ### Added
