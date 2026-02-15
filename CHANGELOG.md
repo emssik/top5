@@ -7,6 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Hide remove button on completed (locked) tasks in TodayView to prevent accidental removal
+
+- Settings icon in sidebar now renders as proper emoji (⚙️) instead of plain text glyph
+
+## [1.44.0] - 2026-02-16
+
+### Added
+
+- Remove button (✕) on every task row including overflow section for quick task removal
+- "Clear" button on Done section header to remove all completed tasks at once
+
+### Changed
+
+- Focus button is hidden for overflow tasks but remove button remains accessible
+
+## [1.43.1] - 2026-02-15
+
+### Fixed
+
+- Hide remove button on completed (locked) tasks in TodayView to prevent accidental removal
+
+- Keyboard shortcuts (split, focus, remove, etc.) could double-fire because `hoveredTaskRef` was not cleared after action — `consume()` helper now clears both context menu and hover ref
+
+## [1.43.0] - 2026-02-15
+
+### Added
+
+- Right-click context menu on tasks in TodayView with actions: Focus, In Progress, Stop Focus, Open Note, Split & Continue, Remove/Unpin
+- Keyboard shortcuts for task actions triggered on hovered or context-menu-targeted task (F=focus, P=in-progress, S=stop focus, N=open note, C=split, Backspace/Delete=remove)
+- Hover tracking on task rows and focus card for keyboard shortcut targeting
+
+### Changed
+
+- Replaced inline task action buttons (progress toggle, note, split, remove) with context menu — cleaner task row UI
+- Removed stop-focus button from focus card in favor of context menu and S keyboard shortcut
+
+
 ## [1.42.0] - 2026-02-15
 
 ### Added
@@ -16,6 +55,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Hide remove button on completed (locked) tasks in TodayView to prevent accidental removal
+
 - Stale closure in `ProjectDetailView.updateTasks`: now reads fresh project state from Zustand store instead of using potentially stale `project` prop
 - Stale closure in `TodayView.completeTask` and `uncompleteTask`: use `useProjects.getState()` instead of `projects` from closure
 - Today view active task slot calculation no longer subtracts completed tasks from the limit, preventing premature overflow of active tasks
@@ -24,6 +65,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.41.1] - 2026-02-15
 
 ### Fixed
+
+- Hide remove button on completed (locked) tasks in TodayView to prevent accidental removal
 
 - Quick Add window no longer closes on Cmd+Enter when submission fails (empty title); `handleSubmit` now returns success/failure boolean
 - `RepeatUpdateModal` properly awaits async `saveRepeatingTask` before closing
@@ -71,6 +114,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - TodayView uses destructured `config` from store instead of inline `getState()` call
 
 ### Fixed
+
+- Hide remove button on completed (locked) tasks in TodayView to prevent accidental removal
 
 - Drag-and-drop reorder in ProjectDetailView no longer disrupts someday tasks
 
@@ -193,6 +238,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Hide remove button on completed (locked) tasks in TodayView to prevent accidental removal
+
 - Stale focus state on startup: `focusProjectId` and `focusTaskId` are now cleared when the app launches, preventing ghost focus indicators from previous sessions
 
 ## [1.32.0] - 2026-02-14
@@ -268,6 +315,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Hide remove button on completed (locked) tasks in TodayView to prevent accidental removal
+
 - Weekdays schedule in Quick Add: "weekdays" mode now correctly saves Mon-Fri (was saving only `[1]`)
 - Weekly schedule picker correctly maps UI button positions to JS weekday values (Sun=0, Mon=1...Sat=6)
 - Legacy Sunday value `7` normalized to `0` when loading repeating task schedules
@@ -287,6 +336,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Operation Log search filter now matches against the full rendered description instead of raw field values, improving search accuracy
 
 ### Fixed
+
+- Hide remove button on completed (locked) tasks in TodayView to prevent accidental removal
 
 - Focus check-in interval restored to production value (15 minutes) from debug value (30 seconds)
 
@@ -326,6 +377,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.27.1] - 2026-02-13
 
 ### Fixed
+
+- Hide remove button on completed (locked) tasks in TodayView to prevent accidental removal
 
 - Typed task parameter in Focus Mode completion handler (use `Task` type instead of inline `{ id: string }`)
 
@@ -522,6 +575,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Hide remove button on completed (locked) tasks in TodayView to prevent accidental removal
+
 - Completed pinned tasks no longer lost on app restart or window reload
 
 ## [1.17.0] - 2026-02-12
@@ -590,6 +645,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Hide remove button on completed (locked) tasks in TodayView to prevent accidental removal
+
 - New project creation now includes `suspendedAt: null` field
 - Active project count now excludes both archived and suspended projects
 - Unarchive also clears `suspendedAt` to ensure restored projects are fully active
@@ -642,6 +699,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - README rewritten in English with updated feature descriptions, project structure, and stack details
 
 ### Fixed
+
+- Hide remove button on completed (locked) tasks in TodayView to prevent accidental removal
 
 - Inline task editing intermittent revert bug: switched to ref-based state tracking with fire-and-forget save pattern and single Enter→blur→saveEdit path (affects both QuickTasksView and TaskList)
 
@@ -760,11 +819,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Hide remove button on completed (locked) tasks in TodayView to prevent accidental removal
+
 - Conditional React hooks call in `App.tsx` for auxiliary windows (check-in, stats) now compliant with Rules of Hooks
 
 ## [1.6.1] - 2026-02-11
 
 ### Fixed
+
+- Hide remove button on completed (locked) tasks in TodayView to prevent accidental removal
 
 - Focus window now opens on primary display and uses `floating` level instead of `screen-saver`, allowing it to be moved between monitors
 
