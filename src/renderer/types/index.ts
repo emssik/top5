@@ -81,6 +81,7 @@ declare global {
       winsGetLockState: () => Promise<import('../../shared/types').WinsLockState | null>
       winsGetHistory: () => Promise<import('../../shared/types').WinEntry[]>
       winsGetStreaks: () => Promise<import('../../shared/types').StreakStats>
+      selectDirectory: () => Promise<string | null>
       openTaskNote: (taskId: string, taskTitle: string, projectName?: string, taskBadge?: string) => Promise<{ ok?: boolean; error?: string }>
       onReloadData: (callback: () => void) => () => void
       onShortcutAction: (callback: (data: ShortcutActionPayload) => void) => () => void

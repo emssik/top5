@@ -98,6 +98,7 @@ export interface AppConfig {
   activeProjectsLimit: number
   cleanViewFont: string
   obsidianStoragePath?: string
+  obsidianVaultName?: string
 }
 
 export interface FocusCheckIn {

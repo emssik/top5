@@ -16,7 +16,7 @@ import {
 } from 'fs'
 import { createHash, randomUUID } from 'crypto'
 import { platform } from 'os'
-import { dirname, basename, join } from 'path'
+import { dirname, basename, join, resolve } from 'path'
 import { homedir } from 'os'
 import yaml from 'js-yaml'
 import { normalizeRepeatSchedule } from '../shared/schedule'
@@ -386,6 +386,9 @@ function normalizeAppConfig(value: unknown): AppConfig {
       : defaultData.config.cleanViewFont,
     obsidianStoragePath: typeof value.obsidianStoragePath === 'string' && value.obsidianStoragePath.trim().length > 0
       ? value.obsidianStoragePath.trim()
+      : undefined,
+    obsidianVaultName: typeof value.obsidianVaultName === 'string' && value.obsidianVaultName.trim().length > 0
+      ? value.obsidianVaultName.trim()
       : undefined
   }
 }
@@ -1117,6 +1120,14 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
     return winsService.getStreaks()
   })
 
+  ipcMain.handle('select-directory', async () => {
+    const { dialog, BrowserWindow } = require('electron') as typeof import('electron')
+    const win = BrowserWindow.getFocusedWindow()
+    const result = await dialog.showOpenDialog(win!, { properties: ['openDirectory'] })
+    if (result.canceled || !result.filePaths.length) return null
+    return result.filePaths[0]
+  })
+
   // --- Obsidian task notes ---
 
   ipcMain.handle('open-task-note', (_event, taskId: string, taskTitle: string, projectName?: string, taskBadge?: string) => {
@@ -1124,6 +1135,7 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
     const config = getData().config
     const storagePath = config.obsidianStoragePath
     if (!storagePath) return { error: 'no_path' }
+    const vaultName = config.obsidianVaultName || basename(resolve(storagePath))
 
     const { shell } = require('electron') as typeof import('electron')
 
@@ -1134,13 +1146,11 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
     const safeName = `${prefix}${sanitize(truncated)}`
     const folderName = projectName ? sanitize(projectName) : 'QuickTasks'
 
-    // vault/top5.storage/ProjectName/BADGE Title.md
-    const vaultPath = storagePath.replace(/\/+$/, '')
-    const vaultName = basename(vaultPath)
+    const vaultPath = resolve(storagePath.replace(/\/+$/, ''))
     const notePath = `top5.storage/${folderName}/${safeName}`
 
     // Ensure directory exists so Obsidian can write the file
-    const noteDir = join(storagePath, 'top5.storage', folderName)
+    const noteDir = join(vaultPath, 'top5.storage', folderName)
     mkdirSync(noteDir, { recursive: true })
 
     const filePath = join(noteDir, `${safeName}.md`)

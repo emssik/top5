@@ -24,6 +24,7 @@ export default function Settings({ open, onClose }: Props) {
   const [activeProjectsLimit, setActiveProjectsLimit] = useState(config.activeProjectsLimit ?? 5)
   const [cleanViewFont, setCleanViewFont] = useState(config.cleanViewFont || 'Caveat')
   const [obsidianStoragePath, setObsidianStoragePath] = useState(config.obsidianStoragePath || '')
+  const [obsidianVaultName, setObsidianVaultName] = useState(config.obsidianVaultName || '')
   const [showShortcuts, setShowShortcuts] = useState(false)
   const [showApi, setShowApi] = useState(false)
   const [apiConfig, setApiConfig] = useState<ApiConfig | null>(null)
@@ -35,6 +36,7 @@ export default function Settings({ open, onClose }: Props) {
     setActiveProjectsLimit(config.activeProjectsLimit ?? 5)
     setCleanViewFont(config.cleanViewFont || 'Caveat')
     setObsidianStoragePath(config.obsidianStoragePath || '')
+    setObsidianVaultName(config.obsidianVaultName || '')
   }, [config])
 
   useEffect(() => {
@@ -77,7 +79,8 @@ export default function Settings({ open, onClose }: Props) {
       quickTasksLimit: Math.max(1, Math.min(20, quickTasksLimit)),
       activeProjectsLimit: Math.max(1, Math.min(20, activeProjectsLimit)),
       cleanViewFont,
-      obsidianStoragePath: obsidianStoragePath.trim() || undefined
+      obsidianStoragePath: obsidianStoragePath.trim() || undefined,
+      obsidianVaultName: obsidianVaultName.trim() || undefined
     })
     onClose()
   }
@@ -87,7 +90,7 @@ export default function Settings({ open, onClose }: Props) {
     : ''
 
   return (
-    <div className="modal-overlay open" onClick={onClose}>
+    <div className="modal-overlay open" onClick={onClose} onKeyDown={(e) => { if (e.key === 'Escape') onClose() }} tabIndex={-1} ref={(el) => el?.focus()}>
       <div className="modal" style={{ width: 440 }} onClick={(event) => event.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
           <h2>Settings</h2>
@@ -160,13 +163,35 @@ export default function Settings({ open, onClose }: Props) {
           <label style={{ display: 'block', marginBottom: 4 }}>Obsidian Vault</label>
           <input
             className="form-input"
-            style={{ width: '100%', padding: '5px 8px', fontSize: 12 }}
-            placeholder="/Users/you/vault/top5-notes"
-            value={obsidianStoragePath}
-            onChange={(e) => setObsidianStoragePath(e.target.value)}
+            style={{ width: '100%', padding: '5px 8px', fontSize: 12, marginBottom: 6 }}
+            placeholder="Vault name (e.g. my-vault)"
+            value={obsidianVaultName}
+            onChange={(e) => setObsidianVaultName(e.target.value)}
           />
+          <div style={{ position: 'relative' }}>
+            <input
+              className="form-input"
+              style={{ width: '100%', padding: '5px 26px 5px 8px', fontSize: 12 }}
+              placeholder="Vault path (e.g. /Users/you/my-vault)"
+              value={obsidianStoragePath}
+              onChange={(e) => setObsidianStoragePath(e.target.value)}
+            />
+            <button
+              style={{ position: 'absolute', right: 4, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: 2, fontSize: 14, opacity: 0.5, lineHeight: 1 }}
+              title="Browse…"
+              onClick={async () => {
+                const dir = await window.api.selectDirectory()
+                if (dir) {
+                  setObsidianStoragePath(dir)
+                  if (!obsidianVaultName) setObsidianVaultName(dir.split('/').pop() || '')
+                }
+              }}
+            >
+              📂
+            </button>
+          </div>
           <div style={{ fontSize: 11, opacity: 0.5, marginTop: 4 }}>
-            Obsidian vault path — notes are created in project subfolders
+            Notes are saved to vault-path/top5.storage/; vault name is used for obsidian:// links
           </div>
         </div>
 

@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.41.0] - 2026-02-15
+
+### Added
+
+- `obsidianVaultName` config option for explicitly setting the Obsidian vault name used in `obsidian://` URIs (previously derived from storage path)
+- Native directory picker dialog (`select-directory` IPC handler) for browsing vault path in Settings
+- Browse button (folder icon) on Obsidian vault path input in Settings UI
+
+### Changed
+
+- Obsidian Settings section split into separate vault name and vault path fields (previously single path input)
+- Vault name auto-populated from selected directory when using the browse button
+- Obsidian note `open-task-note` handler uses explicit `obsidianVaultName` config with fallback to directory basename via `path.resolve()`
+- Settings modal overlay now handles Escape key via `onKeyDown` for keyboard dismissal
+
 ## [1.40.0] - 2026-02-15
 
 ### Added
