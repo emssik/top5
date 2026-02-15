@@ -103,6 +103,8 @@ export default function TodayView() {
   const [dragOverId, setDragOverId] = useState<string | null>(null)
   const [dragOverZone, setDragOverZone] = useState<'top' | 'overflow' | null>(null)
   const [showLossBanner, setShowLossBanner] = useState(false)
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; task: MergedTask; section: string } | null>(null)
+  const hoveredTaskRef = useRef<{ task: MergedTask; section: string } | null>(null)
   const prevLockedRef = useRef(winsLock?.locked ?? false)
 
   // Load win history for 30-day strip
@@ -201,22 +203,67 @@ export default function TodayView() {
     addInputRef.current?.focus()
   }, [showAddInput])
 
+  // Close context menu on click outside
+  useEffect(() => {
+    if (!contextMenu) return
+    const handleClick = () => setContextMenu(null)
+    window.addEventListener('click', handleClick)
+    return () => window.removeEventListener('click', handleClick)
+  }, [contextMenu])
+
+  // Task keyboard shortcuts: work on hovered task OR context menu task
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      if (event.repeat) return
       const tag = (event.target as HTMLElement).tagName
       if (tag === 'INPUT' || tag === 'TEXTAREA') return
-      if (event.key === 'n' && !event.metaKey && !event.ctrlKey && !event.altKey) {
+
+      // Escape always closes context menu / add input
+      if (event.key === 'Escape') {
+        if (contextMenu) { setContextMenu(null); return }
+        setShowAddInput(false)
+        return
+      }
+
+      // Determine target task: context menu takes priority, then hover
+      const target = contextMenu ?? hoveredTaskRef.current
+      if (!target) {
+        // No task targeted — global shortcuts only
+        if (event.key === 'n' && !event.metaKey && !event.ctrlKey && !event.altKey) {
+          event.preventDefault()
+          setShowAddInput(true)
+        }
+        return
+      }
+
+      const { task, section } = target
+      const locked = isTaskLocked(task)
+      const isFocusCard = section === 'focus'
+      const key = event.key.toLowerCase()
+
+      if (key === 'f' && !isFocusCard) { setContextMenu(null); focusOnTask(task); return }
+      if (key === 'p' && !isFocusCard) { setContextMenu(null); toggleInProgress(task); return }
+      if (key === 's' && isFocusCard) { setContextMenu(null); stopFocus(); return }
+      if (key === 'n' && config.obsidianStoragePath) {
+        setContextMenu(null)
+        window.api.openTaskNote(task.id, task.title, task.projectName, task.kind === 'quick' ? formatQuickTaskId(task.taskNumber) : formatTaskId(task.taskNumber, task.projectCode))
+        return
+      }
+      if (key === 'c' && !task.repeatingTaskId) { setContextMenu(null); splitTask(task); return }
+      if ((key === 'backspace' || key === 'delete') && !isFocusCard && !locked && (section === 'up-next' || task.repeatingTaskId)) {
+        setContextMenu(null); removeTask(task); return
+      }
+
+      // 'n' not consumed by note — fall through to global add
+      if (key === 'n' && !event.metaKey && !event.ctrlKey && !event.altKey) {
         event.preventDefault()
         setShowAddInput(true)
-      }
-      if (event.key === 'Escape') {
-        setShowAddInput(false)
       }
     }
 
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [])
+  }, [contextMenu, config.obsidianStoragePath])
 
   useEffect(() => {
     if (!focusTask) return
@@ -577,6 +624,9 @@ export default function TodayView() {
         onDragOver={(event) => handleDragOver(event, task.id)}
         onDrop={() => handleDrop(task.id)}
         onDragEnd={clearDragState}
+        onContextMenu={(e) => { if (canShowActions) { e.preventDefault(); setContextMenu({ x: e.clientX, y: e.clientY, task, section }) } }}
+        onMouseEnter={() => { if (canShowActions) hoveredTaskRef.current = { task, section } }}
+        onMouseLeave={() => { if (hoveredTaskRef.current?.task.id === task.id) hoveredTaskRef.current = null }}
       >
         <button className="task-checkbox" onClick={() => completeTask(task)} />
         <div className="task-content">
@@ -604,28 +654,12 @@ export default function TodayView() {
         {canShowActions && (
           <div className="task-actions">
             <button
-              className="task-action-btn btn-progress"
-              title={task.inProgress ? 'Stop in progress' : 'Set in progress'}
-              onClick={() => toggleInProgress(task)}
-            >
-              {task.inProgress ? '■' : '▶'}
-            </button>
-            <button
               className="task-action-btn btn-focus"
               title="Focus"
               onClick={() => focusOnTask(task)}
             >
               ▶
             </button>
-            {config.obsidianStoragePath && (
-              <button className="task-action-btn" title="Open note" onClick={() => window.api.openTaskNote(task.id, task.title, task.projectName, task.kind === 'quick' ? formatQuickTaskId(task.taskNumber) : formatTaskId(task.taskNumber, task.projectCode))} style={{ opacity: 0.5, fontSize: 11 }}>📝</button>
-            )}
-            {!task.repeatingTaskId && (
-              <button className="task-action-btn" title="Split: complete &amp; continue" onClick={() => splitTask(task)} style={{ opacity: 0.5, fontSize: 11 }}>✂</button>
-            )}
-            {!locked && (section === 'up-next' || task.repeatingTaskId) && (
-              <button className="task-action-btn btn-remove" title="Remove" onClick={() => removeTask(task)}>✕</button>
-            )}
           </div>
         )}
       </div>
@@ -667,6 +701,49 @@ export default function TodayView() {
           onClose={() => setRepeatUpdatePrompt(null)}
         />
       )}
+
+      {contextMenu && (() => {
+        const { task, section } = contextMenu
+        const locked = isTaskLocked(task)
+        const isFocusCard = section === 'focus'
+        const items: { label: string; kbd: string; action: () => void; danger?: boolean }[] = []
+
+        if (!isFocusCard) {
+          items.push({ label: 'Focus', kbd: 'F', action: () => focusOnTask(task) })
+          items.push({ label: task.inProgress ? 'Stop In Progress' : 'In Progress', kbd: 'P', action: () => toggleInProgress(task) })
+        }
+        if (isFocusCard) {
+          items.push({ label: 'Stop Focus', kbd: 'S', action: () => stopFocus() })
+        }
+        if (config.obsidianStoragePath) {
+          items.push({ label: 'Open Note', kbd: 'N', action: () => window.api.openTaskNote(task.id, task.title, task.projectName, task.kind === 'quick' ? formatQuickTaskId(task.taskNumber) : formatTaskId(task.taskNumber, task.projectCode)) })
+        }
+        if (!task.repeatingTaskId) {
+          items.push({ label: 'Split & Continue', kbd: 'C', action: () => splitTask(task) })
+        }
+        if (!isFocusCard && !locked && (section === 'up-next' || task.repeatingTaskId)) {
+          items.push({ label: task.repeatingTaskId ? 'Unpin' : 'Remove', kbd: '⌫', action: () => removeTask(task), danger: true })
+        }
+
+        return (
+          <div
+            className="context-menu"
+            style={{ left: contextMenu.x, top: contextMenu.y }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {items.map((item, i) => (
+              <div
+                key={i}
+                className={`context-menu-item ${item.danger ? 'danger' : ''}`}
+                onClick={() => { setContextMenu(null); item.action() }}
+              >
+                <span>{item.label}</span>
+                <span className="context-menu-kbd">{item.kbd}</span>
+              </div>
+            ))}
+          </div>
+        )
+      })()}
 
       {showWinCelebration && (
         <div className="wins-victory-overlay" onClick={() => setShowWinCelebration(false)}>
@@ -747,7 +824,12 @@ export default function TodayView() {
             <span style={{ color: '#3b82f6' }}>●</span>
             <span>Focus</span>
           </div>
-          <div className="focus-card">
+          <div
+            className="focus-card"
+            onContextMenu={(e) => { e.preventDefault(); setContextMenu({ x: e.clientX, y: e.clientY, task: focusTask, section: 'focus' }) }}
+            onMouseEnter={() => { hoveredTaskRef.current = { task: focusTask, section: 'focus' } }}
+            onMouseLeave={() => { hoveredTaskRef.current = null }}
+          >
             <div className="focus-dot" />
             <button className="task-checkbox" onClick={() => completeTask(focusTask)} />
             <div className="task-content">
@@ -772,9 +854,6 @@ export default function TodayView() {
               {renderMeta(focusTask)}
             </div>
             <span className="focus-timer">{focusTimer}</span>
-            <div className="task-actions">
-              <button className="task-action-btn btn-focus" title="Stop focus" onClick={stopFocus}>■</button>
-            </div>
           </div>
         </>
       )}

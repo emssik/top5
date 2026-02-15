@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.43.0] - 2026-02-15
+
+### Added
+
+- Right-click context menu on tasks in TodayView with actions: Focus, In Progress, Stop Focus, Open Note, Split & Continue, Remove/Unpin
+- Keyboard shortcuts for task actions triggered on hovered or context-menu-targeted task (F=focus, P=in-progress, S=stop focus, N=open note, C=split, Backspace/Delete=remove)
+- Hover tracking on task rows and focus card for keyboard shortcut targeting
+
+### Changed
+
+- Replaced inline task action buttons (progress toggle, note, split, remove) with context menu — cleaner task row UI
+- Removed stop-focus button from focus card in favor of context menu and S keyboard shortcut
+
+
 ## [1.42.0] - 2026-02-15
 
 ### Added
