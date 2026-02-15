@@ -207,10 +207,8 @@ export function useTaskList(opts?: { excludeFocus?: boolean; limitAdjust?: numbe
     ? [...regularActive.filter((t) => t.inProgress), ...regularActive.filter((t) => !t.inProgress)]
     : regularActive
 
-  const regularCompleted = completedTasks.filter((t) => !isRepeating(t))
   const focusConsumesSlot = excludeFocus && focusTask ? !isRepeating(focusTask) : false
-  const slotsForActive = Math.max(0, limit - regularCompleted.length)
-  const activeSlots = Math.max(0, slotsForActive - (focusConsumesSlot ? 1 : 0))
+  const activeSlots = Math.max(0, limit - (focusConsumesSlot ? 1 : 0))
 
   let activeLimited: MergedTask[]
   let overflow: MergedTask[]

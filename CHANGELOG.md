@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.42.0] - 2026-02-15
+
+### Added
+
+- Split task action ("complete & continue"): scissor button on non-repeating tasks in TodayView completes the current task and creates a continuation with incremented title (e.g. "continue (1) Task title")
+- `continuationTitle` helper for generating sequential continuation titles
+
+### Fixed
+
+- Stale closure in `ProjectDetailView.updateTasks`: now reads fresh project state from Zustand store instead of using potentially stale `project` prop
+- Stale closure in `TodayView.completeTask` and `uncompleteTask`: use `useProjects.getState()` instead of `projects` from closure
+- Today view active task slot calculation no longer subtracts completed tasks from the limit, preventing premature overflow of active tasks
+- Long unbreakable task titles now wrap correctly with `overflow-wrap: anywhere` on task title elements
+
 ## [1.41.1] - 2026-02-15
 
 ### Fixed
