@@ -7,6 +7,8 @@ import { calcTaskTime, calcQuickTaskTime, formatCheckInTime } from '../utils/che
 import type { QuickTask, RepeatingTask, WinEntry } from '../types'
 import { STANDALONE_PROJECT_ID } from '../utils/constants'
 import TaskIdBadge from './TaskIdBadge'
+import { formatTaskId, formatQuickTaskId } from '../../shared/taskId'
+import RepeatUpdateModal from './RepeatUpdateModal'
 
 interface Props {
   showAll?: boolean
@@ -490,7 +492,7 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
           </button>
           {config.obsidianStoragePath && (
             <button
-              onClick={() => window.api.openTaskNote(task.id, task.title, task.projectName)}
+              onClick={() => window.api.openTaskNote(task.id, task.title, task.projectName, task.kind === 'quick' ? formatQuickTaskId(task.taskNumber) : formatTaskId(task.taskNumber, task.projectCode))}
               className="text-[10px] px-1.5 py-0.5 rounded bg-surface hover:bg-hover text-t-secondary transition-colors"
               title="Open note"
             >
@@ -576,39 +578,15 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
     return streak
   })()
 
-  const handleRepeatUpdate = () => {
-    if (!repeatUpdatePrompt) return
-    const rt = repeatingTasks.find((t) => t.id === repeatUpdatePrompt.repeatingTaskId)
-    if (rt) saveRepeatingTask({ ...rt, title: repeatUpdatePrompt.newTitle })
-    setRepeatUpdatePrompt(null)
-  }
-
   return (
     <div className={cleanView ? '' : 'space-y-1'}>
       {repeatUpdatePrompt && !cleanView && (
-        <div
-          className="modal-overlay open"
-          tabIndex={-1}
-          ref={(el) => el?.focus()}
-          onClick={() => setRepeatUpdatePrompt(null)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === 'y' || e.key === 'Y') { e.preventDefault(); handleRepeatUpdate() }
-            if (e.key === 'Escape' || e.key === 'n' || e.key === 'N') { e.preventDefault(); setRepeatUpdatePrompt(null) }
-          }}
-        >
-          <div className="modal" style={{ width: 340, padding: '20px 24px' }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 6, color: 'var(--c-text-heading)' }}>
-              Update repeating template?
-            </div>
-            <div style={{ fontSize: 13, opacity: 0.7, marginBottom: 16 }}>
-              Also change the title in the repeating task template?
-            </div>
-            <div className="form-actions" style={{ marginTop: 0 }}>
-              <button className="form-btn form-btn-secondary" onClick={() => setRepeatUpdatePrompt(null)}>No <kbd style={{ fontSize: 10, opacity: 0.5, marginLeft: 4 }}>N</kbd></button>
-              <button className="form-btn form-btn-primary" onClick={handleRepeatUpdate}>Yes, update <kbd style={{ fontSize: 10, opacity: 0.7, marginLeft: 4 }}>Y</kbd></button>
-            </div>
-          </div>
-        </div>
+        <RepeatUpdateModal
+          prompt={repeatUpdatePrompt}
+          repeatingTasks={repeatingTasks}
+          saveRepeatingTask={saveRepeatingTask}
+          onClose={() => setRepeatUpdatePrompt(null)}
+        />
       )}
 
       {showWinCelebration && (

@@ -1119,7 +1119,7 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
 
   // --- Obsidian task notes ---
 
-  ipcMain.handle('open-task-note', (_event, taskId: string, taskTitle: string, projectName?: string) => {
+  ipcMain.handle('open-task-note', (_event, taskId: string, taskTitle: string, projectName?: string, taskBadge?: string) => {
     if (typeof taskId !== 'string' || typeof taskTitle !== 'string') return { error: 'invalid' }
     const config = getData().config
     const storagePath = config.obsidianStoragePath
@@ -1127,13 +1127,14 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
 
     const { shell } = require('electron') as typeof import('electron')
 
-    // Sanitize names for filesystem
-    const safeName = taskTitle.replace(/[/\\:*?"<>|]/g, '-').slice(0, 100)
-    const folderName = projectName
-      ? projectName.replace(/[/\\:*?"<>|]/g, '-').slice(0, 100)
-      : 'QuickTasks'
+    // Sanitize names for filesystem (also collapse '..' to avoid path traversal)
+    const sanitize = (s: string) => s.replace(/[/\\:*?"<>|]/g, '-').replace(/\.{2,}/g, '.').trim()
+    const prefix = taskBadge ? `${sanitize(taskBadge)} ` : ''
+    const truncated = taskTitle.length > 40 ? taskTitle.slice(0, 40) + '…' : taskTitle
+    const safeName = `${prefix}${sanitize(truncated)}`
+    const folderName = projectName ? sanitize(projectName) : 'QuickTasks'
 
-    // vault/top5.storage/ProjectName/TaskTitle.md
+    // vault/top5.storage/ProjectName/BADGE Title.md
     const vaultPath = storagePath.replace(/\/+$/, '')
     const vaultName = basename(vaultPath)
     const notePath = `top5.storage/${folderName}/${safeName}`

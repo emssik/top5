@@ -157,7 +157,7 @@ export default function Settings({ open, onClose }: Props) {
         </div>
 
         <div className="modal-row" style={{ alignItems: 'flex-start', display: 'block' }}>
-          <label style={{ display: 'block', marginBottom: 4 }}>Obsidian notes path</label>
+          <label style={{ display: 'block', marginBottom: 4 }}>Obsidian Vault</label>
           <input
             className="form-input"
             style={{ width: '100%', padding: '5px 8px', fontSize: 12 }}

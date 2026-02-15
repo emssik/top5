@@ -26,7 +26,6 @@ export default function QuickAddWindow() {
   const [intervalDays, setIntervalDays] = useState(3)
   const [afterDoneDays, setAfterDoneDays] = useState(1)
   const [monthlyDay, setMonthlyDay] = useState(1)
-  const [success, setSuccess] = useState<string | null>(null)
   const [toast, setToast] = useState<string | null>(null)
   const [loaded, setLoaded] = useState(false)
 
@@ -154,7 +153,6 @@ export default function QuickAddWindow() {
 
   const switchMode = useCallback((next: Mode) => {
     setMode(next)
-    setSuccess(null)
   }, [])
 
   // Keyboard shortcuts
@@ -170,8 +168,7 @@ export default function QuickAddWindow() {
         const tag = (e.target as HTMLElement).tagName
         if (tag === 'TEXTAREA') return
         e.preventDefault()
-        handleSubmit()
-        window.api.closeQuickAddWindow()
+        handleSubmit().then(() => window.api.closeQuickAddWindow())
         return
       }
 
@@ -232,19 +229,6 @@ export default function QuickAddWindow() {
   const selectedProject = selectedProjectId ? projects.find((p) => p.id === selectedProjectId) : null
 
   if (!loaded) return null
-
-  if (success) {
-    return (
-      <div className="h-screen bg-card rounded-[14px] overflow-hidden flex items-center justify-center">
-        <div className="flex items-center justify-center gap-2 p-6 text-sm" style={{ color: 'var(--pc-green)' }}>
-          <span className="w-7 h-7 rounded-full flex items-center justify-center text-sm" style={{ background: 'rgba(34,197,94,0.12)' }}>
-            ✓
-          </span>
-          {success}
-        </div>
-      </div>
-    )
-  }
 
   return (
     <div className="h-screen bg-card rounded-[14px] overflow-hidden flex flex-col">

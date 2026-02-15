@@ -7,14 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.40.0] - 2026-02-15
+
 ### Added
 
 - Obsidian task notes integration: configure vault path in Settings, open/create per-task markdown notes from TodayView, QuickTasksView, and ProjectDetailView via `obsidian://` URI
 - `open-task-note` IPC handler creating notes in `top5.storage/<ProjectName>/` subfolders within the Obsidian vault
+- Task ID badge prefix in Obsidian note filenames (e.g. `TOP5-3 Task title.md`) with 40-char title truncation
 - `obsidianStoragePath` config option in AppConfig and Settings UI
 - Someday tasks: `someday` flag on project tasks with dedicated collapsible section in ProjectDetailView
 - Drag-and-drop support for moving tasks to/from the Someday section
-- Repeating task title sync prompt: when renaming a task spawned from a repeating template, a modal asks whether to update the template title too (TodayView and QuickTasksView)
+- Repeating task title sync prompt: when renaming a task spawned from a repeating template, a modal asks whether to update the template title too
+- `RepeatUpdateModal` shared component extracted from duplicated modal code in TodayView and QuickTasksView
 - Done list pagination in ProjectDetailView (10 tasks per page with prev/next controls)
 
 ### Changed
@@ -22,7 +26,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Quick Add window stays open after adding an item: Enter adds and clears the input, Cmd+Enter adds and closes the window
 - Quick Add shows inline toast confirmation instead of closing on success
 - Quick Add footer shortcut hints updated to reflect new Cmd+Enter behavior
+- Quick Add Cmd+Enter close now waits for submit to complete before closing the window
 - Wins day streak calculation now skips weekends (Sat/Sun) and tolerates missing workday entries without breaking the streak
+- Obsidian note path sanitization improved: collapses `..` sequences to prevent path traversal
+- Settings label "Obsidian notes path" renamed to "Obsidian Vault"
+- TodayView uses destructured `config` from store instead of inline `getState()` call
+
+### Fixed
+
+- Drag-and-drop reorder in ProjectDetailView no longer disrupts someday tasks
 
 ## [1.39.0] - 2026-02-15
 
