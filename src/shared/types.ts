@@ -8,6 +8,7 @@ export interface Task {
   toDoNextOrder?: number
   inProgress?: boolean
   taskNumber?: number
+  someday?: boolean
 }
 
 export type RepeatSchedule =
@@ -96,6 +97,8 @@ export interface AppConfig {
   quickTasksLimit: number
   activeProjectsLimit: number
   cleanViewFont: string
+  obsidianStoragePath?: string
+  obsidianVaultName?: string
 }
 
 export interface FocusCheckIn {

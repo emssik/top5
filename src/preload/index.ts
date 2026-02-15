@@ -62,6 +62,8 @@ export const api = {
   winsGetLockState: (): Promise<WinsLockState | null> => ipcRenderer.invoke('wins-get-lock-state'),
   winsGetHistory: (): Promise<WinEntry[]> => ipcRenderer.invoke('wins-get-history'),
   winsGetStreaks: (): Promise<StreakStats> => ipcRenderer.invoke('wins-get-streaks'),
+  selectDirectory: (): Promise<string | null> => ipcRenderer.invoke('select-directory'),
+  openTaskNote: (taskId: string, taskTitle: string, projectName?: string, taskBadge?: string) => ipcRenderer.invoke('open-task-note', taskId, taskTitle, projectName, taskBadge),
   onReloadData: (callback: () => void) => {
     ipcRenderer.on('reload-data', callback)
     return () => ipcRenderer.removeListener('reload-data', callback)

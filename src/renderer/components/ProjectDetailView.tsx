@@ -5,6 +5,7 @@ import type { Project, Task } from '../types'
 import { calcProjectTime, calcTaskTime, formatCheckInTime } from '../utils/checkInTime'
 import { projectColorValue, normalizeProjectLinks, openProjectLink } from '../utils/projects'
 import TaskIdBadge from './TaskIdBadge'
+import { formatTaskId } from '../../shared/taskId'
 
 interface Props {
   project: Project
@@ -13,11 +14,13 @@ interface Props {
 }
 
 export default function ProjectDetailView({ project, onEdit, onDelete }: Props) {
-  const { saveProject, deleteProject, setFocus, toggleTaskToDoNext, focusCheckIns, suspendProject, unsuspendProject } = useProjects()
+  const { saveProject, deleteProject, setFocus, toggleTaskToDoNext, focusCheckIns, config, suspendProject, unsuspendProject } = useProjects()
 
   const [newTaskTitle, setNewTaskTitle] = useState('')
   const [showAddInput, setShowAddInput] = useState(false)
   const [showDone, setShowDone] = useState(false)
+  const [showSomeday, setShowSomeday] = useState(false)
+  const [donePage, setDonePage] = useState(0)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingTitle, setEditingTitle] = useState('')
   const addInputRef = useRef<HTMLInputElement | null>(null)
@@ -25,11 +28,12 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
   const [dragOverTaskId, setDragOverTaskId] = useState<string | null>(null)
 
   const activeTasks = useMemo(() => {
-    const active = project.tasks.filter((task) => !task.completed)
+    const active = project.tasks.filter((task) => !task.completed && !task.someday)
     const pinned = active.filter((task) => task.isToDoNext).sort((a, b) => (a.toDoNextOrder ?? 999) - (b.toDoNextOrder ?? 999))
     const unpinned = active.filter((task) => !task.isToDoNext)
     return [...pinned, ...unpinned]
   }, [project.tasks])
+  const somedayTasks = useMemo(() => project.tasks.filter((task) => !task.completed && task.someday), [project.tasks])
   const doneTasks = useMemo(() => project.tasks.filter((task) => task.completed), [project.tasks])
   const pinnedCount = useMemo(() => activeTasks.filter((task) => task.isToDoNext).length, [activeTasks])
   const projectMinutes = useMemo(() => calcProjectTime(focusCheckIns, project.id), [focusCheckIns, project.id])
@@ -64,6 +68,13 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
     await updateTasks([...project.tasks, task])
     setNewTaskTitle('')
     setShowAddInput(false)
+  }
+
+  const toggleSomeday = async (taskId: string) => {
+    const nextTasks = project.tasks.map((task) =>
+      task.id === taskId ? { ...task, someday: !task.someday, isToDoNext: false } : task
+    )
+    await updateTasks(nextTasks)
   }
 
   const removeTask = async (taskId: string) => {
@@ -123,7 +134,7 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
 
     let activeCursor = 0
     const nextTasks = project.tasks.map((task) => {
-      if (task.completed) return task
+      if (task.completed || task.someday) return task
       const reorderedTask = reorderedActive[activeCursor]
       activeCursor += 1
       return reorderedTask ?? task
@@ -220,6 +231,10 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
             <button className={isPinned ? 'pin-icon' : 'pin-action'} onClick={() => toggleTaskToDoNext(project.id, task.id)} title={isPinned ? 'Unpin' : 'Pin to Today'}>📌</button>
             <div className="task-actions">
               <button className="task-action-btn btn-focus" onClick={() => setFocus(project.id, task.id)} title="Focus">▶</button>
+              {config.obsidianStoragePath && (
+                <button className="task-action-btn" onClick={() => window.api.openTaskNote(task.id, task.title, project.name, formatTaskId(task.taskNumber, project.code))} title="Open note" style={{ opacity: 0.5 }}>📝</button>
+              )}
+              <button className="task-action-btn" onClick={() => toggleSomeday(task.id)} title={task.someday ? 'Move to active' : 'Move to Someday'} style={{ opacity: 0.5 }}>⏳</button>
               <button className="task-action-btn btn-remove" onClick={() => removeTask(task.id)} title="Delete">×</button>
             </div>
           </>
@@ -312,15 +327,66 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
         )}
       </div>
 
+      {somedayTasks.length > 0 && (
+        <div className="mt-section">
+          <div
+            className={`done-toggle ${showSomeday ? 'open' : ''}`}
+            onClick={() => setShowSomeday((value) => !value)}
+            onDragOver={(e) => { e.preventDefault() }}
+            onDrop={(e) => {
+              e.preventDefault()
+              const raw = e.dataTransfer.getData('application/top5-task')
+              if (!raw) return
+              try {
+                const data = JSON.parse(raw)
+                if (data.kind === 'project' && data.projectId === project.id && data.taskId) {
+                  toggleSomeday(data.taskId)
+                }
+              } catch { /* ignore */ }
+            }}
+          >
+            <span style={{ opacity: 0.5 }}>⏳</span>
+            <span>Someday ({somedayTasks.length})</span>
+            <span className="chevron">▸</span>
+          </div>
+          <div className={`done-list ${showSomeday ? 'open' : ''}`}>
+            {somedayTasks.map((task) => renderTask(task))}
+          </div>
+        </div>
+      )}
+
       {doneTasks.length > 0 && (
         <div className="mt-section">
-          <div className={`done-toggle ${showDone ? 'open' : ''}`} onClick={() => setShowDone((value) => !value)}>
+          <div className={`done-toggle ${showDone ? 'open' : ''}`} onClick={() => { setShowDone((value) => { if (value) setDonePage(0); return !value }) }}>
             <span className="done-check">✓</span>
             <span>Done ({doneTasks.length})</span>
             <span className="chevron">▸</span>
           </div>
           <div className={`done-list ${showDone ? 'open' : ''}`}>
-            {doneTasks.map((task) => renderTask(task, true))}
+            {doneTasks.slice(donePage * 10, (donePage + 1) * 10).map((task) => renderTask(task, true))}
+            {doneTasks.length > 10 && (
+              <div className="flex items-center justify-center gap-2 mt-2">
+                <button
+                  className="task-action-btn"
+                  style={{ opacity: donePage > 0 ? 1 : 0.3, fontSize: 12, padding: '2px 8px' }}
+                  disabled={donePage === 0}
+                  onClick={() => setDonePage((p) => p - 1)}
+                >
+                  ‹ Prev
+                </button>
+                <span className="text-xs text-t-muted">
+                  {donePage + 1}/{Math.ceil(doneTasks.length / 10)}
+                </span>
+                <button
+                  className="task-action-btn"
+                  style={{ opacity: (donePage + 1) * 10 < doneTasks.length ? 1 : 0.3, fontSize: 12, padding: '2px 8px' }}
+                  disabled={(donePage + 1) * 10 >= doneTasks.length}
+                  onClick={() => setDonePage((p) => p + 1)}
+                >
+                  Next ›
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

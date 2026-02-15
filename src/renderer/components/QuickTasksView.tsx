@@ -7,6 +7,8 @@ import { calcTaskTime, calcQuickTaskTime, formatCheckInTime } from '../utils/che
 import type { QuickTask, RepeatingTask, WinEntry } from '../types'
 import { STANDALONE_PROJECT_ID } from '../utils/constants'
 import TaskIdBadge from './TaskIdBadge'
+import { formatTaskId, formatQuickTaskId } from '../../shared/taskId'
+import RepeatUpdateModal from './RepeatUpdateModal'
 
 interface Props {
   showAll?: boolean
@@ -16,11 +18,13 @@ interface Props {
 export default function QuickTasksView({ showAll, cleanView }: Props) {
   const {
     quickTasks,
+    repeatingTasks,
     config,
     focusCheckIns,
     winsLock,
     saveProject,
     saveQuickTask,
+    saveRepeatingTask,
     removeQuickTask,
     completeQuickTask,
     uncompleteQuickTask,
@@ -47,6 +51,7 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
   const editingTitleRef = useRef('')
   const editingProjectIdRef = useRef<string | undefined>(undefined)
   const editingTaskIdRef = useRef<string | undefined>(undefined)
+  const [repeatUpdatePrompt, setRepeatUpdatePrompt] = useState<{ repeatingTaskId: string; newTitle: string } | null>(null)
   const [showAddInput, setShowAddInput] = useState(false)
   const addInputRef = useRef<HTMLInputElement>(null)
   const draggedId = useRef<string | null>(null)
@@ -171,14 +176,18 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
     editingProjectIdRef.current = undefined
     editingTaskIdRef.current = undefined
     setEditingId(null)
+    const trimmed = title.trim()
     const qt = useProjects.getState().quickTasks.find((t) => t.id === id)
     if (qt) {
-      saveQuickTask({ ...qt, title: title.trim() })
+      saveQuickTask({ ...qt, title: trimmed })
+      if (qt.repeatingTaskId && trimmed !== qt.title) {
+        setRepeatUpdatePrompt({ repeatingTaskId: qt.repeatingTaskId, newTitle: trimmed })
+      }
     } else if (projectId && taskId) {
       const fresh = useProjects.getState().projects.find((p) => p.id === projectId)
       if (fresh) {
         const updatedTasks = fresh.tasks.map((t) =>
-          t.id === taskId ? { ...t, title: title.trim() } : t
+          t.id === taskId ? { ...t, title: trimmed } : t
         )
         saveProject({ ...fresh, tasks: updatedTasks })
       }
@@ -481,6 +490,15 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
           >
             Focus
           </button>
+          {config.obsidianStoragePath && (
+            <button
+              onClick={() => window.api.openTaskNote(task.id, task.title, task.projectName, task.kind === 'quick' ? formatQuickTaskId(task.taskNumber) : formatTaskId(task.taskNumber, task.projectCode))}
+              className="text-[10px] px-1.5 py-0.5 rounded bg-surface hover:bg-hover text-t-secondary transition-colors"
+              title="Open note"
+            >
+              📝
+            </button>
+          )}
           <button
             onClick={() => handleRemove(task)}
             className="text-[10px] px-1.5 py-0.5 rounded bg-surface hover:bg-hover text-t-secondary hover:text-red-400 transition-colors"
@@ -562,6 +580,15 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
 
   return (
     <div className={cleanView ? '' : 'space-y-1'}>
+      {repeatUpdatePrompt && !cleanView && (
+        <RepeatUpdateModal
+          prompt={repeatUpdatePrompt}
+          repeatingTasks={repeatingTasks}
+          saveRepeatingTask={saveRepeatingTask}
+          onClose={() => setRepeatUpdatePrompt(null)}
+        />
+      )}
+
       {showWinCelebration && (
         <div className="wins-victory-overlay" onClick={() => setShowWinCelebration(false)}>
           <div className="wins-victory-card">

@@ -8,6 +8,8 @@ import { STANDALONE_PROJECT_ID } from '../utils/constants'
 import type { QuickTask, LockedTaskRef, WinEntry } from '../types'
 import { projectColorValue } from '../utils/projects'
 import TaskIdBadge from './TaskIdBadge'
+import { formatTaskId, formatQuickTaskId } from '../../shared/taskId'
+import RepeatUpdateModal from './RepeatUpdateModal'
 
 function formatFocusTimer(seconds: number): string {
   const mm = Math.floor(seconds / 60)
@@ -39,10 +41,12 @@ export default function TodayView() {
   const {
     projects,
     quickTasks,
+    repeatingTasks,
     focusCheckIns,
     winsLock,
     saveProject,
     saveQuickTask,
+    saveRepeatingTask,
     removeQuickTask,
     completeQuickTask,
     uncompleteQuickTask,
@@ -53,6 +57,7 @@ export default function TodayView() {
     setFocus,
     acceptRepeatingProposal,
     dismissRepeatingProposal,
+    config,
     lockWinsTasks,
     unlockWinsTasks,
     loadWinsLock
@@ -74,6 +79,7 @@ export default function TodayView() {
     lockedTaskIds
   } = useTaskList({ excludeFocus: true, limitAdjust })
 
+  const [repeatUpdatePrompt, setRepeatUpdatePrompt] = useState<{ repeatingTaskId: string; newTitle: string } | null>(null)
   const [showAddInput, setShowAddInput] = useState(false)
   const [newTitle, setNewTitle] = useState('')
   const [showDone, setShowDone] = useState(false)
@@ -328,7 +334,12 @@ export default function TodayView() {
 
     if (task.kind === 'quick') {
       const qt = quickTasks.find((t) => t.id === task.id)
-      if (qt) await saveQuickTask({ ...qt, title })
+      if (qt) {
+        await saveQuickTask({ ...qt, title })
+        if (qt.repeatingTaskId && title !== qt.title) {
+          setRepeatUpdatePrompt({ repeatingTaskId: qt.repeatingTaskId, newTitle: title })
+        }
+      }
     } else if (task.projectId && task.taskId) {
       const project = useProjects.getState().projects.find((p) => p.id === task.projectId)
       if (!project) return
@@ -572,6 +583,9 @@ export default function TodayView() {
             >
               ▶
             </button>
+            {config.obsidianStoragePath && (
+              <button className="task-action-btn" title="Open note" onClick={() => window.api.openTaskNote(task.id, task.title, task.projectName, task.kind === 'quick' ? formatQuickTaskId(task.taskNumber) : formatTaskId(task.taskNumber, task.projectCode))} style={{ opacity: 0.5, fontSize: 11 }}>📝</button>
+            )}
             {!locked && (section === 'up-next' || task.repeatingTaskId) && (
               <button className="task-action-btn btn-remove" title="Remove" onClick={() => removeTask(task)}>✕</button>
             )}
@@ -608,6 +622,15 @@ export default function TodayView() {
 
   return (
     <div>
+      {repeatUpdatePrompt && (
+        <RepeatUpdateModal
+          prompt={repeatUpdatePrompt}
+          repeatingTasks={repeatingTasks}
+          saveRepeatingTask={saveRepeatingTask}
+          onClose={() => setRepeatUpdatePrompt(null)}
+        />
+      )}
+
       {showWinCelebration && (
         <div className="wins-victory-overlay" onClick={() => setShowWinCelebration(false)}>
           <div className="wins-victory-card">

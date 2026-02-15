@@ -72,25 +72,27 @@ export function calcStreaks(entries: WinEntry[]): StreakStats {
     }
   }
 
-  // Day streak: consecutive days with a win, going backwards from today
+  // Day streak: consecutive workdays with a win, going backwards from today
+  // Weekends (Sat/Sun) are skipped. Only a 'loss' breaks the streak.
+  // Missing entries on workdays are skipped (grace).
   let currentDayStreak = 0
   const cursor = new Date(now)
   cursor.setHours(0, 0, 0, 0)
-  // Allow starting from today or yesterday
-  let started = false
   for (let i = 0; i < 365; i++) {
+    const dow = cursor.getDay()
+    if (dow === 0 || dow === 6) {
+      // Skip weekends
+      cursor.setDate(cursor.getDate() - 1)
+      continue
+    }
     const key = cursor.toISOString().slice(0, 10)
     const result = byDate.get(key)
     if (result === 'win') {
       currentDayStreak++
-      started = true
     } else if (result === 'loss') {
       break
-    } else {
-      // No entry — skip if streak hasn't started (grace for today), break otherwise
-      if (started) break
-      if (i > 0) break // only skip today
     }
+    // No entry on workday → skip (don't break streak)
     cursor.setDate(cursor.getDate() - 1)
   }
 

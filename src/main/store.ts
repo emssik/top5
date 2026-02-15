@@ -16,7 +16,7 @@ import {
 } from 'fs'
 import { createHash, randomUUID } from 'crypto'
 import { platform } from 'os'
-import { dirname, basename, join } from 'path'
+import { dirname, basename, join, resolve } from 'path'
 import { homedir } from 'os'
 import yaml from 'js-yaml'
 import { normalizeRepeatSchedule } from '../shared/schedule'
@@ -383,7 +383,13 @@ function normalizeAppConfig(value: unknown): AppConfig {
     activeProjectsLimit: typeof value.activeProjectsLimit === 'number' ? Math.max(1, Math.min(20, value.activeProjectsLimit)) : defaultData.config.activeProjectsLimit,
     cleanViewFont: typeof value.cleanViewFont === 'string' && value.cleanViewFont.trim().length > 0
       ? value.cleanViewFont.trim().slice(0, 64)
-      : defaultData.config.cleanViewFont
+      : defaultData.config.cleanViewFont,
+    obsidianStoragePath: typeof value.obsidianStoragePath === 'string' && value.obsidianStoragePath.trim().length > 0
+      ? value.obsidianStoragePath.trim()
+      : undefined,
+    obsidianVaultName: typeof value.obsidianVaultName === 'string' && value.obsidianVaultName.trim().length > 0
+      ? value.obsidianVaultName.trim()
+      : undefined
   }
 }
 
@@ -410,6 +416,8 @@ function isValidAppConfig(value: unknown): value is AppConfig {
   if (!(typeof focusProjectId === 'string' || focusProjectId === null)) return false
   if (typeof compactMode !== 'boolean' || typeof cleanView !== 'boolean') return false
   if (typeof cleanViewFont !== 'string' || cleanViewFont.trim().length === 0 || cleanViewFont.length > 64) return false
+  if (value.obsidianStoragePath !== undefined && typeof value.obsidianStoragePath !== 'string') return false
+  if (value.obsidianVaultName !== undefined && typeof value.obsidianVaultName !== 'string') return false
   return true
 }
 
@@ -1111,6 +1119,58 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
 
   ipcMain.handle('wins-get-streaks', () => {
     return winsService.getStreaks()
+  })
+
+  ipcMain.handle('select-directory', async () => {
+    const { dialog, BrowserWindow } = require('electron') as typeof import('electron')
+    const win = BrowserWindow.getFocusedWindow()
+    const result = await dialog.showOpenDialog(win!, { properties: ['openDirectory'] })
+    if (result.canceled || !result.filePaths.length) return null
+    return result.filePaths[0]
+  })
+
+  // --- Obsidian task notes ---
+
+  ipcMain.handle('open-task-note', (_event, taskId: string, taskTitle: string, projectName?: string, taskBadge?: string) => {
+    if (typeof taskId !== 'string' || typeof taskTitle !== 'string') return { error: 'invalid' }
+    const config = getData().config
+    const storagePath = config.obsidianStoragePath
+    if (!storagePath) return { error: 'no_path' }
+    const vaultName = config.obsidianVaultName || basename(resolve(storagePath))
+
+    const { shell } = require('electron') as typeof import('electron')
+
+    // Sanitize names for filesystem (also collapse '..' to avoid path traversal)
+    const sanitize = (s: string) => s.replace(/[/\\:*?"<>|]/g, '-').replace(/\.{2,}/g, '.').trim()
+    const prefix = taskBadge ? `${sanitize(taskBadge)} ` : ''
+    const truncated = taskTitle.length > 40 ? taskTitle.slice(0, 40) + '…' : taskTitle
+    const safeName = `${prefix}${sanitize(truncated)}`
+    const folderName = projectName ? sanitize(projectName) : 'QuickTasks'
+
+    const vaultPath = resolve(storagePath.replace(/\/+$/, ''))
+    const notePath = `top5.storage/${folderName}/${safeName}`
+
+    // Ensure directory exists so Obsidian can write the file
+    const noteDir = join(vaultPath, 'top5.storage', folderName)
+    mkdirSync(noteDir, { recursive: true })
+
+    const filePath = join(noteDir, `${safeName}.md`)
+    const fileExists = existsSync(filePath)
+
+    if (fileExists) {
+      // File exists — just open it
+      const uri = `obsidian://open?vault=${encodeURIComponent(vaultName)}&file=${encodeURIComponent(notePath)}`
+      shell.openExternal(uri)
+    } else {
+      // File doesn't exist — use obsidian://new to create and open
+      const content = projectName
+        ? `# ${taskTitle}\n\nProject: ${projectName}\n\n---\n\n`
+        : `# ${taskTitle}\n\n---\n\n`
+      const uri = `obsidian://new?vault=${encodeURIComponent(vaultName)}&file=${encodeURIComponent(notePath)}&content=${encodeURIComponent(content)}`
+      shell.openExternal(uri)
+    }
+
+    return { ok: true }
   })
 
   // Deadline check on start + periodic
