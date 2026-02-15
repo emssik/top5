@@ -664,7 +664,9 @@ export default function TodayView() {
               ▶
             </button>
           )}
-          <button className="task-action-btn btn-remove" onClick={() => removeTask(task)} title="Remove">✕</button>
+          {!locked && (
+            <button className="task-action-btn btn-remove" onClick={() => removeTask(task)} title="Remove">✕</button>
+          )}
         </div>
       </div>
     )
