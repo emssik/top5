@@ -417,6 +417,7 @@ function isValidAppConfig(value: unknown): value is AppConfig {
   if (typeof compactMode !== 'boolean' || typeof cleanView !== 'boolean') return false
   if (typeof cleanViewFont !== 'string' || cleanViewFont.trim().length === 0 || cleanViewFont.length > 64) return false
   if (value.obsidianStoragePath !== undefined && typeof value.obsidianStoragePath !== 'string') return false
+  if (value.obsidianVaultName !== undefined && typeof value.obsidianVaultName !== 'string') return false
   return true
 }
 

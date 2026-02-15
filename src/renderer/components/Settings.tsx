@@ -181,10 +181,7 @@ export default function Settings({ open, onClose }: Props) {
               title="Browse…"
               onClick={async () => {
                 const dir = await window.api.selectDirectory()
-                if (dir) {
-                  setObsidianStoragePath(dir)
-                  if (!obsidianVaultName) setObsidianVaultName(dir.split('/').pop() || '')
-                }
+                if (dir) setObsidianStoragePath(dir)
               }}
             >
               📂

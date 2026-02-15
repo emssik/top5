@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.41.1] - 2026-02-15
+
+### Fixed
+
+- Quick Add window no longer closes on Cmd+Enter when submission fails (empty title); `handleSubmit` now returns success/failure boolean
+- `RepeatUpdateModal` properly awaits async `saveRepeatingTask` before closing
+- `obsidianVaultName` config field now validated in `isValidAppConfig`
+- Settings directory picker no longer auto-populates vault name from selected path (vault name is set explicitly)
+
 ## [1.41.0] - 2026-02-15
 
 ### Added

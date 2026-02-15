@@ -3,14 +3,14 @@ import type { RepeatingTask } from '../types'
 interface Props {
   prompt: { repeatingTaskId: string; newTitle: string }
   repeatingTasks: RepeatingTask[]
-  saveRepeatingTask: (rt: RepeatingTask) => void
+  saveRepeatingTask: (rt: RepeatingTask) => Promise<void> | void
   onClose: () => void
 }
 
 export default function RepeatUpdateModal({ prompt, repeatingTasks, saveRepeatingTask, onClose }: Props) {
-  const handleUpdate = () => {
+  const handleUpdate = async () => {
     const rt = repeatingTasks.find((t) => t.id === prompt.repeatingTaskId)
-    if (rt) saveRepeatingTask({ ...rt, title: prompt.newTitle })
+    if (rt) await saveRepeatingTask({ ...rt, title: prompt.newTitle })
     onClose()
   }
 

@@ -63,11 +63,11 @@ export default function QuickAddWindow() {
     }) as RepeatSchedule
   }, [scheduleType, weekdays, intervalDays, monthlyDay, afterDoneDays])
 
-  const handleSubmit = useCallback(async () => {
+  const handleSubmit = useCallback(async (): Promise<boolean> => {
     const title = inputValue.trim()
     if (!title) {
       inputRef.current?.focus()
-      return
+      return false
     }
 
     let msg = ''
@@ -146,8 +146,10 @@ export default function QuickAddWindow() {
       setToast(msg)
       setTimeout(() => setToast(null), 2500)
       inputRef.current?.focus()
+      return true
     } catch (err) {
       console.error('Quick add failed:', err)
+      return false
     }
   }, [inputValue, mode, selectedProjectId, pinToToday, inProgress, color, description, firstTask, buildSchedule])
 
@@ -168,7 +170,7 @@ export default function QuickAddWindow() {
         const tag = (e.target as HTMLElement).tagName
         if (tag === 'TEXTAREA') return
         e.preventDefault()
-        handleSubmit().then(() => window.api.closeQuickAddWindow())
+        handleSubmit().then((ok) => { if (ok) window.api.closeQuickAddWindow() })
         return
       }
 
