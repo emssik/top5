@@ -36,6 +36,9 @@ out/
 target/
 *.egg-info/
 
+# Temp test build artifacts
+.tmp-tests/
+
 # TypeScript build artifacts
 *.tsbuildinfo
 src/**/*.js
