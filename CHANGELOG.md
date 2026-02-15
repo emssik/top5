@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.44.0] - 2026-02-16
+
+### Added
+
+- Remove button (✕) on every task row including overflow section for quick task removal
+- "Clear" button on Done section header to remove all completed tasks at once
+
+### Changed
+
+- Focus button is hidden for overflow tasks but remove button remains accessible
+
 ## [1.43.1] - 2026-02-15
 
 ### Fixed

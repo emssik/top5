@@ -614,9 +614,9 @@ export default function TodayView() {
   }
 
   const renderTask = (task: MergedTask, section: 'in-progress' | 'up-next' | 'overflow') => {
-    const canShowActions = section !== 'overflow'
     const isDragOver = dragOverId === task.id && draggedId.current !== task.id
     const locked = isTaskLocked(task)
+    const isOverflow = section === 'overflow'
 
     return (
       <div
@@ -627,8 +627,8 @@ export default function TodayView() {
         onDragOver={(event) => handleDragOver(event, task.id)}
         onDrop={() => handleDrop(task.id)}
         onDragEnd={clearDragState}
-        onContextMenu={(e) => { if (canShowActions) { e.preventDefault(); setContextMenu({ x: e.clientX, y: e.clientY, task, section }) } }}
-        onMouseEnter={() => { if (canShowActions) hoveredTaskRef.current = { task, section } }}
+        onContextMenu={(e) => { if (!isOverflow) { e.preventDefault(); setContextMenu({ x: e.clientX, y: e.clientY, task, section }) } }}
+        onMouseEnter={() => { if (!isOverflow) hoveredTaskRef.current = { task, section } }}
         onMouseLeave={() => { if (hoveredTaskRef.current?.task.id === task.id) hoveredTaskRef.current = null }}
       >
         <button className="task-checkbox" onClick={() => completeTask(task)} />
@@ -654,8 +654,8 @@ export default function TodayView() {
           )}
           {renderMeta(task)}
         </div>
-        {canShowActions && (
-          <div className="task-actions">
+        <div className="task-actions">
+          {!isOverflow && (
             <button
               className="task-action-btn btn-focus"
               title="Focus"
@@ -663,8 +663,9 @@ export default function TodayView() {
             >
               ▶
             </button>
-          </div>
-        )}
+          )}
+          <button className="task-action-btn btn-remove" onClick={() => removeTask(task)} title="Remove">✕</button>
+        </div>
       </div>
     )
   }
@@ -944,6 +945,16 @@ export default function TodayView() {
           <div className={`done-toggle ${showDone ? 'open' : ''}`} onClick={() => setShowDone((value) => !value)}>
             <span className="done-check">✓</span>
             <span>Done today ({completedToday.length})</span>
+            <button
+              className="done-clear-btn"
+              title="Clear all done tasks"
+              onClick={(e) => {
+                e.stopPropagation()
+                for (const task of completedToday) removeTask(task)
+              }}
+            >
+              Clear
+            </button>
             <span className="chevron">▸</span>
           </div>
           <div className={`done-list ${showDone ? 'open' : ''}`}>
