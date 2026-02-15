@@ -40,7 +40,9 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
   const quickLinks = useMemo(() => normalizeProjectLinks(project), [project])
 
   const updateTasks = async (nextTasks: Task[]) => {
-    await saveProject({ ...project, tasks: nextTasks })
+    const fresh = useProjects.getState().projects.find((p) => p.id === project.id)
+    if (!fresh) return
+    await saveProject({ ...fresh, tasks: nextTasks })
   }
 
   const toggleTask = async (taskId: string) => {

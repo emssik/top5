@@ -5,7 +5,7 @@ import { useTaskList } from '../hooks/useTaskList'
 import type { MergedTask } from '../hooks/useTaskList'
 import { calcQuickTaskTime, calcTaskTime, formatCheckInTime } from '../utils/checkInTime'
 import { STANDALONE_PROJECT_ID } from '../utils/constants'
-import type { QuickTask, LockedTaskRef, WinEntry } from '../types'
+import type { Task, QuickTask, LockedTaskRef, WinEntry } from '../types'
 import { projectColorValue } from '../utils/projects'
 import TaskIdBadge from './TaskIdBadge'
 import { formatTaskId, formatQuickTaskId } from '../../shared/taskId'
@@ -19,6 +19,14 @@ function formatFocusTimer(seconds: number): string {
 
 function isRepeatingEntry(task: { repeatingTaskId?: string | null }): boolean {
   return Boolean(task.repeatingTaskId)
+}
+
+function continuationTitle(title: string): string {
+  const match = title.match(/^continue \((\d+)\) (.*)$/)
+  if (match) {
+    return `continue (${Number(match[1]) + 1}) ${match[2]}`
+  }
+  return `continue (1) ${title}`
 }
 
 function formatCountdown(deadline: string): string {
@@ -242,7 +250,7 @@ export default function TodayView() {
     if (task.kind === 'quick') {
       await completeQuickTask(task.id)
     } else if (task.projectId && task.taskId) {
-      const project = projects.find((item) => item.id === task.projectId)
+      const project = useProjects.getState().projects.find((item) => item.id === task.projectId)
       if (!project) return
       const tasks = project.tasks.map((item) => (
         item.id === task.taskId
@@ -265,7 +273,7 @@ export default function TodayView() {
     }
 
     if (!task.projectId || !task.taskId) return
-    const project = projects.find((item) => item.id === task.projectId)
+    const project = useProjects.getState().projects.find((item) => item.id === task.projectId)
     if (!project) return
 
     const tasks = project.tasks.map((item) => (
@@ -283,6 +291,37 @@ export default function TodayView() {
 
     if (!task.projectId || !task.taskId) return
     await toggleTaskToDoNext(task.projectId, task.taskId)
+  }
+
+  const splitTask = async (task: MergedTask) => {
+    const newTitle = continuationTitle(task.title)
+
+    if (task.kind === 'pinned' && task.projectId && task.taskId) {
+      const project = useProjects.getState().projects.find((p) => p.id === task.projectId)
+      if (!project) return
+      const origTask = project.tasks.find((t) => t.id === task.taskId)
+      const newTask: Task = {
+        id: nanoid(),
+        title: newTitle,
+        completed: false,
+        createdAt: new Date().toISOString(),
+        isToDoNext: true,
+        toDoNextOrder: origTask?.toDoNextOrder ?? task.order
+      }
+      await saveProject({ ...project, tasks: [...project.tasks, newTask] })
+    } else if (task.kind === 'quick') {
+      const qt: QuickTask = {
+        id: nanoid(),
+        title: newTitle,
+        completed: false,
+        createdAt: new Date().toISOString(),
+        completedAt: null,
+        order: task.order
+      }
+      await saveQuickTask(qt)
+    }
+
+    await completeTask(task)
   }
 
   const toggleInProgress = async (task: MergedTask) => {
@@ -398,11 +437,8 @@ export default function TodayView() {
     // Adjust visual split when dragging between sections
     if (isCrossSection) {
       if (draggedInOverflow) {
-        // Only expand if below config limit (limitAdjust < 0 means we removed some earlier)
         if (limitAdjust < 0) setLimitAdjust((prev) => prev + 1)
-        // At limit (limitAdjust >= 0): no adjust → reorder naturally swaps last task out
       } else {
-        // Always allow shrinking (top → overflow)
         setLimitAdjust((prev) => prev - 1)
       }
     }
@@ -464,9 +500,7 @@ export default function TodayView() {
     const reordered = ids.map((id, order) => ({ ...taskById.get(id)!, order }))
 
     if (zone === 'top') {
-      // Only expand if below config limit
       if (limitAdjust < 0) setLimitAdjust((prev) => prev + 1)
-      // At limit: reorder inserts at boundary, naturally pushing last task to overflow (swap)
     } else {
       setLimitAdjust((prev) => prev - 1)
     }
@@ -585,6 +619,9 @@ export default function TodayView() {
             </button>
             {config.obsidianStoragePath && (
               <button className="task-action-btn" title="Open note" onClick={() => window.api.openTaskNote(task.id, task.title, task.projectName, task.kind === 'quick' ? formatQuickTaskId(task.taskNumber) : formatTaskId(task.taskNumber, task.projectCode))} style={{ opacity: 0.5, fontSize: 11 }}>📝</button>
+            )}
+            {!task.repeatingTaskId && (
+              <button className="task-action-btn" title="Split: complete &amp; continue" onClick={() => splitTask(task)} style={{ opacity: 0.5, fontSize: 11 }}>✂</button>
             )}
             {!locked && (section === 'up-next' || task.repeatingTaskId) && (
               <button className="task-action-btn btn-remove" title="Remove" onClick={() => removeTask(task)}>✕</button>
