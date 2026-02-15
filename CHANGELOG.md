@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Settings icon in sidebar now renders as proper emoji (⚙️) instead of plain text glyph
+
 ## [1.44.0] - 2026-02-16
 
 ### Added
