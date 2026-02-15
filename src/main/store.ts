@@ -383,7 +383,10 @@ function normalizeAppConfig(value: unknown): AppConfig {
     activeProjectsLimit: typeof value.activeProjectsLimit === 'number' ? Math.max(1, Math.min(20, value.activeProjectsLimit)) : defaultData.config.activeProjectsLimit,
     cleanViewFont: typeof value.cleanViewFont === 'string' && value.cleanViewFont.trim().length > 0
       ? value.cleanViewFont.trim().slice(0, 64)
-      : defaultData.config.cleanViewFont
+      : defaultData.config.cleanViewFont,
+    obsidianStoragePath: typeof value.obsidianStoragePath === 'string' && value.obsidianStoragePath.trim().length > 0
+      ? value.obsidianStoragePath.trim()
+      : undefined
   }
 }
 
@@ -410,6 +413,7 @@ function isValidAppConfig(value: unknown): value is AppConfig {
   if (!(typeof focusProjectId === 'string' || focusProjectId === null)) return false
   if (typeof compactMode !== 'boolean' || typeof cleanView !== 'boolean') return false
   if (typeof cleanViewFont !== 'string' || cleanViewFont.trim().length === 0 || cleanViewFont.length > 64) return false
+  if (value.obsidianStoragePath !== undefined && typeof value.obsidianStoragePath !== 'string') return false
   return true
 }
 
@@ -1111,6 +1115,50 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
 
   ipcMain.handle('wins-get-streaks', () => {
     return winsService.getStreaks()
+  })
+
+  // --- Obsidian task notes ---
+
+  ipcMain.handle('open-task-note', (_event, taskId: string, taskTitle: string, projectName?: string) => {
+    if (typeof taskId !== 'string' || typeof taskTitle !== 'string') return { error: 'invalid' }
+    const config = getData().config
+    const storagePath = config.obsidianStoragePath
+    if (!storagePath) return { error: 'no_path' }
+
+    const { shell } = require('electron') as typeof import('electron')
+
+    // Sanitize names for filesystem
+    const safeName = taskTitle.replace(/[/\\:*?"<>|]/g, '-').slice(0, 100)
+    const folderName = projectName
+      ? projectName.replace(/[/\\:*?"<>|]/g, '-').slice(0, 100)
+      : 'QuickTasks'
+
+    // vault/top5.storage/ProjectName/TaskTitle.md
+    const vaultPath = storagePath.replace(/\/+$/, '')
+    const vaultName = basename(vaultPath)
+    const notePath = `top5.storage/${folderName}/${safeName}`
+
+    // Ensure directory exists so Obsidian can write the file
+    const noteDir = join(storagePath, 'top5.storage', folderName)
+    mkdirSync(noteDir, { recursive: true })
+
+    const filePath = join(noteDir, `${safeName}.md`)
+    const fileExists = existsSync(filePath)
+
+    if (fileExists) {
+      // File exists — just open it
+      const uri = `obsidian://open?vault=${encodeURIComponent(vaultName)}&file=${encodeURIComponent(notePath)}`
+      shell.openExternal(uri)
+    } else {
+      // File doesn't exist — use obsidian://new to create and open
+      const content = projectName
+        ? `# ${taskTitle}\n\nProject: ${projectName}\n\n---\n\n`
+        : `# ${taskTitle}\n\n---\n\n`
+      const uri = `obsidian://new?vault=${encodeURIComponent(vaultName)}&file=${encodeURIComponent(notePath)}&content=${encodeURIComponent(content)}`
+      shell.openExternal(uri)
+    }
+
+    return { ok: true }
   })
 
   // Deadline check on start + periodic

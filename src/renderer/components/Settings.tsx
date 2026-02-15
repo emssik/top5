@@ -23,6 +23,7 @@ export default function Settings({ open, onClose }: Props) {
   const [quickTasksLimit, setQuickTasksLimit] = useState(config.quickTasksLimit ?? 5)
   const [activeProjectsLimit, setActiveProjectsLimit] = useState(config.activeProjectsLimit ?? 5)
   const [cleanViewFont, setCleanViewFont] = useState(config.cleanViewFont || 'Caveat')
+  const [obsidianStoragePath, setObsidianStoragePath] = useState(config.obsidianStoragePath || '')
   const [showShortcuts, setShowShortcuts] = useState(false)
   const [showApi, setShowApi] = useState(false)
   const [apiConfig, setApiConfig] = useState<ApiConfig | null>(null)
@@ -33,6 +34,7 @@ export default function Settings({ open, onClose }: Props) {
     setQuickTasksLimit(config.quickTasksLimit ?? 5)
     setActiveProjectsLimit(config.activeProjectsLimit ?? 5)
     setCleanViewFont(config.cleanViewFont || 'Caveat')
+    setObsidianStoragePath(config.obsidianStoragePath || '')
   }, [config])
 
   useEffect(() => {
@@ -74,7 +76,8 @@ export default function Settings({ open, onClose }: Props) {
       ...config,
       quickTasksLimit: Math.max(1, Math.min(20, quickTasksLimit)),
       activeProjectsLimit: Math.max(1, Math.min(20, activeProjectsLimit)),
-      cleanViewFont
+      cleanViewFont,
+      obsidianStoragePath: obsidianStoragePath.trim() || undefined
     })
     onClose()
   }
@@ -151,6 +154,20 @@ export default function Settings({ open, onClose }: Props) {
         <div className="modal-row">
           <label>Data location</label>
           <span className="value" style={{ fontSize: 11, opacity: 0.75 }}>~/.config/top5</span>
+        </div>
+
+        <div className="modal-row" style={{ alignItems: 'flex-start', display: 'block' }}>
+          <label style={{ display: 'block', marginBottom: 4 }}>Obsidian notes path</label>
+          <input
+            className="form-input"
+            style={{ width: '100%', padding: '5px 8px', fontSize: 12 }}
+            placeholder="/Users/you/vault/top5-notes"
+            value={obsidianStoragePath}
+            onChange={(e) => setObsidianStoragePath(e.target.value)}
+          />
+          <div style={{ fontSize: 11, opacity: 0.5, marginTop: 4 }}>
+            Obsidian vault path — notes are created in project subfolders
+          </div>
         </div>
 
         <div style={{ marginTop: 16, borderTop: '1px solid var(--c-border-subtle)', paddingTop: 12 }}>

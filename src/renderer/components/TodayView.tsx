@@ -39,10 +39,12 @@ export default function TodayView() {
   const {
     projects,
     quickTasks,
+    repeatingTasks,
     focusCheckIns,
     winsLock,
     saveProject,
     saveQuickTask,
+    saveRepeatingTask,
     removeQuickTask,
     completeQuickTask,
     uncompleteQuickTask,
@@ -74,6 +76,7 @@ export default function TodayView() {
     lockedTaskIds
   } = useTaskList({ excludeFocus: true, limitAdjust })
 
+  const [repeatUpdatePrompt, setRepeatUpdatePrompt] = useState<{ repeatingTaskId: string; newTitle: string } | null>(null)
   const [showAddInput, setShowAddInput] = useState(false)
   const [newTitle, setNewTitle] = useState('')
   const [showDone, setShowDone] = useState(false)
@@ -328,7 +331,12 @@ export default function TodayView() {
 
     if (task.kind === 'quick') {
       const qt = quickTasks.find((t) => t.id === task.id)
-      if (qt) await saveQuickTask({ ...qt, title })
+      if (qt) {
+        await saveQuickTask({ ...qt, title })
+        if (qt.repeatingTaskId && title !== qt.title) {
+          setRepeatUpdatePrompt({ repeatingTaskId: qt.repeatingTaskId, newTitle: title })
+        }
+      }
     } else if (task.projectId && task.taskId) {
       const project = useProjects.getState().projects.find((p) => p.id === task.projectId)
       if (!project) return
@@ -572,6 +580,9 @@ export default function TodayView() {
             >
               ▶
             </button>
+            {useProjects.getState().config.obsidianStoragePath && (
+              <button className="task-action-btn" title="Open note" onClick={() => window.api.openTaskNote(task.id, task.title, task.projectName)} style={{ opacity: 0.5, fontSize: 11 }}>📝</button>
+            )}
             {!locked && (section === 'up-next' || task.repeatingTaskId) && (
               <button className="task-action-btn btn-remove" title="Remove" onClick={() => removeTask(task)}>✕</button>
             )}
@@ -606,8 +617,41 @@ export default function TodayView() {
     return formatFocusTimer(liveSeconds)
   })()
 
+  const handleRepeatUpdate = () => {
+    if (!repeatUpdatePrompt) return
+    const rt = repeatingTasks.find((t) => t.id === repeatUpdatePrompt.repeatingTaskId)
+    if (rt) saveRepeatingTask({ ...rt, title: repeatUpdatePrompt.newTitle })
+    setRepeatUpdatePrompt(null)
+  }
+
   return (
     <div>
+      {repeatUpdatePrompt && (
+        <div
+          className="modal-overlay open"
+          tabIndex={-1}
+          ref={(el) => el?.focus()}
+          onClick={() => setRepeatUpdatePrompt(null)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === 'y' || e.key === 'Y') { e.preventDefault(); handleRepeatUpdate() }
+            if (e.key === 'Escape' || e.key === 'n' || e.key === 'N') { e.preventDefault(); setRepeatUpdatePrompt(null) }
+          }}
+        >
+          <div className="modal" style={{ width: 340, padding: '20px 24px' }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 6, color: 'var(--c-text-heading)' }}>
+              Update repeating template?
+            </div>
+            <div style={{ fontSize: 13, opacity: 0.7, marginBottom: 16 }}>
+              Also change the title in the repeating task template?
+            </div>
+            <div className="form-actions" style={{ marginTop: 0 }}>
+              <button className="form-btn form-btn-secondary" onClick={() => setRepeatUpdatePrompt(null)}>No <kbd style={{ fontSize: 10, opacity: 0.5, marginLeft: 4 }}>N</kbd></button>
+              <button className="form-btn form-btn-primary" onClick={handleRepeatUpdate}>Yes, update <kbd style={{ fontSize: 10, opacity: 0.7, marginLeft: 4 }}>Y</kbd></button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showWinCelebration && (
         <div className="wins-victory-overlay" onClick={() => setShowWinCelebration(false)}>
           <div className="wins-victory-card">

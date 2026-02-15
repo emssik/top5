@@ -27,6 +27,7 @@ export default function QuickAddWindow() {
   const [afterDoneDays, setAfterDoneDays] = useState(1)
   const [monthlyDay, setMonthlyDay] = useState(1)
   const [success, setSuccess] = useState<string | null>(null)
+  const [toast, setToast] = useState<string | null>(null)
   const [loaded, setLoaded] = useState(false)
 
   const inputRef = useRef<HTMLInputElement>(null)
@@ -70,10 +71,10 @@ export default function QuickAddWindow() {
       return
     }
 
+    let msg = ''
     try {
       if (mode === 'task') {
         if (selectedProjectId) {
-          // Add task to project
           const data = await window.api.getAppData()
           const project = data.projects.find((p) => p.id === selectedProjectId)
           if (project) {
@@ -86,10 +87,9 @@ export default function QuickAddWindow() {
               inProgress
             }
             await window.api.saveProject({ ...project, tasks: [...project.tasks, newTask] })
-            setSuccess(`Task added to ${project.name}`)
+            msg = `Task added to ${project.name}`
           }
         } else {
-          // Standalone quick task
           const data = await window.api.getAppData()
           const maxOrder = data.quickTasks.reduce((m, t) => Math.max(m, t.order), 0)
           const task: QuickTask = {
@@ -102,7 +102,7 @@ export default function QuickAddWindow() {
             inProgress
           }
           await window.api.saveQuickTask(task)
-          setSuccess(`Quick task added: "${title}"`)
+          msg = `Quick task added: "${title}"`
         }
       } else if (mode === 'project') {
         const data = await window.api.getAppData()
@@ -124,7 +124,7 @@ export default function QuickAddWindow() {
           suspendedAt: null
         }
         await window.api.saveProject(project)
-        setSuccess(`Project "${title}" created!`)
+        msg = `Project "${title}" created!`
       } else if (mode === 'repeat') {
         const data = await window.api.getAppData()
         const maxOrder = data.repeatingTasks.reduce((m, t) => Math.max(m, t.order), -1)
@@ -140,13 +140,13 @@ export default function QuickAddWindow() {
           completedCount: 0
         }
         await window.api.saveRepeatingTask(task)
-        setSuccess(`Repeating task "${title}" created!`)
+        msg = `Repeating task "${title}" created!`
       }
 
-      // Close after success
-      setTimeout(() => {
-        window.api.closeQuickAddWindow()
-      }, 800)
+      setInputValue('')
+      setToast(msg)
+      setTimeout(() => setToast(null), 2500)
+      inputRef.current?.focus()
     } catch (err) {
       console.error('Quick add failed:', err)
     }
@@ -166,7 +166,16 @@ export default function QuickAddWindow() {
         return
       }
 
-      if (e.key === 'Enter' && !e.metaKey && !e.ctrlKey) {
+      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+        const tag = (e.target as HTMLElement).tagName
+        if (tag === 'TEXTAREA') return
+        e.preventDefault()
+        handleSubmit()
+        window.api.closeQuickAddWindow()
+        return
+      }
+
+      if (e.key === 'Enter') {
         const tag = (e.target as HTMLElement).tagName
         if (tag === 'TEXTAREA') return
         e.preventDefault()
@@ -336,6 +345,14 @@ export default function QuickAddWindow() {
           )}
         </div>
 
+        {/* Toast */}
+        {toast && (
+          <div className="px-[18px] py-[6px] text-[12px] flex items-center gap-[6px]" style={{ color: 'var(--pc-green)' }}>
+            <span className="w-4 h-4 rounded-full flex items-center justify-center text-[10px]" style={{ background: 'rgba(34,197,94,0.12)' }}>✓</span>
+            {toast}
+          </div>
+        )}
+
         {/* Footer */}
         <div className="flex items-center justify-between px-[18px] py-[10px] bg-elevated border-t border-b-subtle">
           <div className="flex gap-[14px]">
@@ -344,8 +361,8 @@ export default function QuickAddWindow() {
               switch mode
             </span>
             <span className="flex items-center gap-[5px] text-[11px] text-t-muted">
-              <kbd className="text-[10px] px-[5px] py-[1px] rounded-[3px] bg-surface border border-b-subtle">{'\u2318'}1-5</kbd>
-              project
+              <kbd className="text-[10px] px-[5px] py-[1px] rounded-[3px] bg-surface border border-b-subtle">{'\u2318\u23CE'}</kbd>
+              add & close
             </span>
           </div>
           <button
@@ -355,7 +372,7 @@ export default function QuickAddWindow() {
               color: '#60a5fa',
               border: '1px solid rgba(59,130,246,0.3)'
             }}
-            onClick={handleSubmit}
+            onClick={() => handleSubmit()}
           >
             {mode === 'project' ? 'Create' : 'Add'}
             <kbd className="text-[9px] px-[3px] rounded-sm" style={{ background: 'rgba(59,130,246,0.2)' }}>{'\u23CE'}</kbd>

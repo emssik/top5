@@ -16,11 +16,13 @@ interface Props {
 export default function QuickTasksView({ showAll, cleanView }: Props) {
   const {
     quickTasks,
+    repeatingTasks,
     config,
     focusCheckIns,
     winsLock,
     saveProject,
     saveQuickTask,
+    saveRepeatingTask,
     removeQuickTask,
     completeQuickTask,
     uncompleteQuickTask,
@@ -47,6 +49,7 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
   const editingTitleRef = useRef('')
   const editingProjectIdRef = useRef<string | undefined>(undefined)
   const editingTaskIdRef = useRef<string | undefined>(undefined)
+  const [repeatUpdatePrompt, setRepeatUpdatePrompt] = useState<{ repeatingTaskId: string; newTitle: string } | null>(null)
   const [showAddInput, setShowAddInput] = useState(false)
   const addInputRef = useRef<HTMLInputElement>(null)
   const draggedId = useRef<string | null>(null)
@@ -171,14 +174,18 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
     editingProjectIdRef.current = undefined
     editingTaskIdRef.current = undefined
     setEditingId(null)
+    const trimmed = title.trim()
     const qt = useProjects.getState().quickTasks.find((t) => t.id === id)
     if (qt) {
-      saveQuickTask({ ...qt, title: title.trim() })
+      saveQuickTask({ ...qt, title: trimmed })
+      if (qt.repeatingTaskId && trimmed !== qt.title) {
+        setRepeatUpdatePrompt({ repeatingTaskId: qt.repeatingTaskId, newTitle: trimmed })
+      }
     } else if (projectId && taskId) {
       const fresh = useProjects.getState().projects.find((p) => p.id === projectId)
       if (fresh) {
         const updatedTasks = fresh.tasks.map((t) =>
-          t.id === taskId ? { ...t, title: title.trim() } : t
+          t.id === taskId ? { ...t, title: trimmed } : t
         )
         saveProject({ ...fresh, tasks: updatedTasks })
       }
@@ -481,6 +488,15 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
           >
             Focus
           </button>
+          {config.obsidianStoragePath && (
+            <button
+              onClick={() => window.api.openTaskNote(task.id, task.title, task.projectName)}
+              className="text-[10px] px-1.5 py-0.5 rounded bg-surface hover:bg-hover text-t-secondary transition-colors"
+              title="Open note"
+            >
+              📝
+            </button>
+          )}
           <button
             onClick={() => handleRemove(task)}
             className="text-[10px] px-1.5 py-0.5 rounded bg-surface hover:bg-hover text-t-secondary hover:text-red-400 transition-colors"
@@ -560,8 +576,41 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
     return streak
   })()
 
+  const handleRepeatUpdate = () => {
+    if (!repeatUpdatePrompt) return
+    const rt = repeatingTasks.find((t) => t.id === repeatUpdatePrompt.repeatingTaskId)
+    if (rt) saveRepeatingTask({ ...rt, title: repeatUpdatePrompt.newTitle })
+    setRepeatUpdatePrompt(null)
+  }
+
   return (
     <div className={cleanView ? '' : 'space-y-1'}>
+      {repeatUpdatePrompt && !cleanView && (
+        <div
+          className="modal-overlay open"
+          tabIndex={-1}
+          ref={(el) => el?.focus()}
+          onClick={() => setRepeatUpdatePrompt(null)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === 'y' || e.key === 'Y') { e.preventDefault(); handleRepeatUpdate() }
+            if (e.key === 'Escape' || e.key === 'n' || e.key === 'N') { e.preventDefault(); setRepeatUpdatePrompt(null) }
+          }}
+        >
+          <div className="modal" style={{ width: 340, padding: '20px 24px' }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 6, color: 'var(--c-text-heading)' }}>
+              Update repeating template?
+            </div>
+            <div style={{ fontSize: 13, opacity: 0.7, marginBottom: 16 }}>
+              Also change the title in the repeating task template?
+            </div>
+            <div className="form-actions" style={{ marginTop: 0 }}>
+              <button className="form-btn form-btn-secondary" onClick={() => setRepeatUpdatePrompt(null)}>No <kbd style={{ fontSize: 10, opacity: 0.5, marginLeft: 4 }}>N</kbd></button>
+              <button className="form-btn form-btn-primary" onClick={handleRepeatUpdate}>Yes, update <kbd style={{ fontSize: 10, opacity: 0.7, marginLeft: 4 }}>Y</kbd></button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showWinCelebration && (
         <div className="wins-victory-overlay" onClick={() => setShowWinCelebration(false)}>
           <div className="wins-victory-card">

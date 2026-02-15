@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Obsidian task notes integration: configure vault path in Settings, open/create per-task markdown notes from TodayView, QuickTasksView, and ProjectDetailView via `obsidian://` URI
+- `open-task-note` IPC handler creating notes in `top5.storage/<ProjectName>/` subfolders within the Obsidian vault
+- `obsidianStoragePath` config option in AppConfig and Settings UI
+- Someday tasks: `someday` flag on project tasks with dedicated collapsible section in ProjectDetailView
+- Drag-and-drop support for moving tasks to/from the Someday section
+- Repeating task title sync prompt: when renaming a task spawned from a repeating template, a modal asks whether to update the template title too (TodayView and QuickTasksView)
+- Done list pagination in ProjectDetailView (10 tasks per page with prev/next controls)
+
+### Changed
+
+- Quick Add window stays open after adding an item: Enter adds and clears the input, Cmd+Enter adds and closes the window
+- Quick Add shows inline toast confirmation instead of closing on success
+- Quick Add footer shortcut hints updated to reflect new Cmd+Enter behavior
+- Wins day streak calculation now skips weekends (Sat/Sun) and tolerates missing workday entries without breaking the streak
+
 ## [1.39.0] - 2026-02-15
 
 ### Added
