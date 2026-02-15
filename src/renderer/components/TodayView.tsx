@@ -241,17 +241,20 @@ export default function TodayView() {
       const isFocusCard = section === 'focus'
       const key = event.key.toLowerCase()
 
-      if (key === 'f' && !isFocusCard) { setContextMenu(null); focusOnTask(task); return }
-      if (key === 'p' && !isFocusCard) { setContextMenu(null); toggleInProgress(task); return }
-      if (key === 's' && isFocusCard) { setContextMenu(null); stopFocus(); return }
+      // Helper: clear refs after destructive actions to prevent double-fire
+      const consume = () => { setContextMenu(null); hoveredTaskRef.current = null }
+
+      if (key === 'f' && !isFocusCard) { consume(); focusOnTask(task); return }
+      if (key === 'p' && !isFocusCard) { consume(); toggleInProgress(task); return }
+      if (key === 's' && isFocusCard) { consume(); stopFocus(); return }
       if (key === 'n' && config.obsidianStoragePath) {
-        setContextMenu(null)
+        consume()
         window.api.openTaskNote(task.id, task.title, task.projectName, task.kind === 'quick' ? formatQuickTaskId(task.taskNumber) : formatTaskId(task.taskNumber, task.projectCode))
         return
       }
-      if (key === 'c' && !task.repeatingTaskId) { setContextMenu(null); splitTask(task); return }
+      if (key === 'c' && !task.repeatingTaskId) { consume(); splitTask(task); return }
       if ((key === 'backspace' || key === 'delete') && !isFocusCard && !locked && (section === 'up-next' || task.repeatingTaskId)) {
-        setContextMenu(null); removeTask(task); return
+        consume(); removeTask(task); return
       }
 
       // 'n' not consumed by note — fall through to global add

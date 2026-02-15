@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.43.1] - 2026-02-15
+
+### Fixed
+
+- Keyboard shortcuts (split, focus, remove, etc.) could double-fire because `hoveredTaskRef` was not cleared after action — `consume()` helper now clears both context menu and hover ref
+
 ## [1.43.0] - 2026-02-15
 
 ### Added
