@@ -1,16 +1,34 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useProjects } from '../hooks/useProjects'
 import { useTaskList } from '../hooks/useTaskList'
-import { getActiveLaunchers, launchByType, launcherMeta } from '../utils/launchers'
+import { normalizeProjectLinks, openProjectLink, projectColorValue } from '../utils/projects'
+import { checkInMinutes } from '../utils/checkInTime'
 import { STANDALONE_PROJECT_ID } from '../utils/constants'
-import type { Task } from '../types'
+import type { Task, ProjectLink } from '../types'
 import { formatTaskId, formatQuickTaskId } from '../../shared/taskId'
 
-function formatCountdown(ms: number): string {
-  const totalSec = Math.ceil(ms / 1000)
-  const min = Math.floor(totalSec / 60)
-  const sec = totalSec % 60
-  return `${min}:${sec.toString().padStart(2, '0')}`
+function formatSessionTime(totalSeconds: number): string {
+  const min = Math.floor(totalSeconds / 60)
+  const sec = totalSeconds % 60
+  if (min < 60) return `${min}:${sec.toString().padStart(2, '0')}`
+  const h = Math.floor(min / 60)
+  const m = min % 60
+  return `${h}h ${m.toString().padStart(2, '0')}m`
+}
+
+function projectLabel(project: { code?: string; name: string } | null, isStandalone: boolean): string {
+  if (isStandalone) return 'QT'
+  if (!project) return ''
+  return project.code || project.name.slice(0, 4)
+}
+
+function linkIcon(label: string): string {
+  const l = label.toLowerCase()
+  if (l.includes('code')) return '</>'
+  if (l.includes('term')) return '>_'
+  if (l.includes('obsidian')) return '📓'
+  if (l.includes('browser') || l.startsWith('http')) return '🌐'
+  return '🔗'
 }
 
 interface PickerTask {
@@ -22,59 +40,104 @@ interface PickerTask {
   taskNumber?: number
 }
 
-const FOCUS_WIDTH = 420
-const FOCUS_HEIGHT_NORMAL = 110
-const FOCUS_HEIGHT_PICKER = 350
+const FOCUS_WIDTH = 520
+const FOCUS_HEIGHT_NORMAL = 58
+const FOCUS_HEIGHT_PICKER = 320
 
 export default function FocusMode() {
   const { projects, quickTasks, config, setFocus } = useProjects()
   const { activeTasks, repeatingActive } = useTaskList()
-  const [remainingMs, setRemainingMs] = useState<number | null>(null)
   const [confirmAction, setConfirmAction] = useState<{ minutes: number; type: 'exit' | 'complete' } | null>(null)
   const [isDev, setIsDev] = useState(false)
-  const [showTooltip, setShowTooltip] = useState(false)
   const [showTaskPicker, setShowTaskPicker] = useState(false)
-  const [completedTaskKey, setCompletedTaskKey] = useState<string | null>(null) // "projectId:taskId" to exclude
-  const hoverTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  const handleMouseEnter = useCallback(() => {
-    hoverTimeout.current = setTimeout(() => setShowTooltip(true), 500)
-  }, [])
-
-  const handleMouseLeave = useCallback(() => {
-    if (hoverTimeout.current) clearTimeout(hoverTimeout.current)
-    hoverTimeout.current = null
-    setShowTooltip(false)
-  }, [])
+  const [completedTaskKey, setCompletedTaskKey] = useState<string | null>(null)
+  const [elapsedSeconds, setElapsedSeconds] = useState(0)
+  const [priorSeconds, setPriorSeconds] = useState(0)
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null)
+  const sessionStartRef = useRef(Date.now())
+  const ctxRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     window.api.getIsDev().then(setIsDev)
   }, [])
 
+  // Load prior tracked time for this task (from check-ins before this session)
   useEffect(() => {
-    return window.api.onCheckInCountdown((ms) => setRemainingMs(ms))
+    if (!config.focusTaskId) return
+    window.api.getFocusCheckIns().then((checkIns) => {
+      const prior = checkIns
+        .filter((c) => new Date(c.timestamp).getTime() < sessionStartRef.current)
+        .filter((c) => c.taskId === config.focusTaskId)
+        .reduce((sum, c) => sum + checkInMinutes(c), 0)
+      setPriorSeconds(prior * 60)
+    })
+  }, [config.focusTaskId])
+
+  // Elapsed session time — tick every second
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setElapsedSeconds(Math.floor((Date.now() - sessionStartRef.current) / 1000))
+    }, 1000)
+    return () => clearInterval(interval)
   }, [])
 
-  // Resize focus window when picker opens/closes
+  // Resize focus window based on open popups
   useEffect(() => {
     if (showTaskPicker) {
+      window.api.resizeFocusWindow(FOCUS_WIDTH, FOCUS_HEIGHT_PICKER)
+    } else if (ctxMenu) {
       window.api.resizeFocusWindow(FOCUS_WIDTH, FOCUS_HEIGHT_PICKER)
     } else {
       window.api.resizeFocusWindow(FOCUS_WIDTH, FOCUS_HEIGHT_NORMAL)
     }
-  }, [showTaskPicker])
+  }, [showTaskPicker, ctxMenu])
+
 
   const isStandalone = config.focusProjectId === STANDALONE_PROJECT_ID
   const project = isStandalone ? null : projects.find((p) => p.id === config.focusProjectId)
   const task = isStandalone
     ? quickTasks.find((t) => t.id === config.focusTaskId)
     : project?.tasks.find((t) => t.id === config.focusTaskId)
-  const contextLabel = isStandalone ? 'Quick Task' : project?.name
-  const focusTaskId = isStandalone
+  // Project label for the bar (code or short name)
+  const projLabel = projectLabel(project ?? null, isStandalone)
+  const projColor = project ? projectColorValue(project.color) : undefined
+
+  // Context menu data
+  const projectLinks: ProjectLink[] = project ? normalizeProjectLinks(project) : []
+  const obsidianEnabled = !!config.obsidianStoragePath
+  const taskBadge = isStandalone
     ? formatQuickTaskId(task?.taskNumber)
     : formatTaskId(task?.taskNumber, project?.code)
 
-  // Build picker from visible tasks (same as clean view), excluding just-completed task
+  const openNote = () => {
+    if (!task || !obsidianEnabled) return
+    window.api.openTaskNote(task.id, task.title, project?.name, taskBadge)
+  }
+
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    setCtxMenu(prev => prev ? null : { x: Math.min(e.clientX, window.innerWidth - 200), y: 48 })
+  }, [])
+
+  // Close context menu on left-click outside or Escape
+  useEffect(() => {
+    if (!ctxMenu) return
+    const handleClick = () => setCtxMenu(null)
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setCtxMenu(null)
+    }
+    document.addEventListener('click', handleClick)
+    document.addEventListener('keydown', handleKey)
+    return () => {
+      document.removeEventListener('click', handleClick)
+      document.removeEventListener('keydown', handleKey)
+    }
+  }, [ctxMenu])
+
+  // Total displayed time = prior check-in time + current session elapsed
+  const totalSeconds = priorSeconds + elapsedSeconds
+
+  // Build picker from visible tasks, excluding just-completed task
   const pickerTasks: PickerTask[] = []
   if (showTaskPicker) {
     for (const mt of [...activeTasks, ...repeatingActive]) {
@@ -92,7 +155,6 @@ export default function FocusMode() {
     if (isStandalone) {
       await window.api.completeQuickTask(config.focusTaskId)
     } else {
-      // Complete pinned/project task — load fresh project
       const { projects: freshProjects } = await window.api.getAppData()
       const freshProject = freshProjects.find((p: { id: string }) => p.id === config.focusProjectId)
       if (freshProject) {
@@ -169,7 +231,6 @@ export default function FocusMode() {
 
   const handlePickTask = async (pickerTask: PickerTask) => {
     setShowTaskPicker(false)
-    setShowTooltip(false)
     await window.api.switchFocusTask(pickerTask.projectId, pickerTask.taskId)
     setCompletedTaskKey(null)
   }
@@ -179,25 +240,26 @@ export default function FocusMode() {
     setFocus(null, null)
   }
 
+  // Confirm save dialog
   if (confirmAction !== null) {
     return (
       <div
-        className="h-[38px] flex items-center px-3 gap-2.5 rounded-xl bg-card/95 border border-border/50"
+        className="h-[44px] flex items-center px-4 gap-3 rounded-xl bg-card/95 border border-border/50"
         style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
       >
-        <span className="text-[12px] text-t-primary flex-shrink-0">
+        <span className="text-[13px] text-t-primary flex-shrink-0">
           Zapisać {confirmAction.minutes} min?
         </span>
-        <div className="flex gap-1.5 flex-shrink-0" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+        <div className="flex gap-2 flex-shrink-0" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
           <button
             onClick={handleConfirmSave}
-            className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-blue-600/80 hover:bg-blue-500/80 text-white transition-colors"
+            className="px-3 py-1 rounded-md text-[12px] font-medium bg-blue-600/80 hover:bg-blue-500/80 text-white transition-colors"
           >
             Tak
           </button>
           <button
             onClick={handleConfirmDiscard}
-            className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-surface/80 hover:bg-hover text-t-secondary transition-colors"
+            className="px-3 py-1 rounded-md text-[12px] font-medium bg-surface/80 hover:bg-hover text-t-secondary transition-colors"
           >
             Nie
           </button>
@@ -207,89 +269,128 @@ export default function FocusMode() {
   }
 
   return (
-    <div
-      className="relative"
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-    >
+    <div className="relative w-screen h-screen">
+      {/* Main bar */}
       <div
-        className="h-[38px] flex items-center px-3 gap-2.5 rounded-xl bg-card/95 border border-border/50"
+        className="h-[44px] flex items-center pl-4 pr-1.5 gap-2 rounded-xl bg-card/95 border border-border/50"
         style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
+        onContextMenu={handleContextMenu}
       >
-        <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse flex-shrink-0" />
+        <div
+          className="w-[7px] h-[7px] rounded-full animate-pulse flex-shrink-0"
+          style={{ background: projColor || '#3b82f6' }}
+        />
         {isDev && (
           <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-orange-500/20 text-orange-400 border border-orange-500/30 flex-shrink-0">
             DEV
           </span>
         )}
-        <div className="flex-1 min-w-0 flex items-center gap-1.5" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
-          <span className="text-[11px] text-blue-400/70 flex-shrink-0">{contextLabel}</span>
-          <span className="text-[10px] text-t-muted flex-shrink-0">/</span>
-          {focusTaskId && <span className="text-[10px] text-t-muted flex-shrink-0" style={{ fontFamily: 'monospace', opacity: 0.5 }}>{focusTaskId}</span>}
-          <span
-            className="text-[13px] font-semibold truncate text-t-primary cursor-default"
-            onDoubleClick={() => {
-              if (task?.title) {
-                navigator.clipboard.writeText(task.title)
-              }
+        {projLabel && (
+          <button
+            className="text-[12px] text-t-muted flex-shrink-0 opacity-50 hover:opacity-100 hover:text-t-primary transition-opacity cursor-pointer bg-transparent border-none p-0"
+            style={{ fontFamily: 'monospace', WebkitAppRegion: 'no-drag', transform: 'translateY(1px)' } as React.CSSProperties}
+            onClick={async () => {
+              if (!project) return
+              await window.api.showProjectInMain(project.id)
             }}
-            title="Double-click to copy"
+            title={project ? `Open ${project.name}` : undefined}
           >
-            {task?.title || 'No task'}
-          </span>
-          {project?.launchers && getActiveLaunchers(project.launchers).length > 0 && (
-            <div className="flex items-center gap-0.5 flex-shrink-0 ml-1">
-              {getActiveLaunchers(project.launchers).map(([type, value]) => (
-                <button
-                  key={type}
-                  title={launcherMeta[type].label}
-                  onClick={() => launchByType(type, value)}
-                  className="w-5 h-5 rounded flex items-center justify-center text-[10px] text-t-muted hover:text-t-primary hover:bg-surface/80 transition-colors"
-                >
-                  {launcherMeta[type].icon}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-        {remainingMs !== null && (
-          <span className={`text-[11px] tabular-nums flex-shrink-0 ${remainingMs === 0 ? 'text-amber-400' : 'text-t-muted'}`}>
-            {remainingMs === 0 ? 'check-in' : formatCountdown(remainingMs)}
-          </span>
+            {projLabel}
+          </button>
         )}
-        <button
-          onClick={handleComplete}
-          className="w-5 h-5 rounded-md flex items-center justify-center bg-surface/80 hover:bg-green-900/60 text-t-secondary hover:text-green-300 text-[10px] transition-colors flex-shrink-0"
-          style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-          title="Complete task"
+        <span
+          className="text-[14px] font-semibold truncate text-t-primary flex-1 min-w-0 cursor-default"
+          onDoubleClick={() => { if (task?.title) navigator.clipboard.writeText(task.title) }}
         >
-          ✓
-        </button>
-        <button
-          onClick={handleExit}
-          className="w-5 h-5 rounded-md flex items-center justify-center bg-surface/80 hover:bg-red-900/60 text-t-secondary hover:text-red-300 text-[10px] transition-colors flex-shrink-0"
-          style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-        >
-          ✕
-        </button>
+          {task?.title || 'No task'}
+        </span>
+        <span className="text-[12px] font-semibold text-blue-400 bg-blue-500/12 rounded-[10px] px-2.5 py-[3px] tabular-nums flex-shrink-0 whitespace-nowrap">
+          {formatSessionTime(totalSeconds)}
+        </span>
+        {/* Action buttons — always visible */}
+        <div className="flex gap-0.5 flex-shrink-0" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+          <button
+            onClick={handleComplete}
+            className="w-[28px] h-[28px] rounded-[7px] bg-transparent text-t-muted text-[12px] hover:bg-green-500/15 hover:text-green-400 transition-all flex items-center justify-center cursor-pointer border-none"
+            title="Complete task"
+          >
+            ✓
+          </button>
+          <button
+            onClick={handleExit}
+            className="w-[28px] h-[28px] rounded-[7px] bg-transparent text-t-muted text-[12px] hover:bg-red-500/15 hover:text-red-400 transition-all flex items-center justify-center cursor-pointer border-none"
+            title="Exit focus"
+          >
+            ✕
+          </button>
+        </div>
       </div>
 
-      {/* Hover tooltip — full task title */}
-      {showTooltip && task?.title && !showTaskPicker && (
-        <div className="absolute top-[42px] left-3 right-3 px-3 py-2 rounded-lg bg-card/95 border border-border/50 shadow-lg">
-          <p className="text-[12px] text-t-primary leading-snug whitespace-normal break-words">
-            {task.title}
-          </p>
+      {/* Context menu */}
+      {ctxMenu && (
+        <div
+          ref={ctxRef}
+          className="absolute z-50 min-w-[180px] rounded-lg bg-card/[0.98] border border-border/50 shadow-lg py-1.5 overflow-hidden"
+          style={{ left: ctxMenu.x, top: ctxMenu.y }}
+        >
+          {projectLinks.map((link, i) => (
+            <button
+              key={`${link.label}-${i}`}
+              onClick={() => { openProjectLink(link); setCtxMenu(null) }}
+              className="w-full text-left px-3 py-1.5 text-[12px] text-t-secondary hover:bg-hover hover:text-t-primary transition-colors flex items-center gap-2.5 border-none bg-transparent cursor-pointer"
+            >
+              <span className="w-[18px] text-center text-[11px] flex-shrink-0">{linkIcon(link.label)}</span>
+              {link.label}
+            </button>
+          ))}
+          {obsidianEnabled && (
+            <button
+              onClick={() => { openNote(); setCtxMenu(null) }}
+              className="w-full text-left px-3 py-1.5 text-[12px] text-t-secondary hover:bg-hover hover:text-t-primary transition-colors flex items-center gap-2.5 border-none bg-transparent cursor-pointer"
+            >
+              <span className="w-[18px] text-center text-[11px] flex-shrink-0">📝</span>
+              Obsidian note
+            </button>
+          )}
+          {(projectLinks.length > 0 || obsidianEnabled) && project && (
+            <div className="h-px bg-border/50 my-1 mx-2" />
+          )}
+          {project && (
+            <button
+              onClick={async () => { await window.api.showProjectInMain(project.id); setCtxMenu(null) }}
+              className="w-full text-left px-3 py-1.5 text-[12px] text-t-secondary hover:bg-hover hover:text-t-primary transition-colors flex items-center gap-2.5 border-none bg-transparent cursor-pointer"
+            >
+              <span className="w-[18px] text-center text-[11px] flex-shrink-0">📂</span>
+              Open project
+            </button>
+          )}
+          {(projectLinks.length > 0 || obsidianEnabled || project) && (
+            <div className="h-px bg-border/50 my-1 mx-2" />
+          )}
+          <button
+            onClick={() => { handleComplete(); setCtxMenu(null) }}
+            className="w-full text-left px-3 py-1.5 text-[12px] text-t-secondary hover:bg-green-500/10 hover:text-green-400 transition-colors flex items-center gap-2.5 border-none bg-transparent cursor-pointer"
+          >
+            <span className="w-[18px] text-center text-[11px] flex-shrink-0">✓</span>
+            Complete task
+          </button>
+          <button
+            onClick={() => { handleExit(); setCtxMenu(null) }}
+            className="w-full text-left px-3 py-1.5 text-[12px] text-t-secondary hover:bg-red-500/10 hover:text-red-400 transition-colors flex items-center gap-2.5 border-none bg-transparent cursor-pointer"
+          >
+            <span className="w-[18px] text-center text-[11px] flex-shrink-0">✕</span>
+            Exit focus
+          </button>
         </div>
       )}
 
       {/* Task picker popup */}
       {showTaskPicker && (
-        <div className="absolute top-[42px] left-0 right-0 mx-2 rounded-lg bg-card/95 border border-border/50 shadow-lg overflow-hidden">
+        <div className="absolute top-[48px] left-0 right-0 mx-2 rounded-lg bg-card/95 border border-border/50 shadow-lg overflow-hidden">
           <div className="px-3 py-2 border-b border-border/30">
             <span className="text-[11px] text-t-muted">Następne zadanie:</span>
           </div>
-          <div className="max-h-[220px] overflow-y-auto">
+          <div className="max-h-[200px] overflow-y-auto">
             {pickerTasks.length === 0 ? (
               <div className="px-3 py-3 text-[12px] text-t-muted text-center">
                 Brak dostępnych zadań
@@ -301,9 +402,6 @@ export default function FocusMode() {
                   onClick={() => handlePickTask(pt)}
                   className="w-full text-left px-3 py-2 hover:bg-hover transition-colors flex items-center gap-2"
                 >
-                  {pt.projectName && (
-                    <span className="text-[10px] text-blue-400/70 flex-shrink-0">{pt.projectName}</span>
-                  )}
                   {pt.taskNumber != null && (
                     <span className="text-[10px] text-t-muted flex-shrink-0" style={{ fontFamily: 'monospace', opacity: 0.5 }}>
                       {pt.projectCode ? formatTaskId(pt.taskNumber, pt.projectCode) : formatQuickTaskId(pt.taskNumber)}

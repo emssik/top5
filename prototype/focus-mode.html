@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Focus Mode — Alternatives (no hover overlay)</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #1a1a1a;
+  --card: #2a2a2a;
+  --border: rgba(255,255,255,0.08);
+  --text-primary: #e8e8e8;
+  --text-muted: rgba(255,255,255,0.4);
+  --text-secondary: rgba(255,255,255,0.6);
+  --blue: #3b82f6;
+  --green: #22c55e;
+  --red: #ef4444;
+  --amber: #f59e0b;
+  --surface: rgba(255,255,255,0.06);
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
+  background: #111;
+  color: var(--text-primary);
+  padding: 40px;
+  line-height: 1.4;
+}
+
+h1 { font-size: 20px; font-weight: 600; margin-bottom: 8px; }
+h2 { font-size: 14px; font-weight: 600; margin-bottom: 12px; color: var(--text-secondary); }
+p.desc { font-size: 12px; color: var(--text-muted); margin-bottom: 24px; max-width: 600px; line-height: 1.6; }
+
+.variant { display: flex; flex-direction: column; gap: 12px; }
+.variant-label {
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--blue); opacity: 0.7;
+}
+.variant-desc { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; max-width: 560px; line-height: 1.6; }
+
+.scene {
+  background: #0d0d0d;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.scene-label { font-size: 10px; color: var(--text-muted); opacity: 0.5; margin-bottom: 4px; }
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
+
+.note-box {
+  margin-top: 32px; padding: 16px 20px; border-radius: 10px;
+  background: rgba(59,130,246,0.06); border: 1px solid rgba(59,130,246,0.15);
+  font-size: 12px; color: var(--text-secondary); line-height: 1.7;
+  max-width: 600px;
+}
+.note-box strong { color: var(--text-primary); font-weight: 600; }
+
+/* ═══════════════════════════════════════════
+   PROBLEM — hover overlay (current broken approach)
+   ═══════════════════════════════════════════ */
+.focus-broken {
+  height: 44px;
+  display: flex; align-items: center;
+  padding: 0 14px; gap: 10px;
+  border-radius: 12px;
+  background: rgba(42,42,42,0.95);
+  border: 1px solid var(--border);
+  width: fit-content; max-width: 520px;
+  cursor: grab;
+  position: relative;
+}
+.focus-broken .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--blue); flex-shrink: 0; animation: pulse 2s ease-in-out infinite; }
+.focus-broken .task-id { font-size: 11px; color: var(--text-muted); font-family: 'SF Mono', monospace; flex-shrink: 0; opacity: 0.6; }
+.focus-broken .title { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; }
+.focus-broken .time-pill {
+  font-size: 12px; font-weight: 600; color: var(--blue);
+  background: rgba(59,130,246,0.12); border-radius: 10px;
+  padding: 3px 10px; font-variant-numeric: tabular-nums; flex-shrink: 0;
+}
+.focus-broken .hover-overlay {
+  position: absolute; inset: 0; border-radius: 12px;
+  background: rgba(30,30,30,0.92); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  opacity: 0; transition: opacity 0.15s; pointer-events: none;
+}
+.focus-broken:hover .hover-overlay { opacity: 1; pointer-events: auto; }
+.focus-broken .hover-overlay .btn {
+  height: 28px; border-radius: 7px; border: none;
+  background: var(--surface); color: var(--text-secondary);
+  font-size: 11px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+  padding: 0 10px; transition: all 0.12s;
+}
+.focus-broken .hover-overlay .sep { width: 1px; height: 16px; background: rgba(255,255,255,0.1); flex-shrink: 0; }
+
+/* ═══════════════════════════════════════════
+   OPTION A — always-visible buttons
+   ═══════════════════════════════════════════ */
+.focus-a {
+  height: 44px;
+  display: flex; align-items: center;
+  padding: 0 6px 0 14px; gap: 8px;
+  border-radius: 12px;
+  background: rgba(42,42,42,0.95);
+  border: 1px solid var(--border);
+  width: fit-content; max-width: 520px;
+  cursor: grab;
+}
+.focus-a .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; animation: pulse 2s ease-in-out infinite; }
+.focus-a .proj-code {
+  font-size: 11px; color: var(--text-muted); font-family: 'SF Mono', monospace;
+  flex-shrink: 0; opacity: 0.5; cursor: pointer; background: none; border: none;
+  padding: 2px 0; transition: opacity 0.12s;
+}
+.focus-a .proj-code:hover { opacity: 1; color: var(--text-primary); }
+.focus-a .title { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; }
+.focus-a .time-pill {
+  font-size: 12px; font-weight: 600; color: var(--blue);
+  background: rgba(59,130,246,0.12); border-radius: 10px;
+  padding: 3px 10px; font-variant-numeric: tabular-nums; flex-shrink: 0;
+  white-space: nowrap;
+}
+.focus-a .actions {
+  display: flex; gap: 2px; flex-shrink: 0;
+}
+.focus-a .actions .btn {
+  width: 28px; height: 28px; border-radius: 7px; border: none;
+  background: transparent; color: var(--text-muted);
+  font-size: 12px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.12s; flex-shrink: 0;
+}
+.focus-a .actions .btn:hover { background: var(--surface); color: var(--text-primary); }
+.focus-a .actions .btn.complete:hover { background: rgba(34,197,94,0.15); color: #4ade80; }
+.focus-a .actions .btn.close:hover { background: rgba(239,68,68,0.15); color: #f87171; }
+
+/* Dropdown for project links */
+.focus-a-wrap { position: relative; display: inline-block; }
+.focus-a-wrap .dropdown {
+  position: absolute;
+  top: calc(100% + 6px); left: 40px;
+  background: rgba(38,38,38,0.98); border: 1px solid var(--border);
+  border-radius: 10px; padding: 6px;
+  display: flex; flex-direction: column; gap: 2px;
+  min-width: 160px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+.focus-a-wrap .dropdown .drop-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 10px; border-radius: 6px; border: none;
+  background: none; color: var(--text-secondary); font-size: 12px;
+  cursor: pointer; text-align: left; width: 100%;
+  transition: all 0.1s;
+}
+.focus-a-wrap .dropdown .drop-item:hover { background: var(--surface); color: var(--text-primary); }
+.focus-a-wrap .dropdown .drop-item .drop-icon { font-size: 11px; width: 18px; text-align: center; flex-shrink: 0; }
+.focus-a-wrap .dropdown .drop-sep { height: 1px; background: var(--border); margin: 3px 6px; }
+
+/* ═══════════════════════════════════════════
+   OPTION B — right-click context menu
+   ═══════════════════════════════════════════ */
+.focus-b {
+  height: 44px;
+  display: flex; align-items: center;
+  padding: 0 14px; gap: 10px;
+  border-radius: 12px;
+  background: rgba(42,42,42,0.95);
+  border: 1px solid var(--border);
+  width: fit-content; max-width: 520px;
+  cursor: grab;
+  position: relative;
+}
+.focus-b .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; animation: pulse 2s ease-in-out infinite; }
+.focus-b .title { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; }
+.focus-b .time-pill {
+  font-size: 12px; font-weight: 600; color: var(--blue);
+  background: rgba(59,130,246,0.12); border-radius: 10px;
+  padding: 3px 10px; font-variant-numeric: tabular-nums; flex-shrink: 0;
+  white-space: nowrap;
+}
+/* Simulated context menu */
+.focus-b-wrap { position: relative; display: inline-block; }
+.focus-b-wrap .ctx-menu {
+  position: absolute;
+  top: calc(100% + 6px); right: 0;
+  background: rgba(38,38,38,0.98); border: 1px solid var(--border);
+  border-radius: 10px; padding: 6px;
+  display: flex; flex-direction: column; gap: 2px;
+  min-width: 180px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+.focus-b-wrap .ctx-menu .ctx-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 7px 12px; border-radius: 6px; border: none;
+  background: none; color: var(--text-secondary); font-size: 12px;
+  cursor: pointer; text-align: left; width: 100%;
+  transition: all 0.1s;
+}
+.focus-b-wrap .ctx-menu .ctx-item:hover { background: var(--surface); color: var(--text-primary); }
+.focus-b-wrap .ctx-menu .ctx-item.danger:hover { background: rgba(239,68,68,0.12); color: #f87171; }
+.focus-b-wrap .ctx-menu .ctx-item.success:hover { background: rgba(34,197,94,0.12); color: #4ade80; }
+.focus-b-wrap .ctx-menu .ctx-icon { width: 18px; text-align: center; font-size: 11px; flex-shrink: 0; }
+.focus-b-wrap .ctx-menu .ctx-sep { height: 1px; background: var(--border); margin: 3px 8px; }
+.focus-b-wrap .ctx-menu .ctx-shortcut { margin-left: auto; font-size: 10px; color: var(--text-muted); opacity: 0.5; font-family: 'SF Mono', monospace; }
+
+/* ═══════════════════════════════════════════
+   OPTION C — hybrid: buttons always + dropdown for links
+   ═══════════════════════════════════════════ */
+.focus-c {
+  height: 44px;
+  display: flex; align-items: center;
+  padding: 0 6px 0 14px; gap: 8px;
+  border-radius: 12px;
+  background: rgba(42,42,42,0.95);
+  border: 1px solid var(--border);
+  width: fit-content; max-width: 520px;
+  cursor: grab;
+}
+.focus-c .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; animation: pulse 2s ease-in-out infinite; }
+.focus-c .proj-code {
+  font-size: 11px; color: var(--text-muted); font-family: 'SF Mono', monospace;
+  flex-shrink: 0; opacity: 0.5; cursor: pointer; background: none; border: none;
+  padding: 2px 0; transition: opacity 0.12s;
+}
+.focus-c .proj-code:hover { opacity: 1; color: var(--text-primary); }
+.focus-c .title { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; }
+.focus-c .time-pill {
+  font-size: 12px; font-weight: 600; color: var(--blue);
+  background: rgba(59,130,246,0.12); border-radius: 10px;
+  padding: 3px 10px; font-variant-numeric: tabular-nums; flex-shrink: 0;
+  white-space: nowrap;
+}
+.focus-c .sep { width: 1px; height: 16px; background: var(--border); flex-shrink: 0; }
+.focus-c .actions {
+  display: flex; gap: 2px; flex-shrink: 0; align-items: center;
+}
+.focus-c .actions .btn {
+  height: 28px; border-radius: 7px; border: none;
+  background: transparent; color: var(--text-muted);
+  font-size: 11px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 4px;
+  padding: 0 8px; transition: all 0.12s; flex-shrink: 0;
+}
+.focus-c .actions .btn:hover { background: var(--surface); color: var(--text-primary); }
+.focus-c .actions .btn.more:hover { background: var(--surface); color: var(--text-primary); }
+.focus-c .actions .btn.complete:hover { background: rgba(34,197,94,0.15); color: #4ade80; }
+.focus-c .actions .btn.close:hover { background: rgba(239,68,68,0.15); color: #f87171; }
+.focus-c .actions .btn .icon { font-size: 12px; }
+.focus-c .actions .btn .label { font-size: 10px; opacity: 0.6; }
+
+/* "More" dropdown for option C */
+.focus-c-wrap { position: relative; display: inline-block; }
+.focus-c-wrap .more-menu {
+  position: absolute;
+  top: calc(100% + 6px); right: 60px;
+  background: rgba(38,38,38,0.98); border: 1px solid var(--border);
+  border-radius: 10px; padding: 6px;
+  display: flex; flex-direction: column; gap: 2px;
+  min-width: 160px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+.focus-c-wrap .more-menu .mm-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 10px; border-radius: 6px; border: none;
+  background: none; color: var(--text-secondary); font-size: 12px;
+  cursor: pointer; text-align: left; width: 100%;
+  transition: all 0.1s;
+}
+.focus-c-wrap .more-menu .mm-item:hover { background: var(--surface); color: var(--text-primary); }
+.focus-c-wrap .more-menu .mm-icon { font-size: 11px; width: 18px; text-align: center; flex-shrink: 0; }
+.focus-c-wrap .more-menu .mm-sep { height: 1px; background: var(--border); margin: 3px 6px; }
+</style>
+</head>
+<body>
+
+<h1>Focus Mode — Alternatywy bez hover overlay</h1>
+<p class="desc">
+  Problem: hover overlay na barze koliduje z drag-to-move. Najeżdżasz żeby przesunąć okno,
+  a przyciski się pojawiają i przechwytują kliknięcia. Poniżej 3 podejścia bez tego problemu.
+</p>
+
+<hr>
+
+<!-- ═══════════════════════════════════════════ -->
+<h2>Problem — obecny hover overlay (reference)</h2>
+<!-- ═══════════════════════════════════════════ -->
+<div class="variant">
+  <p class="variant-desc" style="color: rgba(239,68,68,0.7);">
+    Hover na barze = overlay zasłania treść + koliduje z drag area.
+    Przyciski migają, nie da się stabilnie przesunąć okna.
+  </p>
+  <div class="scene">
+    <div class="scene-label">default — trzeba najechać żeby zobaczyć cokolwiek</div>
+    <div class="focus-broken">
+      <div class="dot" style="background: var(--blue);"></div>
+      <span class="task-id">TOP-39</span>
+      <span class="title">Dodać prawy klik na task z menu kontekstowym</span>
+      <span class="time-pill">23 min</span>
+      <div class="hover-overlay">
+        <button class="btn">&lt;/&gt;</button>
+        <button class="btn">&gt;_</button>
+        <button class="btn">📝</button>
+        <span class="sep"></span>
+        <button class="btn">✓ Done</button>
+        <button class="btn">✕ Exit</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr>
+
+<!-- ═══════════════════════════════════════════ -->
+<h2>Opcja A — Przyciski zawsze widoczne + dropdown na linki</h2>
+<!-- ═══════════════════════════════════════════ -->
+<div class="variant">
+  <p class="variant-desc">
+    ✓ i ✕ zawsze widoczne po prawej stronie (za time pill).<br>
+    Kliknięcie w kod projektu (np. "TOP") otwiera dropdown z linkami (VS Code, iTerm, Obsidian note).<br>
+    Cały bar poza przyciskami = drag area. Zero hover overlay.
+  </p>
+
+  <div class="scene">
+    <div class="scene-label">default — przyciski od razu dostępne, reszta = drag</div>
+    <div class="focus-a">
+      <div class="dot" style="background: var(--blue);"></div>
+      <button class="proj-code">TOP</button>
+      <span class="title">Dodać prawy klik na task z menu kontekstowym i akcjami</span>
+      <span class="time-pill">23 min</span>
+      <div class="actions">
+        <button class="btn complete" title="Complete task">✓</button>
+        <button class="btn close" title="Exit focus">✕</button>
+      </div>
+    </div>
+
+    <div class="scene-label">short task (quick task, no project code)</div>
+    <div class="focus-a">
+      <div class="dot" style="background: var(--amber);"></div>
+      <span class="title">Naprawić bug z loginowaniem</span>
+      <span class="time-pill">4 min</span>
+      <div class="actions">
+        <button class="btn complete" title="Complete task">✓</button>
+        <button class="btn close" title="Exit focus">✕</button>
+      </div>
+    </div>
+
+    <div class="scene-label">dropdown po kliknięciu w kod projektu</div>
+    <div class="focus-a-wrap">
+      <div class="focus-a">
+        <div class="dot" style="background: var(--blue);"></div>
+        <button class="proj-code" style="opacity: 1; color: var(--text-primary);">TOP</button>
+        <span class="title">Dodać prawy klik na task z menu kontekstowym i akcjami</span>
+        <span class="time-pill">23 min</span>
+        <div class="actions">
+          <button class="btn complete" title="Complete task">✓</button>
+          <button class="btn close" title="Exit focus">✕</button>
+        </div>
+      </div>
+      <div class="dropdown">
+        <button class="drop-item"><span class="drop-icon">&lt;/&gt;</span> VS Code</button>
+        <button class="drop-item"><span class="drop-icon">&gt;_</span> iTerm</button>
+        <button class="drop-item"><span class="drop-icon">🌐</span> Browser</button>
+        <div class="drop-sep"></div>
+        <button class="drop-item"><span class="drop-icon">📝</span> Obsidian note</button>
+        <div class="drop-sep"></div>
+        <button class="drop-item"><span class="drop-icon">📂</span> Open project</button>
+      </div>
+    </div>
+
+    <div class="scene-label" style="margin-top: 60px;">long session time</div>
+    <div class="focus-a">
+      <div class="dot" style="background: var(--green);"></div>
+      <button class="proj-code">API</button>
+      <span class="title">Zaimplementować endpoint do eksportu danych użytkownika</span>
+      <span class="time-pill">1h 12m</span>
+      <div class="actions">
+        <button class="btn complete" title="Complete task">✓</button>
+        <button class="btn close" title="Exit focus">✕</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="note-box">
+  <strong>Opcja A — zalety:</strong><br>
+  + Przyciski ✓ ✕ od razu widoczne — nie trzeba hovera<br>
+  + Cały bar poza 2 przyciskami = drag area<br>
+  + Linki ukryte za kliknięciem w kod projektu (dropdown, nie overlay)<br>
+  + Najprostsze w implementacji<br>
+  <br>
+  <strong>Wady:</strong><br>
+  − Bar trochę szerszy (2 przyciski zajmują ~60px)<br>
+  − Dropdown wymaga kliknięcia (dodatkowy krok dla linków)
+</div>
+
+<hr>
+
+<!-- ═══════════════════════════════════════════ -->
+<h2>Opcja B — Prawy klik = context menu</h2>
+<!-- ═══════════════════════════════════════════ -->
+<div class="variant">
+  <p class="variant-desc">
+    Cały bar to czysta drag area. Zero przycisków widocznych na stałe.<br>
+    Prawy klik → natywne-style context menu z wszystkimi akcjami i linkami.<br>
+    Najczystszy bar, ale mniej discoverable.
+  </p>
+
+  <div class="scene">
+    <div class="scene-label">default — ultra-clean bar, 100% drag area</div>
+    <div class="focus-b">
+      <div class="dot" style="background: var(--blue);"></div>
+      <span class="title">Dodać prawy klik na task z menu kontekstowym i akcjami</span>
+      <span class="time-pill">23 min</span>
+    </div>
+
+    <div class="scene-label">quick task — no project code, just task + time</div>
+    <div class="focus-b">
+      <div class="dot" style="background: var(--amber);"></div>
+      <span class="title">Naprawić bug z loginowaniem</span>
+      <span class="time-pill">4 min</span>
+    </div>
+
+    <div class="scene-label">right-click → context menu</div>
+    <div class="focus-b-wrap">
+      <div class="focus-b">
+        <div class="dot" style="background: var(--blue);"></div>
+        <span class="title">Dodać prawy klik na task z menu kontekstowym i akcjami</span>
+        <span class="time-pill">23 min</span>
+      </div>
+      <div class="ctx-menu">
+        <button class="ctx-item success"><span class="ctx-icon">✓</span> Complete task <span class="ctx-shortcut">⌘D</span></button>
+        <div class="ctx-sep"></div>
+        <button class="ctx-item"><span class="ctx-icon">&lt;/&gt;</span> VS Code</button>
+        <button class="ctx-item"><span class="ctx-icon">&gt;_</span> iTerm</button>
+        <button class="ctx-item"><span class="ctx-icon">🌐</span> Browser</button>
+        <div class="ctx-sep"></div>
+        <button class="ctx-item"><span class="ctx-icon">📝</span> Obsidian note</button>
+        <button class="ctx-item"><span class="ctx-icon">📂</span> Open project</button>
+        <div class="ctx-sep"></div>
+        <button class="ctx-item danger"><span class="ctx-icon">✕</span> Exit focus <span class="ctx-shortcut">Esc</span></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="note-box">
+  <strong>Opcja B — zalety:</strong><br>
+  + Najczystszy bar — zero clutter, max miejsca na tytuł<br>
+  + 100% powierzchni = drag area<br>
+  + Shortcuty (⌘D, Esc) przy pozycjach menu — uczy skrótów<br>
+  + Można dodać menu nativeowe (Electron Menu) zamiast custom<br>
+  <br>
+  <strong>Wady:</strong><br>
+  − Prawy klik nie jest oczywisty (discoverability)<br>
+  − Nie widać przycisku "done" — trzeba wiedzieć o prawy klik<br>
+  − Na trackpadzie prawy klik jest mniej naturalny
+</div>
+
+<hr>
+
+<!-- ═══════════════════════════════════════════ -->
+<h2>Opcja C — Hybrid: przyciski + "more" dropdown</h2>
+<!-- ═══════════════════════════════════════════ -->
+<div class="variant">
+  <p class="variant-desc">
+    ✓ Done i ✕ Exit zawsze widoczne z labelem. Przycisk "•••" otwiera dropdown z linkami projektu.<br>
+    Trzy interaktywne elementy po prawej, reszta = drag. Jasna hierarchia: akcje > linki.
+  </p>
+
+  <div class="scene">
+    <div class="scene-label">default — labeled buttons + more</div>
+    <div class="focus-c">
+      <div class="dot" style="background: var(--blue);"></div>
+      <button class="proj-code">TOP</button>
+      <span class="title">Dodać prawy klik na task z menu kontekstowym i akcjami</span>
+      <span class="time-pill">23 min</span>
+      <div class="actions">
+        <button class="btn more" title="More"><span class="icon">•••</span></button>
+        <button class="btn complete" title="Complete task"><span class="icon">✓</span></button>
+        <button class="btn close" title="Exit focus"><span class="icon">✕</span></button>
+      </div>
+    </div>
+
+    <div class="scene-label">quick task — no project code, no "more" (no links to show)</div>
+    <div class="focus-c">
+      <div class="dot" style="background: var(--amber);"></div>
+      <span class="title">Naprawić bug z loginowaniem</span>
+      <span class="time-pill">4 min</span>
+      <div class="actions">
+        <button class="btn complete" title="Complete task"><span class="icon">✓</span></button>
+        <button class="btn close" title="Exit focus"><span class="icon">✕</span></button>
+      </div>
+    </div>
+
+    <div class="scene-label">"more" dropdown open</div>
+    <div class="focus-c-wrap">
+      <div class="focus-c">
+        <div class="dot" style="background: var(--blue);"></div>
+        <button class="proj-code" style="opacity: 1; color: var(--text-primary);">TOP</button>
+        <span class="title">Dodać prawy klik na task z menu kontekstowym i akcjami</span>
+        <span class="time-pill">23 min</span>
+        <div class="actions">
+          <button class="btn more" title="More" style="background: var(--surface); color: var(--text-primary);"><span class="icon">•••</span></button>
+          <button class="btn complete" title="Complete task"><span class="icon">✓</span></button>
+          <button class="btn close" title="Exit focus"><span class="icon">✕</span></button>
+        </div>
+      </div>
+      <div class="more-menu">
+        <button class="mm-item"><span class="mm-icon">&lt;/&gt;</span> VS Code</button>
+        <button class="mm-item"><span class="mm-icon">&gt;_</span> iTerm</button>
+        <button class="mm-item"><span class="mm-icon">🌐</span> Browser</button>
+        <div class="mm-sep"></div>
+        <button class="mm-item"><span class="mm-icon">📝</span> Obsidian note</button>
+        <div class="mm-sep"></div>
+        <button class="mm-item"><span class="mm-icon">📂</span> Open project</button>
+      </div>
+    </div>
+
+    <div class="scene-label" style="margin-top: 60px;">with labels variant (more spacious)</div>
+    <div class="focus-c">
+      <div class="dot" style="background: var(--green);"></div>
+      <button class="proj-code">API</button>
+      <span class="title">Zaimplementować endpoint do eksportu</span>
+      <span class="time-pill">1h 12m</span>
+      <div class="actions">
+        <button class="btn more" title="More"><span class="icon">•••</span></button>
+        <button class="btn complete" title="Complete task"><span class="icon">✓</span> <span class="label">Done</span></button>
+        <button class="btn close" title="Exit focus"><span class="icon">✕</span> <span class="label">Exit</span></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="note-box">
+  <strong>Opcja C — zalety:</strong><br>
+  + Przyciski z labelem — czytelne, nie trzeba hovera<br>
+  + "•••" to znany wzorzec dla "more actions"<br>
+  + Czysta hierarchia: główne akcje widoczne, linki za 1 kliknięciem<br>
+  <br>
+  <strong>Wady:</strong><br>
+  − 3 przyciski po prawej to dużo — bar jest gęstszy<br>
+  − "•••" + ✓ + ✕ = 3 klikalne elementy obok siebie (łatwo chybić)
+</div>
+
+<hr>
+
+<div class="note-box" style="border-color: rgba(34,197,94,0.3); background: rgba(34,197,94,0.04);">
+  <strong>Rekomendacja: Opcja A</strong><br><br>
+  Najprostsze i najstabilniejsze rozwiązanie:<br>
+  − ✓ ✕ zawsze widoczne — zero zaskoczenia, zero migania<br>
+  − Kliknięcie w kod projektu → dropdown z linkami (1 krok)<br>
+  − Cały bar poza przyciskami = pewny drag<br>
+  − Łatwe do zaimplementowania, zero edge case'ów z hover state<br>
+  <br>
+  Opcja B (context menu) jest najczystsza wizualnie, ale mniej discoverable.<br>
+  Opcja C to dobra opcja jeśli chcesz labele, ale bar jest gęstszy.
+</div>
+
+</body>
+</html>

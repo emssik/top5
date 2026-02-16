@@ -73,6 +73,8 @@ declare global {
       getOperations: (since?: string) => Promise<import('../../shared/types').OperationLogEntry[]>
       switchFocusTask: (projectId: string, taskId: string) => Promise<void>
       resizeFocusWindow: (width: number, height: number) => Promise<void>
+      showProjectInMain: (projectId: string) => Promise<void>
+      onNavigateToProject: (callback: (projectId: string) => void) => () => void
       closeQuickAddWindow: () => Promise<void>
       getApiConfig: () => Promise<import('../../shared/types').ApiConfig>
       saveApiConfig: (config: Partial<import('../../shared/types').ApiConfig>) => Promise<import('../../shared/types').ApiConfig>

@@ -53,6 +53,12 @@ export const api = {
   getOperations: (since?: string): Promise<OperationLogEntry[]> => ipcRenderer.invoke('get-operations', since),
   switchFocusTask: (projectId: string, taskId: string) => ipcRenderer.invoke('switch-focus-task', projectId, taskId),
   resizeFocusWindow: (width: number, height: number) => ipcRenderer.invoke('resize-focus-window', width, height),
+  showProjectInMain: (projectId: string) => ipcRenderer.invoke('show-project-in-main', projectId),
+  onNavigateToProject: (callback: (projectId: string) => void) => {
+    const handler = (_event: IpcRendererEvent, projectId: string) => callback(projectId)
+    ipcRenderer.on('navigate-to-project', handler)
+    return () => ipcRenderer.removeListener('navigate-to-project', handler)
+  },
   closeQuickAddWindow: () => ipcRenderer.invoke('close-quick-add-window'),
   openDevTools: () => ipcRenderer.invoke('open-dev-tools'),
   getApiConfig: (): Promise<ApiConfig> => ipcRenderer.invoke('get-api-config'),
