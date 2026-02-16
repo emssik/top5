@@ -7,10 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.45.0] - 2026-02-16
+
+### Added
+
+- Redesigned focus mode bar: compact single-line layout (520x58) with project color dot, project code label, session timer, and inline action buttons
+- Session time tracker in focus bar — counts elapsed time and adds prior check-in minutes for the focused task
+- Right-click context menu on focus bar with project links, Obsidian note shortcut, open project, complete, and exit actions
+- "Show project in main" IPC handler — clicking project code in focus bar opens the project in the main window
+- `onNavigateToProject` IPC bridge for main window to receive navigation requests from focus window
+- macOS application menu with standard Cmd+H, Cmd+Q, Edit (undo/redo/copy/paste), and Window roles
+
+### Changed
+
+- Focus bar dimensions reduced from 420x110 to 520x58 for a more compact, always-on-top experience
+- Replaced hover tooltip and check-in countdown with persistent session timer and context menu
+- Task picker popup height reduced from 350 to 320; removed project name column from picker rows
+- Confirm save dialog uses slightly larger font and button sizing for better readability
+
+### Removed
+
+- Hover tooltip showing full task title (replaced by context menu and double-click to copy)
+- Check-in countdown timer display (replaced by cumulative session timer)
+- Launcher buttons inline in focus bar (moved to context menu as project links)
+
 ### Fixed
 
 - Hide remove button on completed (locked) tasks in TodayView to prevent accidental removal
-
 - Settings icon in sidebar now renders as proper emoji (⚙️) instead of plain text glyph
 
 ## [1.44.0] - 2026-02-16

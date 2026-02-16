@@ -180,8 +180,8 @@ export function registerFocusHandlers(
     const display = screen.getPrimaryDisplay()
     const { x: workX, y: workY, width: workWidth } = display.workArea
 
-    const focusWidth = 420
-    const focusHeight = 110
+    const focusWidth = 520
+    const focusHeight = 58
 
     // Create frameless focus window
     focusWindow = new BrowserWindow({
@@ -292,6 +292,14 @@ export function registerFocusHandlers(
     if (!focusWindow || focusWindow.isDestroyed()) return
     focusWindow.setMinimumSize(width, height)
     focusWindow.setSize(width, height)
+  })
+
+  ipcMain.handle('show-project-in-main', (_event, projectId: string) => {
+    const mainWin = getMainWindow()
+    if (!mainWin) return
+    mainWin.webContents.send('navigate-to-project', projectId)
+    mainWin.show()
+    mainWin.focus()
   })
 
   ipcMain.handle('open-operation-log-window', (_event, filter?: string) => {

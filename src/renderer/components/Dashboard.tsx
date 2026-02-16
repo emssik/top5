@@ -157,6 +157,13 @@ export default function Dashboard() {
     return cleanup
   }, [handleShortcutAction])
 
+  // Navigate to project from focus window
+  useEffect(() => {
+    return window.api.onNavigateToProject((projectId) => {
+      setActiveView(`project-${projectId}`)
+    })
+  }, [])
+
   const needsCodeMigration = projects.length > 0 && projects.some((p) => !p.code)
 
   const handleCodeMigration = async (codes: Record<string, string>) => {

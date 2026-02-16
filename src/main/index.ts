@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell, ipcMain, globalShortcut, screen } from 'electron'
+import { app, BrowserWindow, shell, ipcMain, globalShortcut, screen, Menu } from 'electron'
 import { join } from 'path'
 import { is, optimizer, electronApp } from '@electron-toolkit/utils'
 import { registerStoreHandlers, getAppData, setAppDataKey, IS_DEV } from './store'
@@ -72,6 +72,43 @@ function createWindow(): void {
 
 app.whenReady().then(() => {
   electronApp.setAppUserModelId('com.top5.app')
+
+  // macOS application menu — enables Cmd+H, Cmd+Q, etc.
+  if (process.platform === 'darwin') {
+    Menu.setApplicationMenu(Menu.buildFromTemplate([
+      {
+        label: app.name,
+        submenu: [
+          { role: 'about' },
+          { type: 'separator' },
+          { role: 'hide' },
+          { role: 'hideOthers' },
+          { role: 'unhide' },
+          { type: 'separator' },
+          { role: 'quit' }
+        ]
+      },
+      {
+        label: 'Edit',
+        submenu: [
+          { role: 'undo' },
+          { role: 'redo' },
+          { type: 'separator' },
+          { role: 'cut' },
+          { role: 'copy' },
+          { role: 'paste' },
+          { role: 'selectAll' }
+        ]
+      },
+      {
+        label: 'Window',
+        submenu: [
+          { role: 'minimize' },
+          { role: 'close' }
+        ]
+      }
+    ]))
+  }
 
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
