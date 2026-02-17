@@ -289,7 +289,7 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
       {quickLinks.length > 0 && (
         <div className="quick-links">
           {quickLinks.map((link, index) => (
-            <button key={`${link.label}-${index}`} className="quick-link" onClick={() => openProjectLink(link)}>
+            <button key={`${link.label}-${index}`} className="quick-link" onClick={() => openProjectLink(link, project.name)}>
               {link.label}
             </button>
           ))}

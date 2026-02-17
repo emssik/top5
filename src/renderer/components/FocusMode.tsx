@@ -336,7 +336,7 @@ export default function FocusMode() {
           {projectLinks.map((link, i) => (
             <button
               key={`${link.label}-${i}`}
-              onClick={() => { openProjectLink(link); setCtxMenu(null) }}
+              onClick={() => { openProjectLink(link, project?.name); setCtxMenu(null) }}
               className="w-full text-left px-3 py-1.5 text-[12px] text-t-secondary hover:bg-hover hover:text-t-primary transition-colors flex items-center gap-2.5 border-none bg-transparent cursor-pointer"
             >
               <span className="w-[18px] text-center text-[11px] flex-shrink-0">{linkIcon(link.label)}</span>

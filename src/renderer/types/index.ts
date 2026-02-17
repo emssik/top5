@@ -39,7 +39,7 @@ declare global {
       saveQuickNotes: (notes: string) => Promise<void>
       saveConfig: (config: import('../../shared/types').AppConfig) => Promise<void>
       launchVscode: (path: string) => Promise<void>
-      launchIterm: (path: string) => Promise<void>
+      launchIterm: (path: string, tabName?: string) => Promise<void>
       launchObsidian: (vault: string) => Promise<void>
       launchBrowser: (url: string) => Promise<void>
       openExternal: (url: string) => Promise<void>

@@ -60,6 +60,7 @@ function normalizeExternalUrl(value: unknown): string | null {
 const ITERM_SCRIPT_LINES = [
   'on run argv',
   'set targetPath to item 1 of argv',
+  'set tabName to item 2 of argv',
   'tell application "iTerm"',
   'activate',
   'if (count of windows) = 0 then',
@@ -68,7 +69,8 @@ const ITERM_SCRIPT_LINES = [
   'tell current window',
   'create tab with default profile',
   'tell current session',
-  'write text ("cd " & quoted form of targetPath)',
+  `write text ("cd " & quoted form of targetPath & " && printf '\\\\033]0;%s\\\\007' " & quoted form of tabName & " && clear")`,
+  'set name to tabName',
   'end tell',
   'end tell',
   'end tell',
@@ -82,10 +84,11 @@ export function registerLauncherHandlers(ipcMain: IpcMain): void {
     runDetached('open', ['-a', 'Visual Studio Code', normalizedPath])
   })
 
-  ipcMain.handle('launch-iterm', (_event, path: unknown) => {
+  ipcMain.handle('launch-iterm', (_event, path: unknown, tabName?: unknown) => {
     const normalizedPath = normalizeLocalPath(path)
     if (!normalizedPath) return
-    const args = [...ITERM_SCRIPT_LINES.flatMap((line) => ['-e', line]), normalizedPath]
+    const name = isNonEmptyString(tabName) ? tabName.trim() : normalizedPath.split('/').pop() || 'iTerm'
+    const args = [...ITERM_SCRIPT_LINES.flatMap((line) => ['-e', line]), normalizedPath, name]
     runDetached('osascript', args)
   })
 

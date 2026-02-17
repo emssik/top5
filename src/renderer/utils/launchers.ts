@@ -23,13 +23,13 @@ export function getActiveLaunchers(launchers?: ProjectLaunchers): Array<[Launche
   return active
 }
 
-export function launchByType(type: LauncherType, value: string): void {
+export function launchByType(type: LauncherType, value: string, projectName?: string): void {
   switch (type) {
     case 'vscode':
       window.api.launchVscode(value)
       break
     case 'iterm':
-      window.api.launchIterm(value)
+      window.api.launchIterm(value, projectName)
       break
     case 'obsidian':
       window.api.launchObsidian(value)

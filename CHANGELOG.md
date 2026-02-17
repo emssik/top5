@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.47.0] - 2026-02-17
+
+### Added
+
+- iTerm tab naming: tabs opened via project links are automatically named after the project for easier identification
+
 ## [1.46.0] - 2026-02-17
 
 ### Added

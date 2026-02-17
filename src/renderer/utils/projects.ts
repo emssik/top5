@@ -119,7 +119,7 @@ export function firstAvailableProjectColor(projects: Project[]): ProjectColor {
   return PROJECT_COLORS.find((color) => !used.has(color)) ?? PROJECT_COLORS[0]
 }
 
-export function openProjectLink(link: ProjectLink): void {
+export function openProjectLink(link: ProjectLink, projectName?: string): void {
   const label = link.label.trim().toLowerCase()
   const value = link.url.trim()
   if (!value) return
@@ -152,7 +152,7 @@ export function openProjectLink(link: ProjectLink): void {
   }
 
   if (label.includes('term')) {
-    window.api.launchIterm(value)
+    window.api.launchIterm(value, projectName)
     return
   }
 
