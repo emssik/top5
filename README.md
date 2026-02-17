@@ -13,28 +13,29 @@ Desktop app for attention management. Configurable project limit (default 5), mi
 - **In-progress status** — mark tasks as in-progress with visual amber indicators
 - **Quick Add** — global overlay (`Cmd+Shift+N`) for rapidly adding tasks, projects, and repeating tasks without opening the main window; keyboard-driven with Tab to switch modes, `Cmd+1-9` to select project, Enter to submit
 - **Tasks per project** — full-screen detail view with task list, inline editing, completion, deletion, time tracking
-- **Focus mode** — dedicated always-on-top window with countdown timer, launcher buttons, and double-click to copy task title
+- **Focus mode** — compact always-on-top bar with session timer and context menu (project links, open project, complete, exit), plus double-click to copy task title
 - **Focus check-ins** — every 15 min asks if you're still working; tracks time per project and task
 - **Repeating tasks** — recurring task definitions with schedules (daily, specific weekdays, every N days, N days after completion, monthly day-of-month, Nth weekday, every N months) and optional date ranges; due tasks appear as proposals in Today view
+- **5 Wins system** — lock today's tasks and resolve the day as win/loss; track daily, weekly, monthly, and yearly streaks with grace rules
 - **Clean view** — distraction-free notebook style with configurable handwriting font (Caveat, Patrick Hand, Kalam, Architects Daughter) and dot grid background
-- **Work stats** — per-project focus time table with selectable time ranges (7d / 14d / month / prev month / 6m / 12m)
+- **Work stats** — per-project focus time table with selectable time ranges (7d / 14d / month / prev month / 6m / 12m) and 5 Wins streak cards
 - **Activity log** — persistent operation log tracking task creates/completes/deletes, project events, and focus check-ins
 - **Drag-and-drop** — reorder projects and tasks, move projects between active/suspended/archived states
 - **Project archiving** — archive instead of delete, restore anytime
 - **Project suspend** — temporarily pause projects without archiving, excluded from the active limit; new projects auto-suspend when limit is reached
 - **Light/dark theme** — warm notebook palette (light) or OLED-friendly dark, persisted across sessions
 - **Quick notes** — global scratchpad in a slide-in panel
-- **Shortcuts** — `Cmd+Shift+Space` (global) to toggle app; `Cmd+1-5` to jump to project, `Cmd+Shift+F` to toggle focus, `Cmd+Shift+N` for Quick Add (local, configurable)
+- **Shortcuts** — `Cmd+Shift+Space` (global) to toggle app; `Cmd+Shift+N` (global) for Quick Add; `Cmd+1-5` to jump to project and `Cmd+Shift+F` to toggle focus (local, configurable)
 - **HTTP API** — local REST API (Fastify, `127.0.0.1:15055`) for automations and AI agents; Bearer token auth, full CRUD for projects, quick tasks, and repeating tasks ([docs](docs/API.md))
 - **Dev mode isolation** — separate data directory in development, preventing dev sessions from modifying production data
-- **Persistent storage** — YAML config + JSONL check-ins + JSONL operation log, synced via iCloud Drive with daily backups
+- **Persistent storage** — YAML config + JSONL check-ins + JSONL operation log + JSONL wins history, synced via iCloud Drive with daily backups
 
 ## Stack
 
-- Electron 28 + electron-vite
+- Electron 40 + electron-vite 5
 - React 18 + TypeScript
 - Tailwind CSS v4
-- Zustand (state management)
+- Zustand v5 (state management)
 - Fastify (HTTP API)
 - js-yaml (YAML file persistence)
 - nanoid (ID generation)
@@ -52,10 +53,18 @@ npm run dev
 npm run build
 ```
 
+## Tests
+
+```bash
+npm test
+npm run test:api
+```
+
 ## Documentation
 
 - `docs/CODING_GUIDE.md` — coding conventions and patterns
 - `docs/API.md` — HTTP API reference
+- `docs/wins.md` — 5 Wins rules, hierarchy, and streak definitions
 
 ## Keyboard shortcuts
 
@@ -64,11 +73,11 @@ npm run build
 | `Cmd+Shift+Space` | Global | Toggle app |
 | `Cmd+1..5` | Local | Switch to project (configurable) |
 | `Cmd+Shift+F` | Local | Toggle focus mode (configurable) |
-| `Cmd+Shift+N` | Local | Quick Add window (configurable) |
+| `Cmd+Shift+N` | Global | Quick Add window (configurable) |
 | `Tab` | Quick Add | Switch between Task / Project / Repeat modes |
 | `n` | Local | Add quick task / focus add-task input (context-dependent) |
 
-Global shortcuts work system-wide. Local shortcuts work only when the app window is focused. All shortcuts are configurable in Settings.
+Global shortcuts work system-wide. Local shortcuts work only when the app window is focused. Shortcut bindings are stored in `config.actionShortcuts`.
 
 ## Project structure
 
@@ -76,18 +85,19 @@ Global shortcuts work system-wide. Local shortcuts work only when the app window
 src/
   main/
     index.ts           # BrowserWindow, app lifecycle, IPC registration
-    store.ts           # YAML/JSONL storage, iCloud sync, daily backups, IPC handlers
+    store.ts           # YAML/JSONL storage, iCloud sync, daily backups, IPC handlers, wins lock/deadline checks
     api/
       server.ts        # Fastify HTTP API server (start/stop/restart)
       routes/          # REST endpoints: projects, quick-tasks, repeating-tasks, meta
-    service/           # Business logic layer (projects, quick-tasks, repeating-tasks)
+    service/           # Business logic layer (projects, quick-tasks, repeating-tasks, wins)
     launchers.ts       # VS Code, iTerm, Obsidian, browser launchers
-    focus-window.ts    # Focus mode window, check-in popups, countdown timer
+    focus-window.ts    # Focus mode window, check-in popups, session tracking
     quick-add-window.ts # Quick Add overlay window
     shortcuts.ts       # Global and local keyboard shortcuts
   shared/
     types.ts           # Unified TypeScript interfaces (single source of truth)
     schedule.ts        # Repeating task schedule engine
+    wins.ts            # Win/loss hierarchy and streak calculations
   preload/
     index.ts           # contextBridge IPC api
   renderer/
@@ -98,7 +108,7 @@ src/
       TodayView.tsx      # Default view: Focus, In Progress, Up Next, Done sections
       ProjectDetailView.tsx # Full-screen project view with tasks, links, metadata
       ProjectEditor.tsx  # Modal editor with color picker and links management
-      FocusMode.tsx      # Dedicated focus window with countdown and launchers
+      FocusMode.tsx      # Focus bar UI with session timer and quick actions
       CheckInPopup.tsx   # Focus check-in popup (yes/no/a little)
       InlineStatsView.tsx # Work stats table with time range selection
       OperationLogView.tsx # Activity log with date grouping
@@ -124,11 +134,14 @@ src/
 
 Data lives in iCloud Drive (`~/Library/Mobile Documents/com~apple~CloudDocs/top5/`) with a symlink at `~/.config/top5`. On first launch, existing data from `~/.config/top5/` or legacy electron-store is migrated automatically.
 
+In development mode (`npm run dev`), storage is isolated in `~/.config/top5-dev`.
+
 | File | Content |
 |---|---|
 | `data.yaml` | Projects, quick tasks, repeating tasks, quick notes, config, API settings |
 | `checkins.jsonl` | Focus check-in log (append-only, one JSON per line) |
 | `operations.jsonl` | Activity operation log (task creates/completes/deletes, project events) |
+| `wins.jsonl` | Win/loss history used by 5 Wins streak calculations |
 | `backups/` | Daily auto-backups (max 7 days, skipped if no changes) |
 
 ## License
