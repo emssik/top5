@@ -18,6 +18,12 @@ function isoMonthKey(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
 }
 
+/** Month key for a week (uses the Monday date of that week). */
+function monthOfWeek(wk: string): string {
+  const d = new Date(wk + 'T12:00:00')
+  return isoMonthKey(d)
+}
+
 export function calcStreaks(entries: WinEntry[]): StreakStats {
   const now = new Date()
   const thisWeekStart = isoWeekKey(now)
@@ -72,6 +78,16 @@ export function calcStreaks(entries: WinEntry[]): StreakStats {
     }
   }
 
+  // --- Grace: per month, max 2 weeks with exactly 1 loss are forgiven ---
+  // Count 1-loss weeks per month
+  const monthGraceCount = new Map<string, number>()
+  for (const [wk, wr] of weekResults) {
+    if (wr.losses === 1) {
+      const mk = monthOfWeek(wk)
+      monthGraceCount.set(mk, (monthGraceCount.get(mk) ?? 0) + 1)
+    }
+  }
+
   // Day streak: consecutive workdays with a win, going backwards from today
   // Weekends (Sat/Sun) are skipped. Only a 'loss' breaks the streak.
   // Missing entries on workdays are skipped (grace).
@@ -96,11 +112,28 @@ export function calcStreaks(entries: WinEntry[]): StreakStats {
     cursor.setDate(cursor.getDate() - 1)
   }
 
-  // Week streak: weeks where losses <= 1 and played >= 1
+  // Week won:
+  //   - 2+ losses → immediately lost
+  //   - 0 losses, week fully played → won
+  //   - 1 loss, week fully played → won IF month has ≤ 2 such grace weeks
+  //   - not enough days played → not won yet
   function isWeekWon(wk: string): boolean {
     const wr = weekResults.get(wk)
     if (!wr || wr.played === 0) return false
-    return wr.losses <= 1
+    if (wr.losses >= 2) return false
+    // Week must be substantially played (at least 5 days with entries)
+    if (wr.played < 5) return false
+    if (wr.losses === 0) return true
+    // Exactly 1 loss — check month grace (max 2 grace weeks per month)
+    const mk = monthOfWeek(wk)
+    return (monthGraceCount.get(mk) ?? 0) <= 2
+  }
+
+  // Week is immediately lost (2+ losses, no need to wait for end of week)
+  function isWeekLost(wk: string): boolean {
+    const wr = weekResults.get(wk)
+    if (!wr) return false
+    return wr.losses >= 2
   }
 
   let currentWeekStreak = 0
@@ -109,11 +142,13 @@ export function calcStreaks(entries: WinEntry[]): StreakStats {
     const wk = isoWeekKey(weekCursor)
     if (isWeekWon(wk)) {
       currentWeekStreak++
+    } else if (isWeekLost(wk)) {
+      break
     } else {
-      // If current week has no entries yet, skip it
+      // Incomplete or no entries — skip current week, break on past weeks
       const wr = weekResults.get(wk)
-      if (i === 0 && (!wr || wr.played === 0)) {
-        // skip
+      if (i === 0 && (!wr || wr.played === 0 || !isWeekLost(wk))) {
+        // skip current week (not yet resolved)
       } else {
         break
       }
@@ -121,11 +156,10 @@ export function calcStreaks(entries: WinEntry[]): StreakStats {
     weekCursor.setDate(weekCursor.getDate() - 7)
   }
 
-  // Month streak: all weeks in month won AND month losses <= 2
+  // Month won: all weeks in month are won
   function isMonthWon(mk: string): boolean {
     const mr = monthResults.get(mk)
     if (!mr || mr.played === 0) return false
-    if (mr.losses > 2) return false
     const weeks = monthWeeks.get(mk)
     if (!weeks) return false
     for (const wk of weeks) {

@@ -36,6 +36,30 @@ Codzienny challenge: zablokuj zestaw zadań, wykonaj je wszystkie przed deadline
 - Dodawanie nowych zadań ukryte
 - Complete, focus, edit, in-progress — działają normalnie
 
+## Hierarchia wygranych
+
+### Dzień
+
+Wygrany = wszystkie zablokowane zadania completed przed deadline'em. `entry.date` = data rozwiązania (nie locka).
+
+### Tydzień
+
+Tydzień (ISO, pon–nd) jest wygrany gdy **wszystkie dni** w tygodniu są wygrane.
+
+- **2+ strat w tygodniu** → tydzień od razu przegrany (nie trzeba czekać na koniec tygodnia)
+- **0 strat** → wygrany (po rozegraniu tygodnia, min 5 wpisów)
+- **1 strata** → wygrany, ale tylko jeśli to max 2. taki tydzień w danym miesiącu
+
+Odstępstwo: w ciągu miesiąca **max 2 tygodnie** mogą mieć po 1 przegranym dniu i wciąż liczyć się jako wygrane. 3. taki tydzień (i kolejne) to już przegrana.
+
+### Miesiąc
+
+Miesiąc wygrany = **wszystkie tygodnie** w miesiącu wygrane (z uwzględnieniem powyższego odstępstwa).
+
+### Rok
+
+Rok wygrany = **minimum 11 miesięcy** wygranych (dopuszczalny 1 przegrany miesiąc).
+
 ## Serie (streaks)
 
 ### Seria dzienna
@@ -44,11 +68,15 @@ Kolejne dni z wynikiem "win", liczone wstecz od dziś. Dni bez locka (brak wpisu
 
 ### Seria tygodniowa
 
-Tydzień wygrany = `losses_in_week <= 1` i `played >= 1`. Tygodnie liczone od poniedziałku (ISO week). Bieżący tydzień bez wpisów jest pomijany.
+Kolejne wygrane tygodnie liczone wstecz od bieżącego. Bieżący tydzień bez rozstrzygnięcia jest pomijany. Tydzień z 2+ stratami natychmiast przerywa serię.
 
 ### Seria miesięczna
 
-Miesiąc wygrany = wszystkie tygodnie w miesiącu wygrane **i** `losses_in_month <= 2`. Bieżący miesiąc bez wpisów jest pomijany.
+Kolejne wygrane miesiące liczone wstecz od bieżącego. Bieżący miesiąc bez wpisów jest pomijany.
+
+### Seria roczna
+
+Kolejne wygrane lata liczone wstecz od bieżącego. Bieżący rok bez wpisów jest pomijany.
 
 ## UI
 

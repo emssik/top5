@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.48.0] - 2026-02-17
+
+### Fixed
+
+- Win entry date now uses resolution date instead of lock date, fixing incorrect date attribution for cross-midnight sessions
+- Win/loss celebration banner checks the most recent history entry instead of searching by today's date
+
+### Changed
+
+- Wins hierarchy redesigned: day, week, month, and year win conditions with formal grace rules (max 2 grace weeks per month, 1 lost month per year)
+- Week streak requires minimum 5 played days and uses month-level grace accounting
+- Week with 2+ losses is immediately marked as lost without waiting for end of week
+- Month win condition simplified to "all weeks won" (grace handled at week level)
+- Streak documentation in `docs/wins.md` updated with full hierarchy and revised streak definitions
+
+### Added
+
+- Year win condition and yearly streak tracking
+
 ## [1.47.0] - 2026-02-17
 
 ### Added
