@@ -66,12 +66,11 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
     if (prevLockedRef.current && !isLocked) {
       window.api.winsGetHistory().then((history) => {
         setWinHistory(history)
-        const today = new Date().toISOString().slice(0, 10)
-        const todayEntry = history.find((e) => e.date === today)
-        if (todayEntry?.result === 'win') {
+        const recent = history.length > 0 ? history[history.length - 1] : null
+        if (recent?.result === 'win') {
           setShowWinCelebration(true)
           timer = setTimeout(() => setShowWinCelebration(false), 5000)
-        } else if (todayEntry?.result === 'loss') {
+        } else if (recent?.result === 'loss') {
           setShowLossBanner(true)
           timer = setTimeout(() => setShowLossBanner(false), 6000)
         }
