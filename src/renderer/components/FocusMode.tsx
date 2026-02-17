@@ -111,7 +111,7 @@ export default function FocusMode() {
 
   const openNote = () => {
     if (!task || !obsidianEnabled) return
-    window.api.openTaskNote(task.id, task.title, project?.name, taskBadge)
+    window.api.openTaskNote(task.id, task.title, project?.name, taskBadge, task.noteRef)
   }
 
   const handleContextMenu = useCallback((e: React.MouseEvent) => {

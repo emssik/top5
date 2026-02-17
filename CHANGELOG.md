@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.46.0] - 2026-02-17
+
+### Added
+
+- `noteRef` field on `Task` and `QuickTask` types for persistent Obsidian note references across task splits
+- `computeNotePath` helper in `src/shared/taskId.ts` for client-side note path computation
+- Split task ("Split & Continue") now preserves the original task's Obsidian note reference on the continuation task
+
+### Changed
+
+- Split task continuation title format changed from `continue (N) title` to `(✂N) title`
+- `open-task-note` IPC handler accepts optional `noteRef` parameter and uses stored note path when available
+- All views (TodayView, FocusMode, QuickTasksView, ProjectDetailView) pass `noteRef` through to `openTaskNote` calls
+- `MergedTask` type in `useTaskList` hook extended with `noteRef` field
+
 ## [1.45.1] - 2026-02-17
 
 ### Fixed

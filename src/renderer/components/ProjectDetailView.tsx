@@ -234,7 +234,7 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
             <div className="task-actions">
               <button className="task-action-btn btn-focus" onClick={() => setFocus(project.id, task.id)} title="Focus">▶</button>
               {config.obsidianStoragePath && (
-                <button className="task-action-btn" onClick={() => window.api.openTaskNote(task.id, task.title, project.name, formatTaskId(task.taskNumber, project.code))} title="Open note" style={{ opacity: 0.5 }}>📝</button>
+                <button className="task-action-btn" onClick={() => window.api.openTaskNote(task.id, task.title, project.name, formatTaskId(task.taskNumber, project.code), task.noteRef)} title="Open note" style={{ opacity: 0.5 }}>📝</button>
               )}
               <button className="task-action-btn" onClick={() => toggleSomeday(task.id)} title={task.someday ? 'Move to active' : 'Move to Someday'} style={{ opacity: 0.5 }}>⏳</button>
               <button className="task-action-btn btn-remove" onClick={() => removeTask(task.id)} title="Delete">×</button>

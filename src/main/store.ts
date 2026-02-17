@@ -1131,7 +1131,7 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
 
   // --- Obsidian task notes ---
 
-  ipcMain.handle('open-task-note', (_event, taskId: string, taskTitle: string, projectName?: string, taskBadge?: string) => {
+  ipcMain.handle('open-task-note', (_event, taskId: string, taskTitle: string, projectName?: string, taskBadge?: string, noteRef?: string) => {
     if (typeof taskId !== 'string' || typeof taskTitle !== 'string') return { error: 'invalid' }
     const config = getData().config
     const storagePath = config.obsidianStoragePath
@@ -1142,13 +1142,26 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
 
     // Sanitize names for filesystem (also collapse '..' to avoid path traversal)
     const sanitize = (s: string) => s.replace(/[/\\:*?"<>|]/g, '-').replace(/\.{2,}/g, '.').trim()
-    const prefix = taskBadge ? `${sanitize(taskBadge)} ` : ''
-    const truncated = taskTitle.length > 40 ? taskTitle.slice(0, 40) + '…' : taskTitle
-    const safeName = `${prefix}${sanitize(truncated)}`
-    const folderName = projectName ? sanitize(projectName) : 'QuickTasks'
+
+    let notePath: string
+    let folderName: string
+    let safeName: string
+
+    if (typeof noteRef === 'string' && noteRef.startsWith('top5.storage/')) {
+      // Use stored note reference (e.g. from split tasks)
+      notePath = noteRef
+      const parts = noteRef.replace('top5.storage/', '').split('/')
+      folderName = parts[0]
+      safeName = parts.slice(1).join('/')
+    } else {
+      const prefix = taskBadge ? `${sanitize(taskBadge)} ` : ''
+      const truncated = taskTitle.length > 40 ? taskTitle.slice(0, 40) + '\u2026' : taskTitle
+      safeName = `${prefix}${sanitize(truncated)}`
+      folderName = projectName ? sanitize(projectName) : 'QuickTasks'
+      notePath = `top5.storage/${folderName}/${safeName}`
+    }
 
     const vaultPath = resolve(storagePath.replace(/\/+$/, ''))
-    const notePath = `top5.storage/${folderName}/${safeName}`
 
     // Ensure directory exists so Obsidian can write the file
     const noteDir = join(vaultPath, 'top5.storage', folderName)

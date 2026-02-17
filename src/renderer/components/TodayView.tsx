@@ -8,7 +8,7 @@ import { STANDALONE_PROJECT_ID } from '../utils/constants'
 import type { Task, QuickTask, LockedTaskRef, WinEntry } from '../types'
 import { projectColorValue } from '../utils/projects'
 import TaskIdBadge from './TaskIdBadge'
-import { formatTaskId, formatQuickTaskId } from '../../shared/taskId'
+import { formatTaskId, formatQuickTaskId, computeNotePath } from '../../shared/taskId'
 import RepeatUpdateModal from './RepeatUpdateModal'
 
 function formatFocusTimer(seconds: number): string {
@@ -22,11 +22,11 @@ function isRepeatingEntry(task: { repeatingTaskId?: string | null }): boolean {
 }
 
 function continuationTitle(title: string): string {
-  const match = title.match(/^continue \((\d+)\) (.*)$/)
+  const match = title.match(/^\(✂(\d+)\) (.*)$/)
   if (match) {
-    return `continue (${Number(match[1]) + 1}) ${match[2]}`
+    return `(✂${Number(match[1]) + 1}) ${match[2]}`
   }
-  return `continue (1) ${title}`
+  return `(✂1) ${title}`
 }
 
 function formatCountdown(deadline: string): string {
@@ -249,7 +249,7 @@ export default function TodayView() {
       if (key === 's' && isFocusCard) { consume(); stopFocus(); return }
       if (key === 'n' && config.obsidianStoragePath) {
         consume()
-        window.api.openTaskNote(task.id, task.title, task.projectName, task.kind === 'quick' ? formatQuickTaskId(task.taskNumber) : formatTaskId(task.taskNumber, task.projectCode))
+        window.api.openTaskNote(task.id, task.title, task.projectName, task.kind === 'quick' ? formatQuickTaskId(task.taskNumber) : formatTaskId(task.taskNumber, task.projectCode), task.noteRef)
         return
       }
       if (key === 'c' && !task.repeatingTaskId) { consume(); splitTask(task); return }
@@ -346,6 +346,14 @@ export default function TodayView() {
   const splitTask = async (task: MergedTask) => {
     const newTitle = continuationTitle(task.title)
 
+    // Preserve note reference: use existing noteRef or compute from original task
+    const noteRef = task.noteRef || (() => {
+      const badge = task.kind === 'quick'
+        ? formatQuickTaskId(task.taskNumber)
+        : formatTaskId(task.taskNumber, task.projectCode)
+      return computeNotePath(badge, task.title, task.projectName)
+    })()
+
     if (task.kind === 'pinned' && task.projectId && task.taskId) {
       const project = useProjects.getState().projects.find((p) => p.id === task.projectId)
       if (!project) return
@@ -356,7 +364,8 @@ export default function TodayView() {
         completed: false,
         createdAt: new Date().toISOString(),
         isToDoNext: true,
-        toDoNextOrder: origTask?.toDoNextOrder ?? task.order
+        toDoNextOrder: origTask?.toDoNextOrder ?? task.order,
+        noteRef
       }
       await saveProject({ ...project, tasks: [...project.tasks, newTask] })
     } else if (task.kind === 'quick') {
@@ -366,7 +375,8 @@ export default function TodayView() {
         completed: false,
         createdAt: new Date().toISOString(),
         completedAt: null,
-        order: task.order
+        order: task.order,
+        noteRef
       }
       await saveQuickTask(qt)
     }
@@ -722,7 +732,7 @@ export default function TodayView() {
           items.push({ label: 'Stop Focus', kbd: 'S', action: () => stopFocus() })
         }
         if (config.obsidianStoragePath) {
-          items.push({ label: 'Open Note', kbd: 'N', action: () => window.api.openTaskNote(task.id, task.title, task.projectName, task.kind === 'quick' ? formatQuickTaskId(task.taskNumber) : formatTaskId(task.taskNumber, task.projectCode)) })
+          items.push({ label: 'Open Note', kbd: 'N', action: () => window.api.openTaskNote(task.id, task.title, task.projectName, task.kind === 'quick' ? formatQuickTaskId(task.taskNumber) : formatTaskId(task.taskNumber, task.projectCode), task.noteRef) })
         }
         if (!task.repeatingTaskId) {
           items.push({ label: 'Split & Continue', kbd: 'C', action: () => splitTask(task) })

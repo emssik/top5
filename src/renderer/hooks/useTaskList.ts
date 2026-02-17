@@ -17,6 +17,7 @@ export interface MergedTask {
   taskNumber?: number
   repeatingTaskId?: string | null
   inProgress?: boolean
+  noteRef?: string
 }
 
 export interface TaskListData {
@@ -94,7 +95,8 @@ export function useTaskList(opts?: { excludeFocus?: boolean; limitAdjust?: numbe
       order: t.order,
       taskNumber: t.taskNumber,
       repeatingTaskId: t.repeatingTaskId,
-      inProgress: t.inProgress
+      inProgress: t.inProgress,
+      noteRef: t.noteRef
     }))
 
   const pinnedTasks: MergedTask[] = activeProjects.flatMap((p) =>
@@ -110,7 +112,8 @@ export function useTaskList(opts?: { excludeFocus?: boolean; limitAdjust?: numbe
         projectCode: p.code,
         taskId: t.id,
         taskNumber: t.taskNumber,
-        inProgress: t.inProgress
+        inProgress: t.inProgress,
+        noteRef: t.noteRef
       }))
   )
 
@@ -140,7 +143,7 @@ export function useTaskList(opts?: { excludeFocus?: boolean; limitAdjust?: numbe
       return {
         kind: 'quick', id: qt.id, title: qt.title, order: qt.order,
         taskNumber: qt.taskNumber, inProgress: qt.inProgress,
-        repeatingTaskId: qt.repeatingTaskId
+        repeatingTaskId: qt.repeatingTaskId, noteRef: qt.noteRef
       }
     }
 
@@ -153,7 +156,8 @@ export function useTaskList(opts?: { excludeFocus?: boolean; limitAdjust?: numbe
       title: task.title, order: task.toDoNextOrder ?? 999,
       projectId: project.id, projectName: project.name,
       projectCode: project.code, taskId: task.id,
-      taskNumber: task.taskNumber, inProgress: task.inProgress
+      taskNumber: task.taskNumber, inProgress: task.inProgress,
+      noteRef: task.noteRef
     }
   }, [excludeFocus, config, quickTasks, activeProjects])
 

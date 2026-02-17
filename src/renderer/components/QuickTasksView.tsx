@@ -492,7 +492,7 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
           </button>
           {config.obsidianStoragePath && (
             <button
-              onClick={() => window.api.openTaskNote(task.id, task.title, task.projectName, task.kind === 'quick' ? formatQuickTaskId(task.taskNumber) : formatTaskId(task.taskNumber, task.projectCode))}
+              onClick={() => window.api.openTaskNote(task.id, task.title, task.projectName, task.kind === 'quick' ? formatQuickTaskId(task.taskNumber) : formatTaskId(task.taskNumber, task.projectCode), task.noteRef)}
               className="text-[10px] px-1.5 py-0.5 rounded bg-surface hover:bg-hover text-t-secondary transition-colors"
               title="Open note"
             >
