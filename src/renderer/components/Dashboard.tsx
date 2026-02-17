@@ -184,8 +184,6 @@ export default function Dashboard() {
       <div
         className="group/window h-screen flex flex-col clean-view-dots"
         style={{ fontFamily: `'${config.cleanViewFont || 'Caveat'}', cursive` }}
-        onMouseEnter={() => window.api.setTrafficLightsVisible(true)}
-        onMouseLeave={() => window.api.setTrafficLightsVisible(false)}
       >
         <div className="h-7 flex-shrink-0 flex items-center justify-end px-3" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}>
           <button

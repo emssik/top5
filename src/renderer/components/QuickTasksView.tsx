@@ -341,7 +341,7 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
                 style={{ opacity: isCompleted ? 0.3 : 1 }}
                 title={task.title}
               >
-                {task.title}
+                {cleanView ? task.title.replace(/^\(✂\d+\)\s*/, '') : task.title}
               </span>
             )}
           </div>

@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.48.1] - 2026-02-18
+
+### Fixed
+
+- Clean view no longer toggles macOS traffic lights on mouse enter/leave, preventing flickering
+- Split continuation prefix `(✂N)` stripped from task titles in clean view for cleaner display
+
 ## [1.48.0] - 2026-02-17
 
 ### Fixed
