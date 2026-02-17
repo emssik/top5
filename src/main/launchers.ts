@@ -79,7 +79,7 @@ export function registerLauncherHandlers(ipcMain: IpcMain): void {
   ipcMain.handle('launch-vscode', (_event, path: unknown) => {
     const normalizedPath = normalizeLocalPath(path)
     if (!normalizedPath) return
-    runDetached('code', [normalizedPath])
+    runDetached('open', ['-a', 'Visual Studio Code', normalizedPath])
   })
 
   ipcMain.handle('launch-iterm', (_event, path: unknown) => {

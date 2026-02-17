@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.45.1] - 2026-02-17
+
+### Fixed
+
+- VSCode launcher uses `open -a` instead of `code` CLI for more reliable opening on macOS
+
 ## [1.45.0] - 2026-02-16
 
 ### Added
