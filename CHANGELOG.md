@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.49.1] - 2026-02-19
+
+### Fixed
+
+- Win entry `date` field now uses the lock date (`lockedAt.slice(0,10)`) instead of the resolution date, correctly attributing cross-midnight sessions to the day tasks were locked
+
 ## [1.49.0] - 2026-02-18
 
 ### Added

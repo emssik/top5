@@ -110,7 +110,7 @@ export function checkDeadline(): boolean {
 function resolveDay(result: 'win' | 'loss', lock: WinsLockState, completedCount: number): void {
   const entry: WinEntry = {
     id: randomUUID().slice(0, 21),
-    date: new Date().toISOString().slice(0, 10),
+    date: (lock.lockedAt ?? new Date().toISOString()).slice(0, 10),
     lockedAt: lock.lockedAt ?? new Date().toISOString(),
     resolvedAt: new Date().toISOString(),
     result,
