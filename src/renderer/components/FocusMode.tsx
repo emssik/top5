@@ -302,7 +302,7 @@ export default function FocusMode() {
           className="text-[14px] font-semibold truncate text-t-primary flex-1 min-w-0 cursor-default"
           onDoubleClick={() => { if (task?.title) navigator.clipboard.writeText(task.title) }}
         >
-          {task?.title || 'No task'}
+          {task?.title?.replace(/^\(✂\d+\)\s*/, '') || 'No task'}
         </span>
         <span className="text-[12px] font-semibold text-blue-400 bg-blue-500/12 rounded-[10px] px-2.5 py-[3px] tabular-nums flex-shrink-0 whitespace-nowrap">
           {formatSessionTime(totalSeconds)}
