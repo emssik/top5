@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.49.0] - 2026-02-18
+
+### Added
+
+- `ProjectLinksMenu` component: right-click context menu listing active projects with their quick links; clicking a link launches it, clicking the project code navigates to the project in the main window
+- Right-click on TodayView outer area opens `ProjectLinksMenu` at cursor position (only when at least one project has links)
+- Right-click on clean view outer area opens `ProjectLinksMenu` centered in the window (`fullWidth` prop)
+
+### Fixed
+
+- Cmd+H now reliably hides the app via explicit `before-input-event` handler in `createWindow()` as a belt-and-suspenders fallback to the menu role
+- Right-click on task cards and focus card now stops event propagation so it does not bubble up to the outer div and accidentally open the links menu
+- iTerm tab name set via AppleScript `set name to tabName` directly, removing the broken `printf` escape sequence that was corrupting the tab title
+
+### Changed
+
+- Clean view enters `always-on-top` mode when activated and restores normal window level on exit
+
 ## [1.48.3] - 2026-02-18
 
 ### Added

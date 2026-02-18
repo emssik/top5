@@ -69,7 +69,7 @@ const ITERM_SCRIPT_LINES = [
   'tell current window',
   'create tab with default profile',
   'tell current session',
-  `write text ("cd " & quoted form of targetPath & " && printf '\\\\033]0;%s\\\\007' " & quoted form of tabName & " && clear")`,
+  `write text ("cd " & quoted form of targetPath & " && clear")`,
   'set name to tabName',
   'end tell',
   'end tell',

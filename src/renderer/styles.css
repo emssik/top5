@@ -786,6 +786,99 @@ body {
   color: #f87171;
 }
 
+.context-menu-section {
+  padding: 4px 12px 2px;
+  font-size: 11px;
+  color: var(--c-text-secondary);
+  opacity: 0.7;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.context-menu-separator {
+  height: 1px;
+  background: var(--c-border);
+  margin: 3px 0;
+}
+
+.links-menu {
+  min-width: auto;
+}
+
+.links-menu-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px;
+  font-size: 13px;
+}
+
+.links-menu-row + .links-menu-row {
+  border-top: 1px solid var(--c-border);
+}
+
+.links-menu-code {
+  font-size: 11px;
+  font-family: monospace;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+  opacity: 0.75;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.links-menu-code:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
+
+.links-menu-project-name {
+  font-size: 13px;
+  color: var(--c-text-primary);
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+.links-menu-project-name:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
+
+.links-menu-links {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+
+.links-menu-link-wrap {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.links-menu-link {
+  cursor: pointer;
+  color: var(--c-text-primary);
+  padding: 1px 3px;
+  border-radius: 3px;
+}
+
+.links-menu-link:hover {
+  background: var(--bg-surface);
+}
+
+.links-menu-divider {
+  color: var(--c-text-secondary);
+  opacity: 0.3;
+  user-select: none;
+}
+
 /* Project detail */
 .project-header {
   display: flex;

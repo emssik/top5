@@ -63,6 +63,20 @@ function createWindow(): void {
     event.preventDefault()
   })
 
+  // Explicit Cmd+H handler — belt-and-suspenders in case menu role doesn't fire
+  mainWindow.webContents.on('before-input-event', (_event, input) => {
+    if (
+      input.type === 'keyDown' &&
+      input.meta &&
+      !input.shift &&
+      !input.alt &&
+      !input.control &&
+      input.key.toLowerCase() === 'h'
+    ) {
+      app.hide()
+    }
+  })
+
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
@@ -178,6 +192,7 @@ app.whenReady().then(() => {
       height
     })
     mainWindow.setResizable(true)
+    mainWindow.setAlwaysOnTop(true)
     if (process.platform === 'darwin') {
       mainWindow.setWindowButtonVisibility(false)
     }
@@ -185,6 +200,7 @@ app.whenReady().then(() => {
 
   ipcMain.handle('exit-clean-view', () => {
     if (!mainWindow) return
+    mainWindow.setAlwaysOnTop(false)
     mainWindow.setMinimumSize(600, 400)
     if (savedBounds) {
       mainWindow.setBounds(savedBounds)
