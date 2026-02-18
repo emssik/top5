@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.48.3] - 2026-02-18
+
+### Added
+
+- Clean view header now shows today's total focus time next to the clock (e.g. `14:32 (1h 10min)`), refreshed every 60 seconds
+
 ## [1.48.2] - 2026-02-18
 
 ### Fixed

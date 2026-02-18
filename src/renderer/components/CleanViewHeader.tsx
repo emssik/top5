@@ -1,10 +1,27 @@
 import { useState, useEffect, useMemo } from 'react'
+import type { FocusCheckIn } from '../types'
+import { checkInMinutes, formatCheckInTime } from '../utils/checkInTime'
 
 export default function CleanViewHeader() {
   const [now, setNow] = useState(new Date())
+  const [todayMinutes, setTodayMinutes] = useState(0)
 
   useEffect(() => {
     const interval = setInterval(() => setNow(new Date()), 1000)
+    return () => clearInterval(interval)
+  }, [])
+
+  useEffect(() => {
+    const load = async () => {
+      const checkIns: FocusCheckIn[] = await window.api.getFocusCheckIns()
+      const todayStr = new Date().toISOString().slice(0, 10)
+      const total = checkIns
+        .filter((c) => c.timestamp.startsWith(todayStr))
+        .reduce((sum, c) => sum + checkInMinutes(c), 0)
+      setTodayMinutes(total)
+    }
+    load()
+    const interval = setInterval(load, 60_000)
     return () => clearInterval(interval)
   }, [])
 
@@ -21,7 +38,9 @@ export default function CleanViewHeader() {
   return (
     <div className="text-center mb-4">
       <div className="text-[22px] font-semibold">{dateLabel}</div>
-      <div className="text-[15px] opacity-40 mt-0.5">{timeLabel}</div>
+      <div className="text-[15px] opacity-40 mt-0.5">
+        {timeLabel}{todayMinutes > 0 && <span className="ml-1.5">({formatCheckInTime(todayMinutes)})</span>}
+      </div>
       <div className="mt-3 mx-auto w-full h-px opacity-15" style={{ backgroundColor: 'currentColor' }} />
     </div>
   )
