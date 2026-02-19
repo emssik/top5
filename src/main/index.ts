@@ -63,20 +63,6 @@ function createWindow(): void {
     event.preventDefault()
   })
 
-  // Explicit Cmd+H handler — belt-and-suspenders in case menu role doesn't fire
-  mainWindow.webContents.on('before-input-event', (_event, input) => {
-    if (
-      input.type === 'keyDown' &&
-      input.meta &&
-      !input.shift &&
-      !input.alt &&
-      !input.control &&
-      input.key.toLowerCase() === 'h'
-    ) {
-      app.hide()
-    }
-  })
-
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
@@ -95,7 +81,7 @@ app.whenReady().then(() => {
         submenu: [
           { role: 'about' },
           { type: 'separator' },
-          { role: 'hide' },
+          { label: `Hide ${app.name}`, accelerator: 'Command+H', click: () => { app.hide() } },
           { role: 'hideOthers' },
           { role: 'unhide' },
           { type: 'separator' },

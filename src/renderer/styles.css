@@ -3,6 +3,7 @@
 @theme {
   --color-base: var(--bg-base);
   --color-card: var(--bg-card);
+  --color-clean-view: var(--bg-clean-view);
   --color-surface: var(--bg-surface);
   --color-border: var(--c-border);
   --color-border-subtle: var(--c-border-subtle);
@@ -23,6 +24,8 @@
 /* Dark theme (default) */
 :root {
   --sidebar-w: 170px;
+
+  --bg-clean-view: #2a2520;
 
   --bg-base: #0a0a0a;
   --bg-card: #171717;
@@ -62,6 +65,8 @@
 
 /* Light theme */
 [data-theme="light"] {
+  --bg-clean-view: #fdf6e3;
+
   --bg-base: #faf4e8;
   --bg-card: #fdf8ef;
   --bg-surface: #f0e8d8;

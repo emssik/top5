@@ -244,7 +244,7 @@ export default function FocusMode() {
   if (confirmAction !== null) {
     return (
       <div
-        className="h-[44px] flex items-center px-4 gap-3 rounded-xl bg-card/95 border border-border/50"
+        className="h-[44px] flex items-center px-4 gap-3 rounded-xl bg-clean-view/95 border border-border/50"
         style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
       >
         <span className="text-[13px] text-t-primary flex-shrink-0">
@@ -272,7 +272,7 @@ export default function FocusMode() {
     <div className="relative w-screen h-screen">
       {/* Main bar */}
       <div
-        className="h-[44px] flex items-center pl-4 pr-1.5 gap-2 rounded-xl bg-card/95 border border-border/50"
+        className="h-[44px] flex items-center pl-4 pr-1.5 gap-2 rounded-xl bg-clean-view/95 border border-border/50"
         style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
         onContextMenu={handleContextMenu}
       >
@@ -330,7 +330,7 @@ export default function FocusMode() {
       {ctxMenu && (
         <div
           ref={ctxRef}
-          className="absolute z-50 min-w-[180px] rounded-lg bg-card/[0.98] border border-border/50 shadow-lg py-1.5 overflow-hidden"
+          className="absolute z-50 min-w-[180px] rounded-lg bg-clean-view/[0.98] border border-border/50 shadow-lg py-1.5 overflow-hidden"
           style={{ left: ctxMenu.x, top: ctxMenu.y }}
         >
           {projectLinks.map((link, i) => (
@@ -386,7 +386,7 @@ export default function FocusMode() {
 
       {/* Task picker popup */}
       {showTaskPicker && (
-        <div className="absolute top-[48px] left-0 right-0 mx-2 rounded-lg bg-card/95 border border-border/50 shadow-lg overflow-hidden">
+        <div className="absolute top-[48px] left-0 right-0 mx-2 rounded-lg bg-clean-view/95 border border-border/50 shadow-lg overflow-hidden">
           <div className="px-3 py-2 border-b border-border/30">
             <span className="text-[11px] text-t-muted">Następne zadanie:</span>
           </div>

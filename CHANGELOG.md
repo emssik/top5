@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.49.2] - 2026-02-19
+
+### Fixed
+
+- Focus bar, context menu, and task picker now use `bg-clean-view` instead of `bg-card` so they match the clean view background color in both dark and light themes
+- Cmd+H hide-app now uses an explicit `click` handler in the app menu instead of `role: 'hide'` to ensure reliable hiding on all macOS versions
+- iTerm tab name restored to use `printf` escape sequence alongside AppleScript `set name` for robust tab title setting
+
+### Added
+
+- `--bg-clean-view` CSS variable (`#2a2520` dark / `#fdf6e3` light) and `--color-clean-view` Tailwind token for a warm, distinct clean view background
+
 ## [1.49.1] - 2026-02-19
 
 ### Fixed
