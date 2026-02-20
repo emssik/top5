@@ -20,6 +20,7 @@ import { dirname, basename, join, resolve } from 'path'
 import { homedir } from 'os'
 import yaml from 'js-yaml'
 import { normalizeRepeatSchedule } from '../shared/schedule'
+import { PROJECT_COLORS, LINK_LABELS } from '../shared/constants'
 import * as projectService from './service/projects'
 import * as quickTaskService from './service/quick-tasks'
 import * as repeatingTaskService from './service/repeating-tasks'
@@ -162,7 +163,6 @@ const OPERATIONS_FILE = join(CONFIG_DIR, 'operations.jsonl')
 const BACKUP_DIR = join(CONFIG_DIR, 'backups')
 const MAX_BACKUPS = 7
 const VALID_CHECK_IN_RESPONSES = new Set<FocusCheckIn['response']>(['yes', 'no', 'a_little'])
-const PROJECT_COLORS: ProjectColor[] = ['red', 'orange', 'amber', 'green', 'blue', 'purple', 'pink', 'teal']
 const ALLOWED_CONFIG_SHORTCUT_ACTIONS = new Set([
   'toggle-app',
   'quick-add',
@@ -175,12 +175,6 @@ const ALLOWED_CONFIG_SHORTCUT_ACTIONS = new Set([
   'quick-notes'
 ])
 const ACCELERATOR_PART_PATTERN = /^[A-Za-z0-9]+$/
-const LAUNCHER_LINK_META = {
-  vscode: 'VS Code',
-  iterm: 'Terminal',
-  obsidian: 'Obsidian',
-  browser: 'Browser'
-} as const
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
@@ -265,7 +259,7 @@ function launchersToLinks(launchers: NonNullable<Project['launchers']>): Project
   return Object.entries(launchers)
     .filter(([, value]) => typeof value === 'string' && value.trim().length > 0)
     .map(([type, value]) => ({
-      label: LAUNCHER_LINK_META[type as keyof typeof LAUNCHER_LINK_META],
+      label: LINK_LABELS[type as keyof typeof LINK_LABELS],
       url: (value as string).trim()
     }))
 }

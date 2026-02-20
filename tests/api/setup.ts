@@ -107,14 +107,9 @@ export function setupTestEnv(): void {
     }
     writeFileSync(join(testDir, 'data.yaml'), yaml.dump(initialData, { lineWidth: 120, noRefs: true }), 'utf-8')
 
-    // Force reload of cached data by clearing the module cache
-    // This is needed because store.ts caches data in memory
+
+    // Reset in-memory cache
     const store = await import('../../src/main/store')
-    // Reset in-memory cache by setting data through the public API
-    const data = store.getAppData()
-    // The cache will be stale, but the file is fresh — we need to invalidate
-    // We'll do this by calling getData which re-reads on cache miss
-    // Actually, we need a way to reset the cache. Let's use setData to force it.
     store.setData('projects', [])
     store.setData('quickTasks', [])
     store.setData('repeatingTasks', [])

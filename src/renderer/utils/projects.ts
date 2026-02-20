@@ -1,6 +1,7 @@
 import type { Project, ProjectColor, ProjectLink, ProjectLaunchers } from '../types'
+import { PROJECT_COLORS, LINK_LABELS } from '../../shared/constants'
+export { PROJECT_COLORS }
 
-export const PROJECT_COLORS: ProjectColor[] = ['red', 'orange', 'amber', 'green', 'blue', 'purple', 'pink', 'teal']
 
 const COLOR_CSS_VAR: Record<ProjectColor, string> = {
   red: 'var(--pc-red)',
@@ -13,12 +14,6 @@ const COLOR_CSS_VAR: Record<ProjectColor, string> = {
   teal: 'var(--pc-teal)'
 }
 
-const LINK_LABELS: Record<keyof ProjectLaunchers, string> = {
-  vscode: 'VS Code',
-  iterm: 'Terminal',
-  obsidian: 'Obsidian',
-  browser: 'Browser'
-}
 
 function isProjectColor(value: unknown): value is ProjectColor {
   return typeof value === 'string' && PROJECT_COLORS.includes(value as ProjectColor)

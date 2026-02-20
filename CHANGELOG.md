@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.50.1] - 2026-02-20
+
+### Changed
+
+- Extracted shared `src/shared/constants.ts` module for `PROJECT_COLORS`, `LINK_LABELS`, and clean view layout constants, removing duplicates from `store.ts` and `renderer/utils/projects.ts`
+- Extracted `src/main/api/utils.ts` with `isServiceError` and `errorToHttpStatus` helpers, replacing duplicated `isError`/`errorToStatus` functions across API route files
+- Replaced `any` casts with proper `QuickTask`, `Project`, and `Task` types in clean view sizing logic (`main/index.ts`)
+- Simplified test setup comments in `tests/api/setup.ts`
+
 ## [1.50.0] - 2026-02-20
 
 ### Changed
