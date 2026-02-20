@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.50.0] - 2026-02-20
+
+### Changed
+
+- Focus bar timer now shows wall-clock elapsed time since focus window opened as the main display, with confirmed (check-in recorded) time shown in parentheses
+- Focus bar timer uses reactive `focusCheckIns` from Zustand store instead of a one-time async load, updating confirmed time as check-ins are recorded
+- Removed prior session time accumulation from focus bar — timer resets each time the focus window opens
+
+### Fixed
+
+- Focus check-in save handler now broadcasts `notifyAllWindows()` so the focus window receives updated check-in data in real time
+
 ## [1.49.2] - 2026-02-19
 
 ### Fixed

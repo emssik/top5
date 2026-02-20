@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { useProjects } from '../hooks/useProjects'
 import { useTaskList } from '../hooks/useTaskList'
 import { normalizeProjectLinks, openProjectLink, projectColorValue } from '../utils/projects'
@@ -45,14 +45,13 @@ const FOCUS_HEIGHT_NORMAL = 58
 const FOCUS_HEIGHT_PICKER = 320
 
 export default function FocusMode() {
-  const { projects, quickTasks, config, setFocus } = useProjects()
+  const { projects, quickTasks, focusCheckIns, config, setFocus } = useProjects()
   const { activeTasks, repeatingActive } = useTaskList()
   const [confirmAction, setConfirmAction] = useState<{ minutes: number; type: 'exit' | 'complete' } | null>(null)
   const [isDev, setIsDev] = useState(false)
   const [showTaskPicker, setShowTaskPicker] = useState(false)
   const [completedTaskKey, setCompletedTaskKey] = useState<string | null>(null)
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
-  const [priorSeconds, setPriorSeconds] = useState(0)
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null)
   const sessionStartRef = useRef(Date.now())
   const ctxRef = useRef<HTMLDivElement>(null)
@@ -60,18 +59,6 @@ export default function FocusMode() {
   useEffect(() => {
     window.api.getIsDev().then(setIsDev)
   }, [])
-
-  // Load prior tracked time for this task (from check-ins before this session)
-  useEffect(() => {
-    if (!config.focusTaskId) return
-    window.api.getFocusCheckIns().then((checkIns) => {
-      const prior = checkIns
-        .filter((c) => new Date(c.timestamp).getTime() < sessionStartRef.current)
-        .filter((c) => c.taskId === config.focusTaskId)
-        .reduce((sum, c) => sum + checkInMinutes(c), 0)
-      setPriorSeconds(prior * 60)
-    })
-  }, [config.focusTaskId])
 
   // Elapsed session time — tick every second
   useEffect(() => {
@@ -134,8 +121,17 @@ export default function FocusMode() {
     }
   }, [ctxMenu])
 
-  // Total displayed time = prior check-in time + current session elapsed
-  const totalSeconds = priorSeconds + elapsedSeconds
+  // Confirmed time = check-ins recorded during this focus session.
+  const confirmedSeconds = useMemo(() => {
+    const sessionStart = sessionStartRef.current
+    const confirmedMinutes = focusCheckIns
+      .filter((c) => new Date(c.timestamp).getTime() >= sessionStart)
+      .reduce((sum, c) => sum + checkInMinutes(c), 0)
+    return confirmedMinutes * 60
+  }, [focusCheckIns])
+
+  // Main timer shows wall time from focus window start.
+  const totalSeconds = elapsedSeconds
 
   // Build picker from visible tasks, excluding just-completed task
   const pickerTasks: PickerTask[] = []
@@ -304,9 +300,14 @@ export default function FocusMode() {
         >
           {task?.title?.replace(/^\(✂\d+\)\s*/, '') || 'No task'}
         </span>
-        <span className="text-[12px] font-semibold text-blue-400 bg-blue-500/12 rounded-[10px] px-2.5 py-[3px] tabular-nums flex-shrink-0 whitespace-nowrap">
-          {formatSessionTime(totalSeconds)}
-        </span>
+        <div className="flex items-center gap-1 flex-shrink-0 whitespace-nowrap bg-blue-500/12 rounded-[10px] px-2.5 py-[3px]">
+          <span className="text-[12px] font-semibold text-blue-400 tabular-nums">
+            {formatSessionTime(totalSeconds)}
+          </span>
+          <span className="text-[11px] text-t-muted tabular-nums font-normal opacity-70">
+            ({formatSessionTime(confirmedSeconds)})
+          </span>
+        </div>
         {/* Action buttons — always visible */}
         <div className="flex gap-0.5 flex-shrink-0" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
           <button

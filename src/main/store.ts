@@ -958,6 +958,7 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
     const normalized = toFocusCheckIn(checkIn)
     if (!normalized) return loadCheckIns()
     appendCheckIn(normalized)
+    notifyAllWindows()
     return loadCheckIns()
   })
 
