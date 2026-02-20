@@ -7,6 +7,63 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.50.1] - 2026-02-20
+
+### Changed
+
+- Extracted shared `src/shared/constants.ts` module for `PROJECT_COLORS`, `LINK_LABELS`, and clean view layout constants, removing duplicates from `store.ts` and `renderer/utils/projects.ts`
+- Extracted `src/main/api/utils.ts` with `isServiceError` and `errorToHttpStatus` helpers, replacing duplicated `isError`/`errorToStatus` functions across API route files
+- Replaced `any` casts with proper `QuickTask`, `Project`, and `Task` types in clean view sizing logic (`main/index.ts`)
+- Simplified test setup comments in `tests/api/setup.ts`
+
+## [1.50.0] - 2026-02-20
+
+### Changed
+
+- Focus bar timer now shows wall-clock elapsed time since focus window opened as the main display, with confirmed (check-in recorded) time shown in parentheses
+- Focus bar timer uses reactive `focusCheckIns` from Zustand store instead of a one-time async load, updating confirmed time as check-ins are recorded
+- Removed prior session time accumulation from focus bar — timer resets each time the focus window opens
+
+### Fixed
+
+- Focus check-in save handler now broadcasts `notifyAllWindows()` so the focus window receives updated check-in data in real time
+
+## [1.49.2] - 2026-02-19
+
+### Fixed
+
+- Focus bar, context menu, and task picker now use `bg-clean-view` instead of `bg-card` so they match the clean view background color in both dark and light themes
+- Cmd+H hide-app now uses an explicit `click` handler in the app menu instead of `role: 'hide'` to ensure reliable hiding on all macOS versions
+- iTerm tab name restored to use `printf` escape sequence alongside AppleScript `set name` for robust tab title setting
+
+### Added
+
+- `--bg-clean-view` CSS variable (`#2a2520` dark / `#fdf6e3` light) and `--color-clean-view` Tailwind token for a warm, distinct clean view background
+
+## [1.49.1] - 2026-02-19
+
+### Fixed
+
+- Win entry `date` field now uses the lock date (`lockedAt.slice(0,10)`) instead of the resolution date, correctly attributing cross-midnight sessions to the day tasks were locked
+
+## [1.49.0] - 2026-02-18
+
+### Added
+
+- `ProjectLinksMenu` component: right-click context menu listing active projects with their quick links; clicking a link launches it, clicking the project code navigates to the project in the main window
+- Right-click on TodayView outer area opens `ProjectLinksMenu` at cursor position (only when at least one project has links)
+- Right-click on clean view outer area opens `ProjectLinksMenu` centered in the window (`fullWidth` prop)
+
+### Fixed
+
+- Cmd+H now reliably hides the app via explicit `before-input-event` handler in `createWindow()` as a belt-and-suspenders fallback to the menu role
+- Right-click on task cards and focus card now stops event propagation so it does not bubble up to the outer div and accidentally open the links menu
+- iTerm tab name set via AppleScript `set name to tabName` directly, removing the broken `printf` escape sequence that was corrupting the tab title
+
+### Changed
+
+- Clean view enters `always-on-top` mode when activated and restores normal window level on exit
+
 ## [1.48.3] - 2026-02-18
 
 ### Added

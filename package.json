@@ -1,6 +1,6 @@
 {
   "name": "top5",
-  "version": "1.48.3",
+  "version": "1.50.1",
   "description": "Focus management app - limit yourself to 5 projects",
   "main": "./out/main/index.js",
   "scripts": {

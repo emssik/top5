@@ -40,7 +40,7 @@ Codzienny challenge: zablokuj zestaw zadań, wykonaj je wszystkie przed deadline
 
 ### Dzień
 
-Wygrany = wszystkie zablokowane zadania completed przed deadline'em. `entry.date` = data rozwiązania (nie locka).
+Wygrany = wszystkie zablokowane zadania completed przed deadline'em. `entry.date` = data blokady (`lockedAt.slice(0,10)`), nie data rozwiązania.
 
 ### Tydzień
 

@@ -6,7 +6,8 @@ import type { MergedTask } from '../hooks/useTaskList'
 import { calcQuickTaskTime, calcTaskTime, formatCheckInTime } from '../utils/checkInTime'
 import { STANDALONE_PROJECT_ID } from '../utils/constants'
 import type { Task, QuickTask, LockedTaskRef, WinEntry } from '../types'
-import { projectColorValue } from '../utils/projects'
+import { projectColorValue, normalizeProjectLinks } from '../utils/projects'
+import ProjectLinksMenu from './ProjectLinksMenu'
 import TaskIdBadge from './TaskIdBadge'
 import { formatTaskId, formatQuickTaskId, computeNotePath } from '../../shared/taskId'
 import RepeatUpdateModal from './RepeatUpdateModal'
@@ -104,6 +105,7 @@ export default function TodayView() {
   const [dragOverZone, setDragOverZone] = useState<'top' | 'overflow' | null>(null)
   const [showLossBanner, setShowLossBanner] = useState(false)
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; task: MergedTask; section: string } | null>(null)
+  const [linksMenu, setLinksMenu] = useState<{ x: number; y: number } | null>(null)
   const hoveredTaskRef = useRef<{ task: MergedTask; section: string } | null>(null)
   const prevLockedRef = useRef(winsLock?.locked ?? false)
 
@@ -636,7 +638,7 @@ export default function TodayView() {
         onDragOver={(event) => handleDragOver(event, task.id)}
         onDrop={() => handleDrop(task.id)}
         onDragEnd={clearDragState}
-        onContextMenu={(e) => { if (!isOverflow) { e.preventDefault(); setContextMenu({ x: e.clientX, y: e.clientY, task, section }) } }}
+        onContextMenu={(e) => { e.stopPropagation(); if (!isOverflow) { e.preventDefault(); setContextMenu({ x: e.clientX, y: e.clientY, task, section }) } }}
         onMouseEnter={() => { if (!isOverflow) hoveredTaskRef.current = { task, section } }}
         onMouseLeave={() => { if (hoveredTaskRef.current?.task.id === task.id) hoveredTaskRef.current = null }}
       >
@@ -707,7 +709,26 @@ export default function TodayView() {
   })()
 
   return (
-    <div>
+    <div
+      onContextMenu={(e) => {
+        const hasLinks = projects
+          .filter((p) => !p.archivedAt && !p.suspendedAt)
+          .some((p) => normalizeProjectLinks(p).length > 0)
+        if (!hasLinks) return
+        e.preventDefault()
+        if (contextMenu) setContextMenu(null)
+        setLinksMenu({ x: e.clientX, y: e.clientY })
+      }}
+    >
+      {linksMenu && (
+        <ProjectLinksMenu
+          projects={projects}
+          x={linksMenu.x}
+          y={linksMenu.y}
+          onClose={() => setLinksMenu(null)}
+        />
+      )}
+
       {repeatUpdatePrompt && (
         <RepeatUpdateModal
           prompt={repeatUpdatePrompt}
@@ -841,7 +862,7 @@ export default function TodayView() {
           </div>
           <div
             className="focus-card"
-            onContextMenu={(e) => { e.preventDefault(); setContextMenu({ x: e.clientX, y: e.clientY, task: focusTask, section: 'focus' }) }}
+            onContextMenu={(e) => { e.stopPropagation(); e.preventDefault(); setContextMenu({ x: e.clientX, y: e.clientY, task: focusTask, section: 'focus' }) }}
             onMouseEnter={() => { hoveredTaskRef.current = { task: focusTask, section: 'focus' } }}
             onMouseLeave={() => { hoveredTaskRef.current = null }}
           >

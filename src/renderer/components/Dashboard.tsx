@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useProjects } from '../hooks/useProjects'
+import { normalizeProjectLinks } from '../utils/projects'
+import ProjectLinksMenu from './ProjectLinksMenu'
 import Sidebar from './Sidebar'
 import QuickNotesPanel from './QuickNotesPanel'
 import Settings from './Settings'
@@ -25,6 +27,7 @@ export default function Dashboard() {
   const [archivedOpen, setArchivedOpen] = useState(false)
   const [editorProjectId, setEditorProjectId] = useState<string | null>(null)
   const [showEditor, setShowEditor] = useState(false)
+  const [linksMenu, setLinksMenu] = useState<{ x: number; y: number } | null>(null)
 
   const activeProjects = useMemo(
     () => projects.filter((project) => !project.archivedAt && !project.suspendedAt).sort((a, b) => a.order - b.order),
@@ -184,7 +187,22 @@ export default function Dashboard() {
       <div
         className="group/window h-screen flex flex-col clean-view-dots"
         style={{ fontFamily: `'${config.cleanViewFont || 'Caveat'}', cursive` }}
+        onContextMenu={(e) => {
+          const hasLinks = activeProjects.some((p) => normalizeProjectLinks(p).length > 0)
+          if (!hasLinks) return
+          e.preventDefault()
+          setLinksMenu({ x: e.clientX, y: e.clientY })
+        }}
       >
+        {linksMenu && (
+          <ProjectLinksMenu
+            projects={activeProjects}
+            x={linksMenu.x}
+            y={linksMenu.y}
+            onClose={() => setLinksMenu(null)}
+            fullWidth
+          />
+        )}
         <div className="h-7 flex-shrink-0 flex items-center justify-end px-3" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}>
           <button
             onClick={toggleCleanView}

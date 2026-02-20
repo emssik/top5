@@ -7,6 +7,8 @@ import { registerFocusHandlers } from './focus-window'
 import { registerGlobalShortcut, registerLocalShortcuts } from './shortcuts'
 import { registerQuickAddHandlers } from './quick-add-window'
 import { getRepeatingTaskProposals } from '../shared/schedule'
+import type { QuickTask, Project, Task } from '../shared/types'
+import { CLEAN_VIEW_ROW_HEIGHT, CLEAN_VIEW_SEPARATOR_HEIGHT, CLEAN_VIEW_HEADER_HEIGHT, CLEAN_VIEW_MIN_HEIGHT, CLEAN_VIEW_WIDTH } from '../shared/constants'
 import { startApiServer } from './api/server'
 
 let mainWindow: BrowserWindow | null = null
@@ -81,7 +83,7 @@ app.whenReady().then(() => {
         submenu: [
           { role: 'about' },
           { type: 'separator' },
-          { role: 'hide' },
+          { label: `Hide ${app.name}`, accelerator: 'Command+H', click: () => { app.hide() } },
           { role: 'hideOthers' },
           { role: 'unhide' },
           { type: 'separator' },
@@ -143,16 +145,16 @@ app.whenReady().then(() => {
     const workArea = display.workArea
     const data = getAppData()
     const limit = data.config.quickTasksLimit ?? 5
-    const width = 340
+    const width = CLEAN_VIEW_WIDTH
     // Count visible rows to match renderer logic
     const today = new Date().toISOString().slice(0, 10)
-    const qts: any[] = data.quickTasks ?? []
+    const qts: QuickTask[] = data.quickTasks ?? []
     const completedToday = qts.filter((t) => t.completed && t.completedAt?.startsWith(today))
     const regularCompleted = completedToday.filter((t) => !t.repeatingTaskId)
     const activeQuick = qts.filter((t) => !t.completed)
     const pinnedCount = (data.projects ?? [])
-      .filter((p: any) => !p.archivedAt)
-      .reduce((n: number, p: any) => n + p.tasks.filter((t: any) => t.isToDoNext && !t.completed).length, 0)
+      .filter((p: Project) => !p.archivedAt)
+      .reduce((n: number, p: any) => n + p.tasks.filter((t: Task) => t.isToDoNext && !t.completed).length, 0)
     const regularActiveCount = activeQuick.filter((t) => !t.repeatingTaskId).length + pinnedCount
     const repeatingActiveCount = activeQuick.filter((t) => t.repeatingTaskId).length
     const activeSlots = Math.max(0, limit - regularCompleted.length)
@@ -169,7 +171,7 @@ app.whenReady().then(() => {
     const hasCompleted = completedToday.length > 0
     const separators = (hasRepeating && visibleRegularCount > 0 ? 1 : 0) + (hasCompleted && (visibleRegularCount > 0 || hasRepeating) ? 1 : 0)
     // Header ≈ 130, each row ≈ 34px, each separator ≈ 20px, bottom padding 12px
-    const height = Math.min(Math.max(totalRows * 34 + separators * 20 + 142, 240), workArea.height)
+    const height = Math.min(Math.max(totalRows * CLEAN_VIEW_ROW_HEIGHT + separators * CLEAN_VIEW_SEPARATOR_HEIGHT + CLEAN_VIEW_HEADER_HEIGHT, CLEAN_VIEW_MIN_HEIGHT), workArea.height)
     mainWindow.setMinimumSize(width, 100)
     mainWindow.setBounds({
       x: bounds.x + Math.round((bounds.width - width) / 2),
@@ -178,6 +180,7 @@ app.whenReady().then(() => {
       height
     })
     mainWindow.setResizable(true)
+    mainWindow.setAlwaysOnTop(true)
     if (process.platform === 'darwin') {
       mainWindow.setWindowButtonVisibility(false)
     }
@@ -185,6 +188,7 @@ app.whenReady().then(() => {
 
   ipcMain.handle('exit-clean-view', () => {
     if (!mainWindow) return
+    mainWindow.setAlwaysOnTop(false)
     mainWindow.setMinimumSize(600, 400)
     if (savedBounds) {
       mainWindow.setBounds(savedBounds)
