@@ -101,6 +101,16 @@ export function reorderQuickTasks(orderedIds: unknown): QuickTask[] | ServiceErr
   return quickTasks
 }
 
+export function updateQuickTaskDueDate(id: string, dueDate: string | null): QuickTask[] | ServiceError {
+  const data = getData()
+  const quickTasks = [...data.quickTasks]
+  const task = quickTasks.find((t) => t.id === id)
+  if (!task) return { error: 'not_found' }
+  task.dueDate = dueDate
+  setData('quickTasks', quickTasks)
+  return quickTasks
+}
+
 export function toggleQuickTaskInProgress(id: string): QuickTask[] | ServiceError {
   const data = getData()
   const quickTasks = [...data.quickTasks]

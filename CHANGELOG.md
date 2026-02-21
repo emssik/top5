@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.52.0] - 2026-02-21
+
+### Added
+
+- Due date field (`dueDate`) on project tasks and quick tasks with set/change/remove support
+- Due date picker popover in ProjectDetailView and TodayView with quick-set buttons (+1d, +2d, +3d, +1w), calendar input, and remove option
+- Due date badge on tasks showing formatted date with overdue highlighting (red) for past-due items
+- "Scheduled" tasks section in TodayView: tasks due today or overdue are always visible and don't count against the active task limit
+- Due date proposals in TodayView: "Due" and "Due Tomorrow" sections suggest unpinned tasks approaching their deadline with accept (pin) and reschedule actions
+- `getDueDateProposals` function in shared schedule engine for date-based task proposal filtering
+- `updateTaskDueDate` and `updateQuickTaskDueDate` service functions, IPC handlers, and preload bridge APIs
+- Unit tests for `getDueDateProposals` covering matching, exclusion of completed/pinned/someday/archived tasks, and null dates
+
+### Changed
+
+- Moving a task to someday now clears its due date
+- Lockable tasks for Wins now include scheduled (due today) tasks alongside regular within-limit tasks
+- Focus task slot calculation excludes scheduled tasks from limit consumption
+- `MergedTask` type extended with `dueDate` field
+- `TaskListData` extended with `scheduledTasks`, `dueDateProposals`, and `dueDateTomorrowProposals`
+
 ## [1.51.0] - 2026-02-21
 
 ### Added

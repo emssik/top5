@@ -10,6 +10,7 @@ export interface Task {
   taskNumber?: number
   someday?: boolean
   noteRef?: string
+  dueDate?: string | null
 }
 
 export type RepeatSchedule =
@@ -47,6 +48,7 @@ export interface QuickTask {
   inProgress?: boolean
   taskNumber?: number
   noteRef?: string
+  dueDate?: string | null
 }
 
 export type ProjectColor =

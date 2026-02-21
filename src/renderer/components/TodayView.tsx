@@ -30,6 +30,12 @@ function continuationTitle(title: string): string {
   return `(✂1) ${title}`
 }
 
+function addDays(days: number): string {
+  const d = new Date()
+  d.setDate(d.getDate() + days)
+  return d.toISOString().slice(0, 10)
+}
+
 function formatCountdown(deadline: string): string {
   const diff = new Date(deadline).getTime() - Date.now()
   if (diff <= 0) return 'expired'
@@ -76,12 +82,15 @@ export default function TodayView() {
 
   const {
     focusTask,
+    scheduledTasks,
     inProgressTasks,
     upNextTasks,
     activeTasks,
     completedTasks: completedToday,
     proposals,
     tomorrowProposals,
+    dueDateProposals,
+    dueDateTomorrowProposals,
     overflowTasks,
     allActiveTasks,
     configLimit,
@@ -108,6 +117,7 @@ export default function TodayView() {
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; task: MergedTask; section: string } | null>(null)
   const [linksMenu, setLinksMenu] = useState<{ x: number; y: number } | null>(null)
   const [showWinsRules, setShowWinsRules] = useState(false)
+  const [dueDateDismissId, setDueDateDismissId] = useState<string | null>(null)
   const hoveredTaskRef = useRef<{ task: MergedTask; section: string } | null>(null)
   const prevLockedRef = useRef(winsLock?.locked ?? false)
 
@@ -183,14 +193,15 @@ export default function TodayView() {
     return () => window.clearInterval(interval)
   }, [isLocked, winsLock?.deadline])
 
-  // Tasks that would be locked (within-limit, non-repeating + focus)
+  // Tasks that would be locked (within-limit + scheduled, non-repeating + focus)
   const lockableTasks = useMemo(() => {
     const withinLimit = activeTasks.filter((t) => !isRepeatingEntry(t))
+    const all = [...scheduledTasks, ...withinLimit]
     if (focusTask && !isRepeatingEntry(focusTask)) {
-      return [focusTask, ...withinLimit]
+      return [focusTask, ...all]
     }
-    return withinLimit
-  }, [activeTasks, focusTask])
+    return all
+  }, [activeTasks, scheduledTasks, focusTask])
 
   // Lock progress: how many locked tasks are completed
   const lockProgress = useMemo(() => {
@@ -221,6 +232,28 @@ export default function TodayView() {
     window.addEventListener('click', handleClick)
     return () => window.removeEventListener('click', handleClick)
   }, [contextMenu])
+
+  // Close due date dismiss popover on click outside or Escape
+  useEffect(() => {
+    if (!dueDateDismissId) return
+    const handleClick = (e: MouseEvent) => {
+      if ((e.target as HTMLElement).closest('.due-date-dismiss-popover')) return
+      setDueDateDismissId(null)
+    }
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setDueDateDismissId(null)
+    }
+    // Defer so the opening click doesn't immediately close the popover
+    const raf = requestAnimationFrame(() => {
+      window.addEventListener('click', handleClick)
+      window.addEventListener('keydown', handleKey)
+    })
+    return () => {
+      cancelAnimationFrame(raf)
+      window.removeEventListener('click', handleClick)
+      window.removeEventListener('keydown', handleKey)
+    }
+  }, [dueDateDismissId])
 
   // Task keyboard shortcuts: work on hovered task OR context menu task
   useEffect(() => {
@@ -610,12 +643,37 @@ export default function TodayView() {
     return 0
   }
 
-  const renderMeta = (task: MergedTask) => {
+  const getTaskDueDate = (task: MergedTask): string | null | undefined => {
+    if (task.kind === 'quick') {
+      return quickTasks.find((t) => t.id === task.id)?.dueDate
+    }
+    if (task.kind === 'pinned' && task.projectId && task.taskId) {
+      const proj = projects.find((p) => p.id === task.projectId)
+      return proj?.tasks.find((t) => t.id === task.taskId)?.dueDate
+    }
+    return undefined
+  }
+
+  const formatDueDateBadge = (dueDate: string): { label: string; overdue: boolean } => {
+    const today = new Date().toISOString().slice(0, 10)
+    const overdue = dueDate < today
+    const d = new Date(dueDate + 'T00:00:00')
+    const label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    return { label, overdue }
+  }
+
+  const renderMeta = (task: MergedTask, done = false) => {
+    const dueDate = getTaskDueDate(task)
+
     if (task.kind === 'pinned' && task.projectId) {
       const project = projects.find((item) => item.id === task.projectId)
       const minutes = getTaskMinutes(task)
       return (
         <div className="task-meta">
+          {dueDate && (() => {
+            const { label, overdue } = formatDueDateBadge(dueDate)
+            return <span className={`due-date-badge ${!done && overdue ? 'overdue' : ''}`}>📅 {label}</span>
+          })()}
           <span className="dot" style={{ background: projectColorValue(project?.color) }} />
           <span>{task.projectName || 'Project'}</span>
           {minutes > 0 && <span>· {formatCheckInTime(minutes)}</span>}
@@ -633,6 +691,10 @@ export default function TodayView() {
 
     return (
       <div className="task-meta">
+        {dueDate && (() => {
+          const { label, overdue } = formatDueDateBadge(dueDate)
+          return <span className={`due-date-badge ${!done && overdue ? 'overdue' : ''}`}>📅 {label}</span>
+        })()}
         <span className="task-source">quick task</span>
       </div>
     )
@@ -705,7 +767,7 @@ export default function TodayView() {
           <TaskIdBadge taskNumber={task.taskNumber} projectCode={task.projectCode} kind={task.kind} />
           {task.title}
         </div>
-        {renderMeta(task)}
+        {renderMeta(task, true)}
       </div>
       <div className="task-actions">
         {!isTaskLocked(task) && (
@@ -1006,6 +1068,13 @@ export default function TodayView() {
         </>
       )}
 
+      {scheduledTasks.length > 0 && (
+        <>
+          {scheduledTasks.map((task) => renderTask(task, 'up-next'))}
+          <div className="repeating-separator" />
+        </>
+      )}
+
       {inProgressTasks.length > 0 && (
         <>
           <div className="section-label mt-section">
@@ -1044,6 +1113,72 @@ export default function TodayView() {
               <span className="title">{proposal.title}</span>
               <button className="proposal-btn accept" onClick={() => acceptRepeatingProposal(proposal.id)}>✓</button>
               <button className="proposal-btn dismiss" onClick={() => dismissRepeatingProposal(proposal.id)}>✕</button>
+            </div>
+          ))}
+        </>
+      )}
+
+      {dueDateProposals.length > 0 && (
+        <>
+          <div className="section-label mt-section">
+            <span style={{ opacity: 0.7 }}>📅</span>
+            <span>Due</span>
+          </div>
+          {dueDateProposals.map(({ task, project: proj }) => (
+            <div key={task.id} className="proposal-card due-date-proposal">
+              <span className="due-date-icon">📅</span>
+              <span className="title">
+                {proj.code && <span style={{ opacity: 0.6, marginRight: 4 }}>[{proj.code}]</span>}
+                {task.title}
+              </span>
+              <button className="proposal-btn accept" onClick={() => toggleTaskToDoNext(proj.id, task.id)} title="Pin to today">✓</button>
+              <div style={{ position: 'relative' }}>
+                <button className="proposal-btn dismiss" onClick={() => setDueDateDismissId(dueDateDismissId === task.id ? null : task.id)} title="Dismiss">✕</button>
+                {dueDateDismissId === task.id && (
+                  <div className="due-date-dismiss-popover">
+                    <div className="due-date-quick-btns">
+                      {[{ label: '+1d', days: 1 }, { label: '+2d', days: 2 }, { label: '+3d', days: 3 }, { label: '+1w', days: 7 }].map((opt) => (
+                        <button key={opt.label} onClick={() => { window.api.updateTaskDueDate(proj.id, task.id, addDays(opt.days)); setDueDateDismissId(null) }}>{opt.label}</button>
+                      ))}
+                    </div>
+                    <input type="date" onChange={(e) => { if (e.target.value) { window.api.updateTaskDueDate(proj.id, task.id, e.target.value); setDueDateDismissId(null) } }} />
+                    <button onClick={() => { window.api.updateTaskDueDate(proj.id, task.id, null); setDueDateDismissId(null) }}>Remove due date</button>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </>
+      )}
+
+      {dueDateTomorrowProposals.length > 0 && (
+        <>
+          <div className="section-label mt-section">
+            <span style={{ opacity: 0.7 }}>📅</span>
+            <span>Due Tomorrow</span>
+          </div>
+          {dueDateTomorrowProposals.map(({ task, project: proj }) => (
+            <div key={task.id} className="proposal-card due-date-proposal due-date-tomorrow">
+              <span className="due-date-icon">📅</span>
+              <span className="tomorrow-badge">tomorrow</span>
+              <span className="title">
+                {proj.code && <span style={{ opacity: 0.6, marginRight: 4 }}>[{proj.code}]</span>}
+                {task.title}
+              </span>
+              <div style={{ position: 'relative' }}>
+                <button className="proposal-btn dismiss" onClick={() => setDueDateDismissId(dueDateDismissId === task.id ? null : task.id)} title="Reschedule / remove">✕</button>
+                {dueDateDismissId === task.id && (
+                  <div className="due-date-dismiss-popover">
+                    <div className="due-date-quick-btns">
+                      {[{ label: '+1d', days: 1 }, { label: '+2d', days: 2 }, { label: '+3d', days: 3 }, { label: '+1w', days: 7 }].map((opt) => (
+                        <button key={opt.label} onClick={() => { window.api.updateTaskDueDate(proj.id, task.id, addDays(opt.days)); setDueDateDismissId(null) }}>{opt.label}</button>
+                      ))}
+                    </div>
+                    <input type="date" onChange={(e) => { if (e.target.value) { window.api.updateTaskDueDate(proj.id, task.id, e.target.value); setDueDateDismissId(null) } }} />
+                    <button onClick={() => { window.api.updateTaskDueDate(proj.id, task.id, null); setDueDateDismissId(null) }}>Remove due date</button>
+                  </div>
+                )}
+              </div>
             </div>
           ))}
         </>

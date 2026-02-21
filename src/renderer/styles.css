@@ -630,6 +630,102 @@ body {
   letter-spacing: 0.5px;
 }
 
+.due-date-icon {
+  font-size: 14px;
+}
+
+.due-date-badge {
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(59, 130, 246, 0.12);
+  color: #60a5fa;
+  margin-left: 4px;
+  white-space: nowrap;
+}
+
+.due-date-badge.overdue {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+}
+
+.due-date-tomorrow {
+  opacity: 1;
+}
+
+.due-date-dismiss-popover {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  z-index: 100;
+  background: var(--bg-card);
+  border: 1px solid var(--c-border-subtle);
+  border-radius: 8px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 160px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+.due-date-quick-btns {
+  display: flex;
+  gap: 4px;
+}
+
+.due-date-quick-btns button {
+  flex: 1;
+  padding: 4px 0;
+  border: 1px solid var(--c-border-subtle);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--c-text-secondary);
+  font-size: 11px;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: center;
+}
+
+.due-date-quick-btns button:hover {
+  background: var(--c-hover);
+}
+
+.due-date-dismiss-popover button {
+  padding: 4px 8px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--c-text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+}
+
+.due-date-dismiss-popover button:hover {
+  background: var(--c-hover);
+}
+
+.due-date-dismiss-popover input[type="date"] {
+  padding: 4px 6px;
+  border: 1px solid var(--c-border-subtle);
+  border-radius: 4px;
+  background: var(--bg-page);
+  color: var(--c-text-primary);
+  font-size: 12px;
+  font-family: inherit;
+}
+
+.due-date-reschedule-label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+  color: var(--c-text-muted);
+  padding: 2px 8px;
+}
+
 .done-toggle {
   display: flex;
   align-items: center;

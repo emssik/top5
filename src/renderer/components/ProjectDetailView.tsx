@@ -7,6 +7,12 @@ import { projectColorValue, normalizeProjectLinks, openProjectLink } from '../ut
 import TaskIdBadge from './TaskIdBadge'
 import { formatTaskId } from '../../shared/taskId'
 
+function addDays(days: number): string {
+  const d = new Date()
+  d.setDate(d.getDate() + days)
+  return d.toISOString().slice(0, 10)
+}
+
 interface Props {
   project: Project
   onEdit: () => void
@@ -23,6 +29,7 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
   const [donePage, setDonePage] = useState(0)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingTitle, setEditingTitle] = useState('')
+  const [dueDatePickerId, setDueDatePickerId] = useState<string | null>(null)
   const addInputRef = useRef<HTMLInputElement | null>(null)
   const draggedTaskId = useRef<string | null>(null)
   const [dragOverTaskId, setDragOverTaskId] = useState<string | null>(null)
@@ -74,7 +81,7 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
 
   const toggleSomeday = async (taskId: string) => {
     const nextTasks = project.tasks.map((task) =>
-      task.id === taskId ? { ...task, someday: !task.someday, isToDoNext: false } : task
+      task.id === taskId ? { ...task, someday: !task.someday, isToDoNext: false, ...(task.someday ? {} : { dueDate: null }) } : task
     )
     await updateTasks(nextTasks)
   }
@@ -147,6 +154,26 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
   }
 
   useEffect(() => {
+    if (!dueDatePickerId) return
+    const handleClick = (e: MouseEvent) => {
+      if ((e.target as HTMLElement).closest('.due-date-dismiss-popover')) return
+      setDueDatePickerId(null)
+    }
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setDueDatePickerId(null)
+    }
+    const raf = requestAnimationFrame(() => {
+      window.addEventListener('click', handleClick)
+      window.addEventListener('keydown', handleKey)
+    })
+    return () => {
+      cancelAnimationFrame(raf)
+      window.removeEventListener('click', handleClick)
+      window.removeEventListener('keydown', handleKey)
+    }
+  }, [dueDatePickerId])
+
+  useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'n' && event.key !== 'N') return
       const target = event.target as HTMLElement
@@ -217,11 +244,16 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
               {task.title}
             </div>
           )}
-          {taskMinutes > 0 && (
-            <div className="task-meta">
-              <span>{formatCheckInTime(taskMinutes)}</span>
-            </div>
-          )}
+          <div className="task-meta">
+            {taskMinutes > 0 && <span>{formatCheckInTime(taskMinutes)}</span>}
+            {task.dueDate && (() => {
+              const today = new Date().toISOString().slice(0, 10)
+              const overdue = !done && task.dueDate < today
+              const d = new Date(task.dueDate + 'T00:00:00')
+              const label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+              return <span className={`due-date-badge ${overdue ? 'overdue' : ''}`}>📅 {label}</span>
+            })()}
+          </div>
         </div>
 
         {done ? (
@@ -233,6 +265,20 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
             <button className={isPinned ? 'pin-icon' : 'pin-action'} onClick={() => toggleTaskToDoNext(project.id, task.id)} title={isPinned ? 'Unpin' : 'Pin to Today'}>📌</button>
             <div className="task-actions">
               <button className="task-action-btn btn-focus" onClick={() => setFocus(project.id, task.id)} title="Focus">▶</button>
+              <div style={{ position: 'relative', display: 'inline-block' }}>
+                <button className="task-action-btn" onClick={() => setDueDatePickerId(dueDatePickerId === task.id ? null : task.id)} title={task.dueDate ? 'Change due date' : 'Set due date'} style={{ opacity: task.dueDate ? 0.9 : 0.5 }}>📅</button>
+                {dueDatePickerId === task.id && (
+                  <div className="due-date-dismiss-popover">
+                    <div className="due-date-quick-btns">
+                      {[{ label: '+1d', days: 1 }, { label: '+2d', days: 2 }, { label: '+3d', days: 3 }, { label: '+1w', days: 7 }].map((opt) => (
+                        <button key={opt.label} onClick={() => { window.api.updateTaskDueDate(project.id, task.id, addDays(opt.days)); setDueDatePickerId(null) }}>{opt.label}</button>
+                      ))}
+                    </div>
+                    <input type="date" defaultValue={task.dueDate ?? ''} autoFocus onChange={(e) => { window.api.updateTaskDueDate(project.id, task.id, e.target.value || null); setDueDatePickerId(null) }} />
+                    {task.dueDate && <button onClick={() => { window.api.updateTaskDueDate(project.id, task.id, null); setDueDatePickerId(null) }}>Remove</button>}
+                  </div>
+                )}
+              </div>
               {config.obsidianStoragePath && (
                 <button className="task-action-btn" onClick={() => window.api.openTaskNote(task.id, task.title, project.name, formatTaskId(task.taskNumber, project.code), task.noteRef)} title="Open note" style={{ opacity: 0.5 }}>📝</button>
               )}

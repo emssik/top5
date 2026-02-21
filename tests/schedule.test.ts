@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
   getRepeatingTaskProposals,
+  getDueDateProposals,
   isScheduleDueOnDate,
   normalizeRepeatSchedule,
   normalizeWeekdays
@@ -110,4 +111,80 @@ test('monthly schedules are evaluated consistently', () => {
     ),
     true
   )
+})
+
+// --- getDueDateProposals ---
+
+function makeProject(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'p1',
+    name: 'Project',
+    archivedAt: null,
+    suspendedAt: null,
+    tasks: [],
+    ...overrides
+  }
+}
+
+function makeTask(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 't1',
+    completed: false,
+    isToDoNext: false,
+    someday: false,
+    dueDate: null,
+    ...overrides
+  }
+}
+
+test('getDueDateProposals returns tasks due on the given date', () => {
+  const date = new Date(2026, 0, 15, 12, 0, 0) // 2026-01-15
+  const projects = [makeProject({ tasks: [makeTask({ dueDate: '2026-01-15' })] })]
+  const result = getDueDateProposals({ projects, date })
+  assert.equal(result.length, 1)
+  assert.equal(result[0].task.id, 't1')
+  assert.equal(result[0].project.id, 'p1')
+})
+
+test('getDueDateProposals excludes tasks with non-matching dueDate', () => {
+  const date = new Date(2026, 0, 15, 12, 0, 0)
+  const projects = [makeProject({ tasks: [makeTask({ dueDate: '2026-01-16' })] })]
+  const result = getDueDateProposals({ projects, date })
+  assert.equal(result.length, 0)
+})
+
+test('getDueDateProposals excludes completed tasks', () => {
+  const date = new Date(2026, 0, 15, 12, 0, 0)
+  const projects = [makeProject({ tasks: [makeTask({ dueDate: '2026-01-15', completed: true })] })]
+  const result = getDueDateProposals({ projects, date })
+  assert.equal(result.length, 0)
+})
+
+test('getDueDateProposals excludes tasks already pinned (isToDoNext)', () => {
+  const date = new Date(2026, 0, 15, 12, 0, 0)
+  const projects = [makeProject({ tasks: [makeTask({ dueDate: '2026-01-15', isToDoNext: true })] })]
+  const result = getDueDateProposals({ projects, date })
+  assert.equal(result.length, 0)
+})
+
+test('getDueDateProposals excludes someday tasks', () => {
+  const date = new Date(2026, 0, 15, 12, 0, 0)
+  const projects = [makeProject({ tasks: [makeTask({ dueDate: '2026-01-15', someday: true })] })]
+  const result = getDueDateProposals({ projects, date })
+  assert.equal(result.length, 0)
+})
+
+test('getDueDateProposals excludes archived and suspended projects', () => {
+  const date = new Date(2026, 0, 15, 12, 0, 0)
+  const archived = makeProject({ id: 'pa', archivedAt: '2026-01-01', tasks: [makeTask({ id: 'ta', dueDate: '2026-01-15' })] })
+  const suspended = makeProject({ id: 'ps', suspendedAt: '2026-01-01', tasks: [makeTask({ id: 'ts', dueDate: '2026-01-15' })] })
+  const result = getDueDateProposals({ projects: [archived, suspended], date })
+  assert.equal(result.length, 0)
+})
+
+test('getDueDateProposals excludes tasks with null/undefined dueDate', () => {
+  const date = new Date(2026, 0, 15, 12, 0, 0)
+  const projects = [makeProject({ tasks: [makeTask({ dueDate: null }), makeTask({ id: 't2' })] })]
+  const result = getDueDateProposals({ projects, date })
+  assert.equal(result.length, 0)
 })
