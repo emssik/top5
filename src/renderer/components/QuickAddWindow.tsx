@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { nanoid } from 'nanoid'
 import type { Project, ProjectColor, QuickTask, RepeatSchedule, RepeatingTask, AppData } from '../types'
 import { PROJECT_COLORS, projectColorValue, firstAvailableProjectColor } from '../utils/projects'
-import { sortWeekdays } from '../../shared/schedule'
+import { sortWeekdays, dateKey } from '../../shared/schedule'
 import { buildQuickAddSchedule } from '../../shared/quick-add'
 
 type Mode = 'task' | 'project' | 'repeat'
@@ -378,7 +378,7 @@ export default function QuickAddWindow() {
 function addDays(days: number): string {
   const d = new Date()
   d.setDate(d.getDate() + days)
-  return d.toISOString().slice(0, 10)
+  return dateKey(d)
 }
 
 function formatDueDate(date: string): string {
@@ -508,7 +508,7 @@ function TaskPanel({
           <input
             type="date"
             className="px-[6px] py-[3px] rounded-[5px] text-[11px] border border-b-subtle text-t-secondary bg-surface outline-none focus:border-t-secondary transition-colors"
-            min={new Date().toISOString().slice(0, 10)}
+            min={dateKey(new Date())}
             onChange={(e) => {
               if (e.target.value) {
                 onDueDateChange(e.target.value)

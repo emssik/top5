@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { Project, QuickTask, AppConfig, FocusCheckIn, RepeatingTask, LockedTaskRef, WinsLockState } from '../types'
 import { assignMissingProjectColors, normalizeProject } from '../utils/projects'
+import { dateKey } from '../../shared/schedule'
 
 interface ProjectsState {
   projects: Project[]
@@ -227,10 +228,10 @@ export const useProjects = create<ProjectsState>((set, get) => ({
   dismissRepeatingProposal: async (repeatingTaskId: string, forDate?: string) => {
     await window.api.dismissRepeatingProposal(repeatingTaskId, forDate)
     const { dismissedRepeating } = get()
-    const dateKey = forDate || new Date().toISOString().slice(0, 10)
-    const existing = dismissedRepeating[dateKey] ?? []
+    const dk = forDate || dateKey(new Date())
+    const existing = dismissedRepeating[dk] ?? []
     set({
-      dismissedRepeating: { ...dismissedRepeating, [dateKey]: [...existing, repeatingTaskId] }
+      dismissedRepeating: { ...dismissedRepeating, [dk]: [...existing, repeatingTaskId] }
     })
   },
 

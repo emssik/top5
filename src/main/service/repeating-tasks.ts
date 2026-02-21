@@ -5,7 +5,7 @@ import {
   setData,
   isValidRepeatingTask
 } from '../store'
-import { normalizeRepeatSchedule } from '../../shared/schedule'
+import { normalizeRepeatSchedule, dateKey } from '../../shared/schedule'
 
 type ServiceError = { error: 'not_found' | 'validation' }
 
@@ -78,11 +78,11 @@ export function acceptRepeatingProposal(id: string, _forDate?: string): { quickT
 export function dismissRepeatingProposal(id: string, forDate?: string): void | ServiceError {
   const data = getData()
   if (!data.repeatingTasks.some((t) => t.id === id)) return { error: 'not_found' }
-  const dateKey = forDate || new Date().toISOString().slice(0, 10)
+  const dk = forDate || dateKey(new Date())
   const dismissedMap = { ...data.dismissedRepeating }
-  const existing = dismissedMap[dateKey] ?? []
+  const existing = dismissedMap[dk] ?? []
   if (!existing.includes(id)) {
-    dismissedMap[dateKey] = [...existing, id]
+    dismissedMap[dk] = [...existing, id]
   }
   setData('dismissedRepeating', dismissedMap)
   const repeatingTasks = [...data.repeatingTasks]

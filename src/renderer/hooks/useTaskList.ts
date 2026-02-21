@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useProjects } from './useProjects'
 import type { RepeatingTask, Task, Project } from '../types'
-import { getRepeatingTaskProposals, getDueDateProposals } from '../../shared/schedule'
+import { getRepeatingTaskProposals, getDueDateProposals, dateKey } from '../../shared/schedule'
 import type { DueDateProposal } from '../../shared/schedule'
 import { STANDALONE_PROJECT_ID } from '../utils/constants'
 
@@ -70,7 +70,7 @@ export function useTaskList(opts?: { excludeFocus?: boolean; limitAdjust?: numbe
 
   const configLimit = config.quickTasksLimit ?? 5
   const limit = Math.max(1, configLimit + (opts?.limitAdjust ?? 0))
-  const today = new Date().toISOString().slice(0, 10)
+  const today = dateKey(new Date())
   const isLocked = winsLock?.locked ?? false
   const excludeFocus = opts?.excludeFocus ?? false
 

@@ -6,11 +6,12 @@ import { calcProjectTime, calcTaskTime, formatCheckInTime } from '../utils/check
 import { projectColorValue, normalizeProjectLinks, openProjectLink } from '../utils/projects'
 import TaskIdBadge from './TaskIdBadge'
 import { formatTaskId } from '../../shared/taskId'
+import { dateKey } from '../../shared/schedule'
 
 function addDays(days: number): string {
   const d = new Date()
   d.setDate(d.getDate() + days)
-  return d.toISOString().slice(0, 10)
+  return dateKey(d)
 }
 
 interface Props {
@@ -269,7 +270,7 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
           <div className="task-meta">
             {taskMinutes > 0 && <span>{formatCheckInTime(taskMinutes)}</span>}
             {task.dueDate && (() => {
-              const today = new Date().toISOString().slice(0, 10)
+              const today = dateKey(new Date())
               const overdue = !done && task.dueDate < today
               const d = new Date(task.dueDate + 'T00:00:00')
               const label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })

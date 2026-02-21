@@ -6,7 +6,7 @@ import { registerLauncherHandlers } from './launchers'
 import { registerFocusHandlers } from './focus-window'
 import { registerGlobalShortcut, registerLocalShortcuts } from './shortcuts'
 import { registerQuickAddHandlers } from './quick-add-window'
-import { getRepeatingTaskProposals } from '../shared/schedule'
+import { getRepeatingTaskProposals, dateKey } from '../shared/schedule'
 import type { QuickTask, Project, Task } from '../shared/types'
 import { CLEAN_VIEW_ROW_HEIGHT, CLEAN_VIEW_SEPARATOR_HEIGHT, CLEAN_VIEW_HEADER_HEIGHT, CLEAN_VIEW_MIN_HEIGHT, CLEAN_VIEW_WIDTH } from '../shared/constants'
 import { startApiServer } from './api/server'
@@ -147,7 +147,7 @@ app.whenReady().then(() => {
     const limit = data.config.quickTasksLimit ?? 5
     const width = CLEAN_VIEW_WIDTH
     // Count visible rows to match renderer logic
-    const today = new Date().toISOString().slice(0, 10)
+    const today = dateKey(new Date())
     const qts: QuickTask[] = data.quickTasks ?? []
     const completedToday = qts.filter((t) => t.completed && t.completedAt?.startsWith(today))
     const regularCompleted = completedToday.filter((t) => !t.repeatingTaskId)

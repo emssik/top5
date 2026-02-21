@@ -10,6 +10,7 @@ import { projectColorValue, normalizeProjectLinks } from '../utils/projects'
 import ProjectLinksMenu from './ProjectLinksMenu'
 import TaskIdBadge from './TaskIdBadge'
 import { formatTaskId, formatQuickTaskId, computeNotePath } from '../../shared/taskId'
+import { dateKey } from '../../shared/schedule'
 import RepeatUpdateModal from './RepeatUpdateModal'
 
 function formatFocusTimer(seconds: number): string {
@@ -33,7 +34,7 @@ function continuationTitle(title: string): string {
 function addDays(days: number): string {
   const d = new Date()
   d.setDate(d.getDate() + days)
-  return d.toISOString().slice(0, 10)
+  return dateKey(d)
 }
 
 function formatCountdown(deadline: string): string {
@@ -129,7 +130,7 @@ export default function TodayView() {
   const tomorrowKey = useMemo(() => {
     const d = new Date()
     d.setDate(d.getDate() + 1)
-    return d.toISOString().slice(0, 10)
+    return dateKey(d)
   }, [])
 
   // 30-day strip data
@@ -142,7 +143,7 @@ export default function TodayView() {
     for (let i = 29; i >= 0; i--) {
       const d = new Date(today)
       d.setDate(d.getDate() - i)
-      const key = d.toISOString().slice(0, 10)
+      const key = dateKey(d)
       days.push({ date: key, result: byDate.get(key) ?? null })
     }
     // Current streak (consecutive wins from today backwards)
@@ -655,7 +656,7 @@ export default function TodayView() {
   }
 
   const formatDueDateBadge = (dueDate: string): { label: string; overdue: boolean } => {
-    const today = new Date().toISOString().slice(0, 10)
+    const today = dateKey(new Date())
     const overdue = dueDate < today
     const d = new Date(dueDate + 'T00:00:00')
     const label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })

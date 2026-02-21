@@ -4,6 +4,7 @@ import { checkInMinutes, formatCheckInTime } from '../utils/checkInTime'
 import { projectColorValue } from '../utils/projects'
 import { STANDALONE_PROJECT_ID } from '../utils/constants'
 import type { WinEntry, StreakStats } from '../types'
+import { dateKey } from '../../shared/schedule'
 
 type Range = '7d' | '14d' | 'month' | 'prev_month' | '6m' | '12m'
 
@@ -33,7 +34,7 @@ function calcDayStreak(activeDays: string[]): number {
   cursor.setHours(0, 0, 0, 0)
 
   for (const day of uniqueDays) {
-    const current = cursor.toISOString().slice(0, 10)
+    const current = dateKey(cursor)
     if (day === current) {
       streak += 1
       cursor.setDate(cursor.getDate() - 1)
@@ -41,7 +42,7 @@ function calcDayStreak(activeDays: string[]): number {
     }
     if (streak === 0) {
       cursor.setDate(cursor.getDate() - 1)
-      if (day === cursor.toISOString().slice(0, 10)) {
+      if (day === dateKey(cursor)) {
         streak += 1
         cursor.setDate(cursor.getDate() - 1)
         continue

@@ -19,7 +19,7 @@ import { platform } from 'os'
 import { dirname, basename, join, resolve } from 'path'
 import { homedir } from 'os'
 import yaml from 'js-yaml'
-import { normalizeRepeatSchedule } from '../shared/schedule'
+import { normalizeRepeatSchedule, dateKey } from '../shared/schedule'
 import { PROJECT_COLORS, LINK_LABELS } from '../shared/constants'
 import * as projectService from './service/projects'
 import * as quickTaskService from './service/quick-tasks'
@@ -452,7 +452,7 @@ function normalizeRepeatingTask(task: RepeatingTask): RepeatingTask {
 }
 
 function dailyBackup(): void {
-  const today = new Date().toISOString().slice(0, 10) // YYYY-MM-DD
+  const today = dateKey(new Date())
   const backupPrefix = `backup-${today}`
 
   mkdirSync(BACKUP_DIR, { recursive: true })
@@ -725,7 +725,7 @@ function loadData(): AppData {
   try {
     const raw = readFileSync(DATA_FILE, 'utf-8')
     const parsed = yaml.load(raw) as Partial<AppData> | null
-    const today = new Date().toISOString().slice(0, 10)
+    const today = dateKey(new Date())
     const projects = assignMissingProjectColors((parsed?.projects ?? defaultData.projects).map(normalizeProject))
     const config = normalizeAppConfig(parsed?.config ?? {})
     // Migrate old dismissedRepeating format (string[] + dismissedRepeatingDate) to Record<string, string[]>

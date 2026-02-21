@@ -1,4 +1,5 @@
 import type { WinEntry, StreakStats } from './types'
+import { dateKey } from './schedule'
 
 function startOfWeek(date: Date): Date {
   const d = new Date(date)
@@ -11,7 +12,7 @@ function startOfWeek(date: Date): Date {
 
 function isoWeekKey(date: Date): string {
   const w = startOfWeek(date)
-  return w.toISOString().slice(0, 10)
+  return dateKey(w)
 }
 
 function isoMonthKey(date: Date): string {
@@ -101,7 +102,7 @@ export function calcStreaks(entries: WinEntry[]): StreakStats {
       cursor.setDate(cursor.getDate() - 1)
       continue
     }
-    const key = cursor.toISOString().slice(0, 10)
+    const key = dateKey(cursor)
     const result = byDate.get(key)
     if (result === 'win') {
       currentDayStreak++

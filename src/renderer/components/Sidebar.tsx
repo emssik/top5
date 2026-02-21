@@ -3,6 +3,7 @@ import type { Project } from '../types'
 import { projectColorValue } from '../utils/projects'
 import { checkInMinutes, formatCheckInTime } from '../utils/checkInTime'
 import { useProjects } from '../hooks/useProjects'
+import { dateKey } from '../../shared/schedule'
 
 type DragSource = 'active' | 'suspended' | 'archived'
 
@@ -102,7 +103,7 @@ export default function Sidebar({
   const themeLabel = theme === 'light' ? 'Dark mode' : 'Light mode'
   const focusCheckIns = useProjects((s) => s.focusCheckIns)
   const todayTime = useMemo(() => {
-    const today = new Date().toISOString().slice(0, 10)
+    const today = dateKey(new Date())
     const mins = focusCheckIns
       .filter((c) => c.timestamp.startsWith(today))
       .reduce((sum, c) => sum + checkInMinutes(c), 0)

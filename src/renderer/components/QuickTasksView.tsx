@@ -9,6 +9,7 @@ import { STANDALONE_PROJECT_ID } from '../utils/constants'
 import TaskIdBadge from './TaskIdBadge'
 import { formatTaskId, formatQuickTaskId, computeNotePath } from '../../shared/taskId'
 import RepeatUpdateModal from './RepeatUpdateModal'
+import { dateKey } from '../../shared/schedule'
 
 function continuationTitle(title: string): string {
   const match = title.match(/^\(✂(\d+)\) (.*)$/)
@@ -615,7 +616,7 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
   }
 
   // Check if today was already won (for encouragement)
-  const todayWon = winHistory.some((e) => e.date === new Date().toISOString().slice(0, 10) && e.result === 'win')
+  const todayWon = winHistory.some((e) => e.date === dateKey(new Date()) && e.result === 'win')
   const currentStreak = (() => {
     if (winHistory.length === 0) return 0
     const byDate = new Map(winHistory.map((e) => [e.date, e.result]))
@@ -624,7 +625,7 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
     for (let i = 0; i < 365; i++) {
       const d = new Date(today)
       d.setDate(d.getDate() - i)
-      const r = byDate.get(d.toISOString().slice(0, 10))
+      const r = byDate.get(dateKey(d))
       if (r === 'win') streak++
       else if (r === 'loss') break
       else if (streak > 0) break

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { OperationLogEntry, OperationType } from '../types'
+import { dateKey } from '../../shared/schedule'
 
 type LogRange = 'today' | '7d' | '30d'
 
@@ -79,14 +80,14 @@ function formatRelativeTime(iso: string): string {
 function dayLabel(iso: string): string {
   const date = new Date(iso)
   const now = new Date()
-  const today = now.toISOString().slice(0, 10)
+  const today = dateKey(now)
   const entryDay = iso.slice(0, 10)
 
   if (entryDay === today) return 'Today'
 
   const yesterday = new Date(now)
   yesterday.setDate(yesterday.getDate() - 1)
-  if (entryDay === yesterday.toISOString().slice(0, 10)) return 'Yesterday'
+  if (entryDay === dateKey(yesterday)) return 'Yesterday'
 
   return date.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })
 }

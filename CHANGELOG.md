@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.55.1] - 2026-02-22
+
+### Fixed
+
+- Date formatting across the entire codebase now uses local timezone instead of UTC — `dateKey()` helper exported from `shared/schedule.ts` replaces all inline `toISOString().slice(0, 10)` calls, preventing wrong-date bugs near midnight in non-UTC timezones
+
 ## [1.55.0] - 2026-02-22
 
 ### Changed
