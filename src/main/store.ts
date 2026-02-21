@@ -1100,6 +1100,24 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
     return result
   })
 
+  ipcMain.handle('update-task-due-date', (_event, projectId: string, taskId: string, dueDate: unknown) => {
+    if (typeof projectId !== 'string' || typeof taskId !== 'string') return getData().projects
+    const normalizedDate = typeof dueDate === 'string' ? dueDate : null
+    const result = projectService.updateTaskDueDate(projectId, taskId, normalizedDate)
+    if (isServiceError(result)) return getData().projects
+    notifyAllWindows()
+    return result
+  })
+
+  ipcMain.handle('update-quick-task-due-date', (_event, id: string, dueDate: unknown) => {
+    if (typeof id !== 'string') return getData().quickTasks
+    const normalizedDate = typeof dueDate === 'string' ? dueDate : null
+    const result = quickTaskService.updateQuickTaskDueDate(id, normalizedDate)
+    if (isServiceError(result)) return getData().quickTasks
+    notifyAllWindows()
+    return result
+  })
+
   // --- Wins ---
 
   ipcMain.handle('wins-lock', (_event, tasks: unknown) => {

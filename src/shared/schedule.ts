@@ -115,6 +115,49 @@ export function isRepeatingTaskDueOnDate(task: RepeatingTaskLike, onDate: Date =
   return isScheduleDueOnDate(task.schedule, task.createdAt, task.lastCompletedAt, onDate)
 }
 
+export interface DueDateTaskLike {
+  id: string
+  completed: boolean
+  isToDoNext?: boolean
+  someday?: boolean
+  dueDate?: string | null
+}
+
+export interface DueDateProjectLike {
+  id: string
+  name: string
+  code?: string
+  archivedAt: string | null
+  suspendedAt: string | null
+  tasks: DueDateTaskLike[]
+}
+
+export interface DueDateProposal<T extends DueDateTaskLike = DueDateTaskLike, P extends DueDateProjectLike = DueDateProjectLike> {
+  task: T
+  project: P
+}
+
+export function getDueDateProposals<T extends DueDateTaskLike, P extends DueDateProjectLike>(params: {
+  projects: P[]
+  date?: Date
+}): DueDateProposal<T, P>[] {
+  const { projects, date = new Date() } = params
+  const key = dateKey(date)
+  const results: DueDateProposal<T, P>[] = []
+
+  for (const project of projects) {
+    if (project.archivedAt || project.suspendedAt) continue
+    for (const task of project.tasks) {
+      if (task.completed || task.isToDoNext || task.someday) continue
+      if (task.dueDate === key) {
+        results.push({ task: task as T, project })
+      }
+    }
+  }
+
+  return results
+}
+
 export function getRepeatingTaskProposals<T extends RepeatingTaskLike, Q extends QuickTaskLike>(params: {
   repeatingTasks: T[]
   quickTasks: Q[]

@@ -1,7 +1,8 @@
 import { useMemo } from 'react'
 import { useProjects } from './useProjects'
-import type { RepeatingTask } from '../types'
-import { getRepeatingTaskProposals } from '../../shared/schedule'
+import type { RepeatingTask, Task, Project } from '../types'
+import { getRepeatingTaskProposals, getDueDateProposals } from '../../shared/schedule'
+import type { DueDateProposal } from '../../shared/schedule'
 import { STANDALONE_PROJECT_ID } from '../utils/constants'
 
 export interface MergedTask {
@@ -18,10 +19,12 @@ export interface MergedTask {
   repeatingTaskId?: string | null
   inProgress?: boolean
   noteRef?: string
+  dueDate?: string | null
 }
 
 export interface TaskListData {
   focusTask: MergedTask | null
+  scheduledTasks: MergedTask[]
   inProgressTasks: MergedTask[]
   upNextTasks: MergedTask[]
   activeTasks: MergedTask[]
@@ -29,6 +32,8 @@ export interface TaskListData {
   completedTasks: MergedTask[]
   proposals: RepeatingTask[]
   tomorrowProposals: RepeatingTask[]
+  dueDateProposals: DueDateProposal<Task, Project>[]
+  dueDateTomorrowProposals: DueDateProposal<Task, Project>[]
   overflowTasks: MergedTask[]
   allActiveTasks: MergedTask[]
   limit: number
@@ -96,7 +101,8 @@ export function useTaskList(opts?: { excludeFocus?: boolean; limitAdjust?: numbe
       taskNumber: t.taskNumber,
       repeatingTaskId: t.repeatingTaskId,
       inProgress: t.inProgress,
-      noteRef: t.noteRef
+      noteRef: t.noteRef,
+      dueDate: t.dueDate
     }))
 
   const pinnedTasks: MergedTask[] = activeProjects.flatMap((p) =>
@@ -113,7 +119,8 @@ export function useTaskList(opts?: { excludeFocus?: boolean; limitAdjust?: numbe
         taskId: t.id,
         taskNumber: t.taskNumber,
         inProgress: t.inProgress,
-        noteRef: t.noteRef
+        noteRef: t.noteRef,
+        dueDate: t.dueDate
       }))
   )
 
@@ -143,6 +150,16 @@ export function useTaskList(opts?: { excludeFocus?: boolean; limitAdjust?: numbe
       date: tomorrowDate
     })
   }, [repeatingTasks, quickTasks, dismissedRepeating, tomorrowDate])
+
+  // --- Due date proposals ---
+
+  const dueDateProposals = useMemo(() => {
+    return getDueDateProposals<Task, Project>({ projects: activeProjects })
+  }, [activeProjects, today])
+
+  const dueDateTomorrowProposals = useMemo(() => {
+    return getDueDateProposals<Task, Project>({ projects: activeProjects, date: tomorrowDate })
+  }, [activeProjects, tomorrowDate])
 
   // --- Focus task (only when excludeFocus) ---
 
@@ -220,12 +237,21 @@ export function useTaskList(opts?: { excludeFocus?: boolean; limitAdjust?: numbe
   const repeatingActive = nonFocused.filter((t) => isRepeating(t))
   const regularActive = nonFocused.filter((t) => !isRepeating(t))
 
+  // Scheduled tasks: due today or overdue — always visible, don't count against limit
+  const isScheduledForToday = (t: MergedTask): boolean => {
+    if (!t.dueDate) return false
+    return t.dueDate <= today
+  }
+  const scheduledTasks = regularActive.filter((t) => isScheduledForToday(t))
+  const scheduledIds = new Set(scheduledTasks.map((t) => t.id))
+  const nonScheduledRegular = regularActive.filter((t) => !scheduledIds.has(t.id))
+
   // In-progress tasks get priority for limit slots (only when excludeFocus — TodayView)
   const orderedRegular = excludeFocus
-    ? [...regularActive.filter((t) => t.inProgress), ...regularActive.filter((t) => !t.inProgress)]
-    : regularActive
+    ? [...nonScheduledRegular.filter((t) => t.inProgress), ...nonScheduledRegular.filter((t) => !t.inProgress)]
+    : nonScheduledRegular
 
-  const focusConsumesSlot = excludeFocus && focusTask ? !isRepeating(focusTask) : false
+  const focusConsumesSlot = excludeFocus && focusTask ? !isRepeating(focusTask) && !isScheduledForToday(focusTask) : false
   const activeSlots = Math.max(0, limit - (focusConsumesSlot ? 1 : 0))
 
   let activeLimited: MergedTask[]
@@ -252,6 +278,7 @@ export function useTaskList(opts?: { excludeFocus?: boolean; limitAdjust?: numbe
 
   return {
     focusTask,
+    scheduledTasks,
     inProgressTasks,
     upNextTasks,
     activeTasks,
@@ -259,6 +286,8 @@ export function useTaskList(opts?: { excludeFocus?: boolean; limitAdjust?: numbe
     completedTasks,
     proposals,
     tomorrowProposals,
+    dueDateProposals,
+    dueDateTomorrowProposals,
     overflowTasks: overflow,
     allActiveTasks,
     limit,

@@ -285,6 +285,18 @@ export function moveTaskToProject(fromProjectId: string, toProjectId: string, ta
   return nextProjects
 }
 
+export function updateTaskDueDate(projectId: string, taskId: string, dueDate: string | null): Project[] | ServiceError {
+  const data = getData()
+  const projects = [...data.projects]
+  const project = projects.find((p) => p.id === projectId)
+  if (!project) return { error: 'not_found' }
+  const task = project.tasks.find((t) => t.id === taskId)
+  if (!task) return { error: 'not_found' }
+  task.dueDate = dueDate
+  setData('projects', projects)
+  return projects
+}
+
 export function toggleTaskToDoNext(projectId: string, taskId: string): Project[] | ServiceError {
   const data = getData()
   const projects = [...data.projects]

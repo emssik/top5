@@ -65,6 +65,8 @@ declare global {
       toggleTaskInProgress: (projectId: string, taskId: string) => Promise<import('../../shared/types').Project[]>
       moveTaskToProject: (fromProjectId: string, toProjectId: string, taskId: string) => Promise<import('../../shared/types').Project[]>
       toggleTaskToDoNext: (projectId: string, taskId: string) => Promise<import('../../shared/types').Project[]>
+      updateTaskDueDate: (projectId: string, taskId: string, dueDate: string | null) => Promise<import('../../shared/types').Project[]>
+      updateQuickTaskDueDate: (id: string, dueDate: string | null) => Promise<import('../../shared/types').QuickTask[]>
       saveRepeatingTask: (task: import('../../shared/types').RepeatingTask) => Promise<import('../../shared/types').RepeatingTask[]>
       removeRepeatingTask: (id: string) => Promise<import('../../shared/types').RepeatingTask[]>
       reorderRepeatingTasks: (orderedIds: string[]) => Promise<import('../../shared/types').RepeatingTask[]>
