@@ -18,6 +18,7 @@ export default function QuickAddWindow() {
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
   const [pinToToday, setPinToToday] = useState(false)
   const [inProgress, setInProgress] = useState(false)
+  const [dueDate, setDueDate] = useState<string | null>(null)
   const [color, setColor] = useState<ProjectColor>('green')
   const [description, setDescription] = useState('')
   const [firstTask, setFirstTask] = useState('')
@@ -83,7 +84,8 @@ export default function QuickAddWindow() {
               completed: false,
               createdAt: new Date().toISOString(),
               isToDoNext: pinToToday,
-              inProgress
+              inProgress,
+              ...(dueDate ? { dueDate } : {})
             }
             await window.api.saveProject({ ...project, tasks: [...project.tasks, newTask] })
             msg = `Task added to ${project.name}`
@@ -98,7 +100,8 @@ export default function QuickAddWindow() {
             createdAt: new Date().toISOString(),
             completedAt: null,
             order: maxOrder + 1,
-            inProgress
+            inProgress,
+            ...(dueDate ? { dueDate } : {})
           }
           await window.api.saveQuickTask(task)
           msg = `Quick task added: "${title}"`
@@ -151,7 +154,7 @@ export default function QuickAddWindow() {
       console.error('Quick add failed:', err)
       return false
     }
-  }, [inputValue, mode, selectedProjectId, pinToToday, inProgress, color, description, firstTask, buildSchedule])
+  }, [inputValue, mode, selectedProjectId, pinToToday, inProgress, dueDate, color, description, firstTask, buildSchedule])
 
   const switchMode = useCallback((next: Mode) => {
     setMode(next)
@@ -301,6 +304,8 @@ export default function QuickAddWindow() {
               onTogglePin={() => setPinToToday(!pinToToday)}
               inProgress={inProgress}
               onToggleInProgress={() => setInProgress(!inProgress)}
+              dueDate={dueDate}
+              onDueDateChange={setDueDate}
             />
           )}
           {mode === 'project' && (
@@ -370,6 +375,17 @@ export default function QuickAddWindow() {
 
 // ── Task Panel ──
 
+function addDays(days: number): string {
+  const d = new Date()
+  d.setDate(d.getDate() + days)
+  return d.toISOString().slice(0, 10)
+}
+
+function formatDueDate(date: string): string {
+  const d = new Date(date + 'T00:00:00')
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
 function TaskPanel({
   projects,
   selectedProjectId,
@@ -377,7 +393,9 @@ function TaskPanel({
   pinToToday,
   onTogglePin,
   inProgress,
-  onToggleInProgress
+  onToggleInProgress,
+  dueDate,
+  onDueDateChange
 }: {
   projects: Project[]
   selectedProjectId: string | null
@@ -386,7 +404,11 @@ function TaskPanel({
   onTogglePin: () => void
   inProgress: boolean
   onToggleInProgress: () => void
+  dueDate: string | null
+  onDueDateChange: (date: string | null) => void
 }) {
+  const [showDatePicker, setShowDatePicker] = useState(false)
+
   return (
     <>
       <div className="mb-3">
@@ -443,7 +465,59 @@ function TaskPanel({
         >
           <span className="text-[10px]">{'\u25B6'}</span> In Progress
         </button>
+        <button
+          className={`flex items-center gap-1 px-[10px] py-1 rounded-md text-[11px] border transition-all ${
+            dueDate
+              ? 'border-blue-500/30 text-blue-400 bg-blue-500/[0.08]'
+              : 'border-b-subtle text-t-muted bg-surface hover:text-t-secondary hover:border-border'
+          }`}
+          onClick={() => {
+            if (dueDate) {
+              onDueDateChange(null)
+              setShowDatePicker(false)
+            } else {
+              setShowDatePicker(!showDatePicker)
+            }
+          }}
+        >
+          <span className="text-[10px]">{'\uD83D\uDCC5'}</span>
+          {dueDate ? formatDueDate(dueDate) : 'Schedule'}
+          {dueDate && <span className="text-[9px] ml-[2px]">{'\u2715'}</span>}
+        </button>
       </div>
+
+      {showDatePicker && !dueDate && (
+        <div className="flex items-center gap-[6px] mt-2">
+          {[
+            { label: 'Tomorrow', days: 1 },
+            { label: '+2d', days: 2 },
+            { label: '+3d', days: 3 },
+            { label: '+1w', days: 7 }
+          ].map((opt) => (
+            <button
+              key={opt.label}
+              className="px-[8px] py-[4px] rounded-[5px] text-[11px] border border-b-subtle text-t-secondary bg-surface hover:border-border hover:text-t-primary transition-all"
+              onClick={() => {
+                onDueDateChange(addDays(opt.days))
+                setShowDatePicker(false)
+              }}
+            >
+              {opt.label}
+            </button>
+          ))}
+          <input
+            type="date"
+            className="px-[6px] py-[3px] rounded-[5px] text-[11px] border border-b-subtle text-t-secondary bg-surface outline-none focus:border-t-secondary transition-colors"
+            min={new Date().toISOString().slice(0, 10)}
+            onChange={(e) => {
+              if (e.target.value) {
+                onDueDateChange(e.target.value)
+                setShowDatePicker(false)
+              }
+            }}
+          />
+        </div>
+      )}
     </>
   )
 }

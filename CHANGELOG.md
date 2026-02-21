@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.54.0] - 2026-02-21
+
+### Added
+
+- Due date picker in Quick Add window: "Schedule" button with quick-set options (Tomorrow, +2d, +3d, +1w) and calendar input for setting due dates on new tasks
+- Due date passed through to both project tasks and standalone quick tasks created via Quick Add
+
 ## [1.53.0] - 2026-02-21
 
 ### Added
