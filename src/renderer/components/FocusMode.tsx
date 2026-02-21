@@ -4,7 +4,7 @@ import { useTaskList } from '../hooks/useTaskList'
 import { normalizeProjectLinks, openProjectLink, projectColorValue } from '../utils/projects'
 import { checkInMinutes } from '../utils/checkInTime'
 import { STANDALONE_PROJECT_ID } from '../utils/constants'
-import type { Task, ProjectLink } from '../types'
+import type { Task, ProjectLink, QuickTask } from '../types'
 import { formatTaskId, formatQuickTaskId } from '../../shared/taskId'
 
 function formatSessionTime(totalSeconds: number): string {
@@ -45,7 +45,7 @@ const FOCUS_HEIGHT_NORMAL = 58
 const FOCUS_HEIGHT_PICKER = 320
 
 export default function FocusMode() {
-  const { projects, quickTasks, focusCheckIns, config, setFocus } = useProjects()
+  const { projects, quickTasks, focusCheckIns, config, setFocus, repeatingTasks } = useProjects()
   const { activeTasks, repeatingActive } = useTaskList()
   const [confirmAction, setConfirmAction] = useState<{ minutes: number; type: 'exit' | 'complete' } | null>(null)
   const [isDev, setIsDev] = useState(false)
@@ -85,6 +85,18 @@ export default function FocusMode() {
   const task = isStandalone
     ? quickTasks.find((t) => t.id === config.focusTaskId)
     : project?.tasks.find((t) => t.id === config.focusTaskId)
+
+  const repeatingTaskLink = useMemo(() => {
+    const quickTask = isStandalone ? (task as QuickTask | undefined) : null
+    if (!quickTask?.repeatingTaskId) return null
+    const parent = repeatingTasks.find((rt) => rt.id === quickTask.repeatingTaskId)
+    return parent?.link?.trim() || null
+  }, [isStandalone, task, repeatingTasks])
+
+  const openRepeatingTaskLink = () => {
+    if (!repeatingTaskLink) return
+    window.api.openExternal(repeatingTaskLink)
+  }
   // Project label for the bar (code or short name)
   const projLabel = projectLabel(project ?? null, isStandalone)
   const projColor = project ? projectColorValue(project.color) : undefined
@@ -300,6 +312,15 @@ export default function FocusMode() {
         >
           {task?.title?.replace(/^\(✂\d+\)\s*/, '') || 'No task'}
         </span>
+        {repeatingTaskLink && (
+          <button
+            onClick={openRepeatingTaskLink}
+            className="w-[24px] h-[24px] rounded-[6px] bg-transparent text-t-muted text-[11px] hover:bg-hover hover:text-t-secondary transition-all flex items-center justify-center cursor-pointer border-none flex-shrink-0"
+            title="Open link"
+          >
+            🔗
+          </button>
+        )}
         <div className="flex items-center gap-1 flex-shrink-0 whitespace-nowrap bg-blue-500/12 rounded-[10px] px-2.5 py-[3px]">
           <span className="text-[12px] font-semibold text-blue-400 tabular-nums">
             {formatSessionTime(totalSeconds)}

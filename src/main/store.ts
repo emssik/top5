@@ -53,8 +53,7 @@ const defaultData: AppData = {
   quickTasks: [],
   quickNotes: '',
   repeatingTasks: [],
-  dismissedRepeating: [],
-  dismissedRepeatingDate: '',
+  dismissedRepeating: {},
   config: {
     globalShortcut: 'CommandOrControl+Shift+Space',
     actionShortcuts: {
@@ -727,9 +726,22 @@ function loadData(): AppData {
     const raw = readFileSync(DATA_FILE, 'utf-8')
     const parsed = yaml.load(raw) as Partial<AppData> | null
     const today = new Date().toISOString().slice(0, 10)
-    const dismissedRepeatingDate = parsed?.dismissedRepeatingDate ?? ''
     const projects = assignMissingProjectColors((parsed?.projects ?? defaultData.projects).map(normalizeProject))
     const config = normalizeAppConfig(parsed?.config ?? {})
+    // Migrate old dismissedRepeating format (string[] + dismissedRepeatingDate) to Record<string, string[]>
+    let dismissedRepeating: Record<string, string[]> = {}
+    const rawDismissed = (parsed as Record<string, unknown>)?.dismissedRepeating
+    const rawDismissedDate = (parsed as Record<string, unknown>)?.dismissedRepeatingDate
+    if (Array.isArray(rawDismissed) && typeof rawDismissedDate === 'string' && rawDismissedDate) {
+      // Old format: migrate
+      dismissedRepeating = { [rawDismissedDate]: rawDismissed }
+    } else if (rawDismissed && typeof rawDismissed === 'object' && !Array.isArray(rawDismissed)) {
+      dismissedRepeating = rawDismissed as Record<string, string[]>
+    }
+    // Clean up dates older than today
+    for (const key of Object.keys(dismissedRepeating)) {
+      if (key < today) delete dismissedRepeating[key]
+    }
     const data: AppData = {
       projects,
       quickTasks: parsed?.quickTasks ?? [],
@@ -737,8 +749,7 @@ function loadData(): AppData {
       repeatingTasks: (parsed?.repeatingTasks ?? [])
         .filter(isValidRepeatingTask)
         .map(normalizeRepeatingTask),
-      dismissedRepeating: dismissedRepeatingDate === today ? (parsed?.dismissedRepeating ?? []) : [],
-      dismissedRepeatingDate: dismissedRepeatingDate === today ? today : '',
+      dismissedRepeating,
       config,
       apiConfig: getApiConfigPublic(),
       nextQuickTaskNumber: typeof parsed?.nextQuickTaskNumber === 'number' ? parsed.nextQuickTaskNumber : undefined,
@@ -785,8 +796,7 @@ function migrateFromElectronStore(): void {
       quickTasks: parsed.quickTasks ?? [],
       quickNotes: parsed.quickNotes ?? defaultData.quickNotes,
       repeatingTasks: [],
-      dismissedRepeating: [],
-      dismissedRepeatingDate: '',
+      dismissedRepeating: {},
       config: normalizeAppConfig(parsed.config ?? {})
     }
     saveData(data)
@@ -1051,17 +1061,17 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
     return result
   })
 
-  ipcMain.handle('accept-repeating-proposal', (_event, repeatingTaskId: string) => {
+  ipcMain.handle('accept-repeating-proposal', (_event, repeatingTaskId: string, forDate?: string) => {
     if (typeof repeatingTaskId !== 'string') return getData().quickTasks
-    const result = repeatingTaskService.acceptRepeatingProposal(repeatingTaskId)
+    const result = repeatingTaskService.acceptRepeatingProposal(repeatingTaskId, forDate)
     if (isServiceError(result)) return getData().quickTasks
     notifyAllWindows()
     return result.quickTasks
   })
 
-  ipcMain.handle('dismiss-repeating-proposal', (_event, repeatingTaskId: string) => {
+  ipcMain.handle('dismiss-repeating-proposal', (_event, repeatingTaskId: string, forDate?: string) => {
     if (typeof repeatingTaskId !== 'string') return
-    const result = repeatingTaskService.dismissRepeatingProposal(repeatingTaskId)
+    const result = repeatingTaskService.dismissRepeatingProposal(repeatingTaskId, forDate)
     if (isServiceError(result)) return
     notifyAllWindows()
   })

@@ -9,8 +9,7 @@ interface ProjectsState {
   config: AppConfig
   focusCheckIns: FocusCheckIn[]
   repeatingTasks: RepeatingTask[]
-  dismissedRepeating: string[]
-  dismissedRepeatingDate: string
+  dismissedRepeating: Record<string, string[]>
   winsLock: WinsLockState | null
   loaded: boolean
 
@@ -37,8 +36,8 @@ interface ProjectsState {
   saveRepeatingTask: (task: RepeatingTask) => Promise<void>
   removeRepeatingTask: (id: string) => Promise<void>
   reorderRepeatingTasks: (orderedIds: string[]) => Promise<void>
-  acceptRepeatingProposal: (repeatingTaskId: string) => Promise<void>
-  dismissRepeatingProposal: (repeatingTaskId: string) => Promise<void>
+  acceptRepeatingProposal: (repeatingTaskId: string, forDate?: string) => Promise<void>
+  dismissRepeatingProposal: (repeatingTaskId: string, forDate?: string) => Promise<void>
   lockWinsTasks: (tasks: LockedTaskRef[]) => Promise<void>
   unlockWinsTasks: () => Promise<void>
   loadWinsLock: () => Promise<void>
@@ -62,8 +61,7 @@ export const useProjects = create<ProjectsState>((set, get) => ({
   },
   focusCheckIns: [],
   repeatingTasks: [],
-  dismissedRepeating: [],
-  dismissedRepeatingDate: '',
+  dismissedRepeating: {},
   winsLock: null,
   loaded: false,
 
@@ -83,8 +81,7 @@ export const useProjects = create<ProjectsState>((set, get) => ({
         config: data.config,
         focusCheckIns: checkIns,
         repeatingTasks: data.repeatingTasks ?? [],
-        dismissedRepeating: data.dismissedRepeating ?? [],
-        dismissedRepeatingDate: data.dismissedRepeatingDate ?? '',
+        dismissedRepeating: data.dismissedRepeating ?? {},
         winsLock: data.winsLock ?? null,
         loaded: true
       })
@@ -222,18 +219,18 @@ export const useProjects = create<ProjectsState>((set, get) => ({
     set({ repeatingTasks: updated })
   },
 
-  acceptRepeatingProposal: async (repeatingTaskId: string) => {
-    const updated = await window.api.acceptRepeatingProposal(repeatingTaskId)
+  acceptRepeatingProposal: async (repeatingTaskId: string, forDate?: string) => {
+    const updated = await window.api.acceptRepeatingProposal(repeatingTaskId, forDate)
     set({ quickTasks: updated })
   },
 
-  dismissRepeatingProposal: async (repeatingTaskId: string) => {
-    await window.api.dismissRepeatingProposal(repeatingTaskId)
+  dismissRepeatingProposal: async (repeatingTaskId: string, forDate?: string) => {
+    await window.api.dismissRepeatingProposal(repeatingTaskId, forDate)
     const { dismissedRepeating } = get()
-    const today = new Date().toISOString().slice(0, 10)
+    const dateKey = forDate || new Date().toISOString().slice(0, 10)
+    const existing = dismissedRepeating[dateKey] ?? []
     set({
-      dismissedRepeating: [...dismissedRepeating, repeatingTaskId],
-      dismissedRepeatingDate: today
+      dismissedRepeating: { ...dismissedRepeating, [dateKey]: [...existing, repeatingTaskId] }
     })
   },
 

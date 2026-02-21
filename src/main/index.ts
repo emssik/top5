@@ -162,8 +162,7 @@ app.whenReady().then(() => {
     const proposalCount = getRepeatingTaskProposals({
       repeatingTasks: data.repeatingTasks ?? [],
       quickTasks: qts,
-      dismissedRepeating: data.dismissedRepeating ?? [],
-      dismissedRepeatingDate: data.dismissedRepeatingDate ?? ''
+      dismissedRepeating: data.dismissedRepeating ?? {}
     }).length
     const totalRows = visibleRegularCount + repeatingActiveCount + proposalCount + completedToday.length
     // Separators: only when preceding section has content

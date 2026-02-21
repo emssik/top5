@@ -68,8 +68,8 @@ declare global {
       saveRepeatingTask: (task: import('../../shared/types').RepeatingTask) => Promise<import('../../shared/types').RepeatingTask[]>
       removeRepeatingTask: (id: string) => Promise<import('../../shared/types').RepeatingTask[]>
       reorderRepeatingTasks: (orderedIds: string[]) => Promise<import('../../shared/types').RepeatingTask[]>
-      acceptRepeatingProposal: (repeatingTaskId: string) => Promise<import('../../shared/types').QuickTask[]>
-      dismissRepeatingProposal: (repeatingTaskId: string) => Promise<void>
+      acceptRepeatingProposal: (repeatingTaskId: string, forDate?: string) => Promise<import('../../shared/types').QuickTask[]>
+      dismissRepeatingProposal: (repeatingTaskId: string, forDate?: string) => Promise<void>
       getOperations: (since?: string) => Promise<import('../../shared/types').OperationLogEntry[]>
       switchFocusTask: (projectId: string, taskId: string) => Promise<void>
       resizeFocusWindow: (width: number, height: number) => Promise<void>

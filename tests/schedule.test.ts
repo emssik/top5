@@ -75,8 +75,7 @@ test('proposals respect startDate/endDate and completion filters', () => {
   const proposals = getRepeatingTaskProposals({
     repeatingTasks,
     quickTasks,
-    dismissedRepeating: [],
-    dismissedRepeatingDate: '2026-01-12',
+    dismissedRepeating: {},
     date
   })
 

@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>5 Wins — Zasady</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg-base: #0a0a0a;
+  --bg-card: #171717;
+  --bg-surface: #262626;
+  --c-border: #404040;
+  --c-border-subtle: #262626;
+  --c-text-primary: #f5f5f5;
+  --c-text-heading: #e5e5e5;
+  --c-text-secondary: #a3a3a3;
+  --c-text-muted: #525252;
+  --c-win: #22c55e;
+  --c-loss: #ef4444;
+  --c-accent: #f59e0b;
+}
+
+body.light {
+  --bg-base: #faf4e8;
+  --bg-card: #fdf8ef;
+  --bg-surface: #f0e8d8;
+  --c-border: #d4c9a8;
+  --c-border-subtle: #e8dfc8;
+  --c-text-primary: #3c3836;
+  --c-text-heading: #2e2a26;
+  --c-text-secondary: #6b6258;
+  --c-text-muted: #b0a68e;
+  --c-win: #16a34a;
+  --c-loss: #dc2626;
+  --c-accent: #d97706;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
+  background: var(--bg-base);
+  color: var(--c-text-primary);
+  -webkit-font-smoothing: antialiased;
+  padding: 24px;
+  line-height: 1.5;
+}
+
+.container { max-width: 680px; margin: 0 auto; }
+
+.theme-toggle {
+  position: fixed; top: 12px; right: 12px;
+  background: var(--bg-surface); border: 1px solid var(--c-border);
+  color: var(--c-text-secondary); border-radius: 6px;
+  padding: 4px 10px; font-size: 12px; cursor: pointer;
+}
+.theme-toggle:hover { color: var(--c-text-primary); }
+
+/* Header */
+.header {
+  text-align: center;
+  margin-bottom: 20px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--c-border-subtle);
+}
+.header h1 { font-size: 18px; font-weight: 600; color: var(--c-text-heading); }
+.header p { font-size: 12px; color: var(--c-text-secondary); margin-top: 3px; }
+
+/* 2-column grid */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.full { grid-column: 1 / -1; }
+
+/* Section */
+.section {
+  background: var(--bg-card);
+  border: 1px solid var(--c-border-subtle);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.section-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--c-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+/* Compact rules */
+.rule {
+  font-size: 12px;
+  color: var(--c-text-primary);
+  padding: 4px 0;
+}
+.rule + .rule { border-top: 1px solid var(--c-border-subtle); }
+
+.rule b { color: var(--c-text-heading); font-weight: 600; }
+.rule .dim { color: var(--c-text-secondary); }
+
+/* Tags */
+.tag {
+  display: inline-block; font-size: 10px; padding: 1px 5px;
+  border-radius: 3px; font-weight: 600;
+}
+.tag-win { background: rgba(34,197,94,0.15); color: var(--c-win); }
+.tag-loss { background: rgba(239,68,68,0.15); color: var(--c-loss); }
+.tag-grace { background: rgba(245,158,11,0.15); color: var(--c-accent); }
+
+/* Hierarchy */
+.h-row { display: flex; gap: 8px; padding: 4px 0; font-size: 12px; align-items: baseline; }
+.h-row + .h-row { border-top: 1px solid var(--c-border-subtle); }
+.h-label { color: var(--c-text-secondary); font-size: 11px; min-width: 52px; text-align: right; flex-shrink: 0; }
+.h-desc { flex: 1; }
+.h-note { color: var(--c-text-muted); font-size: 10px; }
+
+/* Action chips */
+.chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.chip {
+  font-size: 10px; padding: 2px 7px; border-radius: 4px;
+  background: var(--bg-surface); color: var(--c-text-secondary);
+  border: 1px solid var(--c-border-subtle);
+}
+.chip.ok { border-color: rgba(34,197,94,0.25); color: var(--c-win); }
+
+/* Dots legend */
+.dots { display: flex; gap: 14px; justify-content: center; }
+.dot-item { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--c-text-secondary); }
+.dot { width: 9px; height: 9px; border-radius: 50%; }
+.dot-w { background: var(--c-win); }
+.dot-l { background: var(--c-loss); }
+.dot-e { background: var(--c-text-muted); }
+
+.footer { text-align: center; padding: 14px 0 4px; font-size: 10px; color: var(--c-text-muted); }
+</style>
+</head>
+<body>
+
+<button class="theme-toggle" onclick="document.body.classList.toggle('light')">◑ motyw</button>
+
+<div class="container">
+
+  <div class="header">
+    <h1>🏆 5 Wins</h1>
+    <p>Zablokuj zadania, wykonaj wszystkie, wygraj dzień</p>
+  </div>
+
+  <div class="grid">
+
+    <!-- LEFT COL: Blokada + Termin + Wynik -->
+
+    <div class="section">
+      <div class="section-title">🔒 Blokada</div>
+      <div class="rule"><b>Co:</b> zadania w limicie <span class="dim">(kłódka przy separatorze)</span></div>
+      <div class="rule"><b>Które:</b> zwykłe + przypięte + fokus. <b>Powtarzalne nie wchodzą.</b></div>
+      <div class="rule"><b>Ile:</b> dowolnie, od 1 w górę</div>
+      <div class="rule"><b>Odblokowanie (✕):</b> anuluje bez zapisu wyniku</div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">📊 Hierarchia</div>
+      <div class="h-row">
+        <span class="h-label">Dzień</span>
+        <span class="h-desc">Wszystko zrobione przed terminem</span>
+      </div>
+      <div class="h-row">
+        <span class="h-label">Tydzień</span>
+        <span class="h-desc">5 dni rozegranych, max 1 przegrana<br><span class="h-note"><span class="tag tag-grace">ulga</span> max 2 takie tygodnie / miesiąc</span></span>
+      </div>
+      <div class="h-row">
+        <span class="h-label">Miesiąc</span>
+        <span class="h-desc">Wszystkie tygodnie wygrane</span>
+      </div>
+      <div class="h-row">
+        <span class="h-label">Rok</span>
+        <span class="h-desc">Min. 11/12 miesięcy<br><span class="h-note"><span class="tag tag-grace">ulga</span> 1 przegrany miesiąc dozwolony</span></span>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">⏰ Termin</div>
+      <div class="rule"><b>Przed 20:00</b> — koniec tego dnia <span class="dim">(23:59)</span></div>
+      <div class="rule"><b>Od 20:00</b> — koniec następnego dnia <span class="dim">(23:59)</span></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">🔥 Serie</div>
+      <div class="rule"><b>Dzienna:</b> kolejne wygrane dni wstecz. Brak wpisu = pominięcie. Przegrana przerywa.</div>
+      <div class="rule"><b>Tygodniowa:</b> kolejne wygrane tygodnie. 2+ przegrane = przerwanie.</div>
+      <div class="rule"><b>Miesięczna:</b> kolejne wygrane miesiące wstecz.</div>
+    </div>
+
+    <!-- FULL WIDTH: Wynik + Akcje + Legenda -->
+
+    <div class="section full">
+      <div class="section-title">⚡ Wynik dnia</div>
+      <div style="display:flex; gap: 20px; font-size: 12px;">
+        <div><span class="tag tag-win">WYGRANA</span> &nbsp;wszystko ukończone — rozliczenie automatyczne</div>
+        <div><span class="tag tag-loss">PRZEGRANA</span> &nbsp;termin minął, nie wszystko zrobione</div>
+      </div>
+    </div>
+
+    <div class="section full" style="display:flex; align-items:center; gap: 14px;">
+      <div style="font-size:11px; color:var(--c-text-secondary); white-space:nowrap;">Podczas blokady:</div>
+      <div class="chips">
+        <span class="chip">przeciąganie</span>
+        <span class="chip">usuwanie</span>
+        <span class="chip">odpinanie</span>
+        <span class="chip">dodawanie</span>
+        <span class="chip ok">kończenie</span>
+        <span class="chip ok">fokus</span>
+        <span class="chip ok">edycja</span>
+        <span class="chip ok">w trakcie</span>
+      </div>
+    </div>
+
+    <div class="full dots">
+      <span class="dot-item"><span class="dot dot-w"></span> wygrana</span>
+      <span class="dot-item"><span class="dot dot-l"></span> przegrana</span>
+      <span class="dot-item"><span class="dot dot-e"></span> brak</span>
+    </div>
+
+    <div class="section full faq">
+      <div class="section-title">💬 Dobre pytania</div>
+      <div class="rule"><b>Mniej niż 5 zadań?</b> Tak — blokujesz ile chcesz (nawet 1). Kończysz wszystkie = wygrana.</div>
+      <div class="rule"><b>Powtarzalne się liczą?</b> Nie — blokada obejmuje tylko zwykłe i przypięte zadania.</div>
+      <div class="rule"><b>Odblokowanie = przegrana?</b> Nie — odblokowanie anuluje dzień bez zapisu. Można zmienić zadania i zablokować ponownie.</div>
+      <div class="rule"><b>Dzień bez blokady?</b> Neutralny — nie jest ani wygraną, ani przegraną. Nie wpływa na tydzień, nie przerywa serii dziennej.</div>
+      <div class="rule"><b>Nie grasz codziennie?</b> Nie musisz. Tydzień wymaga 5 rozegranych dni — nie muszą być pod rząd ani konkretne. Pominięty dzień (bez blokady) jest neutralny, nie liczy się jako przegrana.</div>
+      <div class="rule"><b>Weekendy?</b> Można grać. Wygrana w sobotę/niedzielę liczy się do tygodnia. W serii dziennej weekendy są pomijane — nie przerywają, ale nie budują.</div>
+      <div class="rule"><b>Blokada po 20:00 a data?</b> Termin przesuwa się na następny dzień, ale wygrana zapisywana jest na dzień blokady.</div>
+    </div>
+
+  </div>
+
+  <div class="footer">5 Wins — pasek 30 dni w nagłówku widoku Dziś</div>
+</div>
+
+</body>
+</html>

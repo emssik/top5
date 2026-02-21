@@ -81,6 +81,7 @@ export default function TodayView() {
     activeTasks,
     completedTasks: completedToday,
     proposals,
+    tomorrowProposals,
     overflowTasks,
     allActiveTasks,
     configLimit,
@@ -106,6 +107,7 @@ export default function TodayView() {
   const [showLossBanner, setShowLossBanner] = useState(false)
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; task: MergedTask; section: string } | null>(null)
   const [linksMenu, setLinksMenu] = useState<{ x: number; y: number } | null>(null)
+  const [showWinsRules, setShowWinsRules] = useState(false)
   const hoveredTaskRef = useRef<{ task: MergedTask; section: string } | null>(null)
   const prevLockedRef = useRef(winsLock?.locked ?? false)
 
@@ -113,6 +115,12 @@ export default function TodayView() {
   useEffect(() => {
     window.api.winsGetHistory().then(setWinHistory).catch(() => {})
   }, [isLocked]) // reload after lock changes (win/loss resolved)
+
+  const tomorrowKey = useMemo(() => {
+    const d = new Date()
+    d.setDate(d.getDate() + 1)
+    return d.toISOString().slice(0, 10)
+  }, [])
 
   // 30-day strip data
   const last30 = useMemo(() => {
@@ -144,18 +152,20 @@ export default function TodayView() {
     return false
   }
 
-  // Detect lock cleared: win or loss
+  // Detect lock cleared: win or loss (ignore manual unlock which doesn't create an entry)
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | undefined
     if (prevLockedRef.current && !isLocked) {
-      // Check if last entry is win or loss
       window.api.winsGetHistory().then((history) => {
         setWinHistory(history)
         const recent = history.length > 0 ? history[history.length - 1] : null
-        if (recent?.result === 'win') {
+        // Only show celebration/loss if the entry was just resolved (within last 5s)
+        const isRecent = recent?.resolvedAt && (Date.now() - new Date(recent.resolvedAt).getTime()) < 5000
+        if (!isRecent) return
+        if (recent.result === 'win') {
           setShowWinCelebration(true)
           timer = setTimeout(() => setShowWinCelebration(false), 5000)
-        } else if (recent?.result === 'loss') {
+        } else if (recent.result === 'loss') {
           setShowLossBanner(true)
           timer = setTimeout(() => setShowLossBanner(false), 6000)
         }
@@ -411,6 +421,10 @@ export default function TodayView() {
 
   const handleLock = async () => {
     if (lockableTasks.length === 0) return
+    if (tomorrowProposals.length > 0) {
+      const confirmed = window.confirm('You have unapproved recurring tasks for tomorrow. Are you sure you want to lock today\'s tasks?')
+      if (!confirmed) return
+    }
     const refs = lockableTasks.map(taskToRef)
     await lockWinsTasks(refs)
   }
@@ -781,6 +795,103 @@ export default function TodayView() {
         )
       })()}
 
+      {showWinsRules && (
+        <div className="wins-rules-overlay" onClick={() => setShowWinsRules(false)}>
+          <div className="wins-rules-card" onClick={(e) => e.stopPropagation()}>
+            <button className="wr-close" onClick={() => setShowWinsRules(false)}>&#x2715;</button>
+
+            <div className="wr-header">
+              <h2>🏆 5 Wins</h2>
+              <p>Zablokuj zadania, wykonaj wszystkie, wygraj dzień</p>
+            </div>
+
+            <div className="wr-grid">
+
+              <div className="wr-section">
+                <div className="wr-title">🔒 Blokada</div>
+                <div className="wr-rule"><b>Co:</b> zadania w limicie <span className="wr-dim">(kłódka przy separatorze)</span></div>
+                <div className="wr-rule"><b>Które:</b> zwykłe + przypięte + fokus. <b>Powtarzalne nie wchodzą.</b></div>
+                <div className="wr-rule"><b>Ile:</b> dowolnie, od 1 w górę</div>
+                <div className="wr-rule"><b>Odblokowanie (✕):</b> anuluje bez zapisu wyniku</div>
+              </div>
+
+              <div className="wr-section">
+                <div className="wr-title">📊 Hierarchia</div>
+                <div className="wr-h-row">
+                  <span className="wr-h-label">Dzień</span>
+                  <span className="wr-h-desc">Wszystko zrobione przed terminem</span>
+                </div>
+                <div className="wr-h-row">
+                  <span className="wr-h-label">Tydzień</span>
+                  <span className="wr-h-desc">5 dni rozegranych, max 1 przegrana<br /><span className="wr-h-note"><span className="wr-tag wr-tag-grace">ulga</span> max 2 takie tygodnie / miesiąc</span></span>
+                </div>
+                <div className="wr-h-row">
+                  <span className="wr-h-label">Miesiąc</span>
+                  <span className="wr-h-desc">Wszystkie tygodnie wygrane</span>
+                </div>
+                <div className="wr-h-row">
+                  <span className="wr-h-label">Rok</span>
+                  <span className="wr-h-desc">Min. 11/12 miesięcy<br /><span className="wr-h-note"><span className="wr-tag wr-tag-grace">ulga</span> 1 przegrany miesiąc dozwolony</span></span>
+                </div>
+              </div>
+
+              <div className="wr-section">
+                <div className="wr-title">⏰ Termin</div>
+                <div className="wr-rule"><b>Przed 20:00</b> — koniec tego dnia <span className="wr-dim">(23:59)</span></div>
+                <div className="wr-rule"><b>Od 20:00</b> — koniec następnego dnia <span className="wr-dim">(23:59)</span></div>
+              </div>
+
+              <div className="wr-section">
+                <div className="wr-title">🔥 Serie</div>
+                <div className="wr-rule"><b>Dzienna:</b> kolejne wygrane dni wstecz. Brak wpisu = pominięcie. Przegrana przerywa.</div>
+                <div className="wr-rule"><b>Tygodniowa:</b> kolejne wygrane tygodnie. 2+ przegrane = przerwanie.</div>
+                <div className="wr-rule"><b>Miesięczna:</b> kolejne wygrane miesiące wstecz.</div>
+              </div>
+
+              <div className="wr-section wr-full">
+                <div className="wr-title">⚡ Wynik dnia</div>
+                <div style={{ display: 'flex', gap: '20px', fontSize: '12px' }}>
+                  <div><span className="wr-tag wr-tag-win">WYGRANA</span> &nbsp;wszystko ukończone — rozliczenie automatyczne</div>
+                  <div><span className="wr-tag wr-tag-loss">PRZEGRANA</span> &nbsp;termin minął, nie wszystko zrobione</div>
+                </div>
+              </div>
+
+              <div className="wr-section wr-full" style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <div style={{ fontSize: '11px', color: 'var(--c-text-secondary)', whiteSpace: 'nowrap' }}>Podczas blokady:</div>
+                <div className="wr-chips">
+                  <span className="wr-chip">przeciąganie</span>
+                  <span className="wr-chip">usuwanie</span>
+                  <span className="wr-chip">odpinanie</span>
+                  <span className="wr-chip">dodawanie</span>
+                  <span className="wr-chip wr-chip-ok">kończenie</span>
+                  <span className="wr-chip wr-chip-ok">fokus</span>
+                  <span className="wr-chip wr-chip-ok">edycja</span>
+                  <span className="wr-chip wr-chip-ok">w trakcie</span>
+                </div>
+              </div>
+
+              <div className="wr-full wr-dots">
+                <span className="wr-dot-item"><span className="wr-dot wr-dot-w"></span> wygrana</span>
+                <span className="wr-dot-item"><span className="wr-dot wr-dot-l"></span> przegrana</span>
+                <span className="wr-dot-item"><span className="wr-dot wr-dot-e"></span> brak</span>
+              </div>
+
+              <div className="wr-section wr-full">
+                <div className="wr-title">💬 Dobre pytania</div>
+                <div className="wr-rule"><b>Mniej niż 5 zadań?</b> Tak — blokujesz ile chcesz (nawet 1). Kończysz wszystkie = wygrana.</div>
+                <div className="wr-rule"><b>Powtarzalne się liczą?</b> Nie — blokada obejmuje tylko zwykłe i przypięte zadania.</div>
+                <div className="wr-rule"><b>Odblokowanie = przegrana?</b> Nie — odblokowanie anuluje dzień bez zapisu. Można zmienić zadania i zablokować ponownie.</div>
+                <div className="wr-rule"><b>Dzień bez blokady?</b> Neutralny — nie jest ani wygraną, ani przegraną. Nie wpływa na tydzień, nie przerywa serii dziennej.</div>
+                <div className="wr-rule"><b>Nie grasz codziennie?</b> Nie musisz. Tydzień wymaga 5 rozegranych dni — nie muszą być pod rząd ani konkretne. Pominięty dzień (bez blokady) jest neutralny, nie liczy się jako przegrana.</div>
+                <div className="wr-rule"><b>Weekendy?</b> Można grać. Wygrana w sobotę/niedzielę liczy się do tygodnia. W serii dziennej weekendy są pomijane — nie przerywają, ale nie budują.</div>
+                <div className="wr-rule"><b>Blokada po 20:00 a data?</b> Termin przesuwa się na następny dzień, ale wygrana zapisywana jest na dzień blokady.</div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      )}
+
       {showWinCelebration && (
         <div className="wins-victory-overlay" onClick={() => setShowWinCelebration(false)}>
           <div className="wins-victory-card">
@@ -847,6 +958,7 @@ export default function TodayView() {
         <div className="wins-lock-bar">
           <span className="wins-lock-icon">&#x1f512;</span>
           <span className="wins-lock-progress">{lockProgress.completed}/{lockProgress.total}</span>
+          <button className="wins-rules-btn" onClick={() => setShowWinsRules(true)} title="Zasady gry">?</button>
           {winsLock.deadline && (
             <span className="wins-lock-deadline">{formatCountdown(winsLock.deadline)}</span>
           )}
@@ -932,6 +1044,24 @@ export default function TodayView() {
               <span className="title">{proposal.title}</span>
               <button className="proposal-btn accept" onClick={() => acceptRepeatingProposal(proposal.id)}>✓</button>
               <button className="proposal-btn dismiss" onClick={() => dismissRepeatingProposal(proposal.id)}>✕</button>
+            </div>
+          ))}
+        </>
+      )}
+
+      {tomorrowProposals.length > 0 && (
+        <>
+          <div className="section-label mt-section" style={{ opacity: 0.7 }}>
+            <span style={{ opacity: 0.5 }}>↻</span>
+            <span>Tomorrow</span>
+          </div>
+          {tomorrowProposals.map((proposal) => (
+            <div key={proposal.id} className="proposal-card tomorrow-proposal">
+              <span className="repeat-icon">↻</span>
+              <span className="tomorrow-badge">tomorrow</span>
+              <span className="title">{proposal.title}</span>
+              <button className="proposal-btn accept" onClick={() => acceptRepeatingProposal(proposal.id, tomorrowKey)}>✓</button>
+              <button className="proposal-btn dismiss" onClick={() => dismissRepeatingProposal(proposal.id, tomorrowKey)}>✕</button>
             </div>
           ))}
         </>
