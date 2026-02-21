@@ -420,14 +420,12 @@ body {
 }
 
 .focus-card .task-actions {
-  display: flex;
+  display: none;
   gap: 4px;
-  opacity: 0;
-  transition: opacity 0.15s;
 }
 
 .focus-card:hover .task-actions {
-  opacity: 1;
+  display: flex;
 }
 
 .focus-timer {
@@ -518,14 +516,12 @@ body {
 }
 
 .task-actions {
-  display: flex;
+  display: none;
   gap: 4px;
-  opacity: 0;
-  transition: opacity 0.15s;
 }
 
 .task-card:hover .task-actions {
-  opacity: 1;
+  display: flex;
 }
 
 .task-action-btn {
@@ -1081,32 +1077,81 @@ body {
   color: var(--c-text-primary);
 }
 
-.pin-icon {
-  font-size: 11px;
-  color: var(--c-text-muted);
-  opacity: 0.5;
+/* Corner pin triangle — visual indicator for pinned tasks */
+.pin-corner {
+  position: absolute;
+  top: -1px; right: -1px;
+  width: 14px; height: 14px;
+  clip-path: polygon(0 0, 100% 0, 100% 100%);
+  border-radius: 0 7px 0 0;
+  background: var(--c-accent, #c05621);
+  pointer-events: none;
+  z-index: 2;
 }
 
-.pin-action {
-  font-size: 11px;
-  color: var(--c-text-muted);
+/* Overflow trigger (⋯) */
+.task-overflow-trigger {
   opacity: 0;
-  cursor: pointer;
   transition: opacity 0.15s;
+  font-size: 16px;
+  letter-spacing: 1px;
+  padding: 2px 6px;
+  border-radius: 5px;
   background: none;
   border: none;
-  padding: 2px 4px;
-  border-radius: 4px;
+  cursor: pointer;
+  color: var(--c-text-muted);
+  flex-shrink: 0;
+}
+
+.task-card:hover .task-overflow-trigger { opacity: 0.4; }
+.task-overflow-trigger:hover { opacity: 0.8 !important; }
+
+/* Overflow dropdown menu */
+.task-overflow-menu {
+  position: absolute;
+  right: 8px;
+  top: calc(100% + 4px);
+  background: var(--bg-card);
+  border: 1px solid var(--c-border);
+  border-radius: 8px;
+  padding: 4px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+  z-index: 10;
+  min-width: 160px;
+}
+
+.task-overflow-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 5px;
+  font-size: 13px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  color: var(--c-text-primary);
+  transition: background 0.1s;
   font-family: inherit;
 }
 
-.task-card:hover .pin-action {
-  opacity: 0.35;
+.task-overflow-item:hover { background: var(--bg-surface); }
+.task-overflow-item.danger { color: var(--c-danger, #dc2626); }
+
+.toi-icon {
+  width: 20px;
+  text-align: center;
+  font-size: 13px;
+  flex-shrink: 0;
 }
 
-.pin-action:hover {
-  opacity: 0.8 !important;
-  background: var(--bg-surface);
+.task-overflow-sep {
+  height: 1px;
+  background: var(--c-border-subtle);
+  margin: 4px 6px;
 }
 
 /* Repeat */

@@ -5,7 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.55.0] - 2026-02-22
+
+### Changed
+
+- Task actions in ProjectDetailView replaced with overflow menu (`⋯` button): pin, focus, due date, note, someday, and delete actions consolidated into a single dropdown
+- Pinned task indicator changed from inline pin emoji to a colored corner triangle on the task card
+- Task action buttons (`.task-actions`) use `display: none/flex` toggle instead of opacity transition for cleaner show/hide behavior
+
+### Removed
+
+- Inline pin icon and pin-action button styles (replaced by corner triangle and overflow menu)
 
 ## [1.54.0] - 2026-02-21
 

@@ -30,6 +30,7 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingTitle, setEditingTitle] = useState('')
   const [dueDatePickerId, setDueDatePickerId] = useState<string | null>(null)
+  const [menuOpenId, setMenuOpenId] = useState<string | null>(null)
   const addInputRef = useRef<HTMLInputElement | null>(null)
   const draggedTaskId = useRef<string | null>(null)
   const [dragOverTaskId, setDragOverTaskId] = useState<string | null>(null)
@@ -174,6 +175,27 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
   }, [dueDatePickerId])
 
   useEffect(() => {
+    if (!menuOpenId) return
+    const handleClick = (e: MouseEvent) => {
+      if ((e.target as HTMLElement).closest('.task-overflow-menu')) return
+      if ((e.target as HTMLElement).closest('.task-overflow-trigger')) return
+      setMenuOpenId(null)
+    }
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMenuOpenId(null)
+    }
+    const raf = requestAnimationFrame(() => {
+      window.addEventListener('click', handleClick)
+      window.addEventListener('keydown', handleKey)
+    })
+    return () => {
+      cancelAnimationFrame(raf)
+      window.removeEventListener('click', handleClick)
+      window.removeEventListener('keydown', handleKey)
+    }
+  }, [menuOpenId])
+
+  useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'n' && event.key !== 'N') return
       const target = event.target as HTMLElement
@@ -256,35 +278,39 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
           </div>
         </div>
 
+        {!done && isPinned && <div className="pin-corner" />}
+
         {done ? (
           <div className="task-actions">
             <button className="task-action-btn btn-remove" onClick={() => removeTask(task.id)} title="Delete">×</button>
           </div>
         ) : (
           <>
-            <button className={isPinned ? 'pin-icon' : 'pin-action'} onClick={() => toggleTaskToDoNext(project.id, task.id)} title={isPinned ? 'Unpin' : 'Pin to Today'}>📌</button>
-            <div className="task-actions">
-              <button className="task-action-btn btn-focus" onClick={() => setFocus(project.id, task.id)} title="Focus">▶</button>
-              <div style={{ position: 'relative', display: 'inline-block' }}>
-                <button className="task-action-btn" onClick={() => setDueDatePickerId(dueDatePickerId === task.id ? null : task.id)} title={task.dueDate ? 'Change due date' : 'Set due date'} style={{ opacity: task.dueDate ? 0.9 : 0.5 }}>📅</button>
-                {dueDatePickerId === task.id && (
-                  <div className="due-date-dismiss-popover">
-                    <div className="due-date-quick-btns">
-                      {[{ label: '+1d', days: 1 }, { label: '+2d', days: 2 }, { label: '+3d', days: 3 }, { label: '+1w', days: 7 }].map((opt) => (
-                        <button key={opt.label} onClick={() => { window.api.updateTaskDueDate(project.id, task.id, addDays(opt.days)); setDueDatePickerId(null) }}>{opt.label}</button>
-                      ))}
-                    </div>
-                    <input type="date" defaultValue={task.dueDate ?? ''} autoFocus onChange={(e) => { window.api.updateTaskDueDate(project.id, task.id, e.target.value || null); setDueDatePickerId(null) }} />
-                    {task.dueDate && <button onClick={() => { window.api.updateTaskDueDate(project.id, task.id, null); setDueDatePickerId(null) }}>Remove</button>}
-                  </div>
+            <button className="task-overflow-trigger" onClick={() => setMenuOpenId(menuOpenId === task.id ? null : task.id)}>⋯</button>
+            {menuOpenId === task.id && (
+              <div className="task-overflow-menu">
+                <button className="task-overflow-item" onClick={() => { toggleTaskToDoNext(project.id, task.id); setMenuOpenId(null) }}><span className="toi-icon">📌</span>{isPinned ? 'Unpin' : 'Pin to Today'}</button>
+                <button className="task-overflow-item" onClick={() => { setFocus(project.id, task.id); setMenuOpenId(null) }}><span className="toi-icon">▶</span>Focus</button>
+                <button className="task-overflow-item" onClick={() => { setMenuOpenId(null); setDueDatePickerId(task.id) }}><span className="toi-icon">📅</span>{task.dueDate ? 'Change due date' : 'Set due date'}</button>
+                {config.obsidianStoragePath && (
+                  <button className="task-overflow-item" onClick={() => { window.api.openTaskNote(task.id, task.title, project.name, formatTaskId(task.taskNumber, project.code), task.noteRef); setMenuOpenId(null) }}><span className="toi-icon">📝</span>Open note</button>
                 )}
+                <div className="task-overflow-sep" />
+                <button className="task-overflow-item" onClick={() => { toggleSomeday(task.id); setMenuOpenId(null) }}><span className="toi-icon">⏳</span>{task.someday ? 'Move to active' : 'Move to Someday'}</button>
+                <button className="task-overflow-item danger" onClick={() => { removeTask(task.id); setMenuOpenId(null) }}><span className="toi-icon">×</span>Delete</button>
               </div>
-              {config.obsidianStoragePath && (
-                <button className="task-action-btn" onClick={() => window.api.openTaskNote(task.id, task.title, project.name, formatTaskId(task.taskNumber, project.code), task.noteRef)} title="Open note" style={{ opacity: 0.5 }}>📝</button>
-              )}
-              <button className="task-action-btn" onClick={() => toggleSomeday(task.id)} title={task.someday ? 'Move to active' : 'Move to Someday'} style={{ opacity: 0.5 }}>⏳</button>
-              <button className="task-action-btn btn-remove" onClick={() => removeTask(task.id)} title="Delete">×</button>
-            </div>
+            )}
+            {dueDatePickerId === task.id && (
+              <div className="due-date-dismiss-popover">
+                <div className="due-date-quick-btns">
+                  {[{ label: '+1d', days: 1 }, { label: '+2d', days: 2 }, { label: '+3d', days: 3 }, { label: '+1w', days: 7 }].map((opt) => (
+                    <button key={opt.label} onClick={() => { window.api.updateTaskDueDate(project.id, task.id, addDays(opt.days)); setDueDatePickerId(null) }}>{opt.label}</button>
+                  ))}
+                </div>
+                <input type="date" defaultValue={task.dueDate ?? ''} autoFocus onChange={(e) => { window.api.updateTaskDueDate(project.id, task.id, e.target.value || null); setDueDatePickerId(null) }} />
+                {task.dueDate && <button onClick={() => { window.api.updateTaskDueDate(project.id, task.id, null); setDueDatePickerId(null) }}>Remove</button>}
+              </div>
+            )}
           </>
         )}
       </div>
