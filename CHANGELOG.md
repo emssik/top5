@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.53.0] - 2026-02-21
+
+### Added
+
+- Split & Continue button (`⋯`) on non-repeating tasks in QuickTasksView: completes the current task and creates a continuation with incremented `(✂N)` title prefix
+- `handleSplit` function supporting both pinned project tasks and standalone quick tasks, preserving `noteRef` for Obsidian note continuity
+- `continuationTitle` helper in QuickTasksView for generating sequential split titles
+
 ## [1.52.0] - 2026-02-21
 
 ### Added
