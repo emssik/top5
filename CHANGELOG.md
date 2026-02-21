@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.51.0] - 2026-02-21
+
+### Added
+
+- Tomorrow proposals section in TodayView showing next-day repeating tasks for early accept/dismiss
+- Wins rules modal (?) button in lock bar explaining the 5 Wins game mechanics
+- Optional `link` field on repeating tasks with URL/path support in RepeatView editor
+- Repeating task link button in focus bar for quick access to associated resources
+- Confirmation dialog before locking when tomorrow has unapproved recurring tasks
+
+### Changed
+
+- Migrated `dismissedRepeating` from flat `string[]` + `dismissedRepeatingDate` to `Record<string, string[]>` keyed by date, with automatic migration of old format
+- Accept/dismiss repeating proposal APIs now accept optional `forDate` parameter for date-specific operations
+- Wins deadline threshold changed from 12:00 to 20:00 for next-day extension
+- Win/loss celebration banners now only trigger for entries resolved within the last 5 seconds (ignores manual unlock)
+
 ## [1.50.1] - 2026-02-20
 
 ### Changed

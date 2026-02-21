@@ -118,31 +118,29 @@ export function isRepeatingTaskDueOnDate(task: RepeatingTaskLike, onDate: Date =
 export function getRepeatingTaskProposals<T extends RepeatingTaskLike, Q extends QuickTaskLike>(params: {
   repeatingTasks: T[]
   quickTasks: Q[]
-  dismissedRepeating: string[]
-  dismissedRepeatingDate: string
+  dismissedRepeating: Record<string, string[]>
   date?: Date
 }): T[] {
   const {
     repeatingTasks,
     quickTasks,
     dismissedRepeating,
-    dismissedRepeatingDate,
     date = new Date()
   } = params
-  const today = dateKey(date)
-  const todayDismissed = dismissedRepeatingDate === today ? dismissedRepeating : []
+  const key = dateKey(date)
+  const dismissed = dismissedRepeating[key] ?? []
 
   return repeatingTasks
     .filter((task) => {
       if (!isRepeatingTaskDueOnDate(task, date)) return false
-      if (todayDismissed.includes(task.id)) return false
+      if (dismissed.includes(task.id)) return false
       if (quickTasks.some((quickTask) => quickTask.repeatingTaskId === task.id && !quickTask.completed)) return false
       if (
         quickTasks.some(
           (quickTask) =>
             quickTask.repeatingTaskId === task.id &&
             quickTask.completed &&
-            quickTask.completedAt?.startsWith(today)
+            quickTask.completedAt?.startsWith(key)
         )
       ) {
         return false

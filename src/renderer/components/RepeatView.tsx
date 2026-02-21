@@ -62,6 +62,7 @@ export default function RepeatView() {
   const [startDate, setStartDate] = useState<string | null>(null)
   const [endDate, setEndDate] = useState<string | null>(null)
   const [showDateRange, setShowDateRange] = useState(false)
+  const [link, setLink] = useState('')
 
   const sorted = useMemo(() => [...repeatingTasks].sort((a, b) => a.order - b.order), [repeatingTasks])
 
@@ -79,6 +80,7 @@ export default function RepeatView() {
     setStartDate(null)
     setEndDate(null)
     setShowDateRange(false)
+    setLink('')
   }
 
   const openCreate = () => {
@@ -127,6 +129,7 @@ export default function RepeatView() {
     setStartDate(task.startDate || null)
     setEndDate(task.endDate || null)
     setShowDateRange(hasDateRange)
+    setLink(task.link || '')
   }
 
   const closeModal = () => setModal({ open: false })
@@ -158,7 +161,8 @@ export default function RepeatView() {
         title: trimmedTitle,
         schedule: buildSchedule(),
         startDate,
-        endDate
+        endDate,
+        link: link.trim() || null
       }
       : {
         id: nanoid(),
@@ -171,7 +175,8 @@ export default function RepeatView() {
         dismissedCount: 0,
         completedCount: 0,
         startDate,
-        endDate
+        endDate,
+        link: link.trim() || null
       }
 
     await saveRepeatingTask(payload)
@@ -195,6 +200,7 @@ export default function RepeatView() {
         <div key={task.id} className="repeat-item" style={{ cursor: 'pointer' }} onClick={() => openEdit(task)}>
           <span className="icon">↻</span>
           <span className="title">{task.title}</span>
+          {task.link && <span className="link" style={{ opacity: 0.5, fontSize: 12, marginLeft: 6 }}>🔗</span>}
           <span className="schedule">{formatSchedule(task.schedule)}</span>
         </div>
       ))}
@@ -211,6 +217,11 @@ export default function RepeatView() {
             <div className="form-group">
               <label>Title</label>
               <input className="form-input" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="e.g. Morning standup" />
+            </div>
+
+            <div className="form-group">
+              <label>Link</label>
+              <input className="form-input" value={link} onChange={(event) => setLink(event.target.value)} placeholder="Optional URL or file path" />
             </div>
 
             <div className="form-group">

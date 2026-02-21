@@ -28,6 +28,7 @@ export interface TaskListData {
   repeatingActive: MergedTask[]
   completedTasks: MergedTask[]
   proposals: RepeatingTask[]
+  tomorrowProposals: RepeatingTask[]
   overflowTasks: MergedTask[]
   allActiveTasks: MergedTask[]
   limit: number
@@ -59,7 +60,6 @@ export function useTaskList(opts?: { excludeFocus?: boolean; limitAdjust?: numbe
     config,
     repeatingTasks,
     dismissedRepeating,
-    dismissedRepeatingDate,
     winsLock
   } = useProjects()
 
@@ -125,10 +125,24 @@ export function useTaskList(opts?: { excludeFocus?: boolean; limitAdjust?: numbe
     return getRepeatingTaskProposals({
       repeatingTasks,
       quickTasks,
-      dismissedRepeating,
-      dismissedRepeatingDate
+      dismissedRepeating
     })
-  }, [repeatingTasks, quickTasks, dismissedRepeating, dismissedRepeatingDate, today])
+  }, [repeatingTasks, quickTasks, dismissedRepeating, today])
+
+  const tomorrowDate = useMemo(() => {
+    const d = new Date()
+    d.setDate(d.getDate() + 1)
+    return d
+  }, [today])
+
+  const tomorrowProposals = useMemo(() => {
+    return getRepeatingTaskProposals({
+      repeatingTasks,
+      quickTasks,
+      dismissedRepeating,
+      date: tomorrowDate
+    })
+  }, [repeatingTasks, quickTasks, dismissedRepeating, tomorrowDate])
 
   // --- Focus task (only when excludeFocus) ---
 
@@ -244,6 +258,7 @@ export function useTaskList(opts?: { excludeFocus?: boolean; limitAdjust?: numbe
     repeatingActive,
     completedTasks,
     proposals,
+    tomorrowProposals,
     overflowTasks: overflow,
     allActiveTasks,
     limit,

@@ -37,8 +37,7 @@ export function setupTestEnv(): void {
       quickTasks: [],
       quickNotes: '',
       repeatingTasks: [],
-      dismissedRepeating: [],
-      dismissedRepeatingDate: '',
+      dismissedRepeating: {},
       config: {
         globalShortcut: 'CommandOrControl+Shift+Space',
         actionShortcuts: {
@@ -76,8 +75,7 @@ export function setupTestEnv(): void {
       quickTasks: [],
       quickNotes: '',
       repeatingTasks: [],
-      dismissedRepeating: [],
-      dismissedRepeatingDate: '',
+      dismissedRepeating: {},
       config: {
         globalShortcut: 'CommandOrControl+Shift+Space',
         actionShortcuts: {
@@ -113,8 +111,7 @@ export function setupTestEnv(): void {
     store.setData('projects', [])
     store.setData('quickTasks', [])
     store.setData('repeatingTasks', [])
-    store.setData('dismissedRepeating', [])
-    store.setData('dismissedRepeatingDate', '')
+    store.setData('dismissedRepeating', {})
 
     // Reset server instance for fresh routes
     if (_server) {

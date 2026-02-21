@@ -33,6 +33,7 @@ export interface RepeatingTask {
   completedCount: number
   startDate?: string | null
   endDate?: string | null
+  link?: string | null
 }
 
 export interface QuickTask {
@@ -187,8 +188,7 @@ export interface AppData {
   quickNotes: string
   config: AppConfig
   repeatingTasks: RepeatingTask[]
-  dismissedRepeating: string[]
-  dismissedRepeatingDate: string
+  dismissedRepeating: Record<string, string[]>
   apiConfig?: ApiConfigPublic
   nextQuickTaskNumber?: number
   winsLock?: WinsLockState

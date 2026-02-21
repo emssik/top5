@@ -18,7 +18,7 @@ export function getWinsFilePath(): string {
 function calcDeadline(lockedAt: Date): string {
   const hour = lockedAt.getHours()
   const deadline = new Date(lockedAt)
-  if (hour >= 12) {
+  if (hour >= 20) {
     // Next day midnight
     deadline.setDate(deadline.getDate() + 1)
   }

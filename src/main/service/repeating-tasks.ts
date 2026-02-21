@@ -53,7 +53,7 @@ export function reorderRepeatingTasks(orderedIds: unknown): RepeatingTask[] | Se
   return repeatingTasks
 }
 
-export function acceptRepeatingProposal(id: string): { quickTasks: QuickTask[]; repeatingTasks: RepeatingTask[] } | ServiceError {
+export function acceptRepeatingProposal(id: string, _forDate?: string): { quickTasks: QuickTask[]; repeatingTasks: RepeatingTask[] } | ServiceError {
   const data = getData()
   const repeatingTasks = [...data.repeatingTasks]
   const rt = repeatingTasks.find((t) => t.id === id)
@@ -75,14 +75,16 @@ export function acceptRepeatingProposal(id: string): { quickTasks: QuickTask[]; 
   return { quickTasks, repeatingTasks }
 }
 
-export function dismissRepeatingProposal(id: string): void | ServiceError {
+export function dismissRepeatingProposal(id: string, forDate?: string): void | ServiceError {
   const data = getData()
   if (!data.repeatingTasks.some((t) => t.id === id)) return { error: 'not_found' }
-  const today = new Date().toISOString().slice(0, 10)
-  const dismissed = data.dismissedRepeatingDate === today ? [...data.dismissedRepeating] : []
-  if (!dismissed.includes(id)) dismissed.push(id)
-  setData('dismissedRepeating', dismissed)
-  setData('dismissedRepeatingDate', today)
+  const dateKey = forDate || new Date().toISOString().slice(0, 10)
+  const dismissedMap = { ...data.dismissedRepeating }
+  const existing = dismissedMap[dateKey] ?? []
+  if (!existing.includes(id)) {
+    dismissedMap[dateKey] = [...existing, id]
+  }
+  setData('dismissedRepeating', dismissedMap)
   const repeatingTasks = [...data.repeatingTasks]
   const rt = repeatingTasks.find((t) => t.id === id)
   if (rt) {
