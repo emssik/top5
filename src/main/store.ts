@@ -25,6 +25,7 @@ import * as projectService from './service/projects'
 import * as quickTaskService from './service/quick-tasks'
 import * as repeatingTaskService from './service/repeating-tasks'
 import * as winsService from './service/wins'
+import * as journalService from './service/journal'
 import type {
   Task,
   RepeatSchedule,
@@ -835,6 +836,7 @@ export function notifyAllWindows(): void {
       win.webContents.send('reload-data')
     }
   }
+  try { journalService.generateDictionary() } catch { /* non-critical */ }
 }
 
 export function registerStoreHandlers(ipcMain: IpcMain): void {
@@ -1209,6 +1211,25 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
     return { ok: true }
   })
 
+  // --- Journal ---
+
+  ipcMain.handle('journal-generate-daily', (_event, dateStr?: string) => {
+    return journalService.generateDailyNote(typeof dateStr === 'string' ? dateStr : undefined)
+  })
+
+  ipcMain.handle('journal-generate-weekly', (_event, weekKey?: string) => {
+    return journalService.generateWeeklyNote(typeof weekKey === 'string' ? weekKey : undefined)
+  })
+
+  ipcMain.handle('journal-generate-monthly', (_event, monthKey?: string) => {
+    return journalService.generateMonthlyNote(typeof monthKey === 'string' ? monthKey : undefined)
+  })
+
+  ipcMain.handle('journal-open', (_event, notePath: string) => {
+    if (typeof notePath !== 'string') return
+    journalService.openJournalNote(notePath)
+  })
+
   // Deadline check on start + periodic
   winsService.checkDeadline()
   setInterval(() => {
@@ -1216,4 +1237,7 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
       notifyAllWindows()
     }
   }, 60_000)
+
+  // Refresh Obsidian dictionary on startup (non-critical)
+  try { journalService.generateDictionary() } catch { /* ignore */ }
 }

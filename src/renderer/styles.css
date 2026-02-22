@@ -1735,6 +1735,21 @@ body {
   padding: 6px 0;
 }
 
+.journal-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  opacity: 0.6;
+  transition: opacity 0.15s;
+  line-height: 1;
+}
+.journal-btn:hover {
+  opacity: 1;
+}
+
 .wins-30d-streak {
   font-size: 12px;
   font-weight: 600;

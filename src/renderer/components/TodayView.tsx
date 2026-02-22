@@ -279,6 +279,10 @@ export default function TodayView() {
           event.preventDefault()
           setShowAddInput(true)
         }
+        if (event.key === 'j' && !event.metaKey && !event.ctrlKey && !event.altKey && config.obsidianStoragePath) {
+          event.preventDefault()
+          handleJournal()
+        }
         return
       }
 
@@ -466,6 +470,13 @@ export default function TodayView() {
 
   const handleUnlock = async () => {
     await unlockWinsTasks()
+  }
+
+  const handleJournal = async () => {
+    const result = await window.api.journalGenerateDaily()
+    if (result?.notePath) {
+      await window.api.journalOpen(result.notePath)
+    }
   }
 
   const startEditing = (task: MergedTask) => {
@@ -986,6 +997,11 @@ export default function TodayView() {
               />
             ))}
           </div>
+          {config.obsidianStoragePath && (
+            <button className="journal-btn" onClick={handleJournal} title="Open daily journal (J)">
+              📓
+            </button>
+          )}
         </div>
       )}
 

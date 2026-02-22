@@ -26,6 +26,8 @@ Desktop app for attention management. Configurable project limit (default 5), mi
 - **Light/dark theme** — warm notebook palette (light) or OLED-friendly dark, persisted across sessions
 - **Quick notes** — global scratchpad in a slide-in panel
 - **Shortcuts** — `Cmd+Shift+Space` (global) to toggle app; `Cmd+Shift+N` (global) for Quick Add; `Cmd+1-5` to jump to project and `Cmd+Shift+F` to toggle focus (local, configurable)
+- **Obsidian journal** — auto-generated daily/weekly/monthly notes in Obsidian vault with completed tasks, focus time, and 5 Wins results; preserves user-written reflections on re-generation; project dictionary for autocomplete via Various Complements plugin ([docs](docs/journal.md))
+- **Deep links** — `top5://project/<id>` links open projects from Obsidian notes or terminal; single instance lock ensures the running app handles the navigation
 - **HTTP API** — local REST API (Fastify, `127.0.0.1:15055`) for automations and AI agents; Bearer token auth, full CRUD for projects, quick tasks, and repeating tasks ([docs](docs/API.md))
 - **Dev mode isolation** — separate data directory in development, preventing dev sessions from modifying production data
 - **Persistent storage** — YAML config + JSONL check-ins + JSONL operation log + JSONL wins history, synced via iCloud Drive with daily backups
@@ -65,6 +67,7 @@ npm run test:api
 - `docs/CODING_GUIDE.md` — coding conventions and patterns
 - `docs/API.md` — HTTP API reference
 - `docs/wins.md` — 5 Wins rules, hierarchy, and streak definitions
+- `docs/journal.md` — Obsidian journal integration, deep links, and project dictionary
 
 ## Keyboard shortcuts
 
@@ -76,6 +79,7 @@ npm run test:api
 | `Cmd+Shift+N` | Global | Quick Add window (configurable) |
 | `Tab` | Quick Add | Switch between Task / Project / Repeat modes |
 | `n` | Local | Add quick task / focus add-task input (context-dependent) |
+| `j` | Local | Generate and open today's journal note in Obsidian |
 
 Global shortcuts work system-wide. Local shortcuts work only when the app window is focused. Shortcut bindings are stored in `config.actionShortcuts`.
 
@@ -84,12 +88,12 @@ Global shortcuts work system-wide. Local shortcuts work only when the app window
 ```
 src/
   main/
-    index.ts           # BrowserWindow, app lifecycle, IPC registration
+    index.ts           # BrowserWindow, app lifecycle, IPC registration, deep link protocol
     store.ts           # YAML/JSONL storage, iCloud sync, daily backups, IPC handlers, wins lock/deadline checks
     api/
       server.ts        # Fastify HTTP API server (start/stop/restart)
       routes/          # REST endpoints: projects, quick-tasks, repeating-tasks, meta
-    service/           # Business logic layer (projects, quick-tasks, repeating-tasks, wins)
+    service/           # Business logic layer (projects, quick-tasks, repeating-tasks, wins, journal)
     launchers.ts       # VS Code, iTerm, Obsidian, browser launchers
     focus-window.ts    # Focus mode window, check-in popups, session tracking
     quick-add-window.ts # Quick Add overlay window

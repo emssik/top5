@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
+## [1.56.0] - 2026-02-22
+
+### Added
+
+- Obsidian journal integration: auto-generated daily, weekly, and monthly notes in Obsidian vault with completed tasks, focus time, and 5 Wins results
+- Daily notes preserve user-written Refleksja and Notatki sections on re-generation; Zrobione section always refreshed from current data
+- Weekly notes with day-by-day breakdown table, focus per project, and W/L stats
+- Monthly notes with focus per project and links to weekly summaries
+- Auto-trigger: `resolveDay()` generates daily note; Monday auto-generates previous week; 1st of month auto-generates previous month
+- Journal button and `j` keyboard shortcut in TodayView 30-day strip to generate and open daily note in Obsidian
+- Deep links: `top5://project/<id>` protocol opens projects from Obsidian notes or terminal
+- Single instance lock: second app launch forwards deep link URL to the running instance instead of opening a duplicate
+- Project dictionary (`.top5-dictionary.md`) for autocomplete via Obsidian Various Complements plugin, auto-refreshed on data changes and startup
+- Documentation: `docs/journal.md` covering journal structure, deep links, dictionary setup, and architecture
+
 ## [1.55.3] - 2026-02-22
 
 ### Fixed
