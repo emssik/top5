@@ -3,6 +3,7 @@ import { join } from 'path'
 import { randomUUID } from 'crypto'
 import type { LockedTaskRef, WinsLockState, WinEntry, StreakStats } from '../../shared/types'
 import { calcStreaks } from '../../shared/wins'
+import { dateKey } from '../../shared/schedule'
 import { getData, setData, getConfigDir, appendOperation } from '../store'
 
 const WINS_FILE_NAME = 'wins.jsonl'
@@ -110,7 +111,7 @@ export function checkDeadline(): boolean {
 function resolveDay(result: 'win' | 'loss', lock: WinsLockState, completedCount: number): void {
   const entry: WinEntry = {
     id: randomUUID().slice(0, 21),
-    date: (lock.lockedAt ?? new Date().toISOString()).slice(0, 10),
+    date: dateKey(new Date()),
     lockedAt: lock.lockedAt ?? new Date().toISOString(),
     resolvedAt: new Date().toISOString(),
     result,
