@@ -47,7 +47,7 @@ function scheduleToMonthlySubMode(schedule: RepeatSchedule): MonthlySubMode {
 }
 
 export default function RepeatView() {
-  const { repeatingTasks, saveRepeatingTask, removeRepeatingTask } = useProjects()
+  const { repeatingTasks, saveRepeatingTask, removeRepeatingTask, projects } = useProjects()
   const [modal, setModal] = useState<ModalState>({ open: false })
   const [title, setTitle] = useState('')
   const [mode, setMode] = useState<ScheduleMode>('daily')
@@ -63,6 +63,9 @@ export default function RepeatView() {
   const [endDate, setEndDate] = useState<string | null>(null)
   const [showDateRange, setShowDateRange] = useState(false)
   const [link, setLink] = useState('')
+  const [projectId, setProjectId] = useState<string | null>(null)
+
+  const activeProjects = useMemo(() => projects.filter((p) => !p.archivedAt && !p.suspendedAt), [projects])
 
   const sorted = useMemo(() => [...repeatingTasks].sort((a, b) => a.order - b.order), [repeatingTasks])
 
@@ -81,6 +84,7 @@ export default function RepeatView() {
     setEndDate(null)
     setShowDateRange(false)
     setLink('')
+    setProjectId(null)
   }
 
   const openCreate = () => {
@@ -130,6 +134,7 @@ export default function RepeatView() {
     setEndDate(task.endDate || null)
     setShowDateRange(hasDateRange)
     setLink(task.link || '')
+    setProjectId(task.projectId || null)
   }
 
   const closeModal = () => setModal({ open: false })
@@ -162,7 +167,8 @@ export default function RepeatView() {
         schedule: buildSchedule(),
         startDate,
         endDate,
-        link: link.trim() || null
+        link: link.trim() || null,
+        projectId: projectId || null
       }
       : {
         id: nanoid(),
@@ -176,7 +182,8 @@ export default function RepeatView() {
         completedCount: 0,
         startDate,
         endDate,
-        link: link.trim() || null
+        link: link.trim() || null,
+        projectId: projectId || null
       }
 
     await saveRepeatingTask(payload)
@@ -196,14 +203,18 @@ export default function RepeatView() {
         <span>Repeating Tasks</span>
       </div>
 
-      {sorted.map((task) => (
-        <div key={task.id} className="repeat-item" style={{ cursor: 'pointer' }} onClick={() => openEdit(task)}>
-          <span className="icon">↻</span>
-          <span className="title">{task.title}</span>
-          {task.link && <span className="link" style={{ opacity: 0.5, fontSize: 12, marginLeft: 6 }}>🔗</span>}
-          <span className="schedule">{formatSchedule(task.schedule)}</span>
-        </div>
-      ))}
+      {sorted.map((task) => {
+        const proj = task.projectId ? projects.find((p) => p.id === task.projectId) : null
+        return (
+          <div key={task.id} className="repeat-item" style={{ cursor: 'pointer' }} onClick={() => openEdit(task)}>
+            <span className="icon">↻</span>
+            <span className="title">{task.title}</span>
+            {proj?.code && <span style={{ opacity: 0.45, fontSize: 11, marginLeft: 6 }}>[{proj.code}]</span>}
+            {task.link && <span className="link" style={{ opacity: 0.5, fontSize: 12, marginLeft: 6 }}>🔗</span>}
+            <span className="schedule">{formatSchedule(task.schedule)}</span>
+          </div>
+        )
+      })}
 
       <button className="add-task-btn" style={{ marginTop: 8 }} onClick={openCreate}>
         <span className="plus">+</span> Add repeating task
@@ -222,6 +233,20 @@ export default function RepeatView() {
             <div className="form-group">
               <label>Link</label>
               <input className="form-input" value={link} onChange={(event) => setLink(event.target.value)} placeholder="Optional URL or file path" />
+            </div>
+
+            <div className="form-group">
+              <label>Project</label>
+              <select
+                className="form-input"
+                value={projectId || ''}
+                onChange={(event) => setProjectId(event.target.value || null)}
+              >
+                <option value="">None</option>
+                {activeProjects.map((p) => (
+                  <option key={p.id} value={p.id}>{p.code ? `[${p.code}] ` : ''}{p.name}</option>
+                ))}
+              </select>
             </div>
 
             <div className="form-group">

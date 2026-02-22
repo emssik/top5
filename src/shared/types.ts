@@ -35,6 +35,7 @@ export interface RepeatingTask {
   startDate?: string | null
   endDate?: string | null
   link?: string | null
+  projectId?: string | null
 }
 
 export interface QuickTask {
@@ -49,6 +50,7 @@ export interface QuickTask {
   taskNumber?: number
   noteRef?: string
   dueDate?: string | null
+  projectId?: string | null
 }
 
 export type ProjectColor =

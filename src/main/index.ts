@@ -29,6 +29,11 @@ function handleDeepLink(url: string): void {
   mainWindow.focus()
 }
 
+// Dev mode: separate app identity so dev and prod can run side by side
+if (IS_DEV) {
+  app.setPath('userData', join(app.getPath('userData'), '-dev'))
+}
+
 // Single instance lock — second launch forwards deep link to first instance
 const gotTheLock = app.requestSingleInstanceLock()
 if (!gotTheLock) {

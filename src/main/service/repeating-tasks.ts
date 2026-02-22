@@ -66,7 +66,8 @@ export function acceptRepeatingProposal(id: string, _forDate?: string): { quickT
     createdAt: new Date().toISOString(),
     completedAt: null,
     order: quickTasks.filter((t) => !t.completed).length,
-    repeatingTaskId: id
+    repeatingTaskId: id,
+    ...(rt.projectId ? { projectId: rt.projectId } : {})
   }
   quickTasks.push(newTask)
   setData('quickTasks', quickTasks)

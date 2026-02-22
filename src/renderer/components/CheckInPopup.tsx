@@ -16,6 +16,9 @@ export default function CheckInPopup() {
 
       if (focusPid === STANDALONE_PROJECT_ID) {
         const qt = (data.quickTasks ?? []).find((t) => t.id === focusTid)
+        if (qt?.projectId) {
+          projectIdRef.current = qt.projectId
+        }
         setTaskTitle(qt?.title ?? '')
       } else {
         const project = data.projects.find((p) => p.id === focusPid)

@@ -1,5 +1,4 @@
 import type { FocusCheckIn } from '../types'
-import { STANDALONE_PROJECT_ID } from './constants'
 
 export function checkInMinutes(checkIn: FocusCheckIn): number {
   if (checkIn.minutes !== undefined) return checkIn.minutes
@@ -24,7 +23,7 @@ export function calcProjectTime(checkIns: FocusCheckIn[], projectId: string): nu
 
 export function calcQuickTaskTime(checkIns: FocusCheckIn[], quickTaskId: string): number {
   return checkIns
-    .filter((c) => c.projectId === STANDALONE_PROJECT_ID && c.taskId === quickTaskId)
+    .filter((c) => c.taskId === quickTaskId)
     .reduce((sum, c) => sum + checkInMinutes(c), 0)
 }
 

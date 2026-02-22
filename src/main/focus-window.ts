@@ -155,6 +155,10 @@ function resolveFocusTask(): { projectId?: string; projectName?: string; taskTit
 
   if (pid === '__standalone__') {
     const qt = (quickTasks ?? []).find((t) => t.id === tid)
+    if (qt?.projectId) {
+      const project = projects.find((p) => p.id === qt.projectId)
+      return { projectId: qt.projectId, projectName: project?.name, taskTitle: qt?.title }
+    }
     return { taskTitle: qt?.title }
   }
 
