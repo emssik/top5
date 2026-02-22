@@ -9,7 +9,6 @@ import { registerQuickAddHandlers } from './quick-add-window'
 import { getRepeatingTaskProposals, dateKey } from '../shared/schedule'
 import type { QuickTask, Project, Task } from '../shared/types'
 import { CLEAN_VIEW_ROW_HEIGHT, CLEAN_VIEW_SEPARATOR_HEIGHT, CLEAN_VIEW_HEADER_HEIGHT, CLEAN_VIEW_MIN_HEIGHT, CLEAN_VIEW_WIDTH } from '../shared/constants'
-import { startApiServer } from './api/server'
 
 let mainWindow: BrowserWindow | null = null
 let savedBounds: Electron.Rectangle | null = null
@@ -188,7 +187,9 @@ app.whenReady().then(() => {
   registerLocalShortcuts(mainWindow!)
 
   // Start HTTP API server (if enabled in config)
-  startApiServer().catch((err) => console.error('[API] Start failed:', err))
+  import('./api/server').then(({ startApiServer }) =>
+    startApiServer().catch((err) => console.error('[API] Start failed:', err))
+  )
 
   ipcMain.handle('enter-clean-view', () => {
     if (!mainWindow) return

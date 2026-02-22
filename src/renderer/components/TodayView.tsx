@@ -12,6 +12,7 @@ import TaskIdBadge from './TaskIdBadge'
 import { formatTaskId, formatQuickTaskId, computeNotePath } from '../../shared/taskId'
 import { dateKey } from '../../shared/schedule'
 import RepeatUpdateModal from './RepeatUpdateModal'
+import { Linkify } from './Linkify'
 
 function formatFocusTimer(seconds: number): string {
   const mm = Math.floor(seconds / 60)
@@ -749,7 +750,7 @@ export default function TodayView() {
             <div className="task-title" onDoubleClick={() => startEditing(task)}>
               {task.repeatingTaskId && <span style={{ opacity: 0.6, marginRight: 4 }}>↻</span>}
               <TaskIdBadge taskNumber={task.taskNumber} projectCode={task.projectCode} kind={task.kind} />
-              {task.title}
+              <Linkify text={task.title} />
             </div>
           )}
           {renderMeta(task)}
@@ -778,7 +779,7 @@ export default function TodayView() {
       <div className="task-content">
         <div className="task-title completed">
           <TaskIdBadge taskNumber={task.taskNumber} projectCode={task.projectCode} kind={task.kind} />
-          {task.title}
+          <Linkify text={task.title} />
         </div>
         {renderMeta(task, true)}
       </div>
@@ -1077,7 +1078,7 @@ export default function TodayView() {
               ) : (
                 <div className="task-title" onDoubleClick={() => startEditing(focusTask)}>
                   <TaskIdBadge taskNumber={focusTask.taskNumber} projectCode={focusTask.projectCode} kind={focusTask.kind} />
-                  {focusTask.title}
+                  <Linkify text={focusTask.title} />
                 </div>
               )}
               {renderMeta(focusTask)}
@@ -1129,7 +1130,7 @@ export default function TodayView() {
           {proposals.map((proposal) => (
             <div key={proposal.id} className="proposal-card">
               <span className="repeat-icon">↻</span>
-              <span className="title">{proposal.title}</span>
+              <span className="title"><Linkify text={proposal.title} /></span>
               <button className="proposal-btn accept" onClick={() => acceptRepeatingProposal(proposal.id)}>✓</button>
               <button className="proposal-btn dismiss" onClick={() => dismissRepeatingProposal(proposal.id)}>✕</button>
             </div>
@@ -1148,7 +1149,7 @@ export default function TodayView() {
               <span className="due-date-icon">📅</span>
               <span className="title">
                 {proj.code && <span style={{ opacity: 0.6, marginRight: 4 }}>[{proj.code}]</span>}
-                {task.title}
+                <Linkify text={task.title} />
               </span>
               <button className="proposal-btn accept" onClick={() => toggleTaskToDoNext(proj.id, task.id)} title="Pin to today">✓</button>
               <div style={{ position: 'relative' }}>
@@ -1180,7 +1181,7 @@ export default function TodayView() {
             <div key={proposal.id} className="proposal-card tomorrow-proposal">
               <span className="repeat-icon">↻</span>
               <span className="tomorrow-badge">tomorrow</span>
-              <span className="title">{proposal.title}</span>
+              <span className="title"><Linkify text={proposal.title} /></span>
               <button className="proposal-btn accept" onClick={() => acceptRepeatingProposal(proposal.id, tomorrowKey)}>✓</button>
               <button className="proposal-btn dismiss" onClick={() => dismissRepeatingProposal(proposal.id, tomorrowKey)}>✕</button>
             </div>
@@ -1215,7 +1216,7 @@ export default function TodayView() {
               <span className="tomorrow-badge">tomorrow</span>
               <span className="title">
                 {proj.code && <span style={{ opacity: 0.6, marginRight: 4 }}>[{proj.code}]</span>}
-                {task.title}
+                <Linkify text={task.title} />
               </span>
               <div style={{ position: 'relative' }}>
                 <button className="proposal-btn dismiss" onClick={() => setDueDateDismissId(dueDateDismissId === task.id ? null : task.id)} title="Reschedule / remove">✕</button>

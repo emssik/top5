@@ -10,6 +10,7 @@ import TaskIdBadge from './TaskIdBadge'
 import { formatTaskId, formatQuickTaskId, computeNotePath } from '../../shared/taskId'
 import RepeatUpdateModal from './RepeatUpdateModal'
 import { dateKey } from '../../shared/schedule'
+import { Linkify } from './Linkify'
 
 function continuationTitle(title: string): string {
   const match = title.match(/^\(✂(\d+)\) (.*)$/)
@@ -387,7 +388,7 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
                 style={{ opacity: isCompleted ? 0.3 : 1 }}
                 title={task.title}
               >
-                {cleanView ? task.title.replace(/^\(✂\d+\)\s*/, '') : task.title}
+                <Linkify text={cleanView ? task.title.replace(/^\(✂\d+\)\s*/, '') : task.title} />
               </span>
             )}
           </div>
@@ -460,7 +461,7 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
           <div className="flex-1 min-w-0">
             <span className="text-sm text-t-muted line-through truncate block">
               <TaskIdBadge taskNumber={task.taskNumber} projectCode={task.projectCode} kind={task.kind} />
-              {task.title}
+              <Linkify text={task.title} />
             </span>
             {task.kind === 'pinned' && task.projectName && (
               <span className="text-[10px] text-blue-400/50">{task.projectName}</span>
@@ -518,7 +519,7 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
               >
                 {task.repeatingTaskId && <span className="text-t-muted mr-1" style={{ opacity: 0.5 }}>↻</span>}
                 <TaskIdBadge taskNumber={task.taskNumber} projectCode={task.projectCode} kind={task.kind} />
-                {task.title}
+                <Linkify text={task.title} />
               </span>
               {task.kind === 'pinned' && task.projectName && (
                 <span className="text-[10px] text-blue-400/70">{task.projectName}</span>
@@ -578,7 +579,7 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
             ↻
           </button>
           <span className="flex-1 text-[15px] leading-snug truncate block cursor-default">
-            {rt.title}
+            <Linkify text={rt.title} />
           </span>
           <button
             onClick={() => dismissRepeatingProposal(rt.id)}
@@ -594,7 +595,7 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
     return (
       <div key={`proposal-${rt.id}`} className="group flex items-center gap-2 py-1.5 px-3 rounded-lg bg-card/50 border border-dashed border-border-subtle">
         <span className="text-t-muted text-sm flex-shrink-0" style={{ opacity: 0.5 }}>↻</span>
-        <span className="flex-1 text-sm text-t-secondary truncate">{rt.title}</span>
+        <span className="flex-1 text-sm text-t-secondary truncate"><Linkify text={rt.title} /></span>
         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <button
             onClick={() => acceptRepeatingProposal(rt.id)}

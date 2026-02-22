@@ -6,6 +6,7 @@ import { checkInMinutes } from '../utils/checkInTime'
 import { STANDALONE_PROJECT_ID } from '../utils/constants'
 import type { Task, ProjectLink, QuickTask } from '../types'
 import { formatTaskId, formatQuickTaskId } from '../../shared/taskId'
+import { Linkify } from './Linkify'
 
 function formatSessionTime(totalSeconds: number): string {
   const min = Math.floor(totalSeconds / 60)
@@ -310,7 +311,7 @@ export default function FocusMode() {
           className="text-[14px] font-semibold truncate text-t-primary flex-1 min-w-0 cursor-default"
           onDoubleClick={() => { if (task?.title) navigator.clipboard.writeText(task.title) }}
         >
-          {task?.title?.replace(/^\(✂\d+\)\s*/, '') || 'No task'}
+          {task?.title ? <Linkify text={task.title.replace(/^\(✂\d+\)\s*/, '')} /> : 'No task'}
         </span>
         {repeatingTaskLink && (
           <button

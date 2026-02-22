@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [1.58.0] - 2026-02-22
+
+### Added
+
+- Linkify component: URLs in task titles are now clickable links across all views (TodayView, QuickTasksView, ProjectDetailView, FocusMode, RepeatView)
+
+### Changed
+
+- API server uses lazy dynamic import for faster app startup
+
 ## [1.57.0] - 2026-02-22
 
 ### Added

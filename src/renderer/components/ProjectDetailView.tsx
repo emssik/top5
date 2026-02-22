@@ -7,6 +7,7 @@ import { projectColorValue, normalizeProjectLinks, openProjectLink } from '../ut
 import TaskIdBadge from './TaskIdBadge'
 import { formatTaskId } from '../../shared/taskId'
 import { dateKey } from '../../shared/schedule'
+import { Linkify } from './Linkify'
 
 function addDays(days: number): string {
   const d = new Date()
@@ -264,7 +265,7 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
           ) : (
             <div className={`task-title ${done ? 'completed' : ''}`} onDoubleClick={() => !done && startEditing(task)}>
               <TaskIdBadge taskNumber={task.taskNumber} projectCode={project.code} kind="project" />
-              {task.title}
+              <Linkify text={task.title} />
             </div>
           )}
           <div className="task-meta">

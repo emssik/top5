@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { nanoid } from 'nanoid'
 import { useProjects } from '../hooks/useProjects'
 import type { RepeatSchedule, RepeatingTask } from '../types'
+import { Linkify } from './Linkify'
 
 type ScheduleMode = 'daily' | 'weekly' | 'interval' | 'monthly'
 type MonthlySubMode = 'day' | 'nthWeekday' | 'everyN'
@@ -208,7 +209,7 @@ export default function RepeatView() {
         return (
           <div key={task.id} className="repeat-item" style={{ cursor: 'pointer' }} onClick={() => openEdit(task)}>
             <span className="icon">↻</span>
-            <span className="title">{task.title}</span>
+            <span className="title"><Linkify text={task.title} /></span>
             {proj?.code && <span style={{ opacity: 0.45, fontSize: 11, marginLeft: 6 }}>[{proj.code}]</span>}
             {task.link && <span className="link" style={{ opacity: 0.5, fontSize: 12, marginLeft: 6 }}>🔗</span>}
             <span className="schedule">{formatSchedule(task.schedule)}</span>

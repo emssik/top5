@@ -480,6 +480,17 @@ body {
   overflow-wrap: anywhere;
 }
 
+.task-link {
+  color: var(--c-accent, #5b9fd4);
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  transition: text-decoration-color 0.15s;
+  cursor: pointer;
+}
+.task-link:hover {
+  text-decoration-color: currentColor;
+}
+
 .inline-edit-input {
   font-size: inherit;
   font-weight: inherit;
