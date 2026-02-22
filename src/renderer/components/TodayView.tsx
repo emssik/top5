@@ -226,6 +226,7 @@ export default function TodayView() {
     addInputRef.current?.focus()
   }, [showAddInput])
 
+
   // Close context menu on click outside
   useEffect(() => {
     if (!contextMenu) return
@@ -787,6 +788,7 @@ export default function TodayView() {
 
   return (
     <div
+      style={{ minHeight: '100%' }}
       onContextMenu={(e) => {
         const hasLinks = projects
           .filter((p) => !p.archivedAt && !p.suspendedAt)
@@ -1152,39 +1154,6 @@ export default function TodayView() {
         </>
       )}
 
-      {dueDateTomorrowProposals.length > 0 && (
-        <>
-          <div className="section-label mt-section">
-            <span style={{ opacity: 0.7 }}>📅</span>
-            <span>Due Tomorrow</span>
-          </div>
-          {dueDateTomorrowProposals.map(({ task, project: proj }) => (
-            <div key={task.id} className="proposal-card due-date-proposal due-date-tomorrow">
-              <span className="due-date-icon">📅</span>
-              <span className="tomorrow-badge">tomorrow</span>
-              <span className="title">
-                {proj.code && <span style={{ opacity: 0.6, marginRight: 4 }}>[{proj.code}]</span>}
-                {task.title}
-              </span>
-              <div style={{ position: 'relative' }}>
-                <button className="proposal-btn dismiss" onClick={() => setDueDateDismissId(dueDateDismissId === task.id ? null : task.id)} title="Reschedule / remove">✕</button>
-                {dueDateDismissId === task.id && (
-                  <div className="due-date-dismiss-popover">
-                    <div className="due-date-quick-btns">
-                      {[{ label: '+1d', days: 1 }, { label: '+2d', days: 2 }, { label: '+3d', days: 3 }, { label: '+1w', days: 7 }].map((opt) => (
-                        <button key={opt.label} onClick={() => { window.api.updateTaskDueDate(proj.id, task.id, addDays(opt.days)); setDueDateDismissId(null) }}>{opt.label}</button>
-                      ))}
-                    </div>
-                    <input type="date" onChange={(e) => { if (e.target.value) { window.api.updateTaskDueDate(proj.id, task.id, e.target.value); setDueDateDismissId(null) } }} />
-                    <button onClick={() => { window.api.updateTaskDueDate(proj.id, task.id, null); setDueDateDismissId(null) }}>Remove due date</button>
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-        </>
-      )}
-
       {tomorrowProposals.length > 0 && (
         <>
           <div className="section-label mt-section" style={{ opacity: 0.7 }}>
@@ -1217,6 +1186,39 @@ export default function TodayView() {
         )}
         <span>limit {configLimit}</span>
       </div>
+
+      {dueDateTomorrowProposals.length > 0 && (
+        <>
+          <div className="section-label mt-section">
+            <span style={{ opacity: 0.7 }}>📅</span>
+            <span>Due Tomorrow</span>
+          </div>
+          {dueDateTomorrowProposals.map(({ task, project: proj }) => (
+            <div key={task.id} className="proposal-card due-date-proposal due-date-tomorrow">
+              <span className="due-date-icon">📅</span>
+              <span className="tomorrow-badge">tomorrow</span>
+              <span className="title">
+                {proj.code && <span style={{ opacity: 0.6, marginRight: 4 }}>[{proj.code}]</span>}
+                {task.title}
+              </span>
+              <div style={{ position: 'relative' }}>
+                <button className="proposal-btn dismiss" onClick={() => setDueDateDismissId(dueDateDismissId === task.id ? null : task.id)} title="Reschedule / remove">✕</button>
+                {dueDateDismissId === task.id && (
+                  <div className="due-date-dismiss-popover">
+                    <div className="due-date-quick-btns">
+                      {[{ label: '+1d', days: 1 }, { label: '+2d', days: 2 }, { label: '+3d', days: 3 }, { label: '+1w', days: 7 }].map((opt) => (
+                        <button key={opt.label} onClick={() => { window.api.updateTaskDueDate(proj.id, task.id, addDays(opt.days)); setDueDateDismissId(null) }}>{opt.label}</button>
+                      ))}
+                    </div>
+                    <input type="date" onChange={(e) => { if (e.target.value) { window.api.updateTaskDueDate(proj.id, task.id, e.target.value); setDueDateDismissId(null) } }} />
+                    <button onClick={() => { window.api.updateTaskDueDate(proj.id, task.id, null); setDueDateDismissId(null) }}>Remove due date</button>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </>
+      )}
 
       {overflowTasks.length > 0 && (
         <div className="overflow-section">
@@ -1261,39 +1263,37 @@ export default function TodayView() {
         </div>
       )}
 
-      {!isLocked && (
-        <div className="today-add-task-wrap">
-          {showAddInput ? (
-            <div className="today-add-input-row">
-              <input
-                ref={addInputRef}
-                className="form-input"
-                placeholder="Add a quick task..."
-                value={newTitle}
-                onChange={(event) => setNewTitle(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter') addTask()
-                  if (event.key === 'Escape') {
-                    setShowAddInput(false)
-                    setNewTitle('')
-                  }
-                }}
-                onBlur={() => {
-                  if (!newTitle.trim()) {
-                    setShowAddInput(false)
-                    setNewTitle('')
-                  }
-                }}
-              />
-              <button className="task-action-btn btn-focus" onClick={addTask}>Add</button>
-            </div>
-          ) : (
-            <button className="add-task-btn" onClick={() => setShowAddInput(true)}>
-              <span className="plus">+</span> Add task
-            </button>
-          )}
-        </div>
-      )}
+      <div className="today-add-task-wrap">
+        {showAddInput ? (
+          <div className="today-add-input-row">
+            <input
+              ref={addInputRef}
+              className="form-input"
+              placeholder="Add a quick task..."
+              value={newTitle}
+              onChange={(event) => setNewTitle(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') addTask()
+                if (event.key === 'Escape') {
+                  setShowAddInput(false)
+                  setNewTitle('')
+                }
+              }}
+              onBlur={() => {
+                if (!newTitle.trim()) {
+                  setShowAddInput(false)
+                  setNewTitle('')
+                }
+              }}
+            />
+            <button className="task-action-btn btn-focus" onClick={addTask}>Add</button>
+          </div>
+        ) : (
+          <button className="add-task-btn" onClick={() => setShowAddInput(true)}>
+            <span className="plus">+</span> Add task
+          </button>
+        )}
+      </div>
     </div>
   )
 }

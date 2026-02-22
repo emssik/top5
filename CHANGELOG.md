@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.55.2] - 2026-02-22
+
+### Fixed
+
+- TodayView outer container now has `minHeight: 100%` so context menu works on the full viewport area
+- "Due Tomorrow" section moved below task limit indicator for better visual hierarchy
+- "Add task" button is now always visible regardless of lock state, allowing task creation at any time
+
 ## [1.55.1] - 2026-02-22
 
 ### Fixed
