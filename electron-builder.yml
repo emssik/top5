@@ -12,3 +12,7 @@ mac:
   target:
     - dmg
   artifactName: ${name}-${version}-${arch}.${ext}
+  protocols:
+    - name: Top5 Deep Link
+      schemes:
+        - top5

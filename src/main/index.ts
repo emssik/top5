@@ -1,5 +1,5 @@
 import { app, BrowserWindow, shell, ipcMain, globalShortcut, screen, Menu } from 'electron'
-import { join } from 'path'
+import { join, resolve } from 'path'
 import { is, optimizer, electronApp } from '@electron-toolkit/utils'
 import { registerStoreHandlers, getAppData, setAppDataKey, IS_DEV } from './store'
 import { registerLauncherHandlers } from './launchers'
@@ -13,6 +13,53 @@ import { startApiServer } from './api/server'
 
 let mainWindow: BrowserWindow | null = null
 let savedBounds: Electron.Rectangle | null = null
+let pendingDeepLinkUrl: string | null = null
+
+function handleDeepLink(url: string): void {
+  // Expected format: top5://project/<id>
+  const match = url.match(/^top5:\/\/project\/(.+)$/)
+  if (!match) return
+  const projectId = decodeURIComponent(match[1])
+  if (!mainWindow) {
+    pendingDeepLinkUrl = url
+    return
+  }
+  mainWindow.webContents.send('navigate-to-project', projectId)
+  mainWindow.show()
+  mainWindow.focus()
+}
+
+// Single instance lock — second launch forwards deep link to first instance
+const gotTheLock = app.requestSingleInstanceLock()
+if (!gotTheLock) {
+  app.quit()
+} else {
+  app.on('second-instance', (_event, argv) => {
+    // On Windows/Linux the URL arrives as argv; on macOS it comes via open-url
+    const url = argv.find((arg) => arg.startsWith('top5://'))
+    if (url) handleDeepLink(url)
+    if (mainWindow) {
+      mainWindow.show()
+      mainWindow.focus()
+    }
+  })
+}
+
+// Register protocol — in dev mode pass the entry script so macOS launches the right app
+if (is.dev && process.argv[1]) {
+  app.setAsDefaultProtocolClient('top5', process.execPath, [resolve(process.argv[1])])
+} else {
+  app.setAsDefaultProtocolClient('top5')
+}
+
+app.on('open-url', (event, url) => {
+  event.preventDefault()
+  if (mainWindow && mainWindow.webContents) {
+    handleDeepLink(url)
+  } else {
+    pendingDeepLinkUrl = url
+  }
+})
 
 function isAllowedExternalUrl(url: string): boolean {
   try {
@@ -44,6 +91,10 @@ function createWindow(): void {
       mainWindow!.setWindowButtonVisibility(false)
     }
     mainWindow!.show()
+    if (pendingDeepLinkUrl) {
+      handleDeepLink(pendingDeepLinkUrl)
+      pendingDeepLinkUrl = null
+    }
   })
 
   // Hide instead of destroy on close (macOS pattern)

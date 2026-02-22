@@ -5,6 +5,7 @@ import type { LockedTaskRef, WinsLockState, WinEntry, StreakStats } from '../../
 import { calcStreaks } from '../../shared/wins'
 import { dateKey } from '../../shared/schedule'
 import { getData, setData, getConfigDir, appendOperation } from '../store'
+import { generateDailyNote } from './journal'
 
 const WINS_FILE_NAME = 'wins.jsonl'
 
@@ -151,6 +152,9 @@ function resolveDay(result: 'win' | 'loss', lock: WinsLockState, completedCount:
   } else if (streaksBefore.currentMonthStreak > 0 && streaksAfter.currentMonthStreak === 0) {
     appendOperation({ type: 'wins_month_lost' })
   }
+
+  // Auto-generate daily journal note
+  try { generateDailyNote() } catch { /* non-critical */ }
 }
 
 export function loadWinHistory(): WinEntry[] {

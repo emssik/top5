@@ -72,6 +72,10 @@ export const api = {
   winsGetStreaks: (): Promise<StreakStats> => ipcRenderer.invoke('wins-get-streaks'),
   selectDirectory: (): Promise<string | null> => ipcRenderer.invoke('select-directory'),
   openTaskNote: (taskId: string, taskTitle: string, projectName?: string, taskBadge?: string, noteRef?: string) => ipcRenderer.invoke('open-task-note', taskId, taskTitle, projectName, taskBadge, noteRef),
+  journalGenerateDaily: (dateStr?: string) => ipcRenderer.invoke('journal-generate-daily', dateStr),
+  journalGenerateWeekly: (weekKey?: string) => ipcRenderer.invoke('journal-generate-weekly', weekKey),
+  journalGenerateMonthly: (monthKey?: string) => ipcRenderer.invoke('journal-generate-monthly', monthKey),
+  journalOpen: (notePath: string) => ipcRenderer.invoke('journal-open', notePath),
   onReloadData: (callback: () => void) => {
     ipcRenderer.on('reload-data', callback)
     return () => ipcRenderer.removeListener('reload-data', callback)

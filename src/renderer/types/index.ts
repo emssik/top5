@@ -87,6 +87,10 @@ declare global {
       winsGetStreaks: () => Promise<import('../../shared/types').StreakStats>
       selectDirectory: () => Promise<string | null>
       openTaskNote: (taskId: string, taskTitle: string, projectName?: string, taskBadge?: string, noteRef?: string) => Promise<{ ok?: boolean; error?: string }>
+      journalGenerateDaily: (dateStr?: string) => Promise<{ path: string; notePath: string } | null>
+      journalGenerateWeekly: (weekKey?: string) => Promise<{ path: string; notePath: string } | null>
+      journalGenerateMonthly: (monthKey?: string) => Promise<{ path: string; notePath: string } | null>
+      journalOpen: (notePath: string) => Promise<void>
       onReloadData: (callback: () => void) => () => void
       onShortcutAction: (callback: (data: ShortcutActionPayload) => void) => () => void
       onCheckInCountdown: (callback: (remainingMs: number) => void) => () => void
