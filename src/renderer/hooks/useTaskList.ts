@@ -69,7 +69,7 @@ export function useTaskList(opts?: { excludeFocus?: boolean; limitAdjust?: numbe
   } = useProjects()
 
   const configLimit = config.quickTasksLimit ?? 5
-  const limit = Math.max(1, configLimit + (opts?.limitAdjust ?? 0))
+  const limit = Math.max(0, configLimit + (opts?.limitAdjust ?? 0))
   const today = dateKey(new Date())
   const isLocked = winsLock?.locked ?? false
   const excludeFocus = opts?.excludeFocus ?? false

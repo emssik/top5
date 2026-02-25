@@ -473,6 +473,60 @@ export default function TodayView() {
     await unlockWinsTasks()
   }
 
+  // Tasks that can be swept to overflow (non-locked, non-repeating, within limit + focus)
+  const sweepableTasks = useMemo(() => {
+    const isTaskLocked = (task: MergedTask): boolean => {
+      if (!isLocked) return false
+      if (task.kind === 'quick') return lockedTaskIds.has(task.id)
+      if (task.kind === 'pinned' && task.taskId) return lockedTaskIds.has(task.taskId)
+      return false
+    }
+    const ids = new Set<string>()
+    if (focusTask && !isRepeatingEntry(focusTask) && !isTaskLocked(focusTask)) {
+      ids.add(focusTask.id)
+    }
+    for (const task of activeTasks) {
+      if (!isTaskLocked(task)) ids.add(task.id)
+    }
+    return ids
+  }, [focusTask, activeTasks, isLocked, lockedTaskIds])
+
+  const handleSweepToOverflow = async () => {
+    if (sweepableTasks.size === 0) return
+
+    // Clear focus first if it will be swept
+    if (focusTask && sweepableTasks.has(focusTask.id)) {
+      await setFocus(null, null)
+    }
+
+    // Set limitAdjust so that limit becomes 0 (all regular tasks go to overflow)
+    setLimitAdjust(-configLimit)
+
+    // Reorder: non-swept first, swept at end
+    const ids = allActiveTasks.map((t) => t.id)
+    const kept = ids.filter((id) => !sweepableTasks.has(id))
+    const swept = ids.filter((id) => sweepableTasks.has(id))
+    const newIds = [...kept, ...swept]
+
+    const taskById = new Map(allActiveTasks.map((t) => [t.id, t]))
+    const reordered = newIds.map((id, order) => ({ ...taskById.get(id)!, order }))
+
+    const orderedQuickIds = reordered
+      .filter((t) => t.kind === 'quick')
+      .sort((a, b) => a.order - b.order)
+      .map((t) => t.id)
+    if (orderedQuickIds.length > 0) {
+      await reorderQuickTasks(orderedQuickIds)
+    }
+
+    const pinnedUpdates = reordered
+      .filter((t) => t.kind === 'pinned' && t.projectId && t.taskId)
+      .map((t) => ({ projectId: t.projectId!, taskId: t.taskId!, order: t.order }))
+    if (pinnedUpdates.length > 0) {
+      await window.api.reorderPinnedTasks(pinnedUpdates)
+    }
+  }
+
   const handleJournal = async () => {
     const result = await window.api.journalGenerateDaily()
     if (result?.notePath) {
@@ -1202,6 +1256,11 @@ export default function TodayView() {
           </button>
         )}
         <span>limit {configLimit}</span>
+        {sweepableTasks.size > 0 && (
+          <button className="sweep-btn" onClick={handleSweepToOverflow} title="Clear all tasks to overflow">
+            &#x21e9;
+          </button>
+        )}
       </div>
 
       {dueDateTomorrowProposals.length > 0 && (

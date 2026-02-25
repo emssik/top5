@@ -1729,6 +1729,21 @@ body {
   opacity: 0.8;
 }
 
+.sweep-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0 4px;
+  opacity: 1;
+  transition: opacity 0.15s;
+}
+
+.sweep-btn:hover {
+  opacity: 1;
+  transform: scale(1.2);
+}
+
 .task-card.wins-locked {
   border-left: 3px solid rgba(245, 158, 11, 0.35);
 }
