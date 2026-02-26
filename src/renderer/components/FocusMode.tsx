@@ -54,8 +54,11 @@ export default function FocusMode() {
   const [completedTaskKey, setCompletedTaskKey] = useState<string | null>(null)
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null)
+  const [showManualTime, setShowManualTime] = useState(false)
+  const [manualMinutes, setManualMinutes] = useState('')
   const sessionStartRef = useRef(Date.now())
   const ctxRef = useRef<HTMLDivElement>(null)
+  const manualInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     window.api.getIsDev().then(setIsDev)
@@ -249,6 +252,62 @@ export default function FocusMode() {
     setFocus(null, null)
   }
 
+  const openManualTime = () => {
+    setManualMinutes('')
+    setShowManualTime(true)
+    setTimeout(() => manualInputRef.current?.focus(), 50)
+  }
+
+  const handleManualTimeSave = async () => {
+    const mins = parseInt(manualMinutes, 10)
+    if (mins >= 1) {
+      await saveTimeIfNeeded(mins)
+    }
+    setShowManualTime(false)
+  }
+
+  // Manual time entry
+  if (showManualTime) {
+    return (
+      <div
+        className="h-[44px] flex items-center px-4 gap-3 rounded-xl bg-clean-view/95 border border-border/50"
+        style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
+      >
+        <span className="text-[13px] text-t-primary flex-shrink-0">
+          Dodaj czas (min):
+        </span>
+        <div className="flex gap-2 items-center flex-shrink-0" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+          <input
+            ref={manualInputRef}
+            type="number"
+            min="1"
+            max="480"
+            value={manualMinutes}
+            onChange={(e) => setManualMinutes(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleManualTimeSave()
+              if (e.key === 'Escape') setShowManualTime(false)
+            }}
+            className="w-[60px] px-2 py-1 rounded-md text-[12px] text-t-primary bg-surface/80 border border-border/50 outline-none focus:border-blue-500/50 tabular-nums text-center"
+            placeholder="15"
+          />
+          <button
+            onClick={handleManualTimeSave}
+            className="px-3 py-1 rounded-md text-[12px] font-medium bg-blue-600/80 hover:bg-blue-500/80 text-white transition-colors"
+          >
+            Zapisz
+          </button>
+          <button
+            onClick={() => setShowManualTime(false)}
+            className="px-3 py-1 rounded-md text-[12px] font-medium bg-surface/80 hover:bg-hover text-t-secondary transition-colors"
+          >
+            Esc
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   // Confirm save dialog
   if (confirmAction !== null) {
     return (
@@ -322,14 +381,19 @@ export default function FocusMode() {
             🔗
           </button>
         )}
-        <div className="flex items-center gap-1 flex-shrink-0 whitespace-nowrap bg-blue-500/12 rounded-[10px] px-2.5 py-[3px]">
+        <button
+          onClick={openManualTime}
+          className="flex items-center gap-1 flex-shrink-0 whitespace-nowrap bg-blue-500/12 hover:bg-blue-500/20 rounded-[10px] px-2.5 py-[3px] border-none cursor-pointer transition-colors"
+          style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+          title="Dodaj czas"
+        >
           <span className="text-[12px] font-semibold text-blue-400 tabular-nums">
             {formatSessionTime(totalSeconds)}
           </span>
           <span className="text-[11px] text-t-muted tabular-nums font-normal opacity-70">
             ({formatSessionTime(confirmedSeconds)})
           </span>
-        </div>
+        </button>
         {/* Action buttons — always visible */}
         <div className="flex gap-0.5 flex-shrink-0" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
           <button
@@ -390,6 +454,14 @@ export default function FocusMode() {
           {(projectLinks.length > 0 || obsidianEnabled || project) && (
             <div className="h-px bg-border/50 my-1 mx-2" />
           )}
+          <button
+            onClick={() => { openManualTime(); setCtxMenu(null) }}
+            className="w-full text-left px-3 py-1.5 text-[12px] text-t-secondary hover:bg-blue-500/10 hover:text-blue-400 transition-colors flex items-center gap-2.5 border-none bg-transparent cursor-pointer"
+          >
+            <span className="w-[18px] text-center text-[11px] flex-shrink-0">+</span>
+            Dodaj czas
+          </button>
+          <div className="h-px bg-border/50 my-1 mx-2" />
           <button
             onClick={() => { handleComplete(); setCtxMenu(null) }}
             className="w-full text-left px-3 py-1.5 text-[12px] text-t-secondary hover:bg-green-500/10 hover:text-green-400 transition-colors flex items-center gap-2.5 border-none bg-transparent cursor-pointer"

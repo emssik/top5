@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [1.61.0] - 2026-02-26
+
+### Added
+
+- Manual time entry in focus mode: click the time badge to open an inline input for adding arbitrary minutes to the current task
+- "Dodaj czas" option in focus mode context menu for quick access to manual time entry
+
 ## [1.60.0] - 2026-02-26
 
 ### Added
