@@ -62,6 +62,7 @@ declare global {
       toggleQuickTaskInProgress: (id: string) => Promise<import('../../shared/types').QuickTask[]>
       reorderProjects: (orderedIds: string[]) => Promise<import('../../shared/types').Project[]>
       reorderPinnedTasks: (updates: { projectId: string; taskId: string; order: number }[]) => Promise<void>
+      setBeyondLimit: (input: { quickTaskIds?: string[]; pinnedTasks?: { projectId: string; taskId: string }[]; beyondLimit: boolean }) => Promise<void>
       toggleTaskInProgress: (projectId: string, taskId: string) => Promise<import('../../shared/types').Project[]>
       moveTaskToProject: (fromProjectId: string, toProjectId: string, taskId: string) => Promise<import('../../shared/types').Project[]>
       toggleTaskToDoNext: (projectId: string, taskId: string) => Promise<import('../../shared/types').Project[]>

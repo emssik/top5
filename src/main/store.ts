@@ -1040,6 +1040,19 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
     return result
   })
 
+  ipcMain.handle('set-beyond-limit', (_event, input: { quickTaskIds?: string[]; pinnedTasks?: { projectId: string; taskId: string }[]; beyondLimit: boolean }) => {
+    if (typeof input?.beyondLimit !== 'boolean') return
+    if (input.quickTaskIds?.length) {
+      quickTaskService.setBeyondLimitQuickTasks(input.quickTaskIds, input.beyondLimit)
+    }
+    if (input.pinnedTasks?.length) {
+      projectService.setBeyondLimitPinnedTasks(
+        input.pinnedTasks.map((t) => ({ ...t, beyondLimit: input.beyondLimit }))
+      )
+    }
+    notifyAllWindows()
+  })
+
   // --- Repeating Tasks --- (thin IPC adapters → service/repeating-tasks.ts)
 
   ipcMain.handle('save-repeating-task', (_event, task: unknown) => {

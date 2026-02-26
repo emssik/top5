@@ -111,6 +111,18 @@ export function updateQuickTaskDueDate(id: string, dueDate: string | null): Quic
   return quickTasks
 }
 
+export function setBeyondLimitQuickTasks(ids: string[], beyondLimit: boolean): QuickTask[] | ServiceError {
+  if (!Array.isArray(ids) || !ids.every((id) => typeof id === 'string')) return { error: 'validation' }
+  const data = getData()
+  const quickTasks = [...data.quickTasks]
+  for (const id of ids) {
+    const task = quickTasks.find((t) => t.id === id)
+    if (task) task.beyondLimit = beyondLimit || undefined
+  }
+  setData('quickTasks', quickTasks)
+  return quickTasks
+}
+
 export function toggleQuickTaskInProgress(id: string): QuickTask[] | ServiceError {
   const data = getData()
   const quickTasks = [...data.quickTasks]

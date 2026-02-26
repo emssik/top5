@@ -80,8 +80,6 @@ export default function TodayView() {
     loadWinsLock
   } = useProjects()
 
-  const [limitAdjust, setLimitAdjust] = useState(0)
-
   const {
     focusTask,
     scheduledTasks,
@@ -98,13 +96,14 @@ export default function TodayView() {
     configLimit,
     isLocked,
     lockedTaskIds
-  } = useTaskList({ excludeFocus: true, limitAdjust })
+  } = useTaskList({ excludeFocus: true })
 
   const [repeatUpdatePrompt, setRepeatUpdatePrompt] = useState<{ repeatingTaskId: string; newTitle: string } | null>(null)
   const [showAddInput, setShowAddInput] = useState(false)
   const [newTitle, setNewTitle] = useState('')
   const [showDone, setShowDone] = useState(false)
   const [showOverflow, setShowOverflow] = useState(false)
+  const [selectedOverflowIds, setSelectedOverflowIds] = useState<Set<string>>(new Set())
   const [focusTick, setFocusTick] = useState(0)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingTitle, setEditingTitle] = useState('')
@@ -114,7 +113,7 @@ export default function TodayView() {
   const addInputRef = useRef<HTMLInputElement | null>(null)
   const draggedId = useRef<string | null>(null)
   const [dragOverId, setDragOverId] = useState<string | null>(null)
-  const [dragOverZone, setDragOverZone] = useState<'top' | 'overflow' | null>(null)
+  const [dragOverZone, setDragOverZone] = useState<'top' | 'overflow' | 'limit' | null>(null)
   const [showLossBanner, setShowLossBanner] = useState(false)
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; task: MergedTask; section: string } | null>(null)
   const [linksMenu, setLinksMenu] = useState<{ x: number; y: number } | null>(null)
@@ -491,6 +490,14 @@ export default function TodayView() {
     return ids
   }, [focusTask, activeTasks, isLocked, lockedTaskIds])
 
+  const persistBeyondLimit = async (tasks: MergedTask[], beyondLimit: boolean) => {
+    const quickTaskIds = tasks.filter((t) => t.kind === 'quick').map((t) => t.id)
+    const pinnedTasks = tasks
+      .filter((t) => t.kind === 'pinned' && t.projectId && t.taskId)
+      .map((t) => ({ projectId: t.projectId!, taskId: t.taskId! }))
+    await window.api.setBeyondLimit({ quickTaskIds, pinnedTasks, beyondLimit })
+  }
+
   const handleSweepToOverflow = async () => {
     if (sweepableTasks.size === 0) return
 
@@ -499,16 +506,27 @@ export default function TodayView() {
       await setFocus(null, null)
     }
 
-    // Set limitAdjust so that limit becomes 0 (all regular tasks go to overflow)
-    setLimitAdjust(-configLimit)
+    // Mark all sweepable tasks + any unmarked overflow tasks as beyondLimit
+    const tasksToSweep = allActiveTasks.filter((t) => sweepableTasks.has(t.id))
+    const unmarkedOverflow = overflowTasks.filter((t) => !t.beyondLimit)
+    await persistBeyondLimit([...tasksToSweep, ...unmarkedOverflow], true)
+    setSelectedOverflowIds(new Set())
+  }
 
-    // Reorder: non-swept first, swept at end
-    const ids = allActiveTasks.map((t) => t.id)
-    const kept = ids.filter((id) => !sweepableTasks.has(id))
-    const swept = ids.filter((id) => sweepableTasks.has(id))
-    const newIds = [...kept, ...swept]
+  // Visual rendering order — matches actual JSX rendering order for correct D&D
+  const visualOrderTasks = useMemo(() => {
+    const tasks: MergedTask[] = []
+    if (focusTask) tasks.push(focusTask)
+    tasks.push(...scheduledTasks)
+    tasks.push(...inProgressTasks)
+    tasks.push(...upNextTasks.filter((t) => !isRepeatingEntry(t)))
+    tasks.push(...upNextTasks.filter((t) => isRepeatingEntry(t)))
+    tasks.push(...overflowTasks)
+    return tasks
+  }, [focusTask, scheduledTasks, inProgressTasks, upNextTasks, overflowTasks])
 
-    const taskById = new Map(allActiveTasks.map((t) => [t.id, t]))
+  const reorderAndPersist = async (newIds: string[], tasks: MergedTask[]) => {
+    const taskById = new Map(tasks.map((t) => [t.id, t]))
     const reordered = newIds.map((id, order) => ({ ...taskById.get(id)!, order }))
 
     const orderedQuickIds = reordered
@@ -525,6 +543,45 @@ export default function TodayView() {
     if (pinnedUpdates.length > 0) {
       await window.api.reorderPinnedTasks(pinnedUpdates)
     }
+  }
+
+  const isPromotable = (task: MergedTask): boolean => {
+    return !isRepeatingEntry(task) && !getTaskDueDate(task)
+  }
+
+  const toggleOverflowSelection = (id: string) => {
+    setSelectedOverflowIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const handlePromoteToTop = async () => {
+    if (selectedOverflowIds.size === 0) return
+
+    // Respect hard limit: only promote as many as there are free slots
+    const topCount = activeTasks.length + (focusTask && !isRepeatingEntry(focusTask) ? 1 : 0)
+    const freeSlots = Math.max(0, configLimit - topCount)
+    if (freeSlots === 0) return
+
+    const selectedTasks = overflowTasks.filter((t) => selectedOverflowIds.has(t.id))
+    const toPromote = selectedTasks.slice(0, freeSlots)
+    const promoteIds = new Set(toPromote.map((t) => t.id))
+
+    // Clear beyondLimit on promoted tasks
+    await persistBeyondLimit(toPromote, false)
+
+    // Reorder: place promoted tasks at end of top section
+    const ids = visualOrderTasks.map((t) => t.id)
+    const overflowIds = new Set(overflowTasks.map((t) => t.id))
+    const topIds = ids.filter((id) => !overflowIds.has(id))
+    const promotedIds = ids.filter((id) => promoteIds.has(id))
+    const remainingOverflow = ids.filter((id) => overflowIds.has(id) && !promoteIds.has(id))
+
+    await reorderAndPersist([...topIds, ...promotedIds, ...remainingOverflow], visualOrderTasks)
+    setSelectedOverflowIds(new Set())
   }
 
   const handleJournal = async () => {
@@ -589,14 +646,7 @@ export default function TodayView() {
   const handleDrop = async (targetId: string) => {
     if (!draggedId.current || draggedId.current === targetId) return
 
-    // Detect cross-section drag (above-limit ↔ overflow)
-    const overflowIds = new Set(overflowTasks.map((t) => t.id))
-    const draggedInOverflow = overflowIds.has(draggedId.current)
-    const targetInOverflow = overflowIds.has(targetId)
-    const draggedTask = allActiveTasks.find((t) => t.id === draggedId.current)
-    const isCrossSection = draggedTask && !isRepeatingEntry(draggedTask) && draggedInOverflow !== targetInOverflow
-
-    const ids = allActiveTasks.map((task) => task.id)
+    const ids = visualOrderTasks.map((task) => task.id)
     const fromIndex = ids.indexOf(draggedId.current)
     const toIndex = ids.indexOf(targetId)
     if (fromIndex === -1 || toIndex === -1) {
@@ -604,46 +654,33 @@ export default function TodayView() {
       return
     }
 
-    ids.splice(fromIndex, 1)
-    ids.splice(toIndex, 0, draggedId.current)
+    // Detect cross-section drops and update beyondLimit marker
+    const overflowIdSet = new Set(overflowTasks.map((t) => t.id))
+    const draggedInOverflow = overflowIdSet.has(draggedId.current)
+    const targetInOverflow = overflowIdSet.has(targetId)
+    const draggedTask = visualOrderTasks.find((t) => t.id === draggedId.current)
 
-    const taskById = new Map(allActiveTasks.map((task) => [task.id, task]))
-    const reordered = ids.map((id, order) => ({ ...taskById.get(id)!, order }))
-
-    // Adjust visual split when dragging between sections
-    if (isCrossSection) {
-      if (draggedInOverflow) {
-        if (limitAdjust < 0) setLimitAdjust((prev) => prev + 1)
-      } else {
-        setLimitAdjust((prev) => prev - 1)
+    if (draggedTask && !isRepeatingEntry(draggedTask)) {
+      if (!draggedInOverflow && targetInOverflow) {
+        // Top → overflow: mark dragged + freeze all current overflow tasks
+        const toMark = [draggedTask, ...overflowTasks.filter((t) => !t.beyondLimit)]
+        await persistBeyondLimit(toMark, true)
+      } else if (draggedInOverflow && !targetInOverflow) {
+        // Overflow → top: block if top is full
+        const topCount = activeTasks.length + (focusTask && !isRepeatingEntry(focusTask) ? 1 : 0)
+        if (topCount >= configLimit) { clearDragState(); return }
+        await persistBeyondLimit([draggedTask], false)
       }
     }
 
-    const orderedQuickIds = reordered
-      .filter((task) => task.kind === 'quick')
-      .sort((a, b) => a.order - b.order)
-      .map((task) => task.id)
+    ids.splice(fromIndex, 1)
+    ids.splice(toIndex, 0, draggedId.current)
 
-    if (orderedQuickIds.length > 0) {
-      await reorderQuickTasks(orderedQuickIds)
-    }
-
-    const pinnedUpdates = reordered
-      .filter((task) => task.kind === 'pinned' && task.projectId && task.taskId)
-      .map((task) => ({
-        projectId: task.projectId!,
-        taskId: task.taskId!,
-        order: task.order
-      }))
-
-    if (pinnedUpdates.length > 0) {
-      await window.api.reorderPinnedTasks(pinnedUpdates)
-    }
-
+    await reorderAndPersist(ids, visualOrderTasks)
     clearDragState()
   }
 
-  const handleZoneDragOver = (event: React.DragEvent, zone: 'top' | 'overflow') => {
+  const handleZoneDragOver = (event: React.DragEvent, zone: 'top' | 'overflow' | 'limit') => {
     event.preventDefault()
     if (!draggedId.current) return
     setDragOverZone(zone)
@@ -652,16 +689,27 @@ export default function TodayView() {
   const handleDropOnZone = async (zone: 'top' | 'overflow') => {
     if (!draggedId.current) return
 
-    const overflowIds = new Set(overflowTasks.map((t) => t.id))
-    const draggedInOverflow = overflowIds.has(draggedId.current)
-    const draggedTask = allActiveTasks.find((t) => t.id === draggedId.current)
+    const overflowIdSet = new Set(overflowTasks.map((t) => t.id))
+    const draggedInOverflow = overflowIdSet.has(draggedId.current)
+    const draggedTask = visualOrderTasks.find((t) => t.id === draggedId.current)
 
     // Only cross-section drops on non-repeating tasks
     if (!draggedTask || isRepeatingEntry(draggedTask)) { clearDragState(); return }
     if (zone === 'top' && !draggedInOverflow) { clearDragState(); return }
     if (zone === 'overflow' && draggedInOverflow) { clearDragState(); return }
 
-    const ids = allActiveTasks.map((t) => t.id)
+    if (zone === 'overflow') {
+      // Top → overflow: mark dragged + freeze all current overflow tasks
+      const toMark = [draggedTask, ...overflowTasks.filter((t) => !t.beyondLimit)]
+      await persistBeyondLimit(toMark, true)
+    } else {
+      // Overflow → top: block if top is full
+      const topCount = activeTasks.length + (focusTask && !isRepeatingEntry(focusTask) ? 1 : 0)
+      if (topCount >= configLimit) { clearDragState(); return }
+      await persistBeyondLimit([draggedTask], false)
+    }
+
+    const ids = visualOrderTasks.map((t) => t.id)
     const fromIndex = ids.indexOf(draggedId.current)
     if (fromIndex === -1) { clearDragState(); return }
 
@@ -672,33 +720,15 @@ export default function TodayView() {
     const insertPos = firstOverflow ? ids.indexOf(firstOverflow.id) : ids.length
     ids.splice(insertPos, 0, draggedId.current)
 
-    const taskById = new Map(allActiveTasks.map((t) => [t.id, t]))
-    const reordered = ids.map((id, order) => ({ ...taskById.get(id)!, order }))
-
-    if (zone === 'top') {
-      if (limitAdjust < 0) setLimitAdjust((prev) => prev + 1)
-    } else {
-      setLimitAdjust((prev) => prev - 1)
-    }
-
-    const orderedQuickIds = reordered
-      .filter((t) => t.kind === 'quick')
-      .sort((a, b) => a.order - b.order)
-      .map((t) => t.id)
-
-    if (orderedQuickIds.length > 0) {
-      await reorderQuickTasks(orderedQuickIds)
-    }
-
-    const pinnedUpdates = reordered
-      .filter((t) => t.kind === 'pinned' && t.projectId && t.taskId)
-      .map((t) => ({ projectId: t.projectId!, taskId: t.taskId!, order: t.order }))
-
-    if (pinnedUpdates.length > 0) {
-      await window.api.reorderPinnedTasks(pinnedUpdates)
-    }
-
+    await reorderAndPersist(ids, visualOrderTasks)
     clearDragState()
+  }
+
+  // Drop on limit indicator — detect direction from dragged task origin
+  const handleDropOnLimit = () => {
+    if (!draggedId.current) return
+    const overflowIdSet = new Set(overflowTasks.map((t) => t.id))
+    handleDropOnZone(overflowIdSet.has(draggedId.current) ? 'top' : 'overflow')
   }
 
   const getTaskMinutes = (task: MergedTask): number => {
@@ -776,7 +806,7 @@ export default function TodayView() {
     return (
       <div
         key={task.id}
-        className={`task-card draggable-task ${task.inProgress ? 'in-progress' : ''} ${isDragOver ? 'drag-over' : ''} ${locked ? 'wins-locked' : ''}`}
+        className={`task-card draggable-task ${task.inProgress ? 'in-progress' : ''} ${isDragOver ? 'drag-over' : ''} ${locked ? 'wins-locked' : ''} ${isOverflow && selectedOverflowIds.has(task.id) ? 'selected' : ''}`}
         draggable={!isLocked}
         onDragStart={(event) => handleDragStart(event, task)}
         onDragOver={(event) => handleDragOver(event, task.id)}
@@ -786,6 +816,15 @@ export default function TodayView() {
         onMouseEnter={() => { if (!isOverflow) hoveredTaskRef.current = { task, section } }}
         onMouseLeave={() => { if (hoveredTaskRef.current?.task.id === task.id) hoveredTaskRef.current = null }}
       >
+        {isOverflow && isPromotable(task) && (
+          <input
+            type="checkbox"
+            className="overflow-select-checkbox"
+            checked={selectedOverflowIds.has(task.id)}
+            onChange={() => toggleOverflowSelection(task.id)}
+            onClick={(e) => e.stopPropagation()}
+          />
+        )}
         <button className="task-checkbox" onClick={() => completeTask(task)} />
         <div className="task-content">
           {editingId === task.id ? (
@@ -1244,10 +1283,10 @@ export default function TodayView() {
       )}
 
       <div
-        className={`limit-indicator ${dragOverZone ? 'drag-over-zone' : ''}`}
-        onDragOver={(e) => handleZoneDragOver(e, overflowTasks.length > 0 ? 'top' : 'overflow')}
+        className={`limit-indicator ${dragOverZone === 'limit' ? 'drag-over-zone' : ''}`}
+        onDragOver={(e) => handleZoneDragOver(e, 'limit')}
         onDragLeave={() => setDragOverZone(null)}
-        onDrop={() => handleDropOnZone(overflowTasks.length > 0 ? 'top' : 'overflow')}
+        onDrop={handleDropOnLimit}
         onDragEnd={clearDragState}
       >
         {!isLocked && lockableTasks.length > 0 && (
@@ -1300,7 +1339,10 @@ export default function TodayView() {
         <div className="overflow-section">
           <div
             className={`done-toggle ${showOverflow ? 'open' : ''} ${dragOverZone === 'overflow' ? 'drag-over-zone' : ''}`}
-            onClick={() => setShowOverflow((value) => !value)}
+            onClick={() => {
+              if (showOverflow) setSelectedOverflowIds(new Set())
+              setShowOverflow((value) => !value)
+            }}
             onDragOver={(e) => handleZoneDragOver(e, 'overflow')}
             onDragLeave={() => setDragOverZone(null)}
             onDrop={() => handleDropOnZone('overflow')}
@@ -1308,6 +1350,15 @@ export default function TodayView() {
           >
             <span style={{ opacity: 0.4 }}>⋯</span>
             <span>Beyond limit ({overflowTasks.length})</span>
+            {selectedOverflowIds.size > 0 && (
+              <button
+                className="promote-btn"
+                onClick={(e) => { e.stopPropagation(); handlePromoteToTop() }}
+                title="Promote selected to top"
+              >
+                &#x21e7; {selectedOverflowIds.size}
+              </button>
+            )}
             <span className="chevron">▸</span>
           </div>
           <div className={`done-list ${showOverflow ? 'open' : ''}`}>

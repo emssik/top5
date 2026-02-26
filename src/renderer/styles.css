@@ -1744,6 +1744,51 @@ body {
   transform: scale(1.2);
 }
 
+.promote-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 0 6px;
+  opacity: 0.8;
+  transition: opacity 0.15s;
+  color: var(--c-text-muted);
+  margin-left: auto;
+}
+
+.promote-btn:hover {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+.overflow-select-checkbox {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  min-width: 14px;
+  border: 1.5px solid var(--c-text-muted);
+  border-radius: 3px;
+  cursor: pointer;
+  opacity: 0.4;
+  transition: opacity 0.15s, background 0.15s;
+  margin-right: 4px;
+}
+
+.overflow-select-checkbox:hover {
+  opacity: 0.7;
+}
+
+.overflow-select-checkbox:checked {
+  opacity: 1;
+  background: var(--pc-blue);
+  border-color: var(--pc-blue);
+}
+
+.overflow-section .task-card.selected {
+  opacity: 0.7;
+  border-left: 2px solid var(--pc-blue);
+}
+
 .task-card.wins-locked {
   border-left: 3px solid rgba(245, 158, 11, 0.35);
 }

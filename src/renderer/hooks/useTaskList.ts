@@ -20,6 +20,7 @@ export interface MergedTask {
   inProgress?: boolean
   noteRef?: string
   dueDate?: string | null
+  beyondLimit?: boolean
 }
 
 export interface TaskListData {
@@ -36,7 +37,6 @@ export interface TaskListData {
   dueDateTomorrowProposals: DueDateProposal<Task, Project>[]
   overflowTasks: MergedTask[]
   allActiveTasks: MergedTask[]
-  limit: number
   configLimit: number
   activeSlots: number
   hasRepeatingSection: boolean
@@ -55,10 +55,11 @@ function isRepeating(task: { repeatingTaskId?: string | null }): boolean {
  * @param opts.excludeFocus — when true, the focus task is returned separately
  *   and excluded from activeTasks (used by TodayView which renders focus in its own section).
  *   When false/omitted, focus task stays in activeTasks (used by clean view).
- * @param opts.limitAdjust — offset added to config limit for the visual split (default 0).
- *   Used by TodayView to allow free drag between sections without changing the config.
+ *
+ * Tasks with beyondLimit=true are always placed in overflow.
+ * The config limit is fixed and never adjusted at runtime.
  */
-export function useTaskList(opts?: { excludeFocus?: boolean; limitAdjust?: number }): TaskListData {
+export function useTaskList(opts?: { excludeFocus?: boolean }): TaskListData {
   const {
     quickTasks,
     projects,
@@ -69,7 +70,6 @@ export function useTaskList(opts?: { excludeFocus?: boolean; limitAdjust?: numbe
   } = useProjects()
 
   const configLimit = config.quickTasksLimit ?? 5
-  const limit = Math.max(0, configLimit + (opts?.limitAdjust ?? 0))
   const today = dateKey(new Date())
   const isLocked = winsLock?.locked ?? false
   const excludeFocus = opts?.excludeFocus ?? false
@@ -102,7 +102,8 @@ export function useTaskList(opts?: { excludeFocus?: boolean; limitAdjust?: numbe
       repeatingTaskId: t.repeatingTaskId,
       inProgress: t.inProgress,
       noteRef: t.noteRef,
-      dueDate: t.dueDate
+      dueDate: t.dueDate,
+      beyondLimit: t.beyondLimit
     }))
 
   const pinnedTasks: MergedTask[] = activeProjects.flatMap((p) =>
@@ -120,7 +121,8 @@ export function useTaskList(opts?: { excludeFocus?: boolean; limitAdjust?: numbe
         taskNumber: t.taskNumber,
         inProgress: t.inProgress,
         noteRef: t.noteRef,
-        dueDate: t.dueDate
+        dueDate: t.dueDate,
+        beyondLimit: t.beyondLimit
       }))
   )
 
@@ -252,7 +254,7 @@ export function useTaskList(opts?: { excludeFocus?: boolean; limitAdjust?: numbe
     : nonScheduledRegular
 
   const focusConsumesSlot = excludeFocus && focusTask ? !isRepeating(focusTask) && !isScheduledForToday(focusTask) : false
-  const activeSlots = Math.max(0, limit - (focusConsumesSlot ? 1 : 0))
+  const activeSlots = Math.max(0, configLimit - (focusConsumesSlot ? 1 : 0))
 
   let activeLimited: MergedTask[]
   let overflow: MergedTask[]
@@ -262,8 +264,14 @@ export function useTaskList(opts?: { excludeFocus?: boolean; limitAdjust?: numbe
     activeLimited = orderedRegular.filter((t) => isTaskLocked(t))
     overflow = orderedRegular.filter((t) => !isTaskLocked(t))
   } else {
-    activeLimited = orderedRegular.slice(0, activeSlots)
-    overflow = orderedRegular.slice(activeSlots)
+    // beyondLimit=true → forced overflow (user explicitly moved it there)
+    // beyondLimit=undefined → subject to limit (first N by order go to top, rest overflow)
+    // The limit is a hard cap — top can never exceed it.
+    const forced = orderedRegular.filter((t) => t.beyondLimit)
+    const eligible = orderedRegular.filter((t) => !t.beyondLimit)
+    activeLimited = eligible.slice(0, activeSlots)
+    const naturalOverflow = eligible.slice(activeSlots)
+    overflow = [...naturalOverflow, ...forced].sort((a, b) => a.order - b.order)
   }
 
   // activeTasks = non-repeating within limit (QuickTasksView renders repeatingActive separately)
@@ -290,7 +298,6 @@ export function useTaskList(opts?: { excludeFocus?: boolean; limitAdjust?: numbe
     dueDateTomorrowProposals,
     overflowTasks: overflow,
     allActiveTasks,
-    limit,
     configLimit,
     activeSlots,
     hasRepeatingSection,
