@@ -230,6 +230,21 @@ export function reorderPinnedTasks(updates: unknown): Project[] | ServiceError {
   return projects
 }
 
+export function setBeyondLimitPinnedTasks(updates: unknown): Project[] | ServiceError {
+  if (!Array.isArray(updates)) return { error: 'validation' }
+  const data = getData()
+  const projects = [...data.projects]
+  for (const update of updates) {
+    if (typeof update?.projectId !== 'string' || typeof update?.taskId !== 'string' || typeof update?.beyondLimit !== 'boolean') continue
+    const project = projects.find((p) => p.id === update.projectId)
+    if (!project) continue
+    const task = project.tasks.find((t) => t.id === update.taskId)
+    if (task) task.beyondLimit = update.beyondLimit || undefined
+  }
+  setData('projects', projects)
+  return projects
+}
+
 export function toggleTaskInProgress(projectId: string, taskId: string): Project[] | ServiceError {
   const data = getData()
   const projects = [...data.projects]

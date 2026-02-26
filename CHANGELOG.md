@@ -6,6 +6,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [1.60.0] - 2026-02-26
+
+### Added
+
+- `beyondLimit` flag on tasks: persistent marker that keeps tasks in the overflow section across reloads
+- Multi-select in overflow: checkboxes on promotable tasks allow selecting multiple items at once
+- Promote button in overflow header: moves selected tasks back to the top section (respects hard limit)
+- `setBeyondLimit` IPC endpoint for batch-updating beyondLimit on quick tasks and pinned tasks
+- Limit indicator as separate D&D drop zone: bidirectional — drops from overflow promote to top, drops from top demote to overflow
+
+### Changed
+
+- D&D rewrite: `visualOrderTasks` useMemo reflects actual JSX render order (focus → scheduled → in-progress → up-next → overflow), fixing visual/data order mismatch
+- D&D cross-section drops now persist `beyondLimit` flag instead of adjusting a transient `limitAdjust` counter
+- Sweep-to-overflow now sets `beyondLimit=true` on swept tasks instead of using ephemeral limit adjustment
+- Extracted `reorderAndPersist` helper — DRY reorder+persist logic shared by sweep, D&D, and promote
+- Overflow section collapse clears multi-select state
+
+### Removed
+
+- `limitAdjust` state and `limit` from useTaskList — replaced by persistent `beyondLimit` flag on each task
+
 ## [1.59.0] - 2026-02-25
 
 ### Added
