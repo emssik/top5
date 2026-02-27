@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [1.62.1] - 2026-02-27
+
+### Fixed
+
+- Prevent unwanted scrollbars and background flash on the main window by setting `overflow: hidden`, `height: 100%`, and theme background on `html`/`body`
+
 ## [1.62.0] - 2026-02-27
 
 ### Changed

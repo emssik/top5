@@ -21,6 +21,12 @@
   --color-cell-text: var(--c-cell-text);
 }
 
+html, body {
+  overflow: hidden;
+  height: 100%;
+  background: var(--bg-base);
+}
+
 /* Dark theme (default) */
 :root {
   --sidebar-w: 170px;
