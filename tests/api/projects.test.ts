@@ -249,4 +249,173 @@ describe('Projects API', () => {
     p = res.json().data.find((p: any) => p.id === project.id)
     expect(p.tasks[0].isToDoNext).toBe(true)
   })
+
+  describe('PUT /projects/:pid/tasks/:tid/due-date', () => {
+    it('sets due date on a task', async () => {
+      const server = await getTestServer()
+      const project = makeProject({
+        tasks: [{ id: 'task-1', title: 'Task 1', completed: false, createdAt: new Date().toISOString() }]
+      })
+      await server.inject({ method: 'POST', url: '/api/v1/projects', headers: { ...auth, 'content-type': 'application/json' }, payload: project })
+
+      const res = await server.inject({
+        method: 'PUT',
+        url: `/api/v1/projects/${project.id}/tasks/task-1/due-date`,
+        headers: { ...auth, 'content-type': 'application/json' },
+        payload: { dueDate: '2026-03-15' }
+      })
+      expect(res.statusCode).toBe(200)
+      const task = res.json().data.find((p: any) => p.id === project.id).tasks[0]
+      expect(task.dueDate).toBe('2026-03-15')
+    })
+
+    it('clears due date with null', async () => {
+      const server = await getTestServer()
+      const project = makeProject({
+        tasks: [{ id: 'task-1', title: 'Task 1', completed: false, dueDate: '2026-03-15', createdAt: new Date().toISOString() }]
+      })
+      await server.inject({ method: 'POST', url: '/api/v1/projects', headers: { ...auth, 'content-type': 'application/json' }, payload: project })
+
+      const res = await server.inject({
+        method: 'PUT',
+        url: `/api/v1/projects/${project.id}/tasks/task-1/due-date`,
+        headers: { ...auth, 'content-type': 'application/json' },
+        payload: { dueDate: null }
+      })
+      expect(res.statusCode).toBe(200)
+      const task = res.json().data.find((p: any) => p.id === project.id).tasks[0]
+      expect(task.dueDate).toBeNull()
+    })
+
+    it('returns 404 for unknown project', async () => {
+      const server = await getTestServer()
+      const res = await server.inject({
+        method: 'PUT',
+        url: '/api/v1/projects/nonexistent/tasks/task-1/due-date',
+        headers: { ...auth, 'content-type': 'application/json' },
+        payload: { dueDate: '2026-03-15' }
+      })
+      expect(res.statusCode).toBe(404)
+    })
+
+    it('returns 404 for unknown task', async () => {
+      const server = await getTestServer()
+      const project = makeProject({ tasks: [] })
+      await server.inject({ method: 'POST', url: '/api/v1/projects', headers: { ...auth, 'content-type': 'application/json' }, payload: project })
+
+      const res = await server.inject({
+        method: 'PUT',
+        url: `/api/v1/projects/${project.id}/tasks/nonexistent/due-date`,
+        headers: { ...auth, 'content-type': 'application/json' },
+        payload: { dueDate: '2026-03-15' }
+      })
+      expect(res.statusCode).toBe(404)
+    })
+  })
+
+  describe('POST /projects/:pid/tasks/:tid/move', () => {
+    it('moves task to another project', async () => {
+      const server = await getTestServer()
+      const p1 = makeProject({
+        name: 'Source',
+        tasks: [{ id: 'task-1', title: 'Movable', completed: false, createdAt: new Date().toISOString() }]
+      })
+      const p2 = makeProject({ name: 'Target', tasks: [] })
+      await server.inject({ method: 'POST', url: '/api/v1/projects', headers: { ...auth, 'content-type': 'application/json' }, payload: p1 })
+      await server.inject({ method: 'POST', url: '/api/v1/projects', headers: { ...auth, 'content-type': 'application/json' }, payload: p2 })
+
+      const res = await server.inject({
+        method: 'POST',
+        url: `/api/v1/projects/${p1.id}/tasks/task-1/move`,
+        headers: { ...auth, 'content-type': 'application/json' },
+        payload: { toProjectId: p2.id }
+      })
+      expect(res.statusCode).toBe(200)
+      const projects = res.json().data
+      expect(projects.find((p: any) => p.id === p1.id).tasks).toHaveLength(0)
+      expect(projects.find((p: any) => p.id === p2.id).tasks).toHaveLength(1)
+      expect(projects.find((p: any) => p.id === p2.id).tasks[0].title).toBe('Movable')
+    })
+
+    it('returns 400 without toProjectId', async () => {
+      const server = await getTestServer()
+      const project = makeProject({
+        tasks: [{ id: 'task-1', title: 'Task', completed: false, createdAt: new Date().toISOString() }]
+      })
+      await server.inject({ method: 'POST', url: '/api/v1/projects', headers: { ...auth, 'content-type': 'application/json' }, payload: project })
+
+      const res = await server.inject({
+        method: 'POST',
+        url: `/api/v1/projects/${project.id}/tasks/task-1/move`,
+        headers: { ...auth, 'content-type': 'application/json' },
+        payload: {}
+      })
+      expect(res.statusCode).toBe(400)
+    })
+
+    it('returns 400 when moving to same project', async () => {
+      const server = await getTestServer()
+      const project = makeProject({
+        tasks: [{ id: 'task-1', title: 'Task', completed: false, createdAt: new Date().toISOString() }]
+      })
+      await server.inject({ method: 'POST', url: '/api/v1/projects', headers: { ...auth, 'content-type': 'application/json' }, payload: project })
+
+      const res = await server.inject({
+        method: 'POST',
+        url: `/api/v1/projects/${project.id}/tasks/task-1/move`,
+        headers: { ...auth, 'content-type': 'application/json' },
+        payload: { toProjectId: project.id }
+      })
+      expect(res.statusCode).toBe(400)
+    })
+
+    it('returns 404 for unknown source project', async () => {
+      const server = await getTestServer()
+      const res = await server.inject({
+        method: 'POST',
+        url: '/api/v1/projects/nonexistent/tasks/task-1/move',
+        headers: { ...auth, 'content-type': 'application/json' },
+        payload: { toProjectId: 'other' }
+      })
+      expect(res.statusCode).toBe(404)
+    })
+  })
+
+  describe('PUT /projects/pinned-tasks/beyond-limit', () => {
+    it('sets beyondLimit flag on tasks', async () => {
+      const server = await getTestServer()
+      const project = makeProject({
+        tasks: [
+          { id: 'task-1', title: 'T1', completed: false, isToDoNext: true, createdAt: new Date().toISOString() },
+          { id: 'task-2', title: 'T2', completed: false, isToDoNext: true, createdAt: new Date().toISOString() }
+        ]
+      })
+      await server.inject({ method: 'POST', url: '/api/v1/projects', headers: { ...auth, 'content-type': 'application/json' }, payload: project })
+
+      const res = await server.inject({
+        method: 'PUT',
+        url: '/api/v1/projects/pinned-tasks/beyond-limit',
+        headers: { ...auth, 'content-type': 'application/json' },
+        payload: [
+          { projectId: project.id, taskId: 'task-1', beyondLimit: true },
+          { projectId: project.id, taskId: 'task-2', beyondLimit: false }
+        ]
+      })
+      expect(res.statusCode).toBe(200)
+      const tasks = res.json().data.find((p: any) => p.id === project.id).tasks
+      expect(tasks.find((t: any) => t.id === 'task-1').beyondLimit).toBe(true)
+      expect(tasks.find((t: any) => t.id === 'task-2').beyondLimit).toBeUndefined()
+    })
+
+    it('returns 400 for invalid payload', async () => {
+      const server = await getTestServer()
+      const res = await server.inject({
+        method: 'PUT',
+        url: '/api/v1/projects/pinned-tasks/beyond-limit',
+        headers: { ...auth, 'content-type': 'application/json' },
+        payload: 'not-an-array'
+      })
+      expect(res.statusCode).toBe(400)
+    })
+  })
 })

@@ -92,4 +92,28 @@ export function registerProjectRoutes(fastify: FastifyInstance): void {
     notifyAllWindows()
     return { ok: true, data: result }
   })
+
+  fastify.put<{ Params: { pid: string; tid: string } }>('/api/v1/projects/:pid/tasks/:tid/due-date', async (request, reply) => {
+    const { dueDate } = request.body as { dueDate: string | null }
+    const result = projectService.updateTaskDueDate(request.params.pid, request.params.tid, dueDate ?? null)
+    if (isServiceError(result)) return reply.status(404).send({ ok: false, error: result.error })
+    notifyAllWindows()
+    return { ok: true, data: result }
+  })
+
+  fastify.post<{ Params: { pid: string; tid: string } }>('/api/v1/projects/:pid/tasks/:tid/move', async (request, reply) => {
+    const { toProjectId } = request.body as { toProjectId: string }
+    if (!toProjectId) return reply.status(400).send({ ok: false, error: 'validation' })
+    const result = projectService.moveTaskToProject(request.params.pid, toProjectId, request.params.tid)
+    if (isServiceError(result)) return reply.status(errorToHttpStatus(result.error)).send({ ok: false, error: result.error })
+    notifyAllWindows()
+    return { ok: true, data: result }
+  })
+
+  fastify.put('/api/v1/projects/pinned-tasks/beyond-limit', async (request, reply) => {
+    const result = projectService.setBeyondLimitPinnedTasks(request.body)
+    if (isServiceError(result)) return reply.status(400).send({ ok: false, error: result.error })
+    notifyAllWindows()
+    return { ok: true, data: result }
+  })
 }

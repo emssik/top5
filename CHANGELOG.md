@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [1.63.0] - 2026-02-27
+
+### Added
+
+- API route `PUT /projects/:pid/tasks/:tid/due-date` to set or clear a task's due date
+- API route `POST /projects/:pid/tasks/:tid/move` to move a task between projects
+- API route `PUT /projects/pinned-tasks/beyond-limit` to set beyondLimit flags on pinned tasks
+- 12 new API tests covering due-date, move, and beyond-limit endpoints
+
+### Changed
+
+- README updated with recent features: due dates, sweep & promote, split & continue, clickable URLs, project links menu, task IDs, and new shared modules/components
+
 ## [1.62.1] - 2026-02-27
 
 ### Fixed
