@@ -56,6 +56,14 @@ export const api = {
   getOperations: (since?: string): Promise<OperationLogEntry[]> => ipcRenderer.invoke('get-operations', since),
   switchFocusTask: (projectId: string, taskId: string) => ipcRenderer.invoke('switch-focus-task', projectId, taskId),
   resizeFocusWindow: (width: number, height: number) => ipcRenderer.invoke('resize-focus-window', width, height),
+  showFocusContextMenu: (items: { id: string; label: string; type?: 'separator' }[], clickX: number, clickY: number) => ipcRenderer.invoke('show-focus-context-menu', items, clickX, clickY),
+  getFocusMenuItems: (): Promise<{ id: string; label: string; type?: 'separator' }[]> => ipcRenderer.invoke('get-focus-menu-items'),
+  focusMenuClick: (actionId: string) => ipcRenderer.invoke('focus-menu-click', actionId),
+  onFocusMenuAction: (callback: (actionId: string) => void) => {
+    const handler = (_event: IpcRendererEvent, actionId: string) => callback(actionId)
+    ipcRenderer.on('focus-menu-action', handler)
+    return () => ipcRenderer.removeListener('focus-menu-action', handler)
+  },
   showProjectInMain: (projectId: string) => ipcRenderer.invoke('show-project-in-main', projectId),
   onNavigateToProject: (callback: (projectId: string) => void) => {
     const handler = (_event: IpcRendererEvent, projectId: string) => callback(projectId)

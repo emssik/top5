@@ -6,6 +6,7 @@ import type { IpcMain } from 'electron'
 import { appendOperation, getAppData, loadCheckIns, setAppDataKey } from './store'
 
 let focusWindow: BrowserWindow | null = null
+let focusMenuWindow: BrowserWindow | null = null
 let checkInWindow: BrowserWindow | null = null
 let operationLogWindow: BrowserWindow | null = null
 let checkInTimeout: ReturnType<typeof setTimeout> | null = null
@@ -248,6 +249,11 @@ export function registerFocusHandlers(
     clearCheckInTimer()
     closeCheckInPopup()
 
+    if (focusMenuWindow && !focusMenuWindow.isDestroyed()) {
+      focusMenuWindow.close()
+      focusMenuWindow = null
+    }
+
     if (focusWindow && !focusWindow.isDestroyed()) {
       focusWindow.close()
       focusWindow = null
@@ -296,6 +302,88 @@ export function registerFocusHandlers(
     if (!focusWindow || focusWindow.isDestroyed()) return
     focusWindow.setMinimumSize(width, height)
     focusWindow.setSize(width, height)
+  })
+
+  let pendingMenuItems: { id: string; label: string; type?: 'separator' }[] = []
+
+  ipcMain.handle('show-focus-context-menu', (_event, items: { id: string; label: string; type?: 'separator' }[], clickX: number, clickY: number) => {
+    if (!focusWindow || focusWindow.isDestroyed()) return
+
+    // Toggle — close if already open
+    if (focusMenuWindow && !focusMenuWindow.isDestroyed()) {
+      focusMenuWindow.close()
+      focusMenuWindow = null
+      return
+    }
+
+    pendingMenuItems = items
+
+    const focusBounds = focusWindow.getBounds()
+    const display = screen.getDisplayNearestPoint({ x: focusBounds.x, y: focusBounds.y })
+    const workArea = display.workArea
+
+    const popupWidth = 200
+    const itemCount = items.filter((i) => i.type !== 'separator').length
+    const sepCount = items.filter((i) => i.type === 'separator').length
+    const popupHeight = itemCount * 30 + sepCount * 9 + 12
+
+    // Position at click coords (translated to screen), clamped to screen edges
+    const rawX = focusBounds.x + clickX
+    const rawY = focusBounds.y + clickY
+    const x = Math.min(rawX, workArea.x + workArea.width - popupWidth)
+    const y = Math.min(rawY, workArea.y + workArea.height - popupHeight)
+
+    focusMenuWindow = new BrowserWindow({
+      width: popupWidth,
+      height: popupHeight,
+      x,
+      y,
+      frame: false,
+      transparent: false,
+      resizable: false,
+      skipTaskbar: true,
+      alwaysOnTop: true,
+      hasShadow: true,
+      roundedCorners: true,
+      webPreferences: {
+        preload: join(__dirname, '../preload/index.js'),
+        sandbox: false
+      }
+    })
+
+    focusMenuWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
+    focusMenuWindow.setAlwaysOnTop(true, 'screen-saver')
+
+    if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
+      focusMenuWindow.loadURL(process.env['ELECTRON_RENDERER_URL'] + '#focus-menu')
+    } else {
+      focusMenuWindow.loadFile(join(__dirname, '../renderer/index.html'), { hash: 'focus-menu' })
+    }
+
+    focusMenuWindow.on('blur', () => {
+      if (focusMenuWindow && !focusMenuWindow.isDestroyed()) {
+        focusMenuWindow.close()
+      }
+      focusMenuWindow = null
+    })
+
+    focusMenuWindow.on('closed', () => {
+      focusMenuWindow = null
+    })
+  })
+
+  ipcMain.handle('get-focus-menu-items', () => {
+    return pendingMenuItems
+  })
+
+  ipcMain.handle('focus-menu-click', (_event, actionId: string) => {
+    if (focusMenuWindow && !focusMenuWindow.isDestroyed()) {
+      focusMenuWindow.close()
+      focusMenuWindow = null
+    }
+    if (focusWindow && !focusWindow.isDestroyed()) {
+      focusWindow.webContents.send('focus-menu-action', actionId)
+    }
   })
 
   ipcMain.handle('show-project-in-main', (_event, projectId: string) => {

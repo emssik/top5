@@ -17,12 +17,6 @@ function formatSessionTime(totalSeconds: number): string {
   return `${h}h ${m.toString().padStart(2, '0')}m`
 }
 
-function projectLabel(project: { code?: string; name: string } | null, isStandalone: boolean): string {
-  if (isStandalone) return 'QT'
-  if (!project) return ''
-  return project.code || project.name.slice(0, 4)
-}
-
 function linkIcon(label: string): string {
   const l = label.toLowerCase()
   if (l.includes('code')) return '</>'
@@ -30,6 +24,12 @@ function linkIcon(label: string): string {
   if (l.includes('obsidian')) return '📓'
   if (l.includes('browser') || l.startsWith('http')) return '🌐'
   return '🔗'
+}
+
+function projectLabel(project: { code?: string; name: string } | null, isStandalone: boolean): string {
+  if (isStandalone) return 'QT'
+  if (!project) return ''
+  return project.code || project.name.slice(0, 4)
 }
 
 interface PickerTask {
@@ -53,11 +53,9 @@ export default function FocusMode() {
   const [showTaskPicker, setShowTaskPicker] = useState(false)
   const [completedTaskKey, setCompletedTaskKey] = useState<string | null>(null)
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
-  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null)
   const [showManualTime, setShowManualTime] = useState(false)
   const [manualMinutes, setManualMinutes] = useState('')
   const sessionStartRef = useRef(Date.now())
-  const ctxRef = useRef<HTMLDivElement>(null)
   const manualInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -76,12 +74,10 @@ export default function FocusMode() {
   useEffect(() => {
     if (showTaskPicker) {
       window.api.resizeFocusWindow(FOCUS_WIDTH, FOCUS_HEIGHT_PICKER)
-    } else if (ctxMenu) {
-      window.api.resizeFocusWindow(FOCUS_WIDTH, FOCUS_HEIGHT_PICKER)
     } else {
       window.api.resizeFocusWindow(FOCUS_WIDTH, FOCUS_HEIGHT_NORMAL)
     }
-  }, [showTaskPicker, ctxMenu])
+  }, [showTaskPicker])
 
 
   const isStandalone = config.focusProjectId === STANDALONE_PROJECT_ID
@@ -119,23 +115,49 @@ export default function FocusMode() {
 
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
-    setCtxMenu(prev => prev ? null : { x: Math.min(e.clientX, window.innerWidth - 200), y: 48 })
-  }, [])
+    const items: { id: string; label: string; type?: 'separator' }[] = []
+    for (const link of projectLinks) {
+      items.push({ id: `link:${link.label}`, label: `${linkIcon(link.label)}  ${link.label}` })
+    }
+    if (obsidianEnabled) {
+      items.push({ id: 'obsidian-note', label: '📝  Obsidian note' })
+    }
+    if ((projectLinks.length > 0 || obsidianEnabled) && project) {
+      items.push({ id: 'sep1', label: '', type: 'separator' })
+    }
+    if (project) {
+      items.push({ id: 'open-project', label: '📂  Open project' })
+    }
+    if (projectLinks.length > 0 || obsidianEnabled || project) {
+      items.push({ id: 'sep2', label: '', type: 'separator' })
+    }
+    items.push({ id: 'manual-time', label: '+   Dodaj czas' })
+    items.push({ id: 'sep3', label: '', type: 'separator' })
+    items.push({ id: 'complete', label: '✓   Complete task' })
+    items.push({ id: 'exit', label: '✕   Exit focus' })
+    window.api.showFocusContextMenu(items, e.clientX, e.clientY)
+  }, [projectLinks, obsidianEnabled, project])
 
-  // Close context menu on left-click outside or Escape
+  // Handle context menu actions from popup window
   useEffect(() => {
-    if (!ctxMenu) return
-    const handleClick = () => setCtxMenu(null)
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setCtxMenu(null)
-    }
-    document.addEventListener('click', handleClick)
-    document.addEventListener('keydown', handleKey)
-    return () => {
-      document.removeEventListener('click', handleClick)
-      document.removeEventListener('keydown', handleKey)
-    }
-  }, [ctxMenu])
+    return window.api.onFocusMenuAction((actionId: string) => {
+      if (actionId.startsWith('link:')) {
+        const label = actionId.slice(5)
+        const link = projectLinks.find((l) => l.label === label)
+        if (link) openProjectLink(link, project?.name)
+      } else if (actionId === 'obsidian-note') {
+        openNote()
+      } else if (actionId === 'open-project') {
+        if (project) window.api.showProjectInMain(project.id)
+      } else if (actionId === 'manual-time') {
+        openManualTime()
+      } else if (actionId === 'complete') {
+        handleComplete()
+      } else if (actionId === 'exit') {
+        handleExit()
+      }
+    })
+  })
 
   // Confirmed time = check-ins recorded during this focus session.
   const confirmedSeconds = useMemo(() => {
@@ -412,72 +434,6 @@ export default function FocusMode() {
           </button>
         </div>
       </div>
-
-      {/* Context menu */}
-      {ctxMenu && (
-        <div
-          ref={ctxRef}
-          className="absolute z-50 min-w-[180px] rounded-lg bg-clean-view/[0.98] border border-border/50 shadow-lg py-1.5 overflow-hidden"
-          style={{ left: ctxMenu.x, top: ctxMenu.y }}
-        >
-          {projectLinks.map((link, i) => (
-            <button
-              key={`${link.label}-${i}`}
-              onClick={() => { openProjectLink(link, project?.name); setCtxMenu(null) }}
-              className="w-full text-left px-3 py-1.5 text-[12px] text-t-secondary hover:bg-hover hover:text-t-primary transition-colors flex items-center gap-2.5 border-none bg-transparent cursor-pointer"
-            >
-              <span className="w-[18px] text-center text-[11px] flex-shrink-0">{linkIcon(link.label)}</span>
-              {link.label}
-            </button>
-          ))}
-          {obsidianEnabled && (
-            <button
-              onClick={() => { openNote(); setCtxMenu(null) }}
-              className="w-full text-left px-3 py-1.5 text-[12px] text-t-secondary hover:bg-hover hover:text-t-primary transition-colors flex items-center gap-2.5 border-none bg-transparent cursor-pointer"
-            >
-              <span className="w-[18px] text-center text-[11px] flex-shrink-0">📝</span>
-              Obsidian note
-            </button>
-          )}
-          {(projectLinks.length > 0 || obsidianEnabled) && project && (
-            <div className="h-px bg-border/50 my-1 mx-2" />
-          )}
-          {project && (
-            <button
-              onClick={async () => { await window.api.showProjectInMain(project.id); setCtxMenu(null) }}
-              className="w-full text-left px-3 py-1.5 text-[12px] text-t-secondary hover:bg-hover hover:text-t-primary transition-colors flex items-center gap-2.5 border-none bg-transparent cursor-pointer"
-            >
-              <span className="w-[18px] text-center text-[11px] flex-shrink-0">📂</span>
-              Open project
-            </button>
-          )}
-          {(projectLinks.length > 0 || obsidianEnabled || project) && (
-            <div className="h-px bg-border/50 my-1 mx-2" />
-          )}
-          <button
-            onClick={() => { openManualTime(); setCtxMenu(null) }}
-            className="w-full text-left px-3 py-1.5 text-[12px] text-t-secondary hover:bg-blue-500/10 hover:text-blue-400 transition-colors flex items-center gap-2.5 border-none bg-transparent cursor-pointer"
-          >
-            <span className="w-[18px] text-center text-[11px] flex-shrink-0">+</span>
-            Dodaj czas
-          </button>
-          <div className="h-px bg-border/50 my-1 mx-2" />
-          <button
-            onClick={() => { handleComplete(); setCtxMenu(null) }}
-            className="w-full text-left px-3 py-1.5 text-[12px] text-t-secondary hover:bg-green-500/10 hover:text-green-400 transition-colors flex items-center gap-2.5 border-none bg-transparent cursor-pointer"
-          >
-            <span className="w-[18px] text-center text-[11px] flex-shrink-0">✓</span>
-            Complete task
-          </button>
-          <button
-            onClick={() => { handleExit(); setCtxMenu(null) }}
-            className="w-full text-left px-3 py-1.5 text-[12px] text-t-secondary hover:bg-red-500/10 hover:text-red-400 transition-colors flex items-center gap-2.5 border-none bg-transparent cursor-pointer"
-          >
-            <span className="w-[18px] text-center text-[11px] flex-shrink-0">✕</span>
-            Exit focus
-          </button>
-        </div>
-      )}
 
       {/* Task picker popup */}
       {showTaskPicker && (

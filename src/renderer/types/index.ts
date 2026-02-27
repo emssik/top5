@@ -76,6 +76,10 @@ declare global {
       getOperations: (since?: string) => Promise<import('../../shared/types').OperationLogEntry[]>
       switchFocusTask: (projectId: string, taskId: string) => Promise<void>
       resizeFocusWindow: (width: number, height: number) => Promise<void>
+      showFocusContextMenu: (items: { id: string; label: string; type?: 'separator' }[], clickX: number, clickY: number) => Promise<void>
+      getFocusMenuItems: () => Promise<{ id: string; label: string; type?: 'separator' }[]>
+      focusMenuClick: (actionId: string) => Promise<void>
+      onFocusMenuAction: (callback: (actionId: string) => void) => () => void
       showProjectInMain: (projectId: string) => Promise<void>
       onNavigateToProject: (callback: (projectId: string) => void) => () => void
       closeQuickAddWindow: () => Promise<void>

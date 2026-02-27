@@ -3,6 +3,7 @@ import { useProjects } from './hooks/useProjects'
 import Dashboard from './components/Dashboard'
 import FocusMode from './components/FocusMode'
 import CheckInPopup from './components/CheckInPopup'
+import FocusMenuPopup from './components/FocusMenuPopup'
 import OperationLogView from './components/OperationLogView'
 import QuickAddWindow from './components/QuickAddWindow'
 
@@ -11,9 +12,10 @@ export default function App() {
   const windowHash = window.location.hash
   const isFocusWindow = windowHash === '#focus'
   const isCheckInWindow = windowHash === '#checkin'
+  const isFocusMenuWindow = windowHash === '#focus-menu'
   const isOperationLogWindow = windowHash.startsWith('#operation-log')
   const isQuickAddWindow = windowHash === '#quick-add'
-  const isAuxWindow = isCheckInWindow || isOperationLogWindow || isQuickAddWindow
+  const isAuxWindow = isCheckInWindow || isFocusMenuWindow || isOperationLogWindow || isQuickAddWindow
   const isMainOrFocus = !isAuxWindow
 
   // Separate windows with hash routing — apply theme from stored config.
@@ -60,6 +62,7 @@ export default function App() {
 
   if (isFocusWindow) return loaded ? <FocusMode /> : null
   if (isCheckInWindow) return <CheckInPopup />
+  if (isFocusMenuWindow) return <FocusMenuPopup />
   if (isOperationLogWindow) return <OperationLogView />
   if (isQuickAddWindow) return <QuickAddWindow />
 

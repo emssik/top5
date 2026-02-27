@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [1.62.0] - 2026-02-27
+
+### Changed
+
+- Focus mode context menu extracted to a separate popup window (`FocusMenuPopup`) instead of rendering inline inside the focus window — fixes clipping and focus issues
+- Context menu items built dynamically from project links, Obsidian, and actions, sent via IPC to the popup
+- New IPC endpoints: `show-focus-context-menu`, `get-focus-menu-items`, `focus-menu-click`, `focus-menu-action` for popup ↔ focus window communication
+- Popup window positioned at click coordinates, clamped to screen edges, auto-closes on blur
+
+### Removed
+
+- Inline context menu rendering and resize logic from FocusMode component (`ctxMenu` state, `ctxRef`, manual DOM event listeners)
+
 ## [1.61.0] - 2026-02-26
 
 ### Added
