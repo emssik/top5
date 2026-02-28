@@ -6,6 +6,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [1.65.0] - 2026-02-28
+
+### Added
+
+- API route `POST /projects/:pid/tasks/:tid/note` — create/ensure an Obsidian note for a project task, persists `noteRef` on the task
+- API route `POST /quick-tasks/:id/note` — create/ensure an Obsidian note for a quick task
+- API routes for focus mode: `GET /focus` (status), `POST /focus` (start), `DELETE /focus` (stop)
+- `top5 note <task-ref>` CLI command — create or open an Obsidian note for any task (project or quick task)
+- `top5 focus [task-ref|stop]` CLI command — start, stop, or check focus mode from the terminal
+- `-n, --note` flag on `top5 add` and `top5 qt add` — create an Obsidian note together with the new task
+- `task-notes` service (`src/main/service/task-notes.ts`) — extracted note creation logic from IPC handler into a reusable service layer
+- `getQuickTask()` helper in quick-tasks service for single-task lookups
+- API tests for notes endpoints (`tests/api/notes.test.ts`)
+- CLI README with full command reference (`cli/README.md`)
+
+### Changed
+
+- `focus-window.ts` refactored: `enterFocusMode()`, `exitFocusMode()`, `getFocusStatus()` extracted as standalone exported functions, enabling API access to focus mode
+- `open-task-note` IPC handler in `store.ts` now delegates to `task-notes` service instead of inline logic
+
+### Fixed
+
+- Task overflow menu in ProjectDetailView auto-repositions upward when it would extend below the viewport
+
 ## [1.64.0] - 2026-02-28
 
 ### Added

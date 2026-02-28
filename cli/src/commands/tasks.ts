@@ -12,6 +12,7 @@ interface Task {
   isToDoNext?: boolean
   inProgress?: boolean
   dueDate?: string | null
+  noteRef?: string
 }
 
 interface Project {
@@ -78,7 +79,8 @@ export function register(program: Command): void {
     .description('Add a task to a project')
     .argument('<project>', 'Project code or ID')
     .argument('<title>', 'Task title')
-    .action(async (projectRef: string, title: string, _opts, cmd) => {
+    .option('-n, --note', 'Create a note for the task')
+    .action(async (projectRef: string, title: string, opts, cmd) => {
       const globalOpts = cmd.optsWithGlobals()
       const config = resolveConfig({ apiKey: globalOpts.apiKey, port: globalOpts.port })
       const client = new ApiClient(`http://${config.host}:${config.port}`, config.apiKey)
@@ -107,13 +109,26 @@ export function register(program: Command): void {
         const savedProject = result.find((p) => p.id === project.id)
         const savedTask = savedProject?.tasks.find((t) => t.id === newTask.id)
 
+        const code = savedTask?.taskNumber != null && project.code
+          ? `${project.code}-${savedTask.taskNumber}`
+          : ''
+
+        let notePath: string | undefined
+        if (opts.note && savedTask) {
+          try {
+            const noteResult = await client.post<{ noteRef: string; filePath: string }>(
+              `/api/v1/projects/${project.id}/tasks/${savedTask.id}/note`
+            )
+            notePath = noteResult.filePath
+          } catch { /* note creation is best-effort */ }
+        }
+
         printResult(savedTask ?? newTask, {
           json: globalOpts.json,
           formatFn: () => {
-            const code = savedTask?.taskNumber != null && project.code
-              ? `${project.code}-${savedTask.taskNumber}`
-              : ''
-            return `Created: ${code ? code + ' ' : ''}${title}`
+            let msg = `Created: ${code ? code + ' ' : ''}${title}`
+            if (notePath) msg += `\nNote: ${notePath}`
+            return msg
           },
         })
       } catch (err: unknown) {

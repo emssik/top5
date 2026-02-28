@@ -6,6 +6,8 @@ import { register as registerProjects } from './commands/projects.js'
 import { register as registerTasks } from './commands/tasks.js'
 import { register as registerQuickTasks } from './commands/quick-tasks.js'
 import { register as registerConfig } from './commands/config.js'
+import { register as registerNotes } from './commands/notes.js'
+import { register as registerFocus } from './commands/focus.js'
 
 const program = new Command()
 
@@ -22,5 +24,7 @@ registerProjects(program)
 registerTasks(program)
 registerQuickTasks(program)
 registerConfig(program)
+registerNotes(program)
+registerFocus(program)
 
 program.parse()

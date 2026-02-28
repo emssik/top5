@@ -13,6 +13,7 @@ interface QuickTask {
   order: number
   createdAt: string
   completedAt: string | null
+  noteRef?: string
 }
 
 function qtCode(t: QuickTask): string {
@@ -62,7 +63,8 @@ export function register(program: Command): void {
   qt.command('add')
     .description('Add a quick task')
     .argument('<title>', 'Task title')
-    .action(async (title: string, _opts, cmd) => {
+    .option('-n, --note', 'Create a note for the task')
+    .action(async (title: string, opts, cmd) => {
       const globalOpts = cmd.optsWithGlobals()
       const config = resolveConfig({ apiKey: globalOpts.apiKey, port: globalOpts.port })
       const client = new ApiClient(`http://${config.host}:${config.port}`, config.apiKey)
@@ -80,11 +82,24 @@ export function register(program: Command): void {
         const result = await client.post<QuickTask[]>('/api/v1/quick-tasks', newTask)
         const savedTask = result.find((t) => t.id === newTask.id)
 
+        const code = savedTask?.taskNumber != null ? `QT-${savedTask.taskNumber} ` : ''
+
+        let notePath: string | undefined
+        if (opts.note && savedTask) {
+          try {
+            const noteResult = await client.post<{ noteRef: string; filePath: string }>(
+              `/api/v1/quick-tasks/${savedTask.id}/note`
+            )
+            notePath = noteResult.filePath
+          } catch { /* note creation is best-effort */ }
+        }
+
         printResult(savedTask ?? newTask, {
           json: globalOpts.json,
           formatFn: () => {
-            const code = savedTask?.taskNumber != null ? `QT-${savedTask.taskNumber} ` : ''
-            return `Created: ${code}${title}`
+            let msg = `Created: ${code}${title}`
+            if (notePath) msg += `\nNote: ${notePath}`
+            return msg
           },
         })
       } catch (err: unknown) {

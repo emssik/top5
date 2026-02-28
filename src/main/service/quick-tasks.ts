@@ -14,6 +14,12 @@ export function getQuickTasks(): QuickTask[] {
   return getData().quickTasks
 }
 
+export function getQuickTask(id: string): QuickTask | ServiceError {
+  const task = getData().quickTasks.find((t) => t.id === id)
+  if (!task) return { error: 'not_found' }
+  return task
+}
+
 export function saveQuickTask(input: unknown): QuickTask[] | ServiceError {
   if (!isValidQuickTask(input)) return { error: 'validation' }
   const data = getData()

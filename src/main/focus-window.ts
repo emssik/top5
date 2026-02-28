@@ -168,104 +168,139 @@ function resolveFocusTask(): { projectId?: string; projectName?: string; taskTit
   return { projectId: pid, projectName: project?.name, taskTitle: task?.title }
 }
 
+let _getMainWindow: (() => BrowserWindow | null) | null = null
+
+export function enterFocusMode(): { error: string } | undefined {
+  if (focusWindow && !focusWindow.isDestroyed()) return { error: 'already_in_focus' }
+
+  const mainWin = _getMainWindow?.() ?? null
+  if (!mainWin) return { error: 'no_main_window' }
+
+  // Hide main window
+  mainWin.hide()
+
+  // Always open on primary display
+  const display = screen.getPrimaryDisplay()
+  const { x: workX, y: workY, width: workWidth } = display.workArea
+
+  const focusWidth = 520
+  const focusHeight = 58
+
+  // Create frameless focus window
+  focusWindow = new BrowserWindow({
+    width: focusWidth,
+    height: focusHeight,
+    x: workX + workWidth - focusWidth - 16,
+    y: workY + 12,
+    frame: false,
+    transparent: true,
+    resizable: false,
+    movable: true,
+    skipTaskbar: true,
+    alwaysOnTop: true,
+    hasShadow: true,
+    roundedCorners: true,
+    webPreferences: {
+      preload: join(__dirname, '../preload/index.js'),
+      sandbox: false
+    }
+  })
+
+  // Keep on all Spaces but allow moving between monitors
+  focusWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
+  focusWindow.setAlwaysOnTop(true, 'floating')
+
+  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
+    focusWindow.loadURL(process.env['ELECTRON_RENDERER_URL'] + '#focus')
+  } else {
+    focusWindow.loadFile(join(__dirname, '../renderer/index.html'), { hash: 'focus' })
+  }
+
+  focusWindow.on('closed', () => {
+    focusWindow = null
+  })
+
+  focusStartedAt = Date.now()
+  focusTaskInfo = resolveFocusTask()
+  appendOperation({ type: 'focus_started', ...focusTaskInfo })
+
+  startCheckInTimer()
+  return undefined
+}
+
+export function exitFocusMode(): { error: string } | undefined {
+  if (!focusWindow || focusWindow.isDestroyed()) return { error: 'not_in_focus' }
+
+  const mainWin = _getMainWindow?.() ?? null
+
+  // Log focus end with reported (check-in) time
+  const reportedMinutes = focusStartedAt
+    ? loadCheckIns()
+        .filter((c) => new Date(c.timestamp).getTime() >= focusStartedAt)
+        .reduce((sum, c) => sum + (c.minutes ?? (c.response === 'yes' ? 15 : c.response === 'a_little' ? 7 : 0)), 0)
+    : 0
+  appendOperation({ type: 'focus_ended', ...focusTaskInfo, details: `${reportedMinutes}min` })
+  focusStartedAt = 0
+  focusTaskInfo = {}
+
+  // Clear focus state in store before showing main window
+  const { config } = getAppData()
+  setAppDataKey('config', { ...config, focusProjectId: null, focusTaskId: null })
+
+  clearCheckInTimer()
+  closeCheckInPopup()
+
+  if (focusMenuWindow && !focusMenuWindow.isDestroyed()) {
+    focusMenuWindow.close()
+    focusMenuWindow = null
+  }
+
+  if (focusWindow && !focusWindow.isDestroyed()) {
+    focusWindow.close()
+    focusWindow = null
+  }
+
+  if (mainWin) {
+    // Tell main window to reload data
+    mainWin.webContents.send('reload-data')
+    mainWin.show()
+    mainWin.focus()
+  }
+  return undefined
+}
+
+export function getFocusStatus(): {
+  active: boolean
+  projectId?: string
+  taskId?: string
+  projectName?: string
+  taskTitle?: string
+  startedAt?: number
+  elapsedMs?: number
+} {
+  const { config } = getAppData()
+  const active = !!(focusWindow && !focusWindow.isDestroyed())
+  if (!active) return { active: false }
+  return {
+    active: true,
+    projectId: config.focusProjectId ?? undefined,
+    taskId: config.focusTaskId ?? undefined,
+    projectName: focusTaskInfo.projectName,
+    taskTitle: focusTaskInfo.taskTitle,
+    startedAt: focusStartedAt || undefined,
+    elapsedMs: focusStartedAt ? Date.now() - focusStartedAt : undefined,
+  }
+}
+
 export function registerFocusHandlers(
   ipcMain: IpcMain,
   getMainWindow: () => BrowserWindow | null
 ): void {
-  ipcMain.handle('enter-focus-mode', () => {
-    if (focusWindow && !focusWindow.isDestroyed()) return
+  _getMainWindow = getMainWindow
 
-    const mainWin = getMainWindow()
-    if (!mainWin) return
+  ipcMain.handle('enter-focus-mode', () => enterFocusMode())
 
-    // Hide main window
-    mainWin.hide()
-
-    // Always open on primary display
-    const display = screen.getPrimaryDisplay()
-    const { x: workX, y: workY, width: workWidth } = display.workArea
-
-    const focusWidth = 520
-    const focusHeight = 58
-
-    // Create frameless focus window
-    focusWindow = new BrowserWindow({
-      width: focusWidth,
-      height: focusHeight,
-      x: workX + workWidth - focusWidth - 16,
-      y: workY + 12,
-      frame: false,
-      transparent: true,
-      resizable: false,
-      movable: true,
-      skipTaskbar: true,
-      alwaysOnTop: true,
-      hasShadow: true,
-      roundedCorners: true,
-      webPreferences: {
-        preload: join(__dirname, '../preload/index.js'),
-        sandbox: false
-      }
-    })
-
-    // Keep on all Spaces but allow moving between monitors
-    focusWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
-    focusWindow.setAlwaysOnTop(true, 'floating')
-
-    if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-      focusWindow.loadURL(process.env['ELECTRON_RENDERER_URL'] + '#focus')
-    } else {
-      focusWindow.loadFile(join(__dirname, '../renderer/index.html'), { hash: 'focus' })
-    }
-
-    focusWindow.on('closed', () => {
-      focusWindow = null
-    })
-
-    focusStartedAt = Date.now()
-    focusTaskInfo = resolveFocusTask()
-    appendOperation({ type: 'focus_started', ...focusTaskInfo })
-
-    startCheckInTimer()
-  })
-
-  ipcMain.handle('exit-focus-mode', () => {
-    const mainWin = getMainWindow()
-
-    // Log focus end with reported (check-in) time
-    const reportedMinutes = focusStartedAt
-      ? loadCheckIns()
-          .filter((c) => new Date(c.timestamp).getTime() >= focusStartedAt)
-          .reduce((sum, c) => sum + (c.minutes ?? (c.response === 'yes' ? 15 : c.response === 'a_little' ? 7 : 0)), 0)
-      : 0
-    appendOperation({ type: 'focus_ended', ...focusTaskInfo, details: `${reportedMinutes}min` })
-    focusStartedAt = 0
-    focusTaskInfo = {}
-
-    // Clear focus state in store before showing main window
-    const { config } = getAppData()
-    setAppDataKey('config', { ...config, focusProjectId: null, focusTaskId: null })
-
-    clearCheckInTimer()
-    closeCheckInPopup()
-
-    if (focusMenuWindow && !focusMenuWindow.isDestroyed()) {
-      focusMenuWindow.close()
-      focusMenuWindow = null
-    }
-
-    if (focusWindow && !focusWindow.isDestroyed()) {
-      focusWindow.close()
-      focusWindow = null
-    }
-
-    if (mainWin) {
-      // Tell main window to reload data
-      mainWin.webContents.send('reload-data')
-      mainWin.show()
-      mainWin.focus()
-    }
-  })
+  ipcMain.handle('exit-focus-mode', () => exitFocusMode())
 
   ipcMain.handle('get-focus-unsaved-ms', () => {
     if (!lastCheckInAt) return 0
