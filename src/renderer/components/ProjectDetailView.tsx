@@ -290,7 +290,14 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
           <>
             <button className="task-overflow-trigger" onClick={() => setMenuOpenId(menuOpenId === task.id ? null : task.id)}>⋯</button>
             {menuOpenId === task.id && (
-              <div className="task-overflow-menu">
+              <div className="task-overflow-menu" ref={(el) => {
+                if (!el) return
+                const rect = el.getBoundingClientRect()
+                if (rect.bottom > window.innerHeight) {
+                  el.style.top = 'auto'
+                  el.style.bottom = 'calc(100% + 4px)'
+                }
+              }}>
                 <button className="task-overflow-item" onClick={() => { toggleTaskToDoNext(project.id, task.id); setMenuOpenId(null) }}><span className="toi-icon">📌</span>{isPinned ? 'Unpin' : 'Pin to Today'}</button>
                 <button className="task-overflow-item" onClick={() => { setFocus(project.id, task.id); setMenuOpenId(null) }}><span className="toi-icon">▶</span>Focus</button>
                 <button className="task-overflow-item" onClick={() => { setMenuOpenId(null); setDueDatePickerId(task.id) }}><span className="toi-icon">📅</span>{task.dueDate ? 'Change due date' : 'Set due date'}</button>

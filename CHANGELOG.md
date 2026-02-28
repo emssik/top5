@@ -6,6 +6,76 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [1.66.0] - 2026-02-28
+
+### Added
+
+- `createClient()` factory helper (`cli/src/lib/client.ts`) — eliminates repeated `resolveConfig + new ApiClient` boilerplate across all CLI commands
+- `warn()` function in CLI output module for non-fatal warnings (e.g. note creation failures)
+- Port validation in CLI config: rejects invalid port values (NaN, out of 1-65535 range) with a clear error message
+- `top5 note` command now supports raw IDs (not just task codes): tries quick task first, falls back to project task
+- Task code regex now accepts alphanumeric project codes (e.g. `A1-3`, `P2X-12`)
+- CLI tests for raw-ID note resolution branching logic (`cli/tests/notes.test.ts`)
+- CLI tests for alphanumeric project codes in `parseTaskCode`
+- API tests for focus endpoints (`tests/api/focus.test.ts`) — 11 tests covering validation, error rollback, and status
+- Electron test mocks for `globalShortcut`, `screen`, `app.hide` and `@electron-toolkit/utils`
+
+### Changed
+
+- All CLI commands refactored to use `createClient(globalOpts)` instead of inline config + client construction
+- Note creation errors in `top5 add --note` and `top5 qt add --note` now emit a warning instead of being silently swallowed
+
+### Fixed
+
+- Focus API (`POST /focus`) rolls back `focusProjectId`/`focusTaskId` in config when `enterFocusMode()` fails, preventing stale focus config leak
+- Focus API defers `notifyAllWindows()` until after successful `enterFocusMode()`, avoiding premature UI updates on failure
+
+## [1.65.0] - 2026-02-28
+
+### Added
+
+- API route `POST /projects/:pid/tasks/:tid/note` — create/ensure an Obsidian note for a project task, persists `noteRef` on the task
+- API route `POST /quick-tasks/:id/note` — create/ensure an Obsidian note for a quick task
+- API routes for focus mode: `GET /focus` (status), `POST /focus` (start), `DELETE /focus` (stop)
+- `top5 note <task-ref>` CLI command — create or open an Obsidian note for any task (project or quick task)
+- `top5 focus [task-ref|stop]` CLI command — start, stop, or check focus mode from the terminal
+- `-n, --note` flag on `top5 add` and `top5 qt add` — create an Obsidian note together with the new task
+- `task-notes` service (`src/main/service/task-notes.ts`) — extracted note creation logic from IPC handler into a reusable service layer
+- `getQuickTask()` helper in quick-tasks service for single-task lookups
+- API tests for notes endpoints (`tests/api/notes.test.ts`)
+- CLI README with full command reference (`cli/README.md`)
+
+### Changed
+
+- `focus-window.ts` refactored: `enterFocusMode()`, `exitFocusMode()`, `getFocusStatus()` extracted as standalone exported functions, enabling API access to focus mode
+- `open-task-note` IPC handler in `store.ts` now delegates to `task-notes` service instead of inline logic
+
+### Fixed
+
+- Task overflow menu in ProjectDetailView auto-repositions upward when it would extend below the viewport
+
+## [1.64.0] - 2026-02-28
+
+### Added
+
+- `cli/` — new standalone CLI package (`top5-cli` v0.1.0) for interacting with the top5 HTTP API from the terminal
+  - `top5 health` — check if the API is running
+  - `top5 projects` — list active projects, with `--all`, `--archived`, `--suspended` filters
+  - `top5 tasks <project>` — list tasks in a project (by code or ID), with `--all` to include completed
+  - `top5 add <project> <title>` — add a task to a project
+  - `top5 done <task-code>` / `top5 undone <task-code>` — complete or reopen a project task (e.g. `PRJ-3`)
+  - `top5 qt` — list quick tasks, with `--all` flag
+  - `top5 qt add <title>` / `top5 qt done <ref>` / `top5 qt undone <ref>` — manage quick tasks
+  - `top5 config` / `top5 config set <key> <value>` — read/write CLI config (`~/.config/top5/cli.json`)
+  - `--json` flag on every command for pipe-friendly JSON output
+  - `--api-key` and `--port` global flags as per-invocation overrides
+  - Config resolution priority: CLI flags > `TOP5_API_KEY`/`TOP5_API_PORT` env vars > config file > defaults
+  - Task lookup by human-readable code (`PRJ-3`, `QT-5`) or raw UUID
+  - 5s request timeout with clear "is the app running?" error messages
+  - Unit tests with vitest: api-client, config, output formatting, task resolution
+- `docs/CLI_PLAN.md` — implementation plan for the CLI package
+- `docs/CLI_REVIEW.md` — code review notes for the CLI implementation
+
 ## [1.63.0] - 2026-02-27
 
 ### Added

@@ -4,7 +4,8 @@ import { resolve } from 'path'
 export default defineConfig({
   resolve: {
     alias: {
-      electron: resolve(__dirname, 'tests/api/__mocks__/electron.ts')
+      electron: resolve(__dirname, 'tests/api/__mocks__/electron.ts'),
+      '@electron-toolkit/utils': resolve(__dirname, 'tests/api/__mocks__/electron-toolkit-utils.ts')
     }
   },
   test: {

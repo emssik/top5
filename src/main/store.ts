@@ -21,11 +21,13 @@ import { homedir } from 'os'
 import yaml from 'js-yaml'
 import { normalizeRepeatSchedule, dateKey } from '../shared/schedule'
 import { PROJECT_COLORS, LINK_LABELS } from '../shared/constants'
+import { computeNotePath } from '../shared/taskId'
 import * as projectService from './service/projects'
 import * as quickTaskService from './service/quick-tasks'
 import * as repeatingTaskService from './service/repeating-tasks'
 import * as winsService from './service/wins'
 import * as journalService from './service/journal'
+import * as taskNotesService from './service/task-notes'
 import type {
   Task,
   RepeatSchedule,
@@ -1171,57 +1173,56 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
 
   ipcMain.handle('open-task-note', (_event, taskId: string, taskTitle: string, projectName?: string, taskBadge?: string, noteRef?: string) => {
     if (typeof taskId !== 'string' || typeof taskTitle !== 'string') return { error: 'invalid' }
-    const config = getData().config
-    const storagePath = config.obsidianStoragePath
-    if (!storagePath) return { error: 'no_path' }
-    const vaultName = config.obsidianVaultName || basename(resolve(storagePath))
 
-    const { shell } = require('electron') as typeof import('electron')
+    // Try to find task and use the service for note creation + persistence
+    const data = getData()
+    let result: { noteRef: string; filePath: string } | { error: string }
 
-    // Sanitize names for filesystem (also collapse '..' to avoid path traversal)
-    const sanitize = (s: string) => s.replace(/[/\\:*?"<>|]/g, '-').replace(/\.{2,}/g, '.').trim()
-
-    let notePath: string
-    let folderName: string
-    let safeName: string
-
-    if (typeof noteRef === 'string' && noteRef.startsWith('top5.storage/')) {
-      // Use stored note reference (e.g. from split tasks)
-      notePath = noteRef
-      const parts = noteRef.replace('top5.storage/', '').split('/')
-      folderName = parts[0]
-      safeName = parts.slice(1).join('/')
+    const project = data.projects.find((p) => p.tasks.some((t) => t.id === taskId))
+    if (project) {
+      result = taskNotesService.ensureProjectTaskNote(project.id, taskId)
+    } else if (data.quickTasks.some((t) => t.id === taskId)) {
+      result = taskNotesService.ensureQuickTaskNote(taskId)
     } else {
-      const prefix = taskBadge ? `${sanitize(taskBadge)} ` : ''
-      const truncated = taskTitle.length > 40 ? taskTitle.slice(0, 40) + '\u2026' : taskTitle
-      safeName = `${prefix}${sanitize(truncated)}`
-      folderName = projectName ? sanitize(projectName) : 'QuickTasks'
-      notePath = `top5.storage/${folderName}/${safeName}`
+      // Fallback for tasks not yet persisted — use raw params
+      const config = data.config
+      if (!config.obsidianStoragePath) return { error: 'no_path' }
+
+      let notePath: string
+      if (typeof noteRef === 'string' && noteRef.startsWith('top5.storage/')) {
+        notePath = noteRef
+      } else {
+        notePath = computeNotePath(taskBadge, taskTitle, projectName)
+      }
+
+      const vaultPath = resolve(config.obsidianStoragePath.replace(/\/+$/, ''))
+      const relPath = notePath.replace('top5.storage/', '')
+      const parts = relPath.split('/')
+      const folderName = parts[0]
+      const safeName = parts.slice(1).join('/')
+      const noteDir = join(vaultPath, 'top5.storage', folderName)
+      mkdirSync(noteDir, { recursive: true })
+      const filePath = join(noteDir, `${safeName}.md`)
+      if (!existsSync(filePath)) {
+        const content = projectName
+          ? `# ${taskTitle}\n\nProject: ${projectName}\n\n---\n\n`
+          : `# ${taskTitle}\n\n---\n\n`
+        writeFileSync(filePath, content, 'utf-8')
+      }
+      result = { noteRef: notePath, filePath }
     }
 
-    const vaultPath = resolve(storagePath.replace(/\/+$/, ''))
+    if ('error' in result) return { error: result.error }
 
-    // Ensure directory exists so Obsidian can write the file
-    const noteDir = join(vaultPath, 'top5.storage', folderName)
-    mkdirSync(noteDir, { recursive: true })
-
-    const filePath = join(noteDir, `${safeName}.md`)
-    const fileExists = existsSync(filePath)
-
-    if (fileExists) {
-      // File exists — just open it
-      const uri = `obsidian://open?vault=${encodeURIComponent(vaultName)}&file=${encodeURIComponent(notePath)}`
-      shell.openExternal(uri)
-    } else {
-      // File doesn't exist — use obsidian://new to create and open
-      const content = projectName
-        ? `# ${taskTitle}\n\nProject: ${projectName}\n\n---\n\n`
-        : `# ${taskTitle}\n\n---\n\n`
-      const uri = `obsidian://new?vault=${encodeURIComponent(vaultName)}&file=${encodeURIComponent(notePath)}&content=${encodeURIComponent(content)}`
+    // Open in Obsidian
+    const vaultName = taskNotesService.getVaultName()
+    if (vaultName) {
+      const { shell } = require('electron') as typeof import('electron')
+      const uri = `obsidian://open?vault=${encodeURIComponent(vaultName)}&file=${encodeURIComponent(result.noteRef)}`
       shell.openExternal(uri)
     }
 
-    return { ok: true }
+    return { ok: true, noteRef: result.noteRef }
   })
 
   // --- Journal ---
