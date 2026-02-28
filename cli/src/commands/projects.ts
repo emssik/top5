@@ -1,6 +1,5 @@
 import type { Command } from 'commander'
-import { ApiClient } from '../lib/api-client.js'
-import { resolveConfig } from '../lib/config.js'
+import { createClient } from '../lib/client.js'
 import { printResult, formatTable, die } from '../lib/output.js'
 
 interface Project {
@@ -22,8 +21,7 @@ export function register(program: Command): void {
     .option('--suspended', 'Show only suspended projects')
     .action(async (opts, cmd) => {
       const globalOpts = cmd.optsWithGlobals()
-      const config = resolveConfig({ apiKey: globalOpts.apiKey, port: globalOpts.port })
-      const client = new ApiClient(`http://${config.host}:${config.port}`, config.apiKey)
+      const client = createClient(globalOpts)
 
       try {
         let projects = await client.get<Project[]>('/api/v1/projects')

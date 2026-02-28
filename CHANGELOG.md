@@ -6,6 +6,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [1.66.0] - 2026-02-28
+
+### Added
+
+- `createClient()` factory helper (`cli/src/lib/client.ts`) — eliminates repeated `resolveConfig + new ApiClient` boilerplate across all CLI commands
+- `warn()` function in CLI output module for non-fatal warnings (e.g. note creation failures)
+- Port validation in CLI config: rejects invalid port values (NaN, out of 1-65535 range) with a clear error message
+- `top5 note` command now supports raw IDs (not just task codes): tries quick task first, falls back to project task
+- Task code regex now accepts alphanumeric project codes (e.g. `A1-3`, `P2X-12`)
+- CLI tests for raw-ID note resolution branching logic (`cli/tests/notes.test.ts`)
+- CLI tests for alphanumeric project codes in `parseTaskCode`
+- API tests for focus endpoints (`tests/api/focus.test.ts`) — 11 tests covering validation, error rollback, and status
+- Electron test mocks for `globalShortcut`, `screen`, `app.hide` and `@electron-toolkit/utils`
+
+### Changed
+
+- All CLI commands refactored to use `createClient(globalOpts)` instead of inline config + client construction
+- Note creation errors in `top5 add --note` and `top5 qt add --note` now emit a warning instead of being silently swallowed
+
+### Fixed
+
+- Focus API (`POST /focus`) rolls back `focusProjectId`/`focusTaskId` in config when `enterFocusMode()` fails, preventing stale focus config leak
+- Focus API defers `notifyAllWindows()` until after successful `enterFocusMode()`, avoiding premature UI updates on failure
+
 ## [1.65.0] - 2026-02-28
 
 ### Added

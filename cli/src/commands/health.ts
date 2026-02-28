@@ -1,6 +1,5 @@
 import type { Command } from 'commander'
-import { ApiClient } from '../lib/api-client.js'
-import { resolveConfig } from '../lib/config.js'
+import { createClient } from '../lib/client.js'
 import { printResult, die } from '../lib/output.js'
 
 interface HealthData {
@@ -14,8 +13,7 @@ export function register(program: Command): void {
     .description('Check if top5 API is running')
     .action(async (_opts, cmd) => {
       const globalOpts = cmd.optsWithGlobals()
-      const config = resolveConfig({ apiKey: globalOpts.apiKey, port: globalOpts.port })
-      const client = new ApiClient(`http://${config.host}:${config.port}`, config.apiKey)
+      const client = createClient(globalOpts)
 
       try {
         const data = await client.get<HealthData>('/api/v1/health')

@@ -1,6 +1,5 @@
 import type { Command } from 'commander'
-import { ApiClient } from '../lib/api-client.js'
-import { resolveConfig } from '../lib/config.js'
+import { createClient } from '../lib/client.js'
 import { resolveProjectTask, resolveQuickTask, parseTaskCode } from '../lib/resolve.js'
 import { printResult, die } from '../lib/output.js'
 
@@ -23,17 +22,36 @@ export function register(program: Command): void {
     .argument('<task-ref>', 'Task code (e.g. PRJ-3) or QT-5')
     .action(async (taskRef: string, _opts, cmd) => {
       const globalOpts = cmd.optsWithGlobals()
-      const config = resolveConfig({ apiKey: globalOpts.apiKey, port: globalOpts.port })
-      const client = new ApiClient(`http://${config.host}:${config.port}`, config.apiKey)
+      const client = createClient(globalOpts)
 
       try {
         const parsed = parseTaskCode(taskRef)
         let result: NoteResult
 
         if (parsed && parsed.projectCode === 'QT') {
+          // QT-N code
           const task = await resolveQuickTask(client, taskRef)
           result = await client.post<NoteResult>(`/api/v1/quick-tasks/${task.id}/note`)
+        } else if (!parsed) {
+          // Raw ID — try quick task first, fall back to project task only if not found
+          let quickTask: { id: string } | null = null
+          try {
+            quickTask = await resolveQuickTask(client, taskRef)
+          } catch {
+            // not a quick task — fall through to project task
+          }
+
+          if (quickTask) {
+            result = await client.post<NoteResult>(`/api/v1/quick-tasks/${quickTask.id}/note`)
+          } else {
+            const { project, task } = await resolveProjectTask(client, taskRef) as {
+              project: ProjectSummary
+              task: { id: string; taskNumber?: number; title: string }
+            }
+            result = await client.post<NoteResult>(`/api/v1/projects/${project.id}/tasks/${task.id}/note`)
+          }
         } else {
+          // PRJ-N code
           const { project, task } = await resolveProjectTask(client, taskRef) as {
             project: ProjectSummary
             task: { id: string; taskNumber?: number; title: string }

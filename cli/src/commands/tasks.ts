@@ -1,8 +1,7 @@
 import type { Command } from 'commander'
-import { ApiClient } from '../lib/api-client.js'
-import { resolveConfig } from '../lib/config.js'
+import { createClient } from '../lib/client.js'
 import { resolveProject, resolveProjectTask } from '../lib/resolve.js'
-import { printResult, formatTable, die } from '../lib/output.js'
+import { printResult, formatTable, die, warn } from '../lib/output.js'
 
 interface Task {
   id: string
@@ -45,8 +44,7 @@ export function register(program: Command): void {
     .option('-a, --all', 'Show all tasks (including completed)')
     .action(async (projectRef: string, opts, cmd) => {
       const globalOpts = cmd.optsWithGlobals()
-      const config = resolveConfig({ apiKey: globalOpts.apiKey, port: globalOpts.port })
-      const client = new ApiClient(`http://${config.host}:${config.port}`, config.apiKey)
+      const client = createClient(globalOpts)
 
       try {
         const project = await resolveProject(client, projectRef) as Project
@@ -82,8 +80,7 @@ export function register(program: Command): void {
     .option('-n, --note', 'Create a note for the task')
     .action(async (projectRef: string, title: string, opts, cmd) => {
       const globalOpts = cmd.optsWithGlobals()
-      const config = resolveConfig({ apiKey: globalOpts.apiKey, port: globalOpts.port })
-      const client = new ApiClient(`http://${config.host}:${config.port}`, config.apiKey)
+      const client = createClient(globalOpts)
 
       try {
         // Resolve project first to get full data
@@ -120,7 +117,9 @@ export function register(program: Command): void {
               `/api/v1/projects/${project.id}/tasks/${savedTask.id}/note`
             )
             notePath = noteResult.filePath
-          } catch { /* note creation is best-effort */ }
+          } catch (e: unknown) {
+            warn(`Note creation failed: ${(e as Error).message}`)
+          }
         }
 
         printResult(savedTask ?? newTask, {
@@ -143,8 +142,7 @@ export function register(program: Command): void {
     .argument('<task-code>', 'Task code (e.g. PRJ-3) or task ID')
     .action(async (taskRef: string, _opts, cmd) => {
       const globalOpts = cmd.optsWithGlobals()
-      const config = resolveConfig({ apiKey: globalOpts.apiKey, port: globalOpts.port })
-      const client = new ApiClient(`http://${config.host}:${config.port}`, config.apiKey)
+      const client = createClient(globalOpts)
 
       try {
         const { project, task } = await resolveProjectTask(client, taskRef) as {
@@ -189,8 +187,7 @@ export function register(program: Command): void {
     .argument('<task-code>', 'Task code (e.g. PRJ-3) or task ID')
     .action(async (taskRef: string, _opts, cmd) => {
       const globalOpts = cmd.optsWithGlobals()
-      const config = resolveConfig({ apiKey: globalOpts.apiKey, port: globalOpts.port })
-      const client = new ApiClient(`http://${config.host}:${config.port}`, config.apiKey)
+      const client = createClient(globalOpts)
 
       try {
         const { project, task } = await resolveProjectTask(client, taskRef) as {

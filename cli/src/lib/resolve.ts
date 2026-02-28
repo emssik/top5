@@ -14,7 +14,7 @@ interface TaskSummary {
   completed: boolean
 }
 
-const TASK_CODE_RE = /^([A-Za-z]+)-(\d+)$/
+const TASK_CODE_RE = /^([A-Za-z0-9]+)-(\d+)$/
 
 /**
  * Parse a task code like "PRJ-3" into { projectCode, taskNumber }.

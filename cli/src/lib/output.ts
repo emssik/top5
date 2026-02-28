@@ -51,6 +51,10 @@ function pad(str: string, width: number, align: 'left' | 'right'): string {
   return align === 'right' ? padding + str : str + padding
 }
 
+export function warn(message: string): void {
+  console.error(`Warning: ${message}`)
+}
+
 export function die(message: string): never {
   console.error(`Error: ${message}`)
   process.exit(1)

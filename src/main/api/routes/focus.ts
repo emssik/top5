@@ -37,15 +37,17 @@ export function registerFocusRoutes(fastify: FastifyInstance): void {
       }
     }
 
-    // Set focus config before entering focus mode
+    // Set focus config (needed for resolveFocusTask inside enterFocusMode)
     const { config } = getAppData()
     setAppDataKey('config', { ...config, focusProjectId: projectId, focusTaskId: taskId })
-    notifyAllWindows()
 
     const err = enterFocusMode()
     if (err) {
+      // Roll back to previous config
+      setAppDataKey('config', config)
       return reply.status(409).send({ ok: false, error: err.error })
     }
+    notifyAllWindows()
 
     return { ok: true, data: getFocusStatus() }
   })

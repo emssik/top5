@@ -49,11 +49,16 @@ export function resolveConfig(flags: { apiKey?: string; port?: string }): Resolv
     file.apiKey ??
     DEFAULTS.apiKey
 
-  const port =
+  const rawPort =
     (flags.port ? parseInt(flags.port, 10) : undefined) ??
     (process.env['TOP5_API_PORT'] ? parseInt(process.env['TOP5_API_PORT'], 10) : undefined) ??
     file.port ??
     DEFAULTS.port
+
+  if (isNaN(rawPort) || rawPort < 1 || rawPort > 65535) {
+    throw new Error(`Invalid port: ${flags.port ?? process.env['TOP5_API_PORT'] ?? file.port}. Must be 1–65535.`)
+  }
+  const port = rawPort
 
   const host =
     process.env['TOP5_API_HOST'] ??

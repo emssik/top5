@@ -1,8 +1,7 @@
 import type { Command } from 'commander'
-import { ApiClient } from '../lib/api-client.js'
-import { resolveConfig } from '../lib/config.js'
+import { createClient } from '../lib/client.js'
 import { resolveQuickTask } from '../lib/resolve.js'
-import { printResult, formatTable, die } from '../lib/output.js'
+import { printResult, formatTable, die, warn } from '../lib/output.js'
 
 interface QuickTask {
   id: string
@@ -33,8 +32,7 @@ export function register(program: Command): void {
     .option('-a, --all', 'Show all quick tasks (including completed)')
     .action(async (opts, cmd) => {
       const globalOpts = cmd.optsWithGlobals()
-      const config = resolveConfig({ apiKey: globalOpts.apiKey, port: globalOpts.port })
-      const client = new ApiClient(`http://${config.host}:${config.port}`, config.apiKey)
+      const client = createClient(globalOpts)
 
       try {
         let tasks = await client.get<QuickTask[]>('/api/v1/quick-tasks')
@@ -66,8 +64,7 @@ export function register(program: Command): void {
     .option('-n, --note', 'Create a note for the task')
     .action(async (title: string, opts, cmd) => {
       const globalOpts = cmd.optsWithGlobals()
-      const config = resolveConfig({ apiKey: globalOpts.apiKey, port: globalOpts.port })
-      const client = new ApiClient(`http://${config.host}:${config.port}`, config.apiKey)
+      const client = createClient(globalOpts)
 
       try {
         const newTask = {
@@ -91,7 +88,9 @@ export function register(program: Command): void {
               `/api/v1/quick-tasks/${savedTask.id}/note`
             )
             notePath = noteResult.filePath
-          } catch { /* note creation is best-effort */ }
+          } catch (e: unknown) {
+            warn(`Note creation failed: ${(e as Error).message}`)
+          }
         }
 
         printResult(savedTask ?? newTask, {
@@ -113,8 +112,7 @@ export function register(program: Command): void {
     .argument('<ref>', 'Quick task code (e.g. QT-5) or ID')
     .action(async (ref: string, _opts, cmd) => {
       const globalOpts = cmd.optsWithGlobals()
-      const config = resolveConfig({ apiKey: globalOpts.apiKey, port: globalOpts.port })
-      const client = new ApiClient(`http://${config.host}:${config.port}`, config.apiKey)
+      const client = createClient(globalOpts)
 
       try {
         const task = await resolveQuickTask(client, ref) as QuickTask
@@ -144,8 +142,7 @@ export function register(program: Command): void {
     .argument('<ref>', 'Quick task code (e.g. QT-5) or ID')
     .action(async (ref: string, _opts, cmd) => {
       const globalOpts = cmd.optsWithGlobals()
-      const config = resolveConfig({ apiKey: globalOpts.apiKey, port: globalOpts.port })
-      const client = new ApiClient(`http://${config.host}:${config.port}`, config.apiKey)
+      const client = createClient(globalOpts)
 
       try {
         const task = await resolveQuickTask(client, ref) as QuickTask

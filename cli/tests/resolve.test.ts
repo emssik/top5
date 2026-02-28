@@ -65,6 +65,16 @@ describe('parseTaskCode', () => {
     const result = parseTaskCode('A-1')
     expect(result).toEqual({ projectCode: 'A', taskNumber: 1 })
   })
+
+  it('handles codes with digits (e.g. A1-3)', () => {
+    const result = parseTaskCode('A1-3')
+    expect(result).toEqual({ projectCode: 'A1', taskNumber: 3 })
+  })
+
+  it('handles mixed alphanumeric codes (e.g. P2X-12)', () => {
+    const result = parseTaskCode('P2X-12')
+    expect(result).toEqual({ projectCode: 'P2X', taskNumber: 12 })
+  })
 })
 
 describe('resolveProject', () => {

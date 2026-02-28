@@ -1,6 +1,5 @@
 import type { Command } from 'commander'
-import { ApiClient } from '../lib/api-client.js'
-import { resolveConfig } from '../lib/config.js'
+import { createClient } from '../lib/client.js'
 import { resolveProjectTask, resolveQuickTask, parseTaskCode } from '../lib/resolve.js'
 import { printResult, die } from '../lib/output.js'
 
@@ -29,8 +28,7 @@ export function register(program: Command): void {
     .argument('[task-ref]', 'Task code (PRJ-3 / QT-5) or "stop"')
     .action(async (taskRef: string | undefined, _opts, cmd) => {
       const globalOpts = cmd.optsWithGlobals()
-      const config = resolveConfig({ apiKey: globalOpts.apiKey, port: globalOpts.port })
-      const client = new ApiClient(`http://${config.host}:${config.port}`, config.apiKey)
+      const client = createClient(globalOpts)
 
       try {
         // No argument — show status
