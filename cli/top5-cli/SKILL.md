@@ -22,6 +22,16 @@ CLI for managing projects and tasks in the top5 app. Communicates via HTTP API â
 
 All commands support `--json` for machine-readable output. Use `--json` when parsing results programmatically.
 
+## IMPORTANT: Project codes are NOT guessable
+
+Project codes (e.g., `TOP`, `MKT`, `CLI`) are user-defined and **cannot be inferred from project names**. A project named "Top5" might have code "TOP", "T5", "T", or anything else.
+
+**Rules:**
+1. **NEVER guess a project code.** Always look it up first.
+2. If you already have a project UUID (e.g., from `top5 focus --json`), use the UUID directly â€” it works everywhere a code does.
+3. If you don't have the UUID, run `top5 projects` first to get the correct code, then use it.
+4. If the user mentions a project by name, find its code from `top5 projects` output before running any task commands.
+
 ## Commands
 
 ### List projects
