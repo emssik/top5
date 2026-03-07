@@ -6,7 +6,8 @@ import type { MergedTask } from '../hooks/useTaskList'
 import { calcQuickTaskTime, calcTaskTime, formatCheckInTime } from '../utils/checkInTime'
 import { STANDALONE_PROJECT_ID } from '../utils/constants'
 import type { Task, QuickTask, LockedTaskRef, WinEntry } from '../types'
-import { projectColorValue, normalizeProjectLinks } from '../utils/projects'
+import { projectColorValue, normalizeProjectLinks, openProjectLink } from '../utils/projects'
+import TaskLinksIndicator from './TaskLinksIndicator'
 import ProjectLinksMenu from './ProjectLinksMenu'
 import TaskIdBadge from './TaskIdBadge'
 import { formatTaskId, formatQuickTaskId, computeNotePath } from '../../shared/taskId'
@@ -844,6 +845,7 @@ export default function TodayView() {
               {task.repeatingTaskId && <span style={{ opacity: 0.6, marginRight: 4 }}>↻</span>}
               <TaskIdBadge taskNumber={task.taskNumber} projectCode={task.projectCode} kind={task.kind} />
               <Linkify text={task.title} />
+              <TaskLinksIndicator links={task.links ?? []} projectName={task.projectName} />
             </div>
           )}
           {renderMeta(task)}
@@ -940,6 +942,11 @@ export default function TodayView() {
         }
         if (!task.repeatingTaskId) {
           items.push({ label: 'Split & Continue', kbd: 'C', action: () => splitTask(task) })
+        }
+        if (task.links && task.links.length > 0) {
+          for (const link of task.links) {
+            items.push({ label: `🔗 ${link.label}`, kbd: '', action: () => openProjectLink(link, task.projectName) })
+          }
         }
         if (!isFocusCard && !locked && (section === 'up-next' || task.repeatingTaskId)) {
           items.push({ label: task.repeatingTaskId ? 'Unpin' : 'Remove', kbd: '⌫', action: () => removeTask(task), danger: true })

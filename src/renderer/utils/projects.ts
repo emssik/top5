@@ -42,13 +42,16 @@ export function linksFromLaunchers(launchers?: ProjectLaunchers): ProjectLink[] 
     .map(([key, value]) => ({ label: LINK_LABELS[key], url: value!.trim() }))
 }
 
-export function normalizeProjectLinks(project: Project): ProjectLink[] {
-  const rawLinks = Array.isArray(project.links) ? project.links : []
-  const links = rawLinks
+export function normalizeLinks(raw: ProjectLink[] | undefined | null): ProjectLink[] {
+  if (!Array.isArray(raw)) return []
+  return raw
     .filter((link): link is ProjectLink => !!link && typeof link.label === 'string' && typeof link.url === 'string')
     .map((link) => ({ label: link.label.trim(), url: link.url.trim() }))
     .filter((link) => link.label.length > 0 && link.url.length > 0)
+}
 
+export function normalizeProjectLinks(project: Project): ProjectLink[] {
+  const links = normalizeLinks(project.links)
   if (links.length > 0) return links
   return linksFromLaunchers(project.launchers)
 }

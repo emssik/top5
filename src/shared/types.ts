@@ -12,6 +12,7 @@ export interface Task {
   noteRef?: string
   dueDate?: string | null
   beyondLimit?: boolean
+  links?: ProjectLink[]
 }
 
 export type RepeatSchedule =

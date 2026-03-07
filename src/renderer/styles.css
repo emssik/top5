@@ -2097,3 +2097,144 @@ body {
   color: #f87171;
   font-weight: 600;
 }
+
+/* Task links indicator */
+.task-links-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 4px;
+  cursor: pointer;
+  opacity: 0.5;
+  transition: opacity 0.15s;
+  vertical-align: middle;
+}
+.task-links-indicator:hover {
+  opacity: 1;
+}
+.task-link-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  color: var(--c-text-secondary);
+}
+.task-link-icon svg {
+  flex-shrink: 0;
+}
+.task-link-icon img {
+  border-radius: 2px;
+}
+
+/* Task links popover */
+.task-links-popover {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  z-index: 100;
+  background: var(--bg-card);
+  border: 1px solid var(--c-border);
+  border-radius: 8px;
+  padding: 10px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  min-width: 320px;
+  max-width: 420px;
+}
+
+.task-links-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--c-text-secondary);
+}
+
+.task-links-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  color: var(--c-text-muted);
+  padding: 0 2px;
+  line-height: 1;
+}
+
+.task-links-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.task-links-row select {
+  padding: 3px 4px;
+  border-radius: 4px;
+  border: 1px solid var(--c-border);
+  background: var(--bg-surface);
+  color: var(--c-text-primary);
+  font-size: 11px;
+  font-family: inherit;
+  min-width: 70px;
+}
+
+.task-links-row .form-input {
+  flex: 1;
+  font-size: 11px;
+  padding: 3px 6px;
+  min-width: 0;
+}
+
+.task-links-open,
+.task-links-remove {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--c-text-muted);
+  padding: 2px 4px;
+  border-radius: 3px;
+  opacity: 0.5;
+  transition: opacity 0.15s;
+  flex-shrink: 0;
+}
+.task-links-open:hover,
+.task-links-remove:hover {
+  opacity: 1;
+}
+
+.task-links-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 6px;
+}
+
+.task-links-add {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--c-text-muted);
+  padding: 2px 0;
+}
+.task-links-add:hover {
+  color: var(--c-text-primary);
+}
+
+.task-links-save {
+  padding: 3px 10px;
+  border-radius: 4px;
+  border: none;
+  background: var(--pc-blue);
+  color: white;
+  font-size: 11px;
+  font-family: inherit;
+  cursor: pointer;
+  font-weight: 500;
+}
+.task-links-save:hover {
+  opacity: 0.85;
+}

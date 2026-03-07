@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [1.68.0] - 2026-03-07
+
+### Changed
+
+- `TaskLinksIndicator` now shows app-specific SVG icons (VS Code, Obsidian, Terminal, GitHub, GitLab) and favicons for HTTP URLs via Google's favicon service, replacing the generic link emoji
+- Duplicate icon types are deduplicated — multiple links to the same app show a single icon
+
+## [1.67.0] - 2026-03-07
+
+### Added
+
+- Per-task links: tasks can now have their own links (VS Code, iTerm, Obsidian, Browser, Custom) stored on the task model
+- `TaskLinksIndicator` component — inline link icon shown next to task titles across TodayView, QuickTasksView, and ProjectDetailView; clicking opens all task links at once
+- `TaskLinksPopover` component — editor popover in ProjectDetailView to add, edit, and remove task links via the task overflow menu
+- Task links appear in TodayView context menu for one-click access per link
+- Task links appear in FocusMode context menu, listed above project links with a separator
+
+### Changed
+
+- `normalizeLinks()` extracted as a standalone helper from `normalizeProjectLinks()`, enabling link normalization for both project and task links
+- `MergedTask` interface extended with optional `links` field, populated by `useTaskList` for pinned and focus tasks
 
 ## [1.66.0] - 2026-02-28
 
