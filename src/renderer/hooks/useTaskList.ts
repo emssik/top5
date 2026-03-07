@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useProjects } from './useProjects'
-import type { RepeatingTask, Task, Project } from '../types'
+import type { RepeatingTask, Task, Project, ProjectLink } from '../types'
+import { normalizeLinks } from '../utils/projects'
 import { getRepeatingTaskProposals, getDueDateProposals, dateKey } from '../../shared/schedule'
 import type { DueDateProposal } from '../../shared/schedule'
 import { STANDALONE_PROJECT_ID } from '../utils/constants'
@@ -21,6 +22,7 @@ export interface MergedTask {
   noteRef?: string
   dueDate?: string | null
   beyondLimit?: boolean
+  links?: ProjectLink[]
 }
 
 export interface TaskListData {
@@ -109,21 +111,25 @@ export function useTaskList(opts?: { excludeFocus?: boolean }): TaskListData {
   const pinnedTasks: MergedTask[] = activeProjects.flatMap((p) =>
     p.tasks
       .filter((t) => t.isToDoNext && !t.completed)
-      .map((t) => ({
-        kind: 'pinned' as const,
-        id: `pinned-${p.id}-${t.id}`,
-        title: t.title,
-        order: t.toDoNextOrder ?? 999,
-        projectId: p.id,
-        projectName: p.name,
-        projectCode: p.code,
-        taskId: t.id,
-        taskNumber: t.taskNumber,
-        inProgress: t.inProgress,
-        noteRef: t.noteRef,
-        dueDate: t.dueDate,
-        beyondLimit: t.beyondLimit
-      }))
+      .map((t) => {
+        const links = normalizeLinks(t.links)
+        return {
+          kind: 'pinned' as const,
+          id: `pinned-${p.id}-${t.id}`,
+          title: t.title,
+          order: t.toDoNextOrder ?? 999,
+          projectId: p.id,
+          projectName: p.name,
+          projectCode: p.code,
+          taskId: t.id,
+          taskNumber: t.taskNumber,
+          inProgress: t.inProgress,
+          noteRef: t.noteRef,
+          dueDate: t.dueDate,
+          beyondLimit: t.beyondLimit,
+          links: links.length > 0 ? links : undefined
+        }
+      })
   )
 
   const allActiveTasks = [...standaloneTasks, ...pinnedTasks].sort((a, b) => a.order - b.order)
@@ -190,7 +196,8 @@ export function useTaskList(opts?: { excludeFocus?: boolean }): TaskListData {
       projectId: project.id, projectName: project.name,
       projectCode: project.code, taskId: task.id,
       taskNumber: task.taskNumber, inProgress: task.inProgress,
-      noteRef: task.noteRef
+      noteRef: task.noteRef,
+      links: (() => { const l = normalizeLinks(task.links); return l.length > 0 ? l : undefined })()
     }
   }, [excludeFocus, config, quickTasks, activeProjects])
 

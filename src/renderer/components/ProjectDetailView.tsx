@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { nanoid } from 'nanoid'
 import { useProjects } from '../hooks/useProjects'
-import type { Project, Task } from '../types'
+import type { Project, Task, ProjectLink } from '../types'
 import { calcProjectTime, calcTaskTime, formatCheckInTime } from '../utils/checkInTime'
-import { projectColorValue, normalizeProjectLinks, openProjectLink } from '../utils/projects'
+import { projectColorValue, normalizeProjectLinks, normalizeLinks, openProjectLink } from '../utils/projects'
 import TaskIdBadge from './TaskIdBadge'
 import { formatTaskId } from '../../shared/taskId'
 import { dateKey } from '../../shared/schedule'
 import { Linkify } from './Linkify'
+import TaskLinksPopover from './TaskLinksPopover'
+import TaskLinksIndicator from './TaskLinksIndicator'
 
 function addDays(days: number): string {
   const d = new Date()
@@ -33,6 +35,7 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
   const [editingTitle, setEditingTitle] = useState('')
   const [dueDatePickerId, setDueDatePickerId] = useState<string | null>(null)
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null)
+  const [linksEditId, setLinksEditId] = useState<string | null>(null)
   const addInputRef = useRef<HTMLInputElement | null>(null)
   const draggedTaskId = useRef<string | null>(null)
   const [dragOverTaskId, setDragOverTaskId] = useState<string | null>(null)
@@ -114,6 +117,14 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
   const startEditing = (task: Task) => {
     setEditingId(task.id)
     setEditingTitle(task.title)
+  }
+
+  const updateTaskLinks = async (taskId: string, links: ProjectLink[]) => {
+    const normalized = normalizeLinks(links)
+    const nextTasks = project.tasks.map((task) =>
+      task.id === taskId ? { ...task, links: normalized.length > 0 ? normalized : undefined } : task
+    )
+    await updateTasks(nextTasks)
   }
 
   const clearTaskDragState = () => {
@@ -198,6 +209,27 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
   }, [menuOpenId])
 
   useEffect(() => {
+    if (!linksEditId) return
+    const handleClick = (e: MouseEvent) => {
+      if ((e.target as HTMLElement).closest('.task-links-popover')) return
+      if ((e.target as HTMLElement).closest('.task-links-indicator')) return
+      setLinksEditId(null)
+    }
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setLinksEditId(null)
+    }
+    const raf = requestAnimationFrame(() => {
+      window.addEventListener('click', handleClick)
+      window.addEventListener('keydown', handleKey)
+    })
+    return () => {
+      cancelAnimationFrame(raf)
+      window.removeEventListener('click', handleClick)
+      window.removeEventListener('keydown', handleKey)
+    }
+  }, [linksEditId])
+
+  useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'n' && event.key !== 'N') return
       const target = event.target as HTMLElement
@@ -266,6 +298,7 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
             <div className={`task-title ${done ? 'completed' : ''}`} onDoubleClick={() => !done && startEditing(task)}>
               <TaskIdBadge taskNumber={task.taskNumber} projectCode={project.code} kind="project" />
               <Linkify text={task.title} />
+              <TaskLinksIndicator links={task.links ?? []} projectName={project.name} />
             </div>
           )}
           <div className="task-meta">
@@ -301,6 +334,7 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
                 <button className="task-overflow-item" onClick={() => { toggleTaskToDoNext(project.id, task.id); setMenuOpenId(null) }}><span className="toi-icon">📌</span>{isPinned ? 'Unpin' : 'Pin to Today'}</button>
                 <button className="task-overflow-item" onClick={() => { setFocus(project.id, task.id); setMenuOpenId(null) }}><span className="toi-icon">▶</span>Focus</button>
                 <button className="task-overflow-item" onClick={() => { setMenuOpenId(null); setDueDatePickerId(task.id) }}><span className="toi-icon">📅</span>{task.dueDate ? 'Change due date' : 'Set due date'}</button>
+                <button className="task-overflow-item" onClick={() => { setMenuOpenId(null); setLinksEditId(task.id) }}><span className="toi-icon">🔗</span>Links{task.links && task.links.length > 0 ? ` (${task.links.length})` : ''}</button>
                 {config.obsidianStoragePath && (
                   <button className="task-overflow-item" onClick={() => { window.api.openTaskNote(task.id, task.title, project.name, formatTaskId(task.taskNumber, project.code), task.noteRef); setMenuOpenId(null) }}><span className="toi-icon">📝</span>Open note</button>
                 )}
@@ -319,6 +353,14 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
                 <input type="date" defaultValue={task.dueDate ?? ''} autoFocus onChange={(e) => { window.api.updateTaskDueDate(project.id, task.id, e.target.value || null); setDueDatePickerId(null) }} />
                 {task.dueDate && <button onClick={() => { window.api.updateTaskDueDate(project.id, task.id, null); setDueDatePickerId(null) }}>Remove</button>}
               </div>
+            )}
+            {linksEditId === task.id && (
+              <TaskLinksPopover
+                links={task.links ?? []}
+                onSave={(links) => { updateTaskLinks(task.id, links); setLinksEditId(null) }}
+                onClose={() => setLinksEditId(null)}
+                projectName={project.name}
+              />
             )}
           </>
         )}

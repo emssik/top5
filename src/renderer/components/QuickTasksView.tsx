@@ -11,6 +11,7 @@ import { formatTaskId, formatQuickTaskId, computeNotePath } from '../../shared/t
 import RepeatUpdateModal from './RepeatUpdateModal'
 import { dateKey } from '../../shared/schedule'
 import { Linkify } from './Linkify'
+import TaskLinksIndicator from './TaskLinksIndicator'
 
 function continuationTitle(title: string): string {
   const match = title.match(/^\(✂(\d+)\) (.*)$/)
@@ -389,6 +390,7 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
                 title={task.title}
               >
                 <Linkify text={cleanView ? task.title.replace(/^\(✂\d+\)\s*/, '') : task.title} />
+                <TaskLinksIndicator links={task.links ?? []} projectName={task.projectName} />
               </span>
             )}
           </div>
@@ -520,6 +522,7 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
                 {task.repeatingTaskId && <span className="text-t-muted mr-1" style={{ opacity: 0.5 }}>↻</span>}
                 <TaskIdBadge taskNumber={task.taskNumber} projectCode={task.projectCode} kind={task.kind} />
                 <Linkify text={task.title} />
+                <TaskLinksIndicator links={task.links ?? []} projectName={task.projectName} />
               </span>
               {task.kind === 'pinned' && task.projectName && (
                 <span className="text-[10px] text-blue-400/70">{task.projectName}</span>

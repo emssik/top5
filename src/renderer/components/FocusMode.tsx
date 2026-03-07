@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { useProjects } from '../hooks/useProjects'
 import { useTaskList } from '../hooks/useTaskList'
-import { normalizeProjectLinks, openProjectLink, projectColorValue } from '../utils/projects'
+import { normalizeProjectLinks, normalizeLinks, openProjectLink, projectColorValue } from '../utils/projects'
 import { checkInMinutes } from '../utils/checkInTime'
 import { STANDALONE_PROJECT_ID } from '../utils/constants'
 import type { Task, ProjectLink, QuickTask } from '../types'
@@ -102,6 +102,10 @@ export default function FocusMode() {
   const projColor = project ? projectColorValue(project.color) : undefined
 
   // Context menu data
+  const taskLinks: ProjectLink[] = useMemo(() => {
+    if (isStandalone || !task) return []
+    return normalizeLinks((task as Task).links)
+  }, [isStandalone, task])
   const projectLinks: ProjectLink[] = project ? normalizeProjectLinks(project) : []
   const obsidianEnabled = !!config.obsidianStoragePath
   const taskBadge = isStandalone
@@ -116,6 +120,12 @@ export default function FocusMode() {
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
     const items: { id: string; label: string; type?: 'separator' }[] = []
+    for (const link of taskLinks) {
+      items.push({ id: `tasklink:${link.label}`, label: `🔗  ${link.label}` })
+    }
+    if (taskLinks.length > 0 && projectLinks.length > 0) {
+      items.push({ id: 'sep-task-proj', label: '', type: 'separator' })
+    }
     for (const link of projectLinks) {
       items.push({ id: `link:${link.label}`, label: `${linkIcon(link.label)}  ${link.label}` })
     }
@@ -136,12 +146,16 @@ export default function FocusMode() {
     items.push({ id: 'complete', label: '✓   Complete task' })
     items.push({ id: 'exit', label: '✕   Exit focus' })
     window.api.showFocusContextMenu(items, e.clientX, e.clientY)
-  }, [projectLinks, obsidianEnabled, project])
+  }, [taskLinks, projectLinks, obsidianEnabled, project])
 
   // Handle context menu actions from popup window
   useEffect(() => {
     return window.api.onFocusMenuAction((actionId: string) => {
-      if (actionId.startsWith('link:')) {
+      if (actionId.startsWith('tasklink:')) {
+        const label = actionId.slice(9)
+        const link = taskLinks.find((l) => l.label === label)
+        if (link) openProjectLink(link, project?.name)
+      } else if (actionId.startsWith('link:')) {
         const label = actionId.slice(5)
         const link = projectLinks.find((l) => l.label === label)
         if (link) openProjectLink(link, project?.name)
