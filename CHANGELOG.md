@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.68.0] - 2026-03-07
+
+### Changed
+
+- `TaskLinksIndicator` now shows app-specific SVG icons (VS Code, Obsidian, Terminal, GitHub, GitLab) and favicons for HTTP URLs via Google's favicon service, replacing the generic link emoji
+- Duplicate icon types are deduplicated — multiple links to the same app show a single icon
+
 ## [1.67.0] - 2026-03-07
 
 ### Added
