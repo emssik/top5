@@ -165,4 +165,4 @@ In development mode (`npm run dev`), storage is isolated in `~/.config/top5-dev`
 
 ## License
 
-MIT
+MIT with [Commons Clause](https://commonsclause.com/) — free for personal and internal business use; may not be sold as a commercial product or service.
