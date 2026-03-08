@@ -1,5 +1,7 @@
 # Top5
 
+> This project is published as part of [PIY — Prompt It Yourself](https://blog.atdpath.com/piy), a personal initiative launched on March 8, 2026, encouraging others to build their own apps with the help of LLMs.
+
 Desktop app for attention management. Configurable project limit (default 5), minimizes context-switching friction.
 
 ## Features
