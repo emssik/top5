@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.68.1] - 2026-03-10
+
+### Fixed
+
+- Repeating task link button in FocusMode is now clickable — was swallowed by the Electron drag region
+
 ## [1.68.0] - 2026-03-07
 
 ### Changed

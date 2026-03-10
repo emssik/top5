@@ -412,6 +412,7 @@ export default function FocusMode() {
           <button
             onClick={openRepeatingTaskLink}
             className="w-[24px] h-[24px] rounded-[6px] bg-transparent text-t-muted text-[11px] hover:bg-hover hover:text-t-secondary transition-all flex items-center justify-center cursor-pointer border-none flex-shrink-0"
+            style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
             title="Open link"
           >
             🔗
