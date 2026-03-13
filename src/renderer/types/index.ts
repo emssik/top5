@@ -96,6 +96,11 @@ declare global {
       journalGenerateWeekly: (weekKey?: string) => Promise<{ path: string; notePath: string } | null>
       journalGenerateMonthly: (monthKey?: string) => Promise<{ path: string; notePath: string } | null>
       journalOpen: (notePath: string) => Promise<void>
+      nudgeSnooze: (minutes: number) => Promise<void>
+      nudgeDismiss: () => Promise<void>
+      nudgeGetTasks: () => Promise<{ projectId: string; taskId: string; title: string; projectName?: string; projectCode?: string }[]>
+      nudgeStartFocus: (projectId: string, taskId: string) => Promise<void>
+      nudgeOpenQuickAdd: () => Promise<void>
       onReloadData: (callback: () => void) => () => void
       onShortcutAction: (callback: (data: ShortcutActionPayload) => void) => () => void
       onCheckInCountdown: (callback: (remainingMs: number) => void) => () => void

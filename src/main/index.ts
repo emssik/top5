@@ -6,6 +6,7 @@ import { registerLauncherHandlers } from './launchers'
 import { registerFocusHandlers } from './focus-window'
 import { registerGlobalShortcut, registerLocalShortcuts } from './shortcuts'
 import { registerQuickAddHandlers } from './quick-add-window'
+import { registerNudgeHandlers, startNudgeMonitor, stopNudgeMonitor } from './nudge'
 import { getRepeatingTaskProposals, dateKey } from '../shared/schedule'
 import type { QuickTask, Project, Task } from '../shared/types'
 import { CLEAN_VIEW_ROW_HEIGHT, CLEAN_VIEW_SEPARATOR_HEIGHT, CLEAN_VIEW_HEADER_HEIGHT, CLEAN_VIEW_MIN_HEIGHT, CLEAN_VIEW_WIDTH } from '../shared/constants'
@@ -182,9 +183,12 @@ app.whenReady().then(() => {
   registerLauncherHandlers(ipcMain)
   registerFocusHandlers(ipcMain, () => mainWindow)
   registerQuickAddHandlers(ipcMain)
+  registerNudgeHandlers(ipcMain)
   registerGlobalShortcut(globalShortcut, () => mainWindow)
   createWindow()
   registerLocalShortcuts(mainWindow!)
+
+  startNudgeMonitor()
 
   // Start HTTP API server (if enabled in config)
   import('./api/server').then(({ startApiServer }) =>
@@ -282,4 +286,5 @@ app.on('window-all-closed', () => {
 
 app.on('before-quit', () => {
   ;(app as unknown as Record<string, unknown>).isQuitting = true
+  stopNudgeMonitor()
 })

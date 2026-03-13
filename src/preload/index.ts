@@ -99,6 +99,11 @@ export const api = {
     ipcRenderer.on('checkin-countdown', handler)
     return () => ipcRenderer.removeListener('checkin-countdown', handler)
   },
+  nudgeSnooze: (minutes: number) => ipcRenderer.invoke('nudge-snooze', minutes),
+  nudgeDismiss: () => ipcRenderer.invoke('nudge-dismiss'),
+  nudgeGetTasks: () => ipcRenderer.invoke('nudge-get-tasks'),
+  nudgeStartFocus: (projectId: string, taskId: string) => ipcRenderer.invoke('nudge-start-focus', projectId, taskId),
+  nudgeOpenQuickAdd: () => ipcRenderer.invoke('nudge-open-quick-add'),
   onCheckInRespond: (callback: (response: 'yes' | 'a_little' | 'no') => void) => {
     const handler = (_event: IpcRendererEvent, response: 'yes' | 'a_little' | 'no') => callback(response)
     ipcRenderer.on('checkin-respond', handler)
