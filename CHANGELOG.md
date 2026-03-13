@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Restored production timing for focus nudge: polling interval 30s and nudge threshold 15 minutes (were left at debug values 5s/15s)
+
 ## [1.69.0] - 2026-03-13
 
 ### Added

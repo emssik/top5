@@ -8,9 +8,9 @@ import { createQuickAddWindow } from './quick-add-window'
 import { getData, getAppData, setAppDataKey } from './store'
 import type { Project, Task } from '../shared/types'
 
-const POLL_INTERVAL_MS = 5_000 // DEBUG: 5s (prod: 30_000)
+const POLL_INTERVAL_MS = 30_000 // 30s
 const IDLE_THRESHOLD_S = 120 // 2min — below this = user is active
-const NUDGE_THRESHOLD_MS = 15 * 1000 // DEBUG: 15s (prod: 15 * 60 * 1000)
+const NUDGE_THRESHOLD_MS = 15 * 60 * 1000 // 15min cumulative active time
 
 let pollInterval: ReturnType<typeof setInterval> | null = null
 let cumulativeActiveMs = 0
