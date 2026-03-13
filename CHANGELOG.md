@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.69.0] - 2026-03-13
+
+### Added
+
+- Focus nudge popup: after 15 minutes of active computer use without starting focus mode, a centered popup reminds the user to pick a task
+- Nudge popup lists up to 7 uncompleted top-5 tasks (quick tasks + pinned project tasks, excluding beyond-limit); clicking any task immediately enters focus mode on it
+- Quick-add button in nudge popup to add a new task without dismissing context
+- Snooze options (5, 10, 15, 30, 60 min of active time) to delay the next nudge
+- Nudge resets automatically when focus mode is active, all tasks are completed, or the day changes
+
 ## [1.68.1] - 2026-03-10
 
 ### Fixed
