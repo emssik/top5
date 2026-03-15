@@ -5,9 +5,10 @@ import { useTaskList } from '../hooks/useTaskList'
 import type { MergedTask } from '../hooks/useTaskList'
 import { calcQuickTaskTime, calcTaskTime, formatCheckInTime } from '../utils/checkInTime'
 import { STANDALONE_PROJECT_ID } from '../utils/constants'
-import type { Task, QuickTask, LockedTaskRef, WinEntry } from '../types'
-import { projectColorValue, normalizeProjectLinks, openProjectLink } from '../utils/projects'
+import type { Task, QuickTask, LockedTaskRef, WinEntry, ProjectLink } from '../types'
+import { projectColorValue, normalizeProjectLinks, normalizeLinks, openProjectLink } from '../utils/projects'
 import TaskLinksIndicator from './TaskLinksIndicator'
+import TaskLinksPopover from './TaskLinksPopover'
 import ProjectLinksMenu from './ProjectLinksMenu'
 import TaskIdBadge from './TaskIdBadge'
 import { formatTaskId, formatQuickTaskId, computeNotePath } from '../../shared/taskId'
@@ -120,6 +121,9 @@ export default function TodayView() {
   const [linksMenu, setLinksMenu] = useState<{ x: number; y: number } | null>(null)
   const [showWinsRules, setShowWinsRules] = useState(false)
   const [dueDateDismissId, setDueDateDismissId] = useState<string | null>(null)
+  const [menuOpenId, setMenuOpenId] = useState<string | null>(null)
+  const [dueDatePickerId, setDueDatePickerId] = useState<string | null>(null)
+  const [linksEditId, setLinksEditId] = useState<string | null>(null)
   const hoveredTaskRef = useRef<{ task: MergedTask; section: string } | null>(null)
   const prevLockedRef = useRef(winsLock?.locked ?? false)
 
@@ -236,6 +240,27 @@ export default function TodayView() {
     return () => window.removeEventListener('click', handleClick)
   }, [contextMenu])
 
+  // Close task overflow menu on click outside
+  useEffect(() => {
+    if (!menuOpenId) return
+    const handleClick = (e: MouseEvent) => {
+      if ((e.target as HTMLElement).closest('.task-overflow-menu, .task-overflow-trigger')) return
+      setMenuOpenId(null)
+    }
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMenuOpenId(null)
+    }
+    const raf = requestAnimationFrame(() => {
+      window.addEventListener('click', handleClick)
+      window.addEventListener('keydown', handleKey)
+    })
+    return () => {
+      cancelAnimationFrame(raf)
+      window.removeEventListener('click', handleClick)
+      window.removeEventListener('keydown', handleKey)
+    }
+  }, [menuOpenId])
+
   // Close due date dismiss popover on click outside or Escape
   useEffect(() => {
     if (!dueDateDismissId) return
@@ -257,6 +282,27 @@ export default function TodayView() {
       window.removeEventListener('keydown', handleKey)
     }
   }, [dueDateDismissId])
+
+  // Close task menu due-date picker on click outside or Escape
+  useEffect(() => {
+    if (!dueDatePickerId) return
+    const handleClick = (e: MouseEvent) => {
+      if ((e.target as HTMLElement).closest('.due-date-dismiss-popover')) return
+      setDueDatePickerId(null)
+    }
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setDueDatePickerId(null)
+    }
+    const raf = requestAnimationFrame(() => {
+      window.addEventListener('click', handleClick)
+      window.addEventListener('keydown', handleKey)
+    })
+    return () => {
+      cancelAnimationFrame(raf)
+      window.removeEventListener('click', handleClick)
+      window.removeEventListener('keydown', handleKey)
+    }
+  }, [dueDatePickerId])
 
   // Task keyboard shortcuts: work on hovered task OR context menu task
   useEffect(() => {
@@ -443,6 +489,18 @@ export default function TodayView() {
 
     if (!task.projectId || !task.taskId) return
     await toggleTaskInProgress(task.projectId, task.taskId)
+  }
+
+  const updateTaskLinks = async (task: MergedTask, links: ProjectLink[]) => {
+    const normalized = normalizeLinks(links)
+    if (task.kind === 'pinned' && task.projectId && task.taskId) {
+      const project = useProjects.getState().projects.find((p) => p.id === task.projectId)
+      if (!project) return
+      const nextTasks = project.tasks.map((t) =>
+        t.id === task.taskId ? { ...t, links: normalized.length > 0 ? normalized : undefined } : t
+      )
+      await saveProject({ ...project, tasks: nextTasks })
+    }
   }
 
   const focusOnTask = async (task: MergedTask) => {
@@ -863,7 +921,56 @@ export default function TodayView() {
           {!locked && (
             <button className="task-action-btn btn-remove" onClick={() => removeTask(task)} title="Remove">✕</button>
           )}
+          <button className="task-overflow-trigger" onClick={(e) => { e.stopPropagation(); setMenuOpenId(menuOpenId === task.id ? null : task.id) }}>⋯</button>
         </div>
+        {menuOpenId === task.id && (
+          <div className="task-overflow-menu" ref={(el) => {
+            if (!el) return
+            const rect = el.getBoundingClientRect()
+            if (rect.bottom > window.innerHeight) {
+              el.style.top = 'auto'
+              el.style.bottom = 'calc(100% + 4px)'
+            }
+          }}>
+            <button className="task-overflow-item" onClick={() => { focusOnTask(task); setMenuOpenId(null) }}><span className="toi-icon">▶</span>Focus</button>
+            <button className="task-overflow-item" onClick={() => { toggleInProgress(task); setMenuOpenId(null) }}><span className="toi-icon">{task.inProgress ? '⏹' : '⏩'}</span>{task.inProgress ? 'Stop In Progress' : 'In Progress'}</button>
+            {task.kind === 'pinned' && task.projectId && task.taskId && (
+              <button className="task-overflow-item" onClick={() => { setMenuOpenId(null); setDueDatePickerId(task.id) }}><span className="toi-icon">📅</span>{task.dueDate ? 'Change due date' : 'Set due date'}</button>
+            )}
+            {task.kind === 'pinned' && task.projectId && task.taskId && (
+              <button className="task-overflow-item" onClick={() => { setMenuOpenId(null); setLinksEditId(task.id) }}><span className="toi-icon">🔗</span>Links{task.links && task.links.length > 0 ? ` (${task.links.length})` : ''}</button>
+            )}
+            {config.obsidianStoragePath && (
+              <button className="task-overflow-item" onClick={() => { window.api.openTaskNote(task.id, task.title, task.projectName, task.kind === 'quick' ? formatQuickTaskId(task.taskNumber) : formatTaskId(task.taskNumber, task.projectCode), task.noteRef); setMenuOpenId(null) }}><span className="toi-icon">📝</span>Open note</button>
+            )}
+            {!task.repeatingTaskId && (
+              <button className="task-overflow-item" onClick={() => { splitTask(task); setMenuOpenId(null) }}><span className="toi-icon">✂</span>Split & Continue</button>
+            )}
+            <div className="task-overflow-sep" />
+            {!locked && (
+              <button className="task-overflow-item danger" onClick={() => { removeTask(task); setMenuOpenId(null) }}><span className="toi-icon">×</span>{task.repeatingTaskId ? 'Unpin' : 'Remove'}</button>
+            )}
+          </div>
+        )}
+        {dueDatePickerId === task.id && (
+          <div className="due-date-dismiss-popover">
+            <div className="due-date-quick-btns">
+              {[{ label: '+1d', days: 1 }, { label: '+2d', days: 2 }, { label: '+3d', days: 3 }, { label: '+1w', days: 7 }].map((opt) => (
+                <button key={opt.label} onClick={() => { window.api.updateTaskDueDate(task.projectId!, task.taskId!, addDays(opt.days)); setDueDatePickerId(null) }}>{opt.label}</button>
+              ))}
+            </div>
+            <input type="date" defaultValue={task.dueDate ?? ''} autoFocus onChange={(e) => { window.api.updateTaskDueDate(task.projectId!, task.taskId!, e.target.value || null); setDueDatePickerId(null) }} />
+            {task.dueDate && <button onClick={() => { window.api.updateTaskDueDate(task.projectId!, task.taskId!, null); setDueDatePickerId(null) }}>Remove</button>}
+          </div>
+        )}
+        {linksEditId === task.id && (
+          <TaskLinksPopover
+            links={task.links ?? []}
+            onSave={(links) => { updateTaskLinks(task, links); setLinksEditId(null) }}
+            onClose={() => setLinksEditId(null)}
+            projectName={task.projectName}
+          />
+        )}
       </div>
     )
   }

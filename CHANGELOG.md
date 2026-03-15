@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Focus mode auto-stops when the focused task is completed from outside the focus window (e.g. TodayView), saving any unsaved time as a check-in without prompting
+- Task overflow menu (⋯) on each task card in TodayView, consolidating Focus, In Progress, Set due date, Edit links, Open note, Split & Continue, and Remove/Unpin actions
+- Inline due-date picker in overflow menu with quick-add buttons (+1d, +2d, +3d, +1w) and a date input
+- Inline link editor (TaskLinksPopover) accessible from the overflow menu for pinned project tasks
 
 ### Fixed
 
