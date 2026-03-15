@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Focus mode auto-stops when the focused task is completed from outside the focus window (e.g. TodayView), saving any unsaved time as a check-in without prompting
+
 ### Fixed
 
 - Restored production timing for focus nudge: polling interval 30s and nudge threshold 15 minutes (were left at debug values 5s/15s)

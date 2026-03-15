@@ -28,6 +28,7 @@ import * as repeatingTaskService from './service/repeating-tasks'
 import * as winsService from './service/wins'
 import * as journalService from './service/journal'
 import * as taskNotesService from './service/task-notes'
+import { getFocusWindow, stopFocusForCompletedTask } from './focus-window'
 import type {
   Task,
   RepeatSchedule,
@@ -543,7 +544,7 @@ function ensureCheckInCaches(): void {
   }
 }
 
-function appendCheckIn(checkIn: FocusCheckIn): void {
+export function appendCheckIn(checkIn: FocusCheckIn): void {
   ensureCheckInCaches()
   mkdirSync(CONFIG_DIR, { recursive: true })
   appendFileSync(CHECKINS_FILE, JSON.stringify(checkIn) + '\n', 'utf-8')
@@ -894,11 +895,33 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
   ipcMain.handle('save-project', (_event, project: unknown) => {
     // IPC does upsert (backward compat with UI)
     if (!isValidProject(project)) return getData().projects
+
+    // Detect if focus task is being completed (before update)
+    const { config } = getData()
+    let focusTaskJustCompleted = false
+    if (config.focusTaskId && config.focusProjectId === project.id) {
+      const oldProject = getData().projects.find((p) => p.id === project.id)
+      const oldTask = oldProject?.tasks.find((t) => t.id === config.focusTaskId)
+      const newTask = (project.tasks as Task[])?.find((t) => t.id === config.focusTaskId)
+      if (oldTask && !oldTask.completed && newTask?.completed) {
+        focusTaskJustCompleted = true
+      }
+    }
+
     const exists = getData().projects.some((p) => p.id === project.id)
     const result = exists
       ? projectService.updateProject(project.id, project)
       : projectService.createProject(project)
     if (isServiceError(result)) return getData().projects
+
+    // Auto-stop focus if the completed task was focused (skip if from focus window)
+    if (focusTaskJustCompleted) {
+      const focusWin = getFocusWindow()
+      if (!focusWin || focusWin.isDestroyed() || _event.sender !== focusWin.webContents) {
+        stopFocusForCompletedTask(config.focusTaskId!)
+      }
+    }
+
     if (winsService.checkWinCondition()) notifyAllWindows()
     notifyAllWindows()
     return result
@@ -997,8 +1020,22 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
 
   ipcMain.handle('complete-quick-task', (_event, id: string) => {
     if (typeof id !== 'string') return getData().quickTasks
+
+    // Check if this is the focused task
+    const { config } = getData()
+    const isFocusTask = config.focusTaskId === id
+
     const result = quickTaskService.completeQuickTask(id)
     if (isServiceError(result)) return getData().quickTasks
+
+    // Auto-stop focus if the completed task was focused (skip if from focus window)
+    if (isFocusTask) {
+      const focusWin = getFocusWindow()
+      if (!focusWin || focusWin.isDestroyed() || _event.sender !== focusWin.webContents) {
+        stopFocusForCompletedTask(id)
+      }
+    }
+
     if (winsService.checkWinCondition()) notifyAllWindows()
     notifyAllWindows()
     return result

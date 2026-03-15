@@ -3,7 +3,8 @@ import { join } from 'path'
 import { execFile } from 'child_process'
 import { is } from '@electron-toolkit/utils'
 import type { IpcMain } from 'electron'
-import { appendOperation, getAppData, loadCheckIns, setAppDataKey } from './store'
+import { randomUUID } from 'crypto'
+import { appendCheckIn, appendOperation, getAppData, loadCheckIns, setAppDataKey } from './store'
 
 let focusWindow: BrowserWindow | null = null
 let focusMenuWindow: BrowserWindow | null = null
@@ -166,6 +167,33 @@ function resolveFocusTask(): { projectId?: string; projectName?: string; taskTit
   const project = projects.find((p) => p.id === pid)
   const task = project?.tasks.find((t) => t.id === tid)
   return { projectId: pid, projectName: project?.name, taskTitle: task?.title }
+}
+
+/**
+ * Auto-stop focus when the focused task is completed from outside the focus window.
+ * Saves any unsaved time (since last check-in) as a check-in without prompting.
+ */
+export function stopFocusForCompletedTask(taskId: string): void {
+  const { config } = getAppData()
+  if (!config.focusTaskId || config.focusTaskId !== taskId) return
+  if (!focusWindow || focusWindow.isDestroyed()) return
+
+  // Save unsaved time as check-in (no prompt)
+  if (lastCheckInAt > 0 && config.focusProjectId) {
+    const unsavedMin = Math.floor((Date.now() - lastCheckInAt) / 60000)
+    if (unsavedMin >= 1) {
+      appendCheckIn({
+        id: randomUUID().slice(0, 21),
+        projectId: config.focusProjectId,
+        taskId,
+        timestamp: new Date().toISOString(),
+        response: 'yes',
+        minutes: unsavedMin
+      })
+    }
+  }
+
+  exitFocusMode()
 }
 
 let _getMainWindow: (() => BrowserWindow | null) | null = null
