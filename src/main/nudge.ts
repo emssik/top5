@@ -25,7 +25,8 @@ function getVisibleTasksFromStore() {
   return getVisibleTasks({
     quickTasks: data.quickTasks ?? [],
     projects: data.projects ?? [],
-    configLimit: data.config?.quickTasksLimit ?? 5
+    configLimit: data.config?.quickTasksLimit ?? 5,
+    winsLock: data.winsLock
   })
 }
 

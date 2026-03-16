@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Inline due-date picker in overflow menu with quick-add buttons (+1d, +2d, +3d, +1w) and a date input
 - Inline link editor (TaskLinksPopover) accessible from the overflow menu for pinned project tasks
 
+### Changed
+
+- `getVisibleTasks` (shared) now respects wins-lock state: when the day is locked, only locked tasks are shown within the limit and all others move to overflow; nudge and main process pass `winsLock` accordingly
+
 ### Fixed
 
 - Restored production timing for focus nudge: polling interval 30s and nudge threshold 15 minutes (were left at debug values 5s/15s)

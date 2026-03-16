@@ -214,7 +214,8 @@ app.whenReady().then(() => {
     const { repeating, scheduled, withinLimit } = getVisibleTasks({
       quickTasks: qts,
       projects: data.projects ?? [],
-      configLimit: limit
+      configLimit: limit,
+      winsLock: data.winsLock
     })
     const completedToday = qts.filter((t) => t.completed && t.completedAt?.startsWith(today))
     const proposalCount = getRepeatingTaskProposals({

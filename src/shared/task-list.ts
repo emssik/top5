@@ -3,7 +3,7 @@
  * Single source of truth — used by main process (nudge, clean-view sizing).
  * Renderer's useTaskList layers React-specific extras (focus, winsLock, proposals) on top.
  */
-import type { QuickTask, Task, Project } from './types'
+import type { QuickTask, Task, Project, WinsLockState } from './types'
 import { dateKey } from './schedule'
 
 export interface VisibleTask {
@@ -26,6 +26,7 @@ interface GetVisibleTasksInput {
   quickTasks: QuickTask[]
   projects: Project[]
   configLimit: number
+  winsLock?: WinsLockState | null
 }
 
 export interface VisibleTasksResult {
@@ -42,8 +43,14 @@ export interface VisibleTasksResult {
 }
 
 export function getVisibleTasks(input: GetVisibleTasksInput): VisibleTasksResult {
-  const { quickTasks, projects, configLimit } = input
+  const { quickTasks, projects, configLimit, winsLock } = input
   const today = dateKey(new Date())
+  const isLocked = winsLock?.locked ?? false
+  const lockedTaskIds = new Set(
+    (winsLock?.lockedTasks ?? []).flatMap((ref) =>
+      [ref.quickTaskId, ref.taskId].filter(Boolean) as string[]
+    )
+  )
 
   const activeProjects = projects.filter((p) => !p.archivedAt && !p.suspendedAt)
 
@@ -103,12 +110,26 @@ export function getVisibleTasks(input: GetVisibleTasksInput): VisibleTasksResult
     ...nonScheduled.filter((t) => !t.inProgress)
   ]
 
-  // Apply limit (same as useTaskList lines 277-281)
-  const forced = ordered.filter((t) => t.beyondLimit)
-  const eligible = ordered.filter((t) => !t.beyondLimit)
-  const withinLimit = eligible.slice(0, configLimit)
-  const naturalOverflow = eligible.slice(configLimit)
-  const overflow = [...naturalOverflow, ...forced].sort((a, b) => a.order - b.order)
+  let withinLimit: VisibleTask[]
+  let overflow: VisibleTask[]
+
+  if (isLocked) {
+    // Lock-aware: only locked tasks stay within limit, rest goes to overflow
+    const isTaskLocked = (t: VisibleTask): boolean => {
+      if (t.kind === 'quick') return lockedTaskIds.has(t.id)
+      if (t.kind === 'pinned' && t.taskId) return lockedTaskIds.has(t.taskId)
+      return false
+    }
+    withinLimit = ordered.filter((t) => isTaskLocked(t))
+    overflow = ordered.filter((t) => !isTaskLocked(t))
+  } else {
+    // beyondLimit=true → forced overflow, rest subject to configLimit
+    const forced = ordered.filter((t) => t.beyondLimit)
+    const eligible = ordered.filter((t) => !t.beyondLimit)
+    withinLimit = eligible.slice(0, configLimit)
+    const naturalOverflow = eligible.slice(configLimit)
+    overflow = [...naturalOverflow, ...forced].sort((a, b) => a.order - b.order)
+  }
 
   const allVisible = [...repeating, ...scheduled, ...withinLimit]
 
