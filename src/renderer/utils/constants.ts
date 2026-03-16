@@ -1,1 +1,1 @@
-export const STANDALONE_PROJECT_ID = '__standalone__'
+export { STANDALONE_PROJECT_ID } from '../../shared/constants'

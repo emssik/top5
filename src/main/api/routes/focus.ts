@@ -4,6 +4,7 @@ import { enterFocusMode, exitFocusMode, getFocusStatus } from '../../focus-windo
 import * as projectService from '../../service/projects'
 import * as quickTaskService from '../../service/quick-tasks'
 import { isServiceError } from '../utils'
+import { STANDALONE_PROJECT_ID } from '../../../shared/constants'
 
 export function registerFocusRoutes(fastify: FastifyInstance): void {
   // GET /api/v1/focus — current focus status
@@ -21,7 +22,7 @@ export function registerFocusRoutes(fastify: FastifyInstance): void {
     const { projectId, taskId } = body
 
     // Validate the task exists
-    if (projectId === '__standalone__') {
+    if (projectId === STANDALONE_PROJECT_ID) {
       const qt = quickTaskService.getQuickTask(taskId)
       if (isServiceError(qt)) {
         return reply.status(404).send({ ok: false, error: 'Quick task not found' })

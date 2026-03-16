@@ -5,6 +5,7 @@ import { is } from '@electron-toolkit/utils'
 import type { IpcMain } from 'electron'
 import { randomUUID } from 'crypto'
 import { appendCheckIn, appendOperation, getAppData, loadCheckIns, setAppDataKey } from './store'
+import { STANDALONE_PROJECT_ID } from '../shared/constants'
 
 let focusWindow: BrowserWindow | null = null
 let focusMenuWindow: BrowserWindow | null = null
@@ -155,7 +156,7 @@ function resolveFocusTask(): { projectId?: string; projectName?: string; taskTit
   const tid = config.focusTaskId
   if (!pid || !tid) return {}
 
-  if (pid === '__standalone__') {
+  if (pid === STANDALONE_PROJECT_ID) {
     const qt = (quickTasks ?? []).find((t) => t.id === tid)
     if (qt?.projectId) {
       const project = projects.find((p) => p.id === qt.projectId)

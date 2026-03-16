@@ -8,7 +8,8 @@ import { registerGlobalShortcut, registerLocalShortcuts } from './shortcuts'
 import { registerQuickAddHandlers } from './quick-add-window'
 import { registerNudgeHandlers, startNudgeMonitor, stopNudgeMonitor } from './nudge'
 import { getRepeatingTaskProposals, dateKey } from '../shared/schedule'
-import type { QuickTask, Project, Task } from '../shared/types'
+import type { QuickTask } from '../shared/types'
+import { getVisibleTasks } from '../shared/task-list'
 import { CLEAN_VIEW_ROW_HEIGHT, CLEAN_VIEW_SEPARATOR_HEIGHT, CLEAN_VIEW_HEADER_HEIGHT, CLEAN_VIEW_MIN_HEIGHT, CLEAN_VIEW_WIDTH } from '../shared/constants'
 
 let mainWindow: BrowserWindow | null = null
@@ -207,24 +208,22 @@ app.whenReady().then(() => {
     const data = getAppData()
     const limit = data.config.quickTasksLimit ?? 5
     const width = CLEAN_VIEW_WIDTH
-    // Count visible rows to match renderer logic
+    // Count visible rows to match renderer logic (uses shared getVisibleTasks)
     const today = dateKey(new Date())
     const qts: QuickTask[] = data.quickTasks ?? []
+    const { repeating, scheduled, withinLimit } = getVisibleTasks({
+      quickTasks: qts,
+      projects: data.projects ?? [],
+      configLimit: limit
+    })
     const completedToday = qts.filter((t) => t.completed && t.completedAt?.startsWith(today))
-    const regularCompleted = completedToday.filter((t) => !t.repeatingTaskId)
-    const activeQuick = qts.filter((t) => !t.completed)
-    const pinnedCount = (data.projects ?? [])
-      .filter((p: Project) => !p.archivedAt)
-      .reduce((n: number, p: any) => n + p.tasks.filter((t: Task) => t.isToDoNext && !t.completed).length, 0)
-    const regularActiveCount = activeQuick.filter((t) => !t.repeatingTaskId).length + pinnedCount
-    const repeatingActiveCount = activeQuick.filter((t) => t.repeatingTaskId).length
-    const activeSlots = Math.max(0, limit - regularCompleted.length)
-    const visibleRegularCount = Math.min(regularActiveCount, activeSlots)
     const proposalCount = getRepeatingTaskProposals({
       repeatingTasks: data.repeatingTasks ?? [],
       quickTasks: qts,
       dismissedRepeating: data.dismissedRepeating ?? {}
     }).length
+    const visibleRegularCount = scheduled.length + withinLimit.length
+    const repeatingActiveCount = repeating.length
     const totalRows = visibleRegularCount + repeatingActiveCount + proposalCount + completedToday.length
     // Separators: only when preceding section has content
     const hasRepeating = repeatingActiveCount + proposalCount > 0

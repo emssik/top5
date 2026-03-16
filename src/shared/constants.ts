@@ -9,6 +9,8 @@ export const LINK_LABELS: Record<keyof ProjectLaunchers, string> = {
   browser: 'Browser'
 }
 
+export const STANDALONE_PROJECT_ID = '__standalone__'
+
 // UI layout constants for clean view
 export const CLEAN_VIEW_ROW_HEIGHT = 34
 export const CLEAN_VIEW_SEPARATOR_HEIGHT = 20

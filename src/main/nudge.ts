@@ -6,7 +6,9 @@ import type { IpcMain } from 'electron'
 import { getFocusWindow, enterFocusMode } from './focus-window'
 import { createQuickAddWindow } from './quick-add-window'
 import { getData, getAppData, setAppDataKey } from './store'
-import type { Project, Task } from '../shared/types'
+import { getVisibleTasks } from '../shared/task-list'
+import { dateKey } from '../shared/schedule'
+import { STANDALONE_PROJECT_ID } from '../shared/constants'
 
 const POLL_INTERVAL_MS = 30_000 // 30s
 const IDLE_THRESHOLD_S = 120 // 2min — below this = user is active
@@ -16,26 +18,15 @@ let pollInterval: ReturnType<typeof setInterval> | null = null
 let cumulativeActiveMs = 0
 let nudgeThresholdMs = NUDGE_THRESHOLD_MS
 let nudgeWindow: BrowserWindow | null = null
-let lastDate = todayKey()
+let lastDate = dateKey(new Date())
 
-function todayKey(): string {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
-
-function hasUncompletedTasks(): boolean {
+function getVisibleTasksFromStore() {
   const data = getData()
-  const activeQuick = (data.quickTasks ?? []).filter((t) => !t.completed && !t.beyondLimit)
-  if (activeQuick.length > 0) return true
-
-  const pinnedCount = (data.projects ?? [])
-    .filter((p: Project) => !p.archivedAt)
-    .reduce(
-      (n: number, p: Project) =>
-        n + p.tasks.filter((t: Task) => t.isToDoNext && !t.completed && !t.beyondLimit).length,
-      0
-    )
-  return pinnedCount > 0
+  return getVisibleTasks({
+    quickTasks: data.quickTasks ?? [],
+    projects: data.projects ?? [],
+    configLimit: data.config?.quickTasksLimit ?? 5
+  })
 }
 
 function playNudgeSound(): void {
@@ -96,7 +87,7 @@ function closeNudgeWindow(): void {
 
 function tick(): void {
   // Day change → full reset
-  const today = todayKey()
+  const today = dateKey(new Date())
   if (today !== lastDate) {
     lastDate = today
     cumulativeActiveMs = 0
@@ -112,7 +103,7 @@ function tick(): void {
   }
 
   // No uncompleted tasks → nothing to nudge about
-  if (!hasUncompletedTasks()) {
+  if (getVisibleTasksFromStore().allVisible.length === 0) {
     cumulativeActiveMs = 0
     nudgeThresholdMs = NUDGE_THRESHOLD_MS
     return
@@ -135,7 +126,7 @@ function tick(): void {
 
 export function startNudgeMonitor(): void {
   if (pollInterval) return
-  lastDate = todayKey()
+  lastDate = dateKey(new Date())
   cumulativeActiveMs = 0
   nudgeThresholdMs = NUDGE_THRESHOLD_MS
   pollInterval = setInterval(tick, POLL_INTERVAL_MS)
@@ -158,35 +149,13 @@ export interface NudgeTask {
 }
 
 function getUncompletedTaskList(): NudgeTask[] {
-  const data = getData()
-  const tasks: NudgeTask[] = []
-
-  // Quick tasks (standalone) — only top5, not beyond limit
-  for (const qt of (data.quickTasks ?? []).filter((t) => !t.completed && !t.beyondLimit)) {
-    const proj = qt.projectId ? (data.projects ?? []).find((p) => p.id === qt.projectId) : null
-    tasks.push({
-      projectId: '__standalone__',
-      taskId: qt.id,
-      title: qt.title,
-      projectName: proj?.name,
-      projectCode: proj?.code
-    })
-  }
-
-  // Pinned project tasks
-  for (const p of (data.projects ?? []).filter((p: Project) => !p.archivedAt)) {
-    for (const t of p.tasks.filter((t: Task) => t.isToDoNext && !t.completed && !t.beyondLimit)) {
-      tasks.push({
-        projectId: p.id,
-        taskId: t.id,
-        title: t.title,
-        projectName: p.name,
-        projectCode: p.code
-      })
-    }
-  }
-
-  return tasks.slice(0, 7) // max 7 tasks in popup
+  return getVisibleTasksFromStore().allVisible.map((t) => ({
+    projectId: t.projectId ?? STANDALONE_PROJECT_ID,
+    taskId: t.taskId ?? t.id,
+    title: t.title,
+    projectName: t.projectName,
+    projectCode: t.projectCode
+  }))
 }
 
 export function registerNudgeHandlers(ipcMain: IpcMain): void {
