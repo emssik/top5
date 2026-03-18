@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.73.0] - 2026-03-18
+
 ### Added
 
 - Focus mode auto-stops when the focused task is completed from outside the focus window (e.g. TodayView), saving any unsaved time as a check-in without prompting
