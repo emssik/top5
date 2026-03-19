@@ -1,4 +1,4 @@
-import { existsSync, writeFileSync, mkdirSync } from 'fs'
+import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs'
 import { basename, join, resolve } from 'path'
 import { formatTaskId, formatQuickTaskId, computeNotePath } from '../../shared/taskId'
 import { getData, setData } from '../store'
@@ -89,6 +89,45 @@ export function ensureQuickTaskNote(taskId: string): NoteResult | ServiceError {
   }
 
   return result
+}
+
+export function appendDoneEntry(noteRef: string, description: string, focusMinutes: number): { ok: boolean } | ServiceError {
+  const config = getData().config
+  const storagePath = config.obsidianStoragePath
+  if (!storagePath) return { error: 'no_obsidian_path' }
+
+  const vaultPath = resolve(storagePath.replace(/\/+$/, ''))
+  const relPath = noteRef.replace('top5.storage/', '')
+  const parts = relPath.split('/')
+  const folderName = parts[0]
+  const safeName = parts.slice(1).join('/')
+  const noteDir = join(vaultPath, 'top5.storage', folderName)
+  mkdirSync(noteDir, { recursive: true })
+  const filePath = join(noteDir, `${safeName}.md`)
+
+  const today = new Date().toISOString().slice(0, 10)
+  const timeStr = focusMinutes > 0 ? ` — ${focusMinutes >= 60 ? `${Math.floor(focusMinutes / 60)}h${focusMinutes % 60 > 0 ? ` ${focusMinutes % 60}m` : ''}` : `${focusMinutes}m`}` : ''
+  const entry = `- ${today} — ${description}${timeStr}`
+
+  if (!existsSync(filePath)) {
+    const content = `## Zrobione\n${entry}\n`
+    writeFileSync(filePath, content, 'utf-8')
+    return { ok: true }
+  }
+
+  const content = readFileSync(filePath, 'utf-8')
+  const doneHeader = '## Zrobione'
+  const idx = content.indexOf(doneHeader)
+  if (idx !== -1) {
+    const insertPos = idx + doneHeader.length
+    const updated = content.slice(0, insertPos) + `\n${entry}` + content.slice(insertPos)
+    writeFileSync(filePath, updated, 'utf-8')
+  } else {
+    const updated = content.trimEnd() + `\n\n${doneHeader}\n${entry}\n`
+    writeFileSync(filePath, updated, 'utf-8')
+  }
+
+  return { ok: true }
 }
 
 /** Vault name derived from obsidianStoragePath config */

@@ -34,6 +34,11 @@ function continuationTitle(title: string): string {
   return `(✂1) ${title}`
 }
 
+function cleanTitle(title: string): string {
+  const match = title.match(/^\(✂\d+\) (.*)$/)
+  return match ? match[1] : title
+}
+
 function addDays(days: number): string {
   const d = new Date()
   d.setDate(d.getDate() + days)
@@ -462,6 +467,7 @@ export default function TodayView() {
         createdAt: new Date().toISOString(),
         isToDoNext: true,
         toDoNextOrder: origTask?.toDoNextOrder ?? task.order,
+        beyondLimit: true,
         noteRef
       }
       await saveProject({ ...project, tasks: [...project.tasks, newTask] })
@@ -473,12 +479,19 @@ export default function TodayView() {
         createdAt: new Date().toISOString(),
         completedAt: null,
         order: task.order,
+        beyondLimit: true,
         noteRef
       }
       await saveQuickTask(qt)
     }
 
     await completeTask(task)
+
+    // Append done entry to Obsidian note
+    const minutes = task.kind === 'quick'
+      ? calcQuickTaskTime(focusCheckIns, task.id)
+      : task.taskId ? calcTaskTime(focusCheckIns, task.taskId) : 0
+    window.api.appendNoteDoneEntry(noteRef, cleanTitle(task.title), minutes)
   }
 
   const toggleInProgress = async (task: MergedTask) => {
