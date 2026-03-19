@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.74.0] - 2026-03-19
+
+### Added
+
+- Split & Continue now appends a "Zrobione" (Done) entry to the task's Obsidian note, recording the date and focused time for the completed portion
+
+### Fixed
+
+- Split & Continue continuation task now correctly lands in overflow instead of top 5 (`beyondLimit: true`)
+
 ## [1.73.0] - 2026-03-18
 
 ### Added

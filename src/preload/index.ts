@@ -81,6 +81,7 @@ export const api = {
   winsGetStreaks: (): Promise<StreakStats> => ipcRenderer.invoke('wins-get-streaks'),
   selectDirectory: (): Promise<string | null> => ipcRenderer.invoke('select-directory'),
   openTaskNote: (taskId: string, taskTitle: string, projectName?: string, taskBadge?: string, noteRef?: string) => ipcRenderer.invoke('open-task-note', taskId, taskTitle, projectName, taskBadge, noteRef),
+  appendNoteDoneEntry: (noteRef: string, description: string, focusMinutes: number) => ipcRenderer.invoke('append-note-done-entry', noteRef, description, focusMinutes),
   journalGenerateDaily: (dateStr?: string) => ipcRenderer.invoke('journal-generate-daily', dateStr),
   journalGenerateWeekly: (weekKey?: string) => ipcRenderer.invoke('journal-generate-weekly', weekKey),
   journalGenerateMonthly: (monthKey?: string) => ipcRenderer.invoke('journal-generate-monthly', monthKey),

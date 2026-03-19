@@ -1262,6 +1262,11 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
     return { ok: true, noteRef: result.noteRef }
   })
 
+  ipcMain.handle('append-note-done-entry', (_event, noteRef: string, description: string, focusMinutes: number) => {
+    if (typeof noteRef !== 'string' || typeof description !== 'string') return { error: 'invalid' }
+    return taskNotesService.appendDoneEntry(noteRef, description, typeof focusMinutes === 'number' ? focusMinutes : 0)
+  })
+
   // --- Journal ---
 
   ipcMain.handle('journal-generate-daily', (_event, dateStr?: string) => {
