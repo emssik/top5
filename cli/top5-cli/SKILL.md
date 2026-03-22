@@ -5,7 +5,8 @@ description: >
   Use when the user asks to: list projects, list tasks in a project, add tasks,
   mark tasks as done/undone, manage quick tasks, create task notes, or start/stop focus mode.
   Triggers: "top5", "projects list", "add task", "mark done", "quick tasks",
-  "task note", "show my tasks", "what projects do I have", "focus", "start focus", "stop focus".
+  "task note", "show my tasks", "what projects do I have", "focus", "start focus", "stop focus",
+  "today", "today tasks", "what's on today", "dzisiejsze taski".
 ---
 
 # top5-cli
@@ -97,6 +98,17 @@ top5 note QT-5             # create/open note for quick task
 
 Returns file path to the `.md` note in the Obsidian vault.
 
+### Today's tasks
+
+```bash
+top5 today                 # visible tasks from the "today" tab
+top5 today --json
+```
+
+Shows exactly what the user sees in the Today tab: repeating tasks, scheduled (due ≤ today), and regular tasks within the limit (default 5). **Excludes:** overflow (beyond limit), completed, unapproved proposals.
+
+Output columns: #, TITLE, PROJECT, STATUS.
+
 ### Focus mode
 
 ```bash
@@ -136,6 +148,11 @@ Config file: `~/.config/top5/cli.json`. Env vars (`TOP5_API_KEY`, `TOP5_API_PORT
 | UUID    | `abc-…` | Raw ID (fallback)        |
 
 ## Common workflows
+
+**What's on today:**
+```bash
+top5 today
+```
 
 **Overview of all work:**
 ```bash

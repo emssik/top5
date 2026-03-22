@@ -43,3 +43,8 @@ else
   echo "✅ Installed. Opening..."
   open /Applications/Top5.app
 fi
+
+# Build & install CLI
+echo "🔧 Building CLI..."
+(cd cli && npm run build && npm link --silent 2>/dev/null)
+echo "✅ CLI ready (top5)"
