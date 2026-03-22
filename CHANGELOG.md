@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.74.1] - 2026-03-22
+
+### Changed
+
+- Light theme palette updated to Catppuccin Latte — cooler, higher-contrast colors replace the previous warm Solarized-style scheme
+
 ## [1.74.0] - 2026-03-19
 
 ### Added

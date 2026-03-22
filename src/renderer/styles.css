@@ -69,35 +69,44 @@ html, body {
   --pc-teal: #14b8a6;
 }
 
-/* Light theme */
+/* Light theme — Catppuccin Latte */
 [data-theme="light"] {
-  --bg-clean-view: #fdf6e3;
+  --bg-clean-view: #eff1f5;     /* Base */
 
-  --bg-base: #faf4e8;
-  --bg-card: #fdf8ef;
-  --bg-surface: #f0e8d8;
-  --bg-sidebar: #f5eedf;
+  --bg-base: #e6e9ef;           /* Mantle */
+  --bg-card: #eff1f5;           /* Base */
+  --bg-surface: #ccd0da;        /* Surface 0 */
+  --bg-sidebar: #e6e9ef;        /* Mantle */
 
-  --c-border: #d4c9a8;
-  --c-border-subtle: #e8dfc8;
+  --c-border: #bcc0cc;          /* Surface 1 */
+  --c-border-subtle: #ccd0da;   /* Surface 0 */
 
-  --c-text-primary: #3c3836;
-  --c-text-heading: #2e2a26;
-  --c-text-secondary: #6b6258;
-  --c-text-muted: #b0a68e;
+  --c-text-primary: #4c4f69;    /* Text */
+  --c-text-heading: #4c4f69;    /* Text */
+  --c-text-secondary: #6c6f85;  /* Subtext 0 */
+  --c-text-muted: #9ca0b0;      /* Overlay 0 */
 
-  --bg-hover: #ebe3d2;
-  --bg-sidebar-hover: #ebe3d2;
-  --bg-sidebar-active: #e4dbc8;
-  --bg-done: rgba(34, 197, 94, 0.06);
+  --bg-hover: #dce0e8;          /* Crust */
+  --bg-sidebar-hover: #dce0e8;  /* Crust */
+  --bg-sidebar-active: #ccd0da; /* Surface 0 */
+  --bg-done: rgba(64, 160, 43, 0.08); /* Green */
 
-  --bg-accent-row: rgba(120, 140, 80, 0.2);
-  --c-accent-row-text: #4a5530;
-  --c-accent-row-heading: #3d4828;
-  --bg-cell-lo: rgba(120, 140, 80, 0.15);
-  --bg-cell-mid: rgba(120, 140, 80, 0.25);
-  --bg-cell-hi: rgba(120, 140, 80, 0.4);
-  --c-cell-text: #4a5530;
+  --bg-accent-row: rgba(64, 160, 43, 0.15);  /* Green */
+  --c-accent-row-text: #40a02b;               /* Green */
+  --c-accent-row-heading: #40a02b;            /* Green */
+  --bg-cell-lo: rgba(64, 160, 43, 0.12);
+  --bg-cell-mid: rgba(64, 160, 43, 0.22);
+  --bg-cell-hi: rgba(64, 160, 43, 0.35);
+  --c-cell-text: #40a02b;                     /* Green */
+
+  --pc-red: #d20f39;            /* Red */
+  --pc-orange: #fe640b;         /* Peach */
+  --pc-amber: #df8e1d;          /* Yellow */
+  --pc-green: #40a02b;          /* Green */
+  --pc-blue: #1e66f5;           /* Blue */
+  --pc-purple: #8839ef;         /* Mauve */
+  --pc-pink: #ea76cb;           /* Pink */
+  --pc-teal: #179299;           /* Teal */
 }
 
 @font-face {
@@ -136,11 +145,11 @@ body {
 
 /* Clean view */
 .clean-view-dots {
-  background-color: #fdf6e3;
-  background-image: radial-gradient(circle, #d4c9a8 0.6px, transparent 0.6px);
+  background-color: #eff1f5;    /* Latte Base */
+  background-image: radial-gradient(circle, #bcc0cc 0.6px, transparent 0.6px); /* Latte Surface 1 */
   background-size: 18px 18px;
   background-position: 9px 9px;
-  color: #3c3836;
+  color: #4c4f69;               /* Latte Text */
 }
 
 [data-theme="dark"] .clean-view-dots,
@@ -151,9 +160,9 @@ body {
 }
 
 [data-theme="light"] .clean-view-dots {
-  background-color: #fdf6e3;
-  background-image: radial-gradient(circle, #d4c9a8 0.6px, transparent 0.6px);
-  color: #3c3836;
+  background-color: #eff1f5;    /* Latte Base */
+  background-image: radial-gradient(circle, #bcc0cc 0.6px, transparent 0.6px); /* Latte Surface 1 */
+  color: #4c4f69;               /* Latte Text */
 }
 
 /* App layout */
@@ -1612,17 +1621,17 @@ body {
 }
 
 [data-theme="light"] .wins-lock-bar {
-  color: #92600a;
+  color: #df8e1d;               /* Latte Yellow */
 }
 
 [data-theme="light"] .wins-rules-btn {
-  background: rgba(146, 96, 10, 0.12);
-  border-color: rgba(146, 96, 10, 0.35);
-  color: #92600a;
+  background: rgba(223, 142, 29, 0.12);  /* Latte Yellow */
+  border-color: rgba(223, 142, 29, 0.35);
+  color: #df8e1d;
 }
 
 [data-theme="light"] .wins-rules-btn:hover {
-  background: rgba(146, 96, 10, 0.2);
+  background: rgba(223, 142, 29, 0.2);
 }
 
 .wins-rules-overlay {
