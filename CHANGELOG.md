@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `GET /api/v1/today` endpoint returning the exact set of tasks visible in the Today tab (respects limit, winsLock, excludes overflow and completed)
+- `top5 today` CLI command showing today's visible tasks in a formatted table (columns: #, TITLE, PROJECT, STATUS); supports `--json`
+- `build.sh` now also builds and links the CLI after installing the app
+
+### Fixed
+
+- `top5 today` STATUS column now shows `due` instead of the raw date string for dated tasks
+- `build.sh` skips `npm link` if `top5` command is already available (idempotent installs)
+
 ## [1.74.1] - 2026-03-22
 
 ### Changed
