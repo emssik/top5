@@ -27,7 +27,7 @@ function taskCode(t: TodayTask): string {
 
 function taskStatus(t: TodayTask): string {
   if (t.inProgress) return 'in-progress'
-  if (t.dueDate) return `due:${t.dueDate}`
+  if (t.dueDate) return 'due'
   if (t.repeatingTaskId) return 'repeating'
   return ''
 }
