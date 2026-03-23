@@ -281,6 +281,8 @@ export default function FocusMode() {
     setShowTaskPicker(false)
     await window.api.switchFocusTask(pickerTask.projectId, pickerTask.taskId)
     setCompletedTaskKey(null)
+    sessionStartRef.current = Date.now()
+    setElapsedSeconds(0)
   }
 
   const handleExitFromPicker = () => {
