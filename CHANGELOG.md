@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.75.0] - 2026-03-26
+
+### Added
+
+- Focus heartbeat (`top5 focus ping`) — confirms the user is still working, saves accumulated check-in time, and resets the 15-minute check-in timer to suppress the popup; available via CLI and `POST /api/v1/focus/heartbeat`
+
 ## [1.74.2] - 2026-03-23
 
 ### Changed

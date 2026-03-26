@@ -3,10 +3,11 @@ name: top5-cli
 description: >
   Manage projects and tasks in the top5 task manager via the `top5` CLI tool.
   Use when the user asks to: list projects, list tasks in a project, add tasks,
-  mark tasks as done/undone, manage quick tasks, create task notes, or start/stop focus mode.
+  mark tasks as done/undone, manage quick tasks, create task notes, start/stop focus mode,
+  or send a focus heartbeat/ping.
   Triggers: "top5", "projects list", "add task", "mark done", "quick tasks",
   "task note", "show my tasks", "what projects do I have", "focus", "start focus", "stop focus",
-  "today", "today tasks", "what's on today", "dzisiejsze taski".
+  "focus ping", "heartbeat", "today", "today tasks", "what's on today", "dzisiejsze taski".
 ---
 
 # top5-cli
@@ -116,10 +117,13 @@ top5 focus                 # show current focus status
 top5 focus PRJ-3           # start focus on project task PRJ-3
 top5 focus QT-5            # start focus on quick task QT-5
 top5 focus stop            # stop current focus session
+top5 focus ping            # heartbeat — confirm still working, reset 15-min check-in timer
 top5 focus --json
 ```
 
 Starts/stops the focus window in the Electron app. Without arguments, shows current status (task name, elapsed time).
+
+**`ping`** — sends a heartbeat to confirm the user is still working. Saves accumulated time as a check-in and resets the 15-minute check-in timer (so the popup doesn't appear). Useful for automation — e.g., Claude Code can call `top5 focus ping` periodically to suppress check-in prompts.
 
 ### Health check
 
@@ -170,6 +174,7 @@ top5 done PRJ-5
 ```bash
 top5 focus PRJ-3
 top5 focus             # check status
+top5 focus ping        # heartbeat — suppress check-in popup
 top5 focus stop        # done
 ```
 

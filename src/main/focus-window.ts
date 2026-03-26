@@ -298,6 +298,41 @@ export function exitFocusMode(): { error: string } | undefined {
   return undefined
 }
 
+/**
+ * Heartbeat — confirms user is still working.
+ * Saves a check-in for accumulated time, resets the 15-min timer,
+ * and closes the check-in popup if it's showing.
+ */
+export function heartbeatFocus(): { error: string } | { saved: boolean; minutes: number } {
+  if (!focusWindow || focusWindow.isDestroyed()) return { error: 'not_in_focus' }
+
+  const { config } = getAppData()
+  const projectId = config.focusProjectId
+  const taskId = config.focusTaskId
+  if (!projectId || !taskId) return { error: 'no_focus_task' }
+
+  let savedMinutes = 0
+  if (lastCheckInAt > 0) {
+    const unsavedMin = Math.floor((Date.now() - lastCheckInAt) / 60000)
+    if (unsavedMin >= 1) {
+      appendCheckIn({
+        id: randomUUID().slice(0, 21),
+        projectId,
+        taskId,
+        timestamp: new Date().toISOString(),
+        response: 'yes',
+        minutes: unsavedMin
+      })
+      savedMinutes = unsavedMin
+    }
+  }
+
+  closeCheckInPopup()
+  startCheckInTimer()
+
+  return { saved: savedMinutes > 0, minutes: savedMinutes }
+}
+
 export function getFocusStatus(): {
   active: boolean
   projectId?: string

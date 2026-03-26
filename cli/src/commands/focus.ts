@@ -57,6 +57,16 @@ export function register(program: Command): void {
           return
         }
 
+        // "ping" — heartbeat, confirm still working
+        if (taskRef.toLowerCase() === 'ping') {
+          const result = await client.post<{ saved: boolean; minutes: number }>('/api/v1/focus/heartbeat', {})
+          printResult(result, {
+            json: globalOpts.json,
+            formatFn: () => result.saved ? `Heartbeat OK (${result.minutes}min saved)` : 'Heartbeat OK',
+          })
+          return
+        }
+
         // Task ref — start focus
         const parsed = parseTaskCode(taskRef)
         let projectId: string

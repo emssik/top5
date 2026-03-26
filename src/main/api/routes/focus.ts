@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify'
 import { getAppData, setAppDataKey, notifyAllWindows } from '../../store'
-import { enterFocusMode, exitFocusMode, getFocusStatus } from '../../focus-window'
+import { enterFocusMode, exitFocusMode, getFocusStatus, heartbeatFocus } from '../../focus-window'
 import * as projectService from '../../service/projects'
 import * as quickTaskService from '../../service/quick-tasks'
 import { isServiceError } from '../utils'
@@ -51,6 +51,15 @@ export function registerFocusRoutes(fastify: FastifyInstance): void {
     notifyAllWindows()
 
     return { ok: true, data: getFocusStatus() }
+  })
+
+  // POST /api/v1/focus/heartbeat — confirm still working, reset check-in timer
+  fastify.post('/api/v1/focus/heartbeat', async (_request, reply) => {
+    const result = heartbeatFocus()
+    if ('error' in result) {
+      return reply.status(409).send({ ok: false, error: result.error })
+    }
+    return { ok: true, data: result }
   })
 
   // DELETE /api/v1/focus — stop focus
