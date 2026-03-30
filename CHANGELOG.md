@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.77.0] - 2026-03-30
+
+### Added
+
+- CLI `top5 due <task-code> [date]` command to set or clear due dates on project tasks
+- CLI `top5 qt due <ref> [date]` command to set or clear due dates on quick tasks
+- `--due` option on `top5 task add` and `top5 qt add` — accepts YYYY-MM-DD, today, tomorrow, +Nd, or weekday names
+- DUE column in `top5 task list` and `top5 qt list` output
+- API `PUT /api/v1/quick-tasks/:id/due-date` endpoint for setting or clearing a quick task's due date
+
 ## [1.76.0] - 2026-03-30
 
 ### Added

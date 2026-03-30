@@ -48,6 +48,14 @@ export function registerQuickTaskRoutes(fastify: FastifyInstance): void {
     return { ok: true, data: result }
   })
 
+  fastify.put<{ Params: { id: string } }>('/api/v1/quick-tasks/:id/due-date', async (request, reply) => {
+    const { dueDate } = request.body as { dueDate: string | null }
+    const result = quickTaskService.updateQuickTaskDueDate(request.params.id, dueDate ?? null)
+    if (isServiceError(result)) return reply.status(404).send({ ok: false, error: result.error })
+    notifyAllWindows()
+    return { ok: true, data: result }
+  })
+
   fastify.post<{ Params: { id: string } }>('/api/v1/quick-tasks/:id/toggle-in-progress', async (request, reply) => {
     const result = quickTaskService.toggleQuickTaskInProgress(request.params.id)
     if (isServiceError(result)) return reply.status(404).send({ ok: false, error: result.error })
