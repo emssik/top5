@@ -2,6 +2,7 @@ import type { Command } from 'commander'
 import { createClient } from '../lib/client.js'
 import { resolveQuickTask } from '../lib/resolve.js'
 import { printResult, formatTable, die, warn } from '../lib/output.js'
+import { parseDate, formatDueDate } from '../lib/date.js'
 
 interface QuickTask {
   id: string
@@ -9,6 +10,7 @@ interface QuickTask {
   completed: boolean
   taskNumber?: number
   inProgress?: boolean
+  dueDate?: string | null
   order: number
   createdAt: string
   completedAt: string | null
@@ -49,6 +51,7 @@ export function register(program: Command): void {
             formatTable(tasks, [
               { header: '#', value: (t) => qtCode(t), align: 'right' },
               { header: 'TITLE', value: (t) => t.title },
+              { header: 'DUE', value: (t) => formatDueDate(t.dueDate) },
               { header: 'STATUS', value: (t) => qtStatus(t) },
             ]),
         })
@@ -62,11 +65,19 @@ export function register(program: Command): void {
     .description('Add a quick task')
     .argument('<title>', 'Task title')
     .option('-n, --note', 'Create a note for the task')
+    .option('-d, --due <date>', 'Due date (YYYY-MM-DD, today, tomorrow, +Nd, mon-sun)')
     .action(async (title: string, opts, cmd) => {
       const globalOpts = cmd.optsWithGlobals()
       const client = createClient(globalOpts)
 
       try {
+        let dueDate: string | undefined
+        if (opts.due) {
+          const parsed = parseDate(opts.due)
+          if (parsed === null) die('Cannot clear due date on a new task. Just omit --due.')
+          dueDate = parsed
+        }
+
         const newTask = {
           id: crypto.randomUUID(),
           title,
@@ -74,6 +85,7 @@ export function register(program: Command): void {
           createdAt: new Date().toISOString(),
           completedAt: null,
           order: 0,
+          ...(dueDate ? { dueDate } : {}),
         }
 
         const result = await client.post<QuickTask[]>('/api/v1/quick-tasks', newTask)
@@ -97,8 +109,52 @@ export function register(program: Command): void {
           json: globalOpts.json,
           formatFn: () => {
             let msg = `Created: ${code}${title}`
+            if (dueDate) msg += ` (due: ${formatDueDate(dueDate)})`
             if (notePath) msg += `\nNote: ${notePath}`
             return msg
+          },
+        })
+      } catch (err: unknown) {
+        die((err as Error).message)
+      }
+    })
+
+  // top5 qt due <ref> [date]
+  qt.command('due')
+    .description('Set or clear due date for a quick task')
+    .argument('<ref>', 'Quick task code (e.g. QT-5) or ID')
+    .argument('[date]', 'Due date (YYYY-MM-DD, today, tomorrow, +Nd, mon-sun, or "clear")')
+    .action(async (ref: string, dateInput: string | undefined, _opts, cmd) => {
+      const globalOpts = cmd.optsWithGlobals()
+      const client = createClient(globalOpts)
+
+      try {
+        const task = await resolveQuickTask(client, ref) as QuickTask
+
+        // No date arg — show current due date
+        if (!dateInput) {
+          printResult(task, {
+            json: globalOpts.json,
+            formatFn: () => {
+              const code = qtCode(task)
+              const due = task.dueDate ? formatDueDate(task.dueDate) : '(none)'
+              return `${code !== '-' ? code + ' ' : ''}${task.title} — due: ${due}`
+            },
+          })
+          return
+        }
+
+        const dueDate = parseDate(dateInput)
+
+        await client.put(`/api/v1/quick-tasks/${task.id}/due-date`, { dueDate })
+
+        printResult({ ...task, dueDate }, {
+          json: globalOpts.json,
+          formatFn: () => {
+            const code = qtCode(task)
+            const prefix = code !== '-' ? code + ' ' : ''
+            if (dueDate === null) return `${prefix}${task.title} — due date cleared`
+            return `${prefix}${task.title} — due: ${formatDueDate(dueDate)}`
           },
         })
       } catch (err: unknown) {
