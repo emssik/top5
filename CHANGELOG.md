@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.76.0] - 2026-03-30
+
+### Added
+
+- Quick-add window: project picker now uses a compact 3-column grid with keyboard shortcuts ⌘A–Z for projects beyond the first 9
+- Quick-add window: inline mini-calendar replaces the native date picker when selecting a due date
+- Quick-add window: window height auto-adjusts to content via ResizeObserver — no more fixed-height blank space
+- Base font size setting (10–18 px) in Settings with a live-preview slider; applies via zoom factor across the app
+- Window position and size are now persisted to `window-state.json` and restored on next launch
+- Main window is clamped to the display work area on every show to prevent off-screen placement
+
 ## [1.75.0] - 2026-03-26
 
 ### Added

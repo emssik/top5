@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, webFrame } from 'electron'
 import type { IpcRendererEvent } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 import type { AppConfig, FocusCheckIn, OperationLogEntry, Project, QuickTask, RepeatingTask, ApiConfig, LockedTaskRef, WinsLockState, WinEntry, StreakStats } from '../shared/types'
@@ -71,6 +71,8 @@ export const api = {
     return () => ipcRenderer.removeListener('navigate-to-project', handler)
   },
   closeQuickAddWindow: () => ipcRenderer.invoke('close-quick-add-window'),
+  resizeQuickAddWindow: (height: number) => ipcRenderer.invoke('resize-quick-add-window', height),
+  setZoomFactor: (factor: number) => webFrame.setZoomFactor(factor),
   openDevTools: () => ipcRenderer.invoke('open-dev-tools'),
   getApiConfig: (): Promise<ApiConfig> => ipcRenderer.invoke('get-api-config'),
   saveApiConfig: (config: Partial<ApiConfig>): Promise<ApiConfig> => ipcRenderer.invoke('save-api-config', config),

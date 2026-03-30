@@ -109,6 +109,7 @@ export interface AppConfig {
   cleanViewFont: string
   obsidianStoragePath?: string
   obsidianVaultName?: string
+  baseFontSize?: number
 }
 
 export interface FocusCheckIn {

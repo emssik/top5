@@ -1,11 +1,13 @@
 import { app, BrowserWindow, shell, ipcMain, globalShortcut, screen, Menu } from 'electron'
 import { join, resolve } from 'path'
 import { is, optimizer, electronApp } from '@electron-toolkit/utils'
-import { registerStoreHandlers, getAppData, setAppDataKey, IS_DEV } from './store'
+import { registerStoreHandlers, getAppData, setAppDataKey, IS_DEV, getConfigDir } from './store'
 import { registerLauncherHandlers } from './launchers'
 import { registerFocusHandlers } from './focus-window'
 import { registerGlobalShortcut, registerLocalShortcuts } from './shortcuts'
 import { registerQuickAddHandlers } from './quick-add-window'
+import { showWindowVisible } from './window-utils'
+import { existsSync, readFileSync, writeFileSync } from 'fs'
 import { registerNudgeHandlers, startNudgeMonitor, stopNudgeMonitor } from './nudge'
 import { getRepeatingTaskProposals, dateKey } from '../shared/schedule'
 import type { QuickTask } from '../shared/types'
@@ -15,6 +17,35 @@ import { CLEAN_VIEW_ROW_HEIGHT, CLEAN_VIEW_SEPARATOR_HEIGHT, CLEAN_VIEW_HEADER_H
 let mainWindow: BrowserWindow | null = null
 let savedBounds: Electron.Rectangle | null = null
 let pendingDeepLinkUrl: string | null = null
+
+function showMainWindow(): void {
+  if (!mainWindow || mainWindow.isDestroyed()) return
+  showWindowVisible(mainWindow)
+}
+
+const WINDOW_STATE_FILE = () => join(getConfigDir(), 'window-state.json')
+
+function loadWindowBounds(): Electron.Rectangle | null {
+  try {
+    const f = WINDOW_STATE_FILE()
+    if (!existsSync(f)) return null
+    const data = JSON.parse(readFileSync(f, 'utf-8'))
+    if (typeof data.x === 'number' && typeof data.y === 'number' &&
+        typeof data.width === 'number' && typeof data.height === 'number') {
+      return data as Electron.Rectangle
+    }
+  } catch { /* ignore */ }
+  return null
+}
+
+function saveWindowBounds(): void {
+  if (!mainWindow || mainWindow.isDestroyed()) return
+  // Don't save bounds when in clean view (smaller window)
+  if (savedBounds) return
+  try {
+    writeFileSync(WINDOW_STATE_FILE(), JSON.stringify(mainWindow.getBounds()))
+  } catch { /* ignore */ }
+}
 
 function handleDeepLink(url: string): void {
   // Expected format: top5://project/<id>
@@ -26,8 +57,7 @@ function handleDeepLink(url: string): void {
     return
   }
   mainWindow.webContents.send('navigate-to-project', projectId)
-  mainWindow.show()
-  mainWindow.focus()
+  showMainWindow()
 }
 
 // Dev mode: separate app identity so dev and prod can run side by side
@@ -45,8 +75,7 @@ if (!gotTheLock) {
     const url = argv.find((arg) => arg.startsWith('top5://'))
     if (url) handleDeepLink(url)
     if (mainWindow) {
-      mainWindow.show()
-      mainWindow.focus()
+      showMainWindow()
     }
   })
 }
@@ -77,9 +106,13 @@ function isAllowedExternalUrl(url: string): boolean {
 }
 
 function createWindow(): void {
+  const restored = loadWindowBounds()
+
   mainWindow = new BrowserWindow({
-    width: 900,
-    height: 670,
+    width: restored?.width ?? 900,
+    height: restored?.height ?? 670,
+    x: restored?.x,
+    y: restored?.y,
     minWidth: 600,
     minHeight: 400,
     show: false,
@@ -96,15 +129,19 @@ function createWindow(): void {
     if (process.platform === 'darwin') {
       mainWindow!.setWindowButtonVisibility(false)
     }
-    mainWindow!.show()
+    showWindowVisible(mainWindow!)
     if (pendingDeepLinkUrl) {
       handleDeepLink(pendingDeepLinkUrl)
       pendingDeepLinkUrl = null
     }
   })
 
+  mainWindow.on('resize', saveWindowBounds)
+  mainWindow.on('move', saveWindowBounds)
+
   // Hide instead of destroy on close (macOS pattern)
   mainWindow.on('close', (e) => {
+    saveWindowBounds()
     if (!(app as unknown as Record<string, unknown>).isQuitting) {
       e.preventDefault()
       mainWindow!.hide()
@@ -273,7 +310,7 @@ app.whenReady().then(() => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow()
     } else if (mainWindow) {
-      mainWindow.show()
+      showMainWindow()
     }
   })
 })

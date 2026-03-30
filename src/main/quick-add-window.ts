@@ -14,13 +14,13 @@ export function createQuickAddWindow(): void {
   const display = screen.getPrimaryDisplay()
   const { width: screenW, height: screenH } = display.workAreaSize
   const winW = 520
-  const winH = 500
+  const winH = 300
 
   quickAddWindow = new BrowserWindow({
     width: winW,
     height: winH,
     x: Math.round(display.workArea.x + (screenW - winW) / 2),
-    y: Math.round(display.workArea.y + (screenH - winH) / 2 - 80),
+    y: Math.max(display.workArea.y, Math.round(display.workArea.y + (screenH - winH) / 2 - 80)),
     show: false,
     frame: false,
     transparent: true,
@@ -67,6 +67,17 @@ export function registerQuickAddHandlers(ipcMain: IpcMain): void {
     if (quickAddWindow && !quickAddWindow.isDestroyed()) {
       quickAddWindow.close()
       quickAddWindow = null
+    }
+  })
+
+  ipcMain.handle('resize-quick-add-window', (_e, height: number) => {
+    if (quickAddWindow && !quickAddWindow.isDestroyed()) {
+      const [w] = quickAddWindow.getSize()
+      const pos = quickAddWindow.getPosition()
+      const display = screen.getPrimaryDisplay()
+      const maxY = display.workArea.y + display.workAreaSize.height
+      const maxH = Math.min(Math.ceil(height), maxY - pos[1])
+      quickAddWindow.setSize(w, maxH)
     }
   })
 }

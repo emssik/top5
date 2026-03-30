@@ -83,6 +83,8 @@ declare global {
       showProjectInMain: (projectId: string) => Promise<void>
       onNavigateToProject: (callback: (projectId: string) => void) => () => void
       closeQuickAddWindow: () => Promise<void>
+      resizeQuickAddWindow: (height: number) => Promise<void>
+      setZoomFactor: (factor: number) => void
       getApiConfig: () => Promise<import('../../shared/types').ApiConfig>
       saveApiConfig: (config: Partial<import('../../shared/types').ApiConfig>) => Promise<import('../../shared/types').ApiConfig>
       winsLock: (tasks: import('../../shared/types').LockedTaskRef[]) => Promise<import('../../shared/types').WinsLockState>

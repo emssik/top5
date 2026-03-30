@@ -1,6 +1,7 @@
 import type { BrowserWindow, GlobalShortcut } from 'electron'
 import { getAppData } from './store'
 import { toggleQuickAddWindow } from './quick-add-window'
+import { showWindowVisible } from './window-utils'
 
 interface ParsedAccelerator {
   meta: boolean
@@ -55,8 +56,7 @@ export function registerGlobalShortcut(
     if (win.isVisible()) {
       win.hide()
     } else {
-      win.show()
-      win.focus()
+      showWindowVisible(win)
     }
   })
 

@@ -23,6 +23,7 @@ export default function Settings({ open, onClose }: Props) {
   const [quickTasksLimit, setQuickTasksLimit] = useState(config.quickTasksLimit ?? 5)
   const [activeProjectsLimit, setActiveProjectsLimit] = useState(config.activeProjectsLimit ?? 5)
   const [cleanViewFont, setCleanViewFont] = useState(config.cleanViewFont || 'Caveat')
+  const [baseFontSize, setBaseFontSize] = useState(config.baseFontSize ?? 13)
   const [obsidianStoragePath, setObsidianStoragePath] = useState(config.obsidianStoragePath || '')
   const [obsidianVaultName, setObsidianVaultName] = useState(config.obsidianVaultName || '')
   const [showShortcuts, setShowShortcuts] = useState(false)
@@ -35,6 +36,7 @@ export default function Settings({ open, onClose }: Props) {
     setQuickTasksLimit(config.quickTasksLimit ?? 5)
     setActiveProjectsLimit(config.activeProjectsLimit ?? 5)
     setCleanViewFont(config.cleanViewFont || 'Caveat')
+    setBaseFontSize(config.baseFontSize ?? 13)
     setObsidianStoragePath(config.obsidianStoragePath || '')
     setObsidianVaultName(config.obsidianVaultName || '')
   }, [config])
@@ -79,6 +81,7 @@ export default function Settings({ open, onClose }: Props) {
       quickTasksLimit: Math.max(1, Math.min(20, quickTasksLimit)),
       activeProjectsLimit: Math.max(1, Math.min(20, activeProjectsLimit)),
       cleanViewFont,
+      baseFontSize: Math.max(10, Math.min(18, baseFontSize)),
       obsidianStoragePath: obsidianStoragePath.trim() || undefined,
       obsidianVaultName: obsidianVaultName.trim() || undefined
     })
@@ -120,6 +123,26 @@ export default function Settings({ open, onClose }: Props) {
                 {font}
               </button>
             ))}
+          </div>
+        </div>
+
+        <div className="modal-row">
+          <label>Base font size</label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <input
+              type="range"
+              min={10}
+              max={18}
+              step={1}
+              value={baseFontSize}
+              onChange={(e) => {
+                const v = Number(e.target.value)
+                setBaseFontSize(v)
+                window.api.setZoomFactor(v / 13)
+              }}
+              style={{ width: 100 }}
+            />
+            <span className="value" style={{ minWidth: 32, textAlign: 'center' }}>{baseFontSize}px</span>
           </div>
         </div>
 
@@ -273,7 +296,10 @@ export default function Settings({ open, onClose }: Props) {
         </div>
 
         <div className="form-actions">
-          <button className="form-btn form-btn-secondary" onClick={onClose}>Cancel</button>
+          <button className="form-btn form-btn-secondary" onClick={() => {
+            window.api.setZoomFactor((config.baseFontSize ?? 13) / 13)
+            onClose()
+          }}>Cancel</button>
           <button className="form-btn form-btn-primary" onClick={handleSave}>Save</button>
         </div>
       </div>

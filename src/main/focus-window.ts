@@ -3,6 +3,7 @@ import { join } from 'path'
 import { execFile } from 'child_process'
 import { is } from '@electron-toolkit/utils'
 import type { IpcMain } from 'electron'
+import { showWindowVisible } from './window-utils'
 import { randomUUID } from 'crypto'
 import { appendCheckIn, appendOperation, getAppData, loadCheckIns, setAppDataKey } from './store'
 import { STANDALONE_PROJECT_ID } from '../shared/constants'
@@ -292,8 +293,7 @@ export function exitFocusMode(): { error: string } | undefined {
   if (mainWin) {
     // Tell main window to reload data
     mainWin.webContents.send('reload-data')
-    mainWin.show()
-    mainWin.focus()
+    showWindowVisible(mainWin)
   }
   return undefined
 }
@@ -489,8 +489,7 @@ export function registerFocusHandlers(
     const mainWin = getMainWindow()
     if (!mainWin) return
     mainWin.webContents.send('navigate-to-project', projectId)
-    mainWin.show()
-    mainWin.focus()
+    showWindowVisible(mainWin)
   })
 
   ipcMain.handle('open-operation-log-window', (_event, filter?: string) => {

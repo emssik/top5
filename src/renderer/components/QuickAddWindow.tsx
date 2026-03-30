@@ -33,6 +33,7 @@ export default function QuickAddWindow() {
   const inputRef = useRef<HTMLInputElement>(null)
   const descRef = useRef<HTMLTextAreaElement>(null)
   const firstTaskRef = useRef<HTMLInputElement>(null)
+  const rootRef = useRef<HTMLDivElement>(null)
 
   // Load data — apply theme BEFORE first visible render
   useEffect(() => {
@@ -53,6 +54,18 @@ export default function QuickAddWindow() {
   useEffect(() => {
     if (loaded) inputRef.current?.focus()
   }, [mode, loaded])
+
+  // Auto-resize window to fit content
+  useEffect(() => {
+    const el = rootRef.current
+    if (!el) return
+    const ro = new ResizeObserver(() => {
+      const h = el.scrollHeight
+      if (h > 0) window.api.resizeQuickAddWindow(Math.ceil(h))
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [loaded])
 
   const buildSchedule = useCallback((): RepeatSchedule => {
     return buildQuickAddSchedule({
@@ -206,6 +219,18 @@ export default function QuickAddWindow() {
         return
       }
 
+      // Cmd+A..Z for projects 10+
+      if (e.metaKey && /^[a-z]$/.test(e.key)) {
+        const letterIdx = e.key.charCodeAt(0) - 97 // a=0, b=1, ...
+        const projectIdx = 9 + letterIdx
+        if (projectIdx < projects.length) {
+          e.preventDefault()
+          if (mode !== 'task') switchMode('task')
+          setSelectedProjectId(projects[projectIdx].id)
+        }
+        return
+      }
+
       if (e.metaKey && e.key === '0') {
         e.preventDefault()
         if (mode !== 'task') switchMode('task')
@@ -236,7 +261,7 @@ export default function QuickAddWindow() {
   if (!loaded) return null
 
   return (
-    <div className="h-screen bg-card rounded-[14px] overflow-hidden flex flex-col">
+    <div ref={rootRef} className="bg-card rounded-[14px] overflow-hidden flex flex-col">
         {/* Input area */}
         <div className="px-[18px] pt-4 pb-3">
           <div className="flex items-center gap-[10px]">
@@ -294,7 +319,7 @@ export default function QuickAddWindow() {
         <div className="h-px bg-b-subtle mx-[18px]" />
 
         {/* Content panels */}
-        <div className="px-[18px] py-3 min-h-[60px] flex-1 overflow-hidden">
+        <div className="px-[18px] py-3 min-h-[60px] overflow-y-auto">
           {mode === 'task' && (
             <TaskPanel
               projects={projects}
@@ -386,6 +411,70 @@ function formatDueDate(date: string): string {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
+const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+const CAL_DOW = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
+
+function MiniCalendar({ onSelect, onClose }: { onSelect: (date: string) => void; onClose: () => void }) {
+  const today = new Date()
+  const [year, setYear] = useState(today.getFullYear())
+  const [month, setMonth] = useState(today.getMonth())
+
+  const firstDay = new Date(year, month, 1)
+  // Monday=0 offset
+  const startOffset = (firstDay.getDay() + 6) % 7
+  const daysInMonth = new Date(year, month + 1, 0).getDate()
+
+  const prevMonth = () => {
+    if (month === 0) { setYear(year - 1); setMonth(11) }
+    else setMonth(month - 1)
+  }
+  const nextMonth = () => {
+    if (month === 11) { setYear(year + 1); setMonth(0) }
+    else setMonth(month + 1)
+  }
+
+  const todayKey = dateKey(today)
+  const cells: (number | null)[] = Array(startOffset).fill(null)
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d)
+
+  return (
+    <div className="mt-2 p-2 rounded-lg border border-b-subtle bg-surface">
+      <div className="flex items-center justify-between mb-1">
+        <button className="text-[11px] text-t-muted hover:text-t-primary px-1" onClick={prevMonth}>{'\u2039'}</button>
+        <span className="text-[11px] font-medium text-t-primary">{MONTH_NAMES[month]} {year}</span>
+        <button className="text-[11px] text-t-muted hover:text-t-primary px-1" onClick={nextMonth}>{'\u203A'}</button>
+      </div>
+      <div className="grid grid-cols-7 gap-0">
+        {CAL_DOW.map((d, i) => (
+          <span key={i} className="text-[9px] text-t-muted text-center py-[2px]">{d}</span>
+        ))}
+        {cells.map((day, i) => {
+          if (day === null) return <span key={`e${i}`} />
+          const dk = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+          const isToday = dk === todayKey
+          const isPast = dk < todayKey
+          return (
+            <button
+              key={dk}
+              className={`text-[11px] rounded-[4px] py-[2px] transition-colors ${
+                isToday
+                  ? 'bg-blue-500/20 text-blue-400 font-semibold'
+                  : isPast
+                    ? 'text-t-muted/40 cursor-default'
+                    : 'text-t-secondary hover:bg-hover hover:text-t-primary'
+              }`}
+              disabled={isPast}
+              onClick={() => { if (!isPast) { onSelect(dk); onClose() } }}
+            >
+              {day}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 function TaskPanel({
   projects,
   selectedProjectId,
@@ -411,36 +500,36 @@ function TaskPanel({
 
   return (
     <>
-      <div className="mb-3">
-        <div className="text-[10px] font-semibold uppercase tracking-wider text-t-muted mb-2">
+      <div className="mb-2">
+        <div className="text-[10px] font-semibold uppercase tracking-wider text-t-muted mb-1">
           Add to
         </div>
-        <div className="flex flex-col gap-[2px] max-h-[240px] overflow-y-auto">
-          {projects.map((project, i) => (
-            <button
-              key={project.id}
-              className={`flex items-center gap-[10px] px-[10px] py-[7px] rounded-[7px] transition-all border-[1.5px] text-left ${
-                selectedProjectId === project.id
-                  ? 'bg-surface border-border'
-                  : 'border-transparent hover:bg-hover'
-              }`}
-              onClick={() => onSelectProject(project.id)}
-            >
-              <span className={`text-[10px] font-semibold tabular-nums w-[18px] text-center shrink-0 ${
-                selectedProjectId === project.id ? '' : 'text-t-muted'
-              }`} style={selectedProjectId === project.id ? { color: 'var(--pc-blue)' } : undefined}>
-                {'\u2318'}{i + 1}
-              </span>
-              <span className="w-2 h-2 rounded-full shrink-0" style={{ background: projectColorValue(project.color) }} />
-              <span className="text-[13px] text-t-primary flex-1">{project.name}</span>
-              <span className="text-[11px] text-t-muted">
-                {project.tasks.filter((t) => !t.completed).length} tasks
-              </span>
-              {selectedProjectId === project.id && (
-                <span className="text-xs" style={{ color: 'var(--pc-blue)' }}>✓</span>
-              )}
-            </button>
-          ))}
+        <div className="grid grid-cols-3 gap-x-[2px]">
+          {projects.map((project, i) => {
+            const shortcut = i < 9 ? String(i + 1) : String.fromCharCode(65 + i - 9)
+            return (
+              <button
+                key={project.id}
+                className={`flex items-center gap-[4px] px-[5px] py-[3px] rounded-[5px] transition-all border-[1.5px] text-left min-w-0 ${
+                  selectedProjectId === project.id
+                    ? 'bg-surface border-border'
+                    : 'border-transparent hover:bg-hover'
+                }`}
+                onClick={() => onSelectProject(project.id)}
+              >
+                <span className={`text-[9px] font-semibold tabular-nums shrink-0 ${
+                  selectedProjectId === project.id ? '' : 'text-t-muted'
+                }`} style={selectedProjectId === project.id ? { color: 'var(--pc-blue)' } : undefined}>
+                  {'\u2318'}{shortcut}
+                </span>
+                <span className="w-[6px] h-[6px] rounded-full shrink-0" style={{ background: projectColorValue(project.color) }} />
+                <span className="text-[11px] text-t-primary truncate flex-1">{project.name}</span>
+                {selectedProjectId === project.id && (
+                  <span className="text-[10px]" style={{ color: 'var(--pc-blue)' }}>✓</span>
+                )}
+              </button>
+            )
+          })}
         </div>
       </div>
 
@@ -487,36 +576,28 @@ function TaskPanel({
       </div>
 
       {showDatePicker && !dueDate && (
-        <div className="flex items-center gap-[6px] mt-2">
-          {[
-            { label: 'Tomorrow', days: 1 },
-            { label: '+2d', days: 2 },
-            { label: '+3d', days: 3 },
-            { label: '+1w', days: 7 }
-          ].map((opt) => (
-            <button
-              key={opt.label}
-              className="px-[8px] py-[4px] rounded-[5px] text-[11px] border border-b-subtle text-t-secondary bg-surface hover:border-border hover:text-t-primary transition-all"
-              onClick={() => {
-                onDueDateChange(addDays(opt.days))
-                setShowDatePicker(false)
-              }}
-            >
-              {opt.label}
-            </button>
-          ))}
-          <input
-            type="date"
-            className="px-[6px] py-[3px] rounded-[5px] text-[11px] border border-b-subtle text-t-secondary bg-surface outline-none focus:border-t-secondary transition-colors"
-            min={dateKey(new Date())}
-            onChange={(e) => {
-              if (e.target.value) {
-                onDueDateChange(e.target.value)
-                setShowDatePicker(false)
-              }
-            }}
-          />
-        </div>
+        <>
+          <div className="flex items-center gap-[6px] mt-2">
+            {[
+              { label: 'Tomorrow', days: 1 },
+              { label: '+2d', days: 2 },
+              { label: '+3d', days: 3 },
+              { label: '+1w', days: 7 }
+            ].map((opt) => (
+              <button
+                key={opt.label}
+                className="px-[8px] py-[4px] rounded-[5px] text-[11px] border border-b-subtle text-t-secondary bg-surface hover:border-border hover:text-t-primary transition-all"
+                onClick={() => {
+                  onDueDateChange(addDays(opt.days))
+                  setShowDatePicker(false)
+                }}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          <MiniCalendar onSelect={onDueDateChange} onClose={() => setShowDatePicker(false)} />
+        </>
       )}
     </>
   )

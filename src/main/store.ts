@@ -386,7 +386,8 @@ function normalizeAppConfig(value: unknown): AppConfig {
       : undefined,
     obsidianVaultName: typeof value.obsidianVaultName === 'string' && value.obsidianVaultName.trim().length > 0
       ? value.obsidianVaultName.trim()
-      : undefined
+      : undefined,
+    baseFontSize: typeof value.baseFontSize === 'number' ? Math.max(10, Math.min(18, value.baseFontSize)) : undefined
   }
 }
 
@@ -415,6 +416,7 @@ function isValidAppConfig(value: unknown): value is AppConfig {
   if (typeof cleanViewFont !== 'string' || cleanViewFont.trim().length === 0 || cleanViewFont.length > 64) return false
   if (value.obsidianStoragePath !== undefined && typeof value.obsidianStoragePath !== 'string') return false
   if (value.obsidianVaultName !== undefined && typeof value.obsidianVaultName !== 'string') return false
+  if (value.baseFontSize !== undefined && (typeof value.baseFontSize !== 'number' || value.baseFontSize < 10 || value.baseFontSize > 18)) return false
   return true
 }
 

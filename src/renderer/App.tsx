@@ -60,7 +60,10 @@ export default function App() {
     } else {
       document.documentElement.removeAttribute('data-theme')
     }
-  }, [isMainOrFocus, config.theme])
+
+    const zoom = (config.baseFontSize ?? 13) / 13
+    window.api.setZoomFactor(zoom)
+  }, [isMainOrFocus, config.theme, config.baseFontSize])
 
   if (isFocusWindow) return loaded ? <FocusMode /> : null
   if (isCheckInWindow) return <CheckInPopup />
