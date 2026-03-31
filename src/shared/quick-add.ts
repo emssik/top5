@@ -1,7 +1,7 @@
 import type { RepeatScheduleLike } from './schedule'
 import { MONDAY_TO_FRIDAY, normalizeWeekdays } from './schedule'
 
-export type QuickAddScheduleType = 'daily' | 'weekdays' | 'weekly' | 'interval' | 'monthly' | 'afterDone'
+export type QuickAddScheduleType = 'daily' | 'weekdays' | 'weekly' | 'interval' | 'monthly' | 'lastDay' | 'afterDone'
 
 export interface QuickAddScheduleOptions {
   scheduleType: QuickAddScheduleType
@@ -23,6 +23,8 @@ export function buildQuickAddSchedule(options: QuickAddScheduleOptions): RepeatS
       return { type: 'interval', days: Math.max(1, options.intervalDays) }
     case 'monthly':
       return { type: 'monthlyDay', day: Math.max(1, Math.min(31, options.monthlyDay)) }
+    case 'lastDay':
+      return { type: 'monthlyLastDay' }
     case 'afterDone':
       return { type: 'afterCompletion', days: Math.max(1, options.afterDoneDays) }
     default:

@@ -3,11 +3,13 @@ name: top5-cli
 description: >
   Manage projects and tasks in the top5 task manager via the `top5` CLI tool.
   Use when the user asks to: list projects, list tasks in a project, add tasks,
-  mark tasks as done/undone, manage quick tasks, create task notes, start/stop focus mode,
-  or send a focus heartbeat/ping.
+  mark tasks as done/undone, manage quick tasks, set due dates, create task notes,
+  start/stop focus mode, send a focus heartbeat/ping, or manage repeating tasks.
   Triggers: "top5", "projects list", "add task", "mark done", "quick tasks",
   "task note", "show my tasks", "what projects do I have", "focus", "start focus", "stop focus",
-  "focus ping", "heartbeat", "today", "today tasks", "what's on today", "dzisiejsze taski".
+  "focus ping", "heartbeat", "today", "today tasks", "what's on today", "dzisiejsze taski",
+  "due date", "set deadline", "termin", "ustaw datę", "pin", "pin to today", "przypnij",
+  "repeating", "repeating tasks", "recurring", "cykliczne", "powtarzalne".
 ---
 
 # top5-cli
@@ -64,9 +66,33 @@ Task statuses: `[done]`, `in-progress`, `up-next`, or empty (backlog).
 
 ```bash
 top5 add PRJ "Task title"
+top5 add PRJ "Task title" --due tomorrow
+top5 add PRJ "Task title" --due 2026-04-15
+top5 add PRJ "Task title" --pin     # pin to today (mark as up-next)
 top5 add PRJ "Task title" --note    # also create Obsidian note
 top5 add PRJ "Task title" --json
 ```
+
+`--due` accepts: `YYYY-MM-DD`, `today`, `tomorrow`, `+Nd` (e.g. `+3d`), day name (`monday`–`sunday`, or `mon`–`sun`).
+
+### Set / clear due date
+
+```bash
+top5 due PRJ-3                 # show current due date
+top5 due PRJ-3 tomorrow        # set due date
+top5 due PRJ-3 +5d             # 5 days from today
+top5 due PRJ-3 friday          # next Friday
+top5 due PRJ-3 2026-04-15      # specific date
+top5 due PRJ-3 clear           # remove due date
+```
+
+### Pin / unpin task (pin to today)
+
+```bash
+top5 pin PRJ-3             # toggle pin — if unpinned, pins to today; if pinned, unpins
+```
+
+Pinned tasks appear in the "today" view as "up-next". Toggle behavior: running `pin` again unpins the task.
 
 ### Mark task done / undone
 
@@ -83,7 +109,11 @@ top5 undone PRJ-3
 top5 qt                    # list active quick tasks
 top5 qt --all              # include completed
 top5 qt add "Buy coffee"
+top5 qt add "Buy coffee" --due friday
 top5 qt add "Research" --note
+top5 qt due QT-5 tomorrow  # set due date
+top5 qt due QT-5           # show due date
+top5 qt due QT-5 clear     # remove due date
 top5 qt done QT-5
 top5 qt undone QT-5
 ```
@@ -125,6 +155,28 @@ Starts/stops the focus window in the Electron app. Without arguments, shows curr
 
 **`ping`** — sends a heartbeat to confirm the user is still working. Saves accumulated time as a check-in and resets the 15-minute check-in timer (so the popup doesn't appear). Useful for automation — e.g., Claude Code can call `top5 focus ping` periodically to suppress check-in prompts.
 
+### Repeating tasks
+
+```bash
+top5 rt                    # list all repeating task definitions
+top5 rt proposals          # show today's pending proposals
+top5 rt add "Standup" --daily           # every day (default)
+top5 rt add "Review" --weekdays         # Mon-Fri
+top5 rt add "Gym" --weekly 1,3,5        # specific weekdays (0=Sun..6=Sat or mon-sun)
+top5 rt add "Check" --interval 3        # every 3 days
+top5 rt add "Review" --after-done 7     # 7 days after completion
+top5 rt add "Rent" --monthly-day 1      # 1st of month
+top5 rt add "EOM" --monthly-last-day    # last day of month
+top5 rt edit 1 --title "New title"      # change title
+top5 rt edit 1 --interval 5            # change schedule
+top5 rt rm 1                           # delete
+top5 rt accept 1                       # accept proposal → creates quick task
+top5 rt dismiss 1                      # dismiss proposal for today
+```
+
+`<ref>` accepts: 1-based position from `top5 rt` list, or raw UUID.
+`accept` and `dismiss` resolve from proposals list (not full list).
+
 ### Health check
 
 ```bash
@@ -145,11 +197,12 @@ Config file: `~/.config/top5/cli.json`. Env vars (`TOP5_API_KEY`, `TOP5_API_PORT
 
 ## Task code format
 
-| Format  | Example | Description              |
-|---------|---------|--------------------------|
-| `PRJ-N` | `PRJ-3` | Task #3 in project PRJ   |
-| `QT-N`  | `QT-5`  | Quick task #5            |
-| UUID    | `abc-…` | Raw ID (fallback)        |
+| Format  | Example | Description                        | Used by              |
+|---------|---------|------------------------------------|-----------------------|
+| `PRJ-N` | `PRJ-3` | Task #3 in project PRJ             | tasks, done, due, pin |
+| `QT-N`  | `QT-5`  | Quick task #5                      | qt done, qt due, note |
+| `N`     | `1`     | 1-based position from list         | rt, rt accept/dismiss |
+| UUID    | `abc-…` | Raw ID (fallback)                  | everywhere            |
 
 ## Common workflows
 
@@ -166,8 +219,22 @@ top5 tasks PRJ
 
 **Add and complete a task:**
 ```bash
-top5 add PRJ "New task"
+top5 add PRJ "New task" --due friday
+top5 add PRJ "New task" --pin       # add and pin to today
 top5 done PRJ-5
+```
+
+**Pin a task to today:**
+```bash
+top5 pin PRJ-3             # pin (appears in today view)
+top5 pin PRJ-3             # unpin (toggle)
+```
+
+**Manage due dates:**
+```bash
+top5 due PRJ-3 tomorrow     # set
+top5 due PRJ-3              # check
+top5 due PRJ-3 clear        # remove
 ```
 
 **Focus on a task:**
@@ -176,6 +243,16 @@ top5 focus PRJ-3
 top5 focus             # check status
 top5 focus ping        # heartbeat — suppress check-in popup
 top5 focus stop        # done
+```
+
+**Manage repeating tasks:**
+```bash
+top5 rt                     # list definitions
+top5 rt proposals           # what's due today?
+top5 rt accept 1            # accept → becomes quick task
+top5 rt dismiss 2           # skip for today
+top5 rt add "Daily standup" --weekdays
+top5 rt rm 3                # delete definition
 ```
 
 ## Error handling

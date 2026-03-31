@@ -5,7 +5,7 @@ import type { RepeatSchedule, RepeatingTask } from '../types'
 import { Linkify } from './Linkify'
 
 type ScheduleMode = 'daily' | 'weekly' | 'interval' | 'monthly'
-type MonthlySubMode = 'day' | 'nthWeekday' | 'everyN'
+type MonthlySubMode = 'day' | 'nthWeekday' | 'everyN' | 'lastDay'
 
 type ModalState =
   | { open: false }
@@ -30,6 +30,7 @@ function formatSchedule(schedule: RepeatSchedule): string {
   if (schedule.type === 'monthlyDay') return `${schedule.day}. of month`
   if (schedule.type === 'monthlyNthWeekday') return `${ORDINAL[schedule.week - 1]} ${WEEKDAY_NAMES_FULL[schedule.weekday]}`
   if (schedule.type === 'everyNMonths') return `Every ${schedule.months} mo, day ${schedule.day}`
+  if (schedule.type === 'monthlyLastDay') return 'Last day of month'
   return 'Custom'
 }
 
@@ -37,13 +38,14 @@ function scheduleToMode(schedule: RepeatSchedule): ScheduleMode {
   if (schedule.type === 'daily') return 'daily'
   if (schedule.type === 'interval' || schedule.type === 'afterCompletion') return 'interval'
   if (schedule.type === 'weekdays') return 'weekly'
-  if (schedule.type === 'monthlyDay' || schedule.type === 'monthlyNthWeekday' || schedule.type === 'everyNMonths') return 'monthly'
+  if (schedule.type === 'monthlyDay' || schedule.type === 'monthlyNthWeekday' || schedule.type === 'everyNMonths' || schedule.type === 'monthlyLastDay') return 'monthly'
   return 'daily'
 }
 
 function scheduleToMonthlySubMode(schedule: RepeatSchedule): MonthlySubMode {
   if (schedule.type === 'monthlyNthWeekday') return 'nthWeekday'
   if (schedule.type === 'everyNMonths') return 'everyN'
+  if (schedule.type === 'monthlyLastDay') return 'lastDay'
   return 'day'
 }
 
@@ -148,6 +150,7 @@ export default function RepeatView() {
       return afterCompletion ? { type: 'afterCompletion', days } : { type: 'interval', days }
     }
     if (mode === 'monthly') {
+      if (monthlySubMode === 'lastDay') return { type: 'monthlyLastDay' }
       if (monthlySubMode === 'nthWeekday') return { type: 'monthlyNthWeekday', week: nthWeek, weekday: nthWeekday }
       if (monthlySubMode === 'everyN') return { type: 'everyNMonths', months: Math.max(1, everyMonths), day: Math.max(1, Math.min(31, monthDay)) }
       return { type: 'monthlyDay', day: Math.max(1, Math.min(31, monthDay)) }
@@ -339,6 +342,7 @@ export default function RepeatView() {
                   <div style={{ display: 'flex', gap: 6 }}>
                     {([
                       ['day', 'Day of month'],
+                      ['lastDay', 'Last day'],
                       ['nthWeekday', 'Nth weekday'],
                       ['everyN', 'Every N mo.']
                     ] as [MonthlySubMode, string][]).map(([key, label]) => (

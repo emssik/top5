@@ -6,6 +6,7 @@ export type RepeatScheduleLike =
   | { type: 'monthlyDay'; day: number }
   | { type: 'monthlyNthWeekday'; week: number; weekday: number }
   | { type: 'everyNMonths'; months: number; day: number }
+  | { type: 'monthlyLastDay' }
 
 export interface RepeatingTaskLike {
   id: string
@@ -107,6 +108,10 @@ export function isScheduleDueOnDate(
     const created = new Date(createdAt)
     const monthsDiff = (onDate.getFullYear() - created.getFullYear()) * 12 + (onDate.getMonth() - created.getMonth())
     return monthsDiff >= 0 && monthsDiff % normalized.months === 0
+  }
+  if (normalized.type === 'monthlyLastDay') {
+    const lastDay = new Date(onDate.getFullYear(), onDate.getMonth() + 1, 0).getDate()
+    return onDate.getDate() === lastDay
   }
   return false
 }

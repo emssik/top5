@@ -132,10 +132,10 @@ top5 tasks <project-id>     # po UUID projektu
 
 ```
 PRJ - My Project
-   #  TITLE               STATUS
- PRJ-1  Setup database    [done]
- PRJ-2  Write API         in-progress
- PRJ-3  Frontend          up-next
+   #  TITLE               DUE                 STATUS
+ PRJ-1  Setup database                        [done]
+ PRJ-2  Write API         today               in-progress
+ PRJ-3  Frontend          2026-04-05           up-next
  PRJ-4  Deploy
 ```
 
@@ -157,17 +157,70 @@ Dodaje nowy task do projektu.
 top5 add PRJ "Napisać testy"
 # Created: PRJ-5 Napisać testy
 
-top5 add APP "Fix login bug" --json
+top5 add PRJ "Review PR" --due tomorrow
+# Created: PRJ-6 Review PR (due: tomorrow)
+
+top5 add APP "Fix login bug" --due 2026-04-15
+# Created: APP-8 Fix login bug (due: 2026-04-15)
 ```
 
 **Opcje:**
 - `-n, --note` — od razu tworzy notatkę Obsidian dla nowego tasku
+- `-d, --due <date>` — ustawia datę realizacji (patrz [Formaty daty](#formaty-daty))
+- `-p, --pin` — przypina task do widoku "today" (up-next)
 
 ```bash
-top5 add PRJ "Design API" --note
-# Created: PRJ-6 Design API
-# Note: /path/to/vault/top5.storage/My Project/PRJ-6 Design API.md
+top5 add PRJ "Design API" --note --due friday
+# Created: PRJ-7 Design API (due: 2026-04-03)
+# Note: /path/to/vault/top5.storage/My Project/PRJ-7 Design API.md
 ```
+
+---
+
+### `top5 due <task-code> [date]`
+
+Ustawia, wyświetla lub czyści datę realizacji tasku projektowego.
+
+```bash
+# Sprawdź aktualną datę
+top5 due PRJ-3
+# PRJ-3 Frontend — due: 2026-04-05
+
+# Ustaw datę
+top5 due PRJ-3 tomorrow
+# PRJ-3 Frontend — due: tomorrow
+
+top5 due PRJ-3 +5d
+# PRJ-3 Frontend — due: 2026-04-04
+
+# Wyczyść datę
+top5 due PRJ-3 clear
+# PRJ-3 Frontend — due date cleared
+```
+
+Akceptuje:
+- kod tasku: `PRJ-3`, `APP-12`
+- UUID tasku
+
+Formaty daty — patrz [Formaty daty](#formaty-daty).
+
+---
+
+### `top5 pin <task-code>`
+
+Przypina / odpina task do widoku "today" (toggle). Przypięte taski pojawiają się jako "up-next" w widoku dzisiejszych zadań.
+
+```bash
+top5 pin PRJ-3
+# Pinned: PRJ-3 Frontend
+
+top5 pin PRJ-3          # ponowne wywołanie odpina
+# Unpinned: PRJ-3 Frontend
+```
+
+Akceptuje:
+- kod tasku: `PRJ-3`, `APP-12`
+- UUID tasku
 
 ---
 
@@ -209,10 +262,10 @@ top5 qt --all        # z ukończonymi
 ```
 
 ```
-   #  TITLE              STATUS
-QT-1  Buy groceries
-QT-2  Call dentist       in-progress
-QT-3  Read book          [done]
+   #  TITLE              DUE                 STATUS
+QT-1  Buy groceries      today
+QT-2  Call dentist                           in-progress
+QT-3  Read book                              [done]
 ```
 
 #### `top5 qt add <title>`
@@ -220,16 +273,37 @@ QT-3  Read book          [done]
 ```bash
 top5 qt add "Kupić kawę"
 # Created: QT-4 Kupić kawę
+
+top5 qt add "Wysłać fakturę" --due friday
+# Created: QT-5 Wysłać fakturę (due: 2026-04-03)
 ```
 
 **Opcje:**
 - `-n, --note` — od razu tworzy notatkę Obsidian
+- `-d, --due <date>` — ustawia datę realizacji (patrz [Formaty daty](#formaty-daty))
 
 ```bash
-top5 qt add "Research tool" --note
-# Created: QT-5 Research tool
-# Note: /path/to/vault/top5.storage/QuickTasks/QT-5 Research tool.md
+top5 qt add "Research tool" --note --due +3d
+# Created: QT-6 Research tool (due: 2026-04-02)
+# Note: /path/to/vault/top5.storage/QuickTasks/QT-6 Research tool.md
 ```
+
+#### `top5 qt due <ref> [date]`
+
+Ustawia, wyświetla lub czyści datę realizacji quick tasku.
+
+```bash
+top5 qt due QT-2
+# QT-2 Call dentist — due: (none)
+
+top5 qt due QT-2 monday
+# QT-2 Call dentist — due: 2026-04-06
+
+top5 qt due QT-2 clear
+# QT-2 Call dentist — due date cleared
+```
+
+Formaty daty — patrz [Formaty daty](#formaty-daty).
 
 #### `top5 qt done <ref>`
 
@@ -275,6 +349,97 @@ Wymaga skonfigurowanego `obsidianStoragePath` w ustawieniach aplikacji top5 (Set
 
 ---
 
+### `top5 rt`
+
+Zarządzanie zadaniami powtarzalnymi (repeating tasks).
+
+```bash
+top5 rt              # lista wszystkich definicji
+top5 rt --json
+```
+
+```
+  #  TITLE              SCHEDULE
+  1  Morning standup     Weekdays
+  2  Weekly review       Mon
+  3  Pay rent            1. of month
+```
+
+#### `top5 rt proposals`
+
+Wyświetla dzisiejsze oczekujące propozycje — taski, które są "due today" i jeszcze nie zaakceptowane/odrzucone.
+
+```bash
+top5 rt proposals
+top5 rt proposals --json
+```
+
+#### `top5 rt add <title>`
+
+Tworzy nowy repeating task z harmonogramem.
+
+```bash
+top5 rt add "Standup" --daily             # codziennie (domyślne)
+top5 rt add "Review" --weekdays           # pon-pt
+top5 rt add "Gym" --weekly 1,3,5          # pon, śr, pt (0=nd..6=sob)
+top5 rt add "Gym" --weekly mon,wed,fri    # to samo, nazwy dni
+top5 rt add "Check" --interval 3          # co 3 dni
+top5 rt add "Review" --after-done 7       # 7 dni po ukończeniu
+top5 rt add "Rent" --monthly-day 1        # 1. dnia miesiąca
+top5 rt add "EOM report" --monthly-last-day  # ostatni dzień miesiąca
+# Created: Standup (Every day)
+```
+
+Można podać tylko jedną flagę harmonogramu. Bez flagi — domyślnie `--daily`.
+
+#### `top5 rt edit <ref>`
+
+Zmienia tytuł i/lub harmonogram istniejącego tasku.
+
+```bash
+top5 rt edit 1 --title "Nowa nazwa"
+top5 rt edit 1 --interval 5
+top5 rt edit 1 --title "X" --weekly 1,3
+# Updated: X (Mon, Wed)
+```
+
+#### `top5 rt rm <ref>`
+
+Usuwa definicję repeating tasku.
+
+```bash
+top5 rt rm 1
+# Deleted: Morning standup
+```
+
+#### `top5 rt accept <ref>`
+
+Akceptuje dzisiejszą propozycję — tworzy quick task.
+
+```bash
+top5 rt accept 1
+# Accepted: Morning standup
+```
+
+Numer `<ref>` odnosi się do pozycji na liście `top5 rt proposals` (nie pełnej listy).
+
+#### `top5 rt dismiss <ref>`
+
+Odrzuca propozycję na dzisiaj (nie pojawi się ponownie do jutra).
+
+```bash
+top5 rt dismiss 1
+# Dismissed: Morning standup
+```
+
+Numer `<ref>` odnosi się do pozycji na liście `top5 rt proposals`.
+
+Argument `<ref>` akceptuje:
+- numer pozycji (1-based) z odpowiedniej listy (`rt` lub `rt proposals`)
+- UUID tasku
+
+---
+
 ### `top5 config`
 
 Wyświetla aktualną konfigurację CLI.
@@ -304,13 +469,37 @@ Plik konfiguracyjny: `~/.config/top5/cli.json`
 
 CLI używa czytelnych kodów do identyfikacji tasków:
 
-| Format  | Przykład | Opis                       |
-|---------|----------|----------------------------|
-| `PRJ-N` | `PRJ-3`  | Task nr 3 w projekcie PRJ  |
-| `QT-N`  | `QT-5`   | Quick task nr 5            |
-| UUID    | `abc-...`| Surowy ID (fallback)       |
+| Format  | Przykład | Opis                       | Dotyczy                  |
+|---------|----------|----------------------------|--------------------------|
+| `PRJ-N` | `PRJ-3`  | Task nr 3 w projekcie PRJ  | tasks, done, due, pin    |
+| `QT-N`  | `QT-5`   | Quick task nr 5            | qt done, qt due, note    |
+| `N`     | `1`      | Pozycja na liście (1-based)| rt, rt accept, rt dismiss|
+| UUID    | `abc-...`| Surowy ID (fallback)       | wszędzie                 |
 
 Kody projektów widać w kolumnie `CODE` w `top5 projects`.
+
+---
+
+## Formaty daty
+
+Wszędzie gdzie CLI przyjmuje datę (`--due`, komenda `due`) obsługiwane są następujące formaty:
+
+| Format          | Przykład     | Opis                                |
+|-----------------|--------------|-------------------------------------|
+| `YYYY-MM-DD`    | `2026-04-15` | Konkretna data                      |
+| `today`         |              | Dzisiejsza data                     |
+| `tomorrow`      |              | Jutrzejsza data                     |
+| `+Nd`           | `+3d`        | Za N dni od dziś                    |
+| Dzień tygodnia  | `monday`     | Najbliższe wystąpienie (skróty: `mon`–`sun`) |
+| `clear` / `none`|             | Usuwa datę realizacji               |
+
+Formaty są case-insensitive (`TODAY`, `Monday`, `FRI` — wszystko działa).
+
+Kolumna `DUE` w listingach wyświetla:
+- `today` — data = dziś
+- `tomorrow` — data = jutro
+- `2026-03-28 (overdue)` — data w przeszłości
+- `2026-04-15` — data w przyszłości
 
 ---
 
@@ -361,19 +550,24 @@ cli/
     main.ts               # entry point
     commands/
       projects.ts         # top5 projects
-      tasks.ts            # top5 tasks, add, done, undone
-      quick-tasks.ts      # top5 qt *
+      tasks.ts            # top5 tasks, add, pin, due, done, undone
+      quick-tasks.ts      # top5 qt, qt add, qt due, qt done, qt undone
+      repeating-tasks.ts  # top5 rt, rt add, rt edit, rt rm, rt accept, rt dismiss
       notes.ts            # top5 note
+      focus.ts            # top5 focus, focus stop, focus ping
+      today.ts            # top5 today
       health.ts           # top5 health
       config.ts           # top5 config
     lib/
       api-client.ts       # HTTP client (fetch, Bearer auth, 5s timeout)
       config.ts           # odczyt/zapis ~/.config/top5/cli.json
+      date.ts             # parsowanie i formatowanie dat (due date)
       output.ts           # formatowanie tabel i JSON
       resolve.ts          # lookup tasków po kodzie (PRJ-3 → ID)
   tests/
     api-client.test.ts
     config.test.ts
+    date.test.ts
     output.test.ts
     resolve.test.ts
 ```

@@ -15,7 +15,7 @@ export function printResult(data: unknown, opts: { json?: boolean; formatFn?: ()
  */
 export interface Column<T> {
   header: string
-  value: (row: T) => string
+  value: (row: T, index: number) => string
   width?: number
   align?: 'left' | 'right'
 }
@@ -26,7 +26,7 @@ export function formatTable<T>(rows: T[], columns: Column<T>[]): string {
   // Calculate column widths
   const widths = columns.map((col) => {
     const headerLen = col.header.length
-    const maxDataLen = rows.reduce((max, row) => Math.max(max, col.value(row).length), 0)
+    const maxDataLen = rows.reduce((max, row, idx) => Math.max(max, col.value(row, idx).length), 0)
     return col.width ?? Math.max(headerLen, maxDataLen)
   })
 
@@ -36,9 +36,9 @@ export function formatTable<T>(rows: T[], columns: Column<T>[]): string {
     .join('  ')
 
   // Data lines
-  const lines = rows.map((row) =>
+  const lines = rows.map((row, rowIdx) =>
     columns
-      .map((col, i) => pad(col.value(row), widths[i], col.align ?? 'left'))
+      .map((col, i) => pad(col.value(row, rowIdx), widths[i], col.align ?? 'left'))
       .join('  ')
   )
 

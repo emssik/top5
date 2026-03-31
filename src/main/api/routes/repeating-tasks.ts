@@ -1,11 +1,22 @@
 import type { FastifyInstance } from 'fastify'
-import { notifyAllWindows } from '../../store'
+import { getData, notifyAllWindows } from '../../store'
 import * as repeatingTaskService from '../../service/repeating-tasks'
 import { isServiceError, errorToHttpStatus } from '../utils'
+import { getRepeatingTaskProposals } from '../../../shared/schedule'
 
 export function registerRepeatingTaskRoutes(fastify: FastifyInstance): void {
   fastify.get('/api/v1/repeating-tasks', async () => {
     return { ok: true, data: repeatingTaskService.getRepeatingTasks() }
+  })
+
+  fastify.get('/api/v1/repeating-tasks/proposals', async () => {
+    const data = getData()
+    const proposals = getRepeatingTaskProposals({
+      repeatingTasks: data.repeatingTasks,
+      quickTasks: data.quickTasks,
+      dismissedRepeating: data.dismissedRepeating,
+    })
+    return { ok: true, data: proposals }
   })
 
   fastify.post('/api/v1/repeating-tasks', async (request, reply) => {

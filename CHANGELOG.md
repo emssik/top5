@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.78.0] - 2026-03-31
+
+### Added
+
+- CLI `top5 rt` command group for managing repeating tasks: list, add, edit, delete, and `proposals` (today's pending proposals)
+- CLI `top5 pin <task-code>` command to toggle pin-to-today (up-next) on a project task
+- `--pin` flag on `top5 task add` to immediately pin the new task to today
+- API `GET /api/v1/repeating-tasks/proposals` endpoint returning today's pending repeating task proposals
+- `monthlyLastDay` repeat schedule type — task repeats on the last day of every month; supported in UI (Quick Add, RepeatView) and schedule engine
+- `resolveRepeatingTask` helper in CLI resolve module — look up repeating tasks by 1-based position or UUID
+
+### Fixed
+
+- `monthlyLastDay` schedule variant now passes validation in `isValidRepeatSchedule` (was silently rejected)
+
 ## [1.77.0] - 2026-03-30
 
 ### Added

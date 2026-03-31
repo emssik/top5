@@ -113,6 +113,38 @@ test('monthly schedules are evaluated consistently', () => {
   )
 })
 
+test('monthlyLastDay is due on last day of each month', () => {
+  const schedule = { type: 'monthlyLastDay' as const }
+  const created = '2026-01-01T00:00:00.000Z'
+
+  // Jan 31
+  assert.equal(isScheduleDueOnDate(schedule, created, null, new Date(2026, 0, 31, 12, 0, 0)), true)
+  assert.equal(isScheduleDueOnDate(schedule, created, null, new Date(2026, 0, 30, 12, 0, 0)), false)
+
+  // Feb 28 (non-leap)
+  assert.equal(isScheduleDueOnDate(schedule, created, null, new Date(2026, 1, 28, 12, 0, 0)), true)
+  assert.equal(isScheduleDueOnDate(schedule, created, null, new Date(2026, 1, 27, 12, 0, 0)), false)
+
+  // Feb 29 (leap year 2028)
+  assert.equal(isScheduleDueOnDate(schedule, created, null, new Date(2028, 1, 29, 12, 0, 0)), true)
+  assert.equal(isScheduleDueOnDate(schedule, created, null, new Date(2028, 1, 28, 12, 0, 0)), false)
+
+  // Apr 30
+  assert.equal(isScheduleDueOnDate(schedule, created, null, new Date(2026, 3, 30, 12, 0, 0)), true)
+  assert.equal(isScheduleDueOnDate(schedule, created, null, new Date(2026, 3, 29, 12, 0, 0)), false)
+})
+
+test('Quick Add lastDay maps to monthlyLastDay', () => {
+  const schedule = buildQuickAddSchedule({
+    scheduleType: 'lastDay',
+    weekdays: [],
+    intervalDays: 1,
+    monthlyDay: 1,
+    afterDoneDays: 1
+  })
+  assert.deepEqual(schedule, { type: 'monthlyLastDay' })
+})
+
 // --- getDueDateProposals ---
 
 function makeProject(overrides: Record<string, unknown> = {}) {

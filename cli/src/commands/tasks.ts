@@ -81,6 +81,7 @@ export function register(program: Command): void {
     .argument('<title>', 'Task title')
     .option('-n, --note', 'Create a note for the task')
     .option('-d, --due <date>', 'Due date (YYYY-MM-DD, today, tomorrow, +Nd, mon-sun)')
+    .option('-p, --pin', 'Pin task to today (mark as up-next)')
     .action(async (projectRef: string, title: string, opts, cmd) => {
       const globalOpts = cmd.optsWithGlobals()
       const client = createClient(globalOpts)
@@ -119,6 +120,16 @@ export function register(program: Command): void {
           ? `${project.code}-${savedTask.taskNumber}`
           : ''
 
+        let pinned = false
+        if (opts.pin && savedTask) {
+          try {
+            await client.post(`/api/v1/projects/${project.id}/tasks/${savedTask.id}/toggle-to-do-next`)
+            pinned = true
+          } catch (e: unknown) {
+            warn(`Pin failed: ${(e as Error).message}`)
+          }
+        }
+
         let notePath: string | undefined
         if (opts.note && savedTask) {
           try {
@@ -136,6 +147,7 @@ export function register(program: Command): void {
           formatFn: () => {
             let msg = `Created: ${code ? code + ' ' : ''}${title}`
             if (dueDate) msg += ` (due: ${formatDueDate(dueDate)})`
+            if (pinned) msg += ` [pinned]`
             if (notePath) msg += `\nNote: ${notePath}`
             return msg
           },
@@ -185,6 +197,44 @@ export function register(program: Command): void {
             const prefix = code !== '-' ? code + ' ' : ''
             if (dueDate === null) return `${prefix}${task.title} — due date cleared`
             return `${prefix}${task.title} — due: ${formatDueDate(dueDate)}`
+          },
+        })
+      } catch (err: unknown) {
+        die((err as Error).message)
+      }
+    })
+
+  // top5 pin <task-code>
+  program
+    .command('pin')
+    .description('Toggle pin-to-today on a project task')
+    .argument('<task-code>', 'Task code (e.g. PRJ-3) or task ID')
+    .action(async (taskRef: string, _opts, cmd) => {
+      const globalOpts = cmd.optsWithGlobals()
+      const client = createClient(globalOpts)
+
+      try {
+        const { project, task } = await resolveProjectTask(client, taskRef) as {
+          project: Project
+          task: Task
+        }
+
+        const result = await client.post<Project[]>(
+          `/api/v1/projects/${project.id}/tasks/${task.id}/toggle-to-do-next`
+        )
+
+        const updatedProject = result.find((p) => p.id === project.id)
+        const updatedTask = updatedProject?.tasks.find((t) => t.id === task.id)
+        const pinned = updatedTask?.isToDoNext ?? !task.isToDoNext
+
+        printResult(updatedTask ?? task, {
+          json: globalOpts.json,
+          formatFn: () => {
+            const code = taskCode(task, project.code)
+            const prefix = code !== '-' ? code + ' ' : ''
+            return pinned
+              ? `Pinned: ${prefix}${task.title}`
+              : `Unpinned: ${prefix}${task.title}`
           },
         })
       } catch (err: unknown) {

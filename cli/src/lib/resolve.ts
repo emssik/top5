@@ -90,3 +90,26 @@ export async function resolveQuickTask(
   if (!found) throw new Error(`Quick task not found: ${ref}`)
   return found
 }
+
+/**
+ * Resolve a repeating task by 1-based position (from sorted list) or raw UUID.
+ */
+export async function resolveRepeatingTask<T extends { id: string; order: number } = { id: string; title: string; order: number }>(
+  client: ApiClient,
+  ref: string,
+  endpoint = '/api/v1/repeating-tasks'
+): Promise<T> {
+  const tasks = await client.get<T[]>(endpoint)
+  const sorted = [...tasks].sort((a, b) => a.order - b.order)
+
+  // Try as 1-based position
+  const num = parseInt(ref, 10)
+  if (!isNaN(num) && String(num) === ref && num >= 1 && num <= sorted.length) {
+    return sorted[num - 1]
+  }
+
+  // Try as raw ID
+  const found = sorted.find((t) => t.id === ref)
+  if (!found) throw new Error(`Repeating task not found: ${ref}`)
+  return found
+}

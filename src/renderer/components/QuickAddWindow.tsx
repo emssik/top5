@@ -6,7 +6,7 @@ import { sortWeekdays, dateKey } from '../../shared/schedule'
 import { buildQuickAddSchedule } from '../../shared/quick-add'
 
 type Mode = 'task' | 'project' | 'repeat'
-type ScheduleType = 'daily' | 'weekdays' | 'weekly' | 'interval' | 'monthly' | 'afterDone'
+type ScheduleType = 'daily' | 'weekdays' | 'weekly' | 'interval' | 'monthly' | 'lastDay' | 'afterDone'
 
 const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 const WEEKDAY_VALUES = [1, 2, 3, 4, 5, 6, 0]
@@ -715,6 +715,7 @@ function RepeatPanel({
     { key: 'weekly', label: 'Weekly' },
     { key: 'interval', label: 'Every N days' },
     { key: 'monthly', label: 'Monthly' },
+    { key: 'lastDay', label: 'Last day' },
     { key: 'afterDone', label: 'After done' }
   ]
 

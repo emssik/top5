@@ -23,6 +23,7 @@ export type RepeatSchedule =
   | { type: 'monthlyDay'; day: number }
   | { type: 'monthlyNthWeekday'; week: number; weekday: number }
   | { type: 'everyNMonths'; months: number; day: number }
+  | { type: 'monthlyLastDay' }
 
 export interface RepeatingTask {
   id: string

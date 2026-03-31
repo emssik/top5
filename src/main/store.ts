@@ -441,6 +441,7 @@ export function isValidRepeatSchedule(value: unknown): value is RepeatSchedule {
   if (type === 'monthlyDay') return typeof value.day === 'number' && value.day >= 1 && value.day <= 31
   if (type === 'monthlyNthWeekday') return typeof value.week === 'number' && value.week >= 1 && value.week <= 5 && typeof value.weekday === 'number' && value.weekday >= 0 && value.weekday <= 6
   if (type === 'everyNMonths') return typeof value.months === 'number' && value.months >= 1 && typeof value.day === 'number' && value.day >= 1 && value.day <= 31
+  if (type === 'monthlyLastDay') return true
   return false
 }
 

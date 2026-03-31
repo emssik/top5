@@ -21,10 +21,6 @@ This repository is a small, solo-maintained app.
 - Keep code readable and easy to change quickly.
 - Favor pragmatic tradeoffs over completeness for completeness' sake.
 
-## Git workflow
-
-Przed rozpoczęciem nowej funkcjonalności, refaktoryzacji lub większych zmian — upewnij się, że użytkownik jest na osobnym branchu. Jeśli jest na `main`, przypomnij mu o stworzeniu nowego brancha. **NIE twórz branchy samodzielnie** — tylko daj znać.
-
 ## Electron sandbox
 
 W tym projekcie **nie zmieniaj** `webPreferences.sandbox` na `true` (main/focus/quick-add/check-in/operation-log), bo historycznie kończy się to białym oknem.
