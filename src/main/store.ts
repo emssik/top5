@@ -434,7 +434,7 @@ export function isValidRepeatSchedule(value: unknown): value is RepeatSchedule {
     return (
       Array.isArray(value.days) &&
       value.days.length > 0 &&
-      value.days.every((d: unknown) => typeof d === 'number' && Number.isFinite(d) && d >= 0 && d <= 7)
+      value.days.every((d: unknown) => typeof d === 'number' && Number.isFinite(d) && d >= 0 && d <= 6)
     )
   }
   if (type === 'interval' || type === 'afterCompletion') return typeof value.days === 'number' && value.days > 0

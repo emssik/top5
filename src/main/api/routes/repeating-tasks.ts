@@ -19,6 +19,7 @@ export function registerRepeatingTaskRoutes(fastify: FastifyInstance): void {
     return { ok: true, data: proposals }
   })
 
+  // Client provides full RepeatingTask with client-generated UUID. Server validates and may override order.
   fastify.post('/api/v1/repeating-tasks', async (request, reply) => {
     const result = repeatingTaskService.saveRepeatingTask(request.body)
     if (isServiceError(result)) return reply.status(400).send({ ok: false, error: result.error })

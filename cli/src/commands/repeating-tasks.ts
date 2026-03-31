@@ -3,54 +3,8 @@ import type { ApiClient } from '../lib/api-client.js'
 import { createClient } from '../lib/client.js'
 import { resolveRepeatingTask } from '../lib/resolve.js'
 import { printResult, formatTable, die } from '../lib/output.js'
-
-type RepeatSchedule =
-  | { type: 'daily' }
-  | { type: 'weekdays'; days: number[] }
-  | { type: 'interval'; days: number }
-  | { type: 'afterCompletion'; days: number }
-  | { type: 'monthlyDay'; day: number }
-  | { type: 'monthlyNthWeekday'; week: number; weekday: number }
-  | { type: 'everyNMonths'; months: number; day: number }
-  | { type: 'monthlyLastDay' }
-
-interface RepeatingTask {
-  id: string
-  title: string
-  schedule: RepeatSchedule
-  createdAt: string
-  lastCompletedAt: string | null
-  order: number
-  acceptedCount: number
-  dismissedCount: number
-  completedCount: number
-  projectId?: string | null
-  link?: string | null
-}
-
-const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-const WEEKDAY_DEFAULT = [1, 2, 3, 4, 5]
-const ORDINAL = ['1st', '2nd', '3rd', '4th', '5th']
-const WEEKDAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-
-function formatSchedule(schedule: RepeatSchedule): string {
-  switch (schedule.type) {
-    case 'daily': return 'Every day'
-    case 'interval': return `Every ${schedule.days} days`
-    case 'afterCompletion': return `${schedule.days}d after done`
-    case 'weekdays': {
-      const sorted = [...schedule.days].sort((a, b) => a - b)
-      const isWorkWeek = sorted.length === 5 && WEEKDAY_DEFAULT.every((d, i) => d === sorted[i])
-      if (isWorkWeek) return 'Weekdays'
-      return sorted.map((d) => DAY_LABELS[(d + 6) % 7]).join(', ')
-    }
-    case 'monthlyDay': return `${schedule.day}. of month`
-    case 'monthlyNthWeekday': return `${ORDINAL[schedule.week - 1]} ${WEEKDAY_NAMES[schedule.weekday]}`
-    case 'everyNMonths': return `Every ${schedule.months} mo, day ${schedule.day}`
-    case 'monthlyLastDay': return 'Last day of month'
-    default: return 'Custom'
-  }
-}
+import type { RepeatSchedule, RepeatingTask } from '../lib/schedule.js'
+import { formatSchedule } from '../lib/schedule.js'
 
 const WEEKDAY_MAP: Record<string, number> = {
   sun: 0, sunday: 0,
@@ -79,9 +33,21 @@ function buildSchedule(opts: Record<string, unknown>): RepeatSchedule {
 
   if (opts.weekdays) return { type: 'weekdays', days: [1, 2, 3, 4, 5] }
   if (opts.weekly) return { type: 'weekdays', days: parseWeekdays(opts.weekly as string) }
-  if (opts.interval) return { type: 'interval', days: parseInt(opts.interval as string, 10) }
-  if (opts.afterDone) return { type: 'afterCompletion', days: parseInt(opts.afterDone as string, 10) }
-  if (opts.monthlyDay) return { type: 'monthlyDay', day: parseInt(opts.monthlyDay as string, 10) }
+  if (opts.interval) {
+    const days = parseInt(opts.interval as string, 10)
+    if (isNaN(days) || days < 1) die('--interval must be a positive number')
+    return { type: 'interval', days }
+  }
+  if (opts.afterDone) {
+    const days = parseInt(opts.afterDone as string, 10)
+    if (isNaN(days) || days < 1) die('--after-done must be a positive number')
+    return { type: 'afterCompletion', days }
+  }
+  if (opts.monthlyDay) {
+    const day = parseInt(opts.monthlyDay as string, 10)
+    if (isNaN(day) || day < 1 || day > 31) die('--monthly-day must be 1-31')
+    return { type: 'monthlyDay', day }
+  }
   if (opts.monthlyLastDay) return { type: 'monthlyLastDay' }
 
   return { type: 'daily' }
@@ -148,6 +114,7 @@ export function register(program: Command): void {
 
       try {
         const schedule = buildSchedule(opts)
+        // Client generates UUID; server accepts it and may override order field
         const newTask = {
           id: crypto.randomUUID(),
           title,

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { nanoid } from 'nanoid'
 import { useProjects } from '../hooks/useProjects'
 import type { RepeatSchedule, RepeatingTask } from '../types'
+import { formatSchedule, DAY_LABELS, ORDINAL, WEEKDAY_NAMES } from '../../shared/schedule'
 import { Linkify } from './Linkify'
 
 type ScheduleMode = 'daily' | 'weekly' | 'interval' | 'monthly'
@@ -10,29 +11,6 @@ type MonthlySubMode = 'day' | 'nthWeekday' | 'everyN' | 'lastDay'
 type ModalState =
   | { open: false }
   | { open: true; task: RepeatingTask | null }
-
-const WEEKDAY_DEFAULT = [1, 2, 3, 4, 5]
-const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-
-const ORDINAL = ['1st', '2nd', '3rd', '4th', '5th']
-const WEEKDAY_NAMES_FULL = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-
-function formatSchedule(schedule: RepeatSchedule): string {
-  if (schedule.type === 'daily') return 'Every day'
-  if (schedule.type === 'interval') return `Every ${schedule.days} days`
-  if (schedule.type === 'afterCompletion') return `${schedule.days}d after done`
-  if (schedule.type === 'weekdays') {
-    const normalized = [...schedule.days].sort((a, b) => a - b)
-    const isWorkWeek = normalized.length === 5 && WEEKDAY_DEFAULT.every((day, index) => day === normalized[index])
-    if (isWorkWeek) return 'Weekdays'
-    return normalized.map((day) => DAY_LABELS[(day + 6) % 7]).join(', ')
-  }
-  if (schedule.type === 'monthlyDay') return `${schedule.day}. of month`
-  if (schedule.type === 'monthlyNthWeekday') return `${ORDINAL[schedule.week - 1]} ${WEEKDAY_NAMES_FULL[schedule.weekday]}`
-  if (schedule.type === 'everyNMonths') return `Every ${schedule.months} mo, day ${schedule.day}`
-  if (schedule.type === 'monthlyLastDay') return 'Last day of month'
-  return 'Custom'
-}
 
 function scheduleToMode(schedule: RepeatSchedule): ScheduleMode {
   if (schedule.type === 'daily') return 'daily'
@@ -391,7 +369,7 @@ export default function RepeatView() {
                         value={nthWeekday}
                         onChange={(event) => setNthWeekday(Number(event.target.value))}
                       >
-                        {WEEKDAY_NAMES_FULL.map((name, i) => (
+                        {WEEKDAY_NAMES.map((name, i) => (
                           <option key={i} value={i}>{name}</option>
                         ))}
                       </select>

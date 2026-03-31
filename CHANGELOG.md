@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.78.1] - 2026-03-31
+
+### Fixed
+
+- Off-by-one in weekday validation — `isValidRepeatSchedule` now correctly rejects day value 7 (valid range is 0-6)
+- CLI `top5 rt add` now validates `--interval`, `--after-done`, and `--monthly-day` inputs; bad values exit with a clear error instead of silently producing `NaN`
+
+### Changed
+
+- `formatSchedule` and display constants (`DAY_LABELS`, `ORDINAL`, `WEEKDAY_NAMES`) extracted to `src/shared/schedule.ts` — renderer and CLI both import from the single shared source, eliminating duplicated logic
+- CLI repeating-tasks types (`RepeatSchedule`, `RepeatingTask`) consolidated into `cli/src/lib/schedule.ts`; `repeating-tasks.ts` command no longer duplicates them inline
+
 ## [1.78.0] - 2026-03-31
 
 ### Added
