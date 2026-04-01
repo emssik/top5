@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.79.0] - 2026-04-01
+
+### Added
+
+- CLI `top5 add --json` output now includes `notePath` (full Obsidian note path) when `--note` is used, and `pinned: true` when `--pin` is used — enables scripted workflows that need to write note content immediately after task creation
+
 ## [1.78.1] - 2026-03-31
 
 ### Fixed

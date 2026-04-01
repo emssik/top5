@@ -142,7 +142,13 @@ export function register(program: Command): void {
           }
         }
 
-        printResult(savedTask ?? newTask, {
+        const resultData = {
+          ...(savedTask ?? newTask),
+          ...(notePath ? { notePath } : {}),
+          ...(pinned ? { pinned } : {}),
+        }
+
+        printResult(resultData, {
           json: globalOpts.json,
           formatFn: () => {
             let msg = `Created: ${code ? code + ' ' : ''}${title}`

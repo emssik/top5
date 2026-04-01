@@ -175,6 +175,26 @@ top5 add PRJ "Design API" --note --due friday
 # Note: /path/to/vault/top5.storage/My Project/PRJ-7 Design API.md
 ```
 
+**JSON output z `--note` / `--pin`:**
+
+Gdy użyto `--note` i/lub `--pin`, JSON output zawiera dodatkowe pola:
+
+```bash
+top5 add PRJ "Design API" --note --pin --json
+```
+```json
+{
+  "id": "...",
+  "title": "Design API",
+  "taskNumber": 7,
+  "notePath": "/path/to/vault/top5.storage/My Project/PRJ-7 Design API.md",
+  "pinned": true
+}
+```
+
+- `notePath` — pełna ścieżka do notatki Obsidian (tylko gdy `--note`). Pozwala od razu zapisać treść do pliku notatki.
+- `pinned` — `true` gdy task został przypięty (tylko gdy `--pin`).
+
 ---
 
 ### `top5 due <task-code> [date]`

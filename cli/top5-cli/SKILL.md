@@ -75,6 +75,15 @@ top5 add PRJ "Task title" --json
 
 `--due` accepts: `YYYY-MM-DD`, `today`, `tomorrow`, `+Nd` (e.g. `+3d`), day name (`monday`–`sunday`, or `mon`–`sun`).
 
+**JSON output with `--note` and/or `--pin`:** includes extra fields:
+
+```bash
+top5 add PRJ "Report" --note --pin --json
+# { ..., "notePath": "/vault/top5.storage/Project/PRJ-5 Report.md", "pinned": true }
+```
+
+`notePath` — full path to the Obsidian note file (only when `--note` used). Useful for writing content directly to the note after creation.
+
 ### Set / clear due date
 
 ```bash
