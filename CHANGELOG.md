@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.80.1] - 2026-04-03
+
+### Fixed
+
+- `noteRef` in MyCC inbox payload now contains the full absolute path to the Obsidian note file, ensuring MyCC can locate the note correctly
+
 ## [1.80.0] - 2026-04-03
 
 ### Added

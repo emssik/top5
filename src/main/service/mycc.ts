@@ -1,4 +1,4 @@
-import { join } from 'path'
+import { join, resolve } from 'path'
 import { homedir } from 'os'
 import { mkdirSync, writeFileSync } from 'fs'
 import { getData } from '../store'
@@ -26,6 +26,16 @@ export function sendTaskToMyCC(projectId: string, taskId: string): MyccInboxItem
     ? `${project.code}-${task.taskNumber}`
     : taskId
 
+  let fullNotePath: string | undefined
+  if (task.noteRef) {
+    const storagePath = data.config.obsidianStoragePath
+    if (storagePath) {
+      const vaultPath = resolve(storagePath.replace(/\/+$/, ''))
+      const relPath = task.noteRef.replace('top5.storage/', '')
+      fullNotePath = join(vaultPath, 'top5.storage', `${relPath}.md`)
+    }
+  }
+
   const item: MyccInboxItem = {
     taskCode,
     projectId,
@@ -33,7 +43,7 @@ export function sendTaskToMyCC(projectId: string, taskId: string): MyccInboxItem
     projectCode: project.code ?? '',
     projectName: project.name,
     title: task.title,
-    ...(task.noteRef ? { noteRef: task.noteRef } : {}),
+    ...(fullNotePath ? { noteRef: fullNotePath } : {}),
   }
 
   const inboxDir = join(homedir(), '.mycc', 'inbox')
