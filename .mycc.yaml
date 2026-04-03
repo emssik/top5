@@ -1,0 +1,37 @@
+actions:
+  - name: commit
+    cmd: "/c.commit --version"
+    pane: 1
+    type: claude
+
+  - name: push
+    cmd: "git push origin $(git branch --show-current)"
+    pane: 3
+
+  - name: deploy (install)
+    cmd: "./build.sh"
+    pane: 3
+
+  - name: dev
+    cmd: "npm run dev"
+    pane: 3
+
+  - name: build
+    cmd: "npm run build"
+    pane: 3
+
+  - name: typecheck
+    cmd: "npm run typecheck"
+    pane: 3
+
+  - name: test
+    cmd: "npm run test"
+    pane: 3
+
+  - name: test-api
+    cmd: "npm run test:api"
+    pane: 3
+
+  - name: clean
+    cmd: "npm run clean"
+    pane: 3

@@ -46,3 +46,4 @@ src/main/**/*.d.ts
 src/renderer/**/*.d.ts
 electron.vite.config.js
 electron.vite.config.d.ts
+.claude/skills
