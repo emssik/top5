@@ -2,12 +2,13 @@
 name: top5-cli
 description: >
   Manage projects and tasks in the top5 task manager via the `top5` CLI tool.
-  Use when the user asks to: list projects, list tasks in a project, add tasks,
-  mark tasks as done/undone, manage quick tasks, set due dates, create task notes,
+  Use when the user asks to: list projects, list tasks in a project, show task details,
+  add tasks, mark tasks as done/undone, manage quick tasks, set due dates, create task notes,
   start/stop focus mode, send a focus heartbeat/ping, or manage repeating tasks.
   Triggers: "top5", "projects list", "add task", "mark done", "quick tasks",
-  "task note", "show my tasks", "what projects do I have", "focus", "start focus", "stop focus",
-  "focus ping", "heartbeat", "today", "today tasks", "what's on today", "dzisiejsze taski",
+  "task note", "show my tasks", "show task", "task details", "what projects do I have",
+  "focus", "start focus", "stop focus", "focus ping", "heartbeat",
+  "today", "today tasks", "what's on today", "dzisiejsze taski",
   "due date", "set deadline", "termin", "ustaw datę", "pin", "pin to today", "przypnij",
   "repeating", "repeating tasks", "recurring", "cykliczne", "powtarzalne".
 ---
@@ -61,6 +62,15 @@ top5 tasks PRJ --json
 `<project>` accepts: project CODE (case-insensitive) or UUID.
 
 Task statuses: `[done]`, `in-progress`, `up-next`, or empty (backlog).
+
+### Show task details
+
+```bash
+top5 show PRJ-3            # show details of a single task
+top5 show PRJ-3 --json     # JSON output (includes projectId, projectCode)
+```
+
+Returns: task code, title, project name, status, due date. JSON mode adds `projectId` and `projectCode`.
 
 ### Add a task
 

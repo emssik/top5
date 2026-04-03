@@ -149,6 +149,44 @@ Argument `<project>` akceptuje:
 
 ---
 
+### `top5 show <task-code>`
+
+Wyświetla szczegóły pojedynczego tasku.
+
+```bash
+top5 show PRJ-3
+```
+
+```
+PRJ-3 Frontend
+Project:  My Project
+Status:   up-next
+Due:      2026-04-05
+```
+
+```bash
+top5 show PRJ-3 --json
+```
+
+```json
+{
+  "id": "...",
+  "title": "Frontend",
+  "completed": false,
+  "taskNumber": 3,
+  "isToDoNext": true,
+  "dueDate": "2026-04-05",
+  "projectId": "...",
+  "projectCode": "PRJ"
+}
+```
+
+Akceptuje:
+- kod tasku: `PRJ-3`, `APP-12`
+- UUID tasku
+
+---
+
 ### `top5 add <project> <title>`
 
 Dodaje nowy task do projektu.

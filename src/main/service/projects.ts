@@ -27,6 +27,14 @@ export function getProject(id: string): Project | ServiceError {
   return project
 }
 
+export function getTask(projectId: string, taskId: string): (Task & { projectId: string; projectCode?: string }) | ServiceError {
+  const project = getData().projects.find((p) => p.id === projectId)
+  if (!project) return { error: 'not_found' }
+  const task = project.tasks.find((t) => t.id === taskId)
+  if (!task) return { error: 'not_found' }
+  return { ...task, projectId: project.id, projectCode: project.code || undefined }
+}
+
 export function createProject(input: unknown): Project[] | ServiceError {
   if (!isValidProject(input)) return { error: 'validation' }
   const data = getData()

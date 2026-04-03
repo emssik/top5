@@ -28,6 +28,7 @@ import * as repeatingTaskService from './service/repeating-tasks'
 import * as winsService from './service/wins'
 import * as journalService from './service/journal'
 import * as taskNotesService from './service/task-notes'
+import * as myccService from './service/mycc'
 import { getFocusWindow, stopFocusForCompletedTask } from './focus-window'
 import type {
   Task,
@@ -1172,6 +1173,13 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
     const result = quickTaskService.updateQuickTaskDueDate(id, normalizedDate)
     if (isServiceError(result)) return getData().quickTasks
     notifyAllWindows()
+    return result
+  })
+
+  ipcMain.handle('send-task-to-mycc', (_event, projectId: string, taskId: string) => {
+    if (typeof projectId !== 'string' || typeof taskId !== 'string') return null
+    const result = myccService.sendTaskToMyCC(projectId, taskId)
+    if (isServiceError(result)) return null
     return result
   })
 

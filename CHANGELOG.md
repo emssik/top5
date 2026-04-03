@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.80.0] - 2026-04-03
+
+### Added
+
+- API `GET /projects/:pid/tasks/:tid` endpoint returns a single task enriched with `projectId` and `projectCode`
+- CLI `top5 show <task-code>` command displays task details (title, project, status, due date); `--json` includes `projectId` and `projectCode`
+- CLI `top5 send <task-code>` command sends a task to the MyCC inbox (writes a JSON file to `~/.mycc/inbox/`)
+- "Send to MyCC" action in task overflow menus in TodayView and ProjectDetailView
+- `MyccInboxItem` type now includes `projectId` and `taskId` fields in the inbox payload
+- API `POST /projects/:pid/tasks/:tid/send-to-mycc` endpoint triggers MyCC inbox delivery from HTTP clients
+- IPC `send-task-to-mycc` handler and `window.api.sendTaskToMyCC` preload bridge
+
+### Changed
+
+- Completed tasks in ProjectDetailView are now sorted by `completedAt` descending (most recently completed first)
+- PUT `/projects/:id` now detects when the active focus task is completed and stops focus mode automatically
+
 ## [1.79.0] - 2026-04-01
 
 ### Added

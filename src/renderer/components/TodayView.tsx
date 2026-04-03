@@ -956,6 +956,9 @@ export default function TodayView() {
             {config.obsidianStoragePath && (
               <button className="task-overflow-item" onClick={() => { window.api.openTaskNote(task.id, task.title, task.projectName, task.kind === 'quick' ? formatQuickTaskId(task.taskNumber) : formatTaskId(task.taskNumber, task.projectCode), task.noteRef); setMenuOpenId(null) }}><span className="toi-icon">📝</span>Open note</button>
             )}
+            {task.kind === 'pinned' && task.projectId && task.taskId && (
+              <button className="task-overflow-item" onClick={() => { window.api.sendTaskToMyCC(task.projectId!, task.taskId!); setMenuOpenId(null) }}><span className="toi-icon">➤</span>Send to MyCC</button>
+            )}
             {!task.repeatingTaskId && (
               <button className="task-overflow-item" onClick={() => { splitTask(task); setMenuOpenId(null) }}><span className="toi-icon">✂</span>Split & Continue</button>
             )}

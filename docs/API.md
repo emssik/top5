@@ -125,6 +125,14 @@ Reorders active projects.
 ["proj-id-1", "proj-id-3", "proj-id-2"]
 ```
 
+#### `GET /projects/:pid/tasks/:tid`
+
+Returns a single task from a project, enriched with `projectId` and `projectCode`.
+
+**Response:** `{ ok, data: Task & { projectId, projectCode? } }`
+
+**Errors:** `404` if project or task not found.
+
 #### `POST /projects/:pid/tasks/:tid/toggle-in-progress`
 
 Toggles `inProgress` flag on a task. No-op if task is completed.

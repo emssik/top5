@@ -73,6 +73,40 @@ export function register(program: Command): void {
       }
     })
 
+  // top5 show <task-code>
+  program
+    .command('show')
+    .description('Show details of a single task')
+    .argument('<task-code>', 'Task code (e.g. PRJ-3) or task ID')
+    .action(async (taskRef: string, _opts, cmd) => {
+      const globalOpts = cmd.optsWithGlobals()
+      const client = createClient(globalOpts)
+
+      try {
+        const { project, task } = await resolveProjectTask(client, taskRef) as {
+          project: Project
+          task: Task
+        }
+
+        const data = { ...task, projectId: project.id, projectCode: project.code }
+
+        printResult(data, {
+          json: globalOpts.json,
+          formatFn: () => {
+            const code = taskCode(task, project.code)
+            const lines: string[] = []
+            lines.push(`${code !== '-' ? code + ' ' : ''}${task.title}`)
+            lines.push(`Project:  ${project.name}`)
+            lines.push(`Status:   ${taskStatus(task) || 'backlog'}`)
+            lines.push(`Due:      ${task.dueDate ? formatDueDate(task.dueDate) : '(none)'}`)
+            return lines.join('\n')
+          },
+        })
+      } catch (err: unknown) {
+        die((err as Error).message)
+      }
+    })
+
   // top5 add <project> <title>
   program
     .command('add')
@@ -330,6 +364,37 @@ export function register(program: Command): void {
           formatFn: () => {
             const code = taskCode(task, project.code)
             return `Undone: ${code !== '-' ? code + ' ' : ''}${task.title}`
+          },
+        })
+      } catch (err: unknown) {
+        die((err as Error).message)
+      }
+    })
+
+  // top5 send <task-code>
+  program
+    .command('send')
+    .description('Send a project task to MyCC inbox')
+    .argument('<task-code>', 'Task code (e.g. PRJ-3) or task ID')
+    .action(async (taskRef: string, _opts, cmd) => {
+      const globalOpts = cmd.optsWithGlobals()
+      const client = createClient(globalOpts)
+
+      try {
+        const { project, task } = await resolveProjectTask(client, taskRef) as {
+          project: Project
+          task: Task
+        }
+
+        const result = await client.post<{ taskCode: string; projectCode: string; projectName: string; title: string; noteRef?: string }>(
+          `/api/v1/projects/${project.id}/tasks/${task.id}/send-to-mycc`
+        )
+
+        printResult(result, {
+          json: globalOpts.json,
+          formatFn: () => {
+            const code = taskCode(task, project.code)
+            return `Sent to MyCC: ${code !== '-' ? code + ' ' : ''}${task.title}`
           },
         })
       } catch (err: unknown) {

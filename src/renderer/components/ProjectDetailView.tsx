@@ -47,7 +47,12 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
     return [...pinned, ...unpinned]
   }, [project.tasks])
   const somedayTasks = useMemo(() => project.tasks.filter((task) => !task.completed && task.someday), [project.tasks])
-  const doneTasks = useMemo(() => project.tasks.filter((task) => task.completed), [project.tasks])
+  const doneTasks = useMemo(() =>
+    project.tasks
+      .filter((task) => task.completed)
+      .sort((a, b) => (b.completedAt ?? '').localeCompare(a.completedAt ?? '')),
+    [project.tasks]
+  )
   const pinnedCount = useMemo(() => activeTasks.filter((task) => task.isToDoNext).length, [activeTasks])
   const projectMinutes = useMemo(() => calcProjectTime(focusCheckIns, project.id), [focusCheckIns, project.id])
   const quickLinks = useMemo(() => normalizeProjectLinks(project), [project])
@@ -338,6 +343,7 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
                 {config.obsidianStoragePath && (
                   <button className="task-overflow-item" onClick={() => { window.api.openTaskNote(task.id, task.title, project.name, formatTaskId(task.taskNumber, project.code), task.noteRef); setMenuOpenId(null) }}><span className="toi-icon">📝</span>Open note</button>
                 )}
+                <button className="task-overflow-item" onClick={() => { window.api.sendTaskToMyCC(project.id, task.id); setMenuOpenId(null) }}><span className="toi-icon">➤</span>Send to MyCC</button>
                 <div className="task-overflow-sep" />
                 <button className="task-overflow-item" onClick={() => { toggleSomeday(task.id); setMenuOpenId(null) }}><span className="toi-icon">⏳</span>{task.someday ? 'Move to active' : 'Move to Someday'}</button>
                 <button className="task-overflow-item danger" onClick={() => { removeTask(task.id); setMenuOpenId(null) }}><span className="toi-icon">×</span>Delete</button>

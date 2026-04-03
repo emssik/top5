@@ -1,6 +1,9 @@
 import type { FastifyInstance } from 'fastify'
-import { notifyAllWindows } from '../../store'
+import type { Task } from '../../../shared/types'
+import { getData, notifyAllWindows } from '../../store'
+import { stopFocusForCompletedTask } from '../../focus-window'
 import * as projectService from '../../service/projects'
+import * as myccService from '../../service/mycc'
 import { isServiceError, errorToHttpStatus } from '../utils'
 
 
@@ -24,8 +27,22 @@ export function registerProjectRoutes(fastify: FastifyInstance): void {
   })
 
   fastify.put<{ Params: { id: string } }>('/api/v1/projects/:id', async (request, reply) => {
+    // Detect if focus task is being completed (before update)
+    const { config, projects: oldProjects } = getData()
+    let completedFocusTaskId: string | null = null
+    if (config.focusTaskId && config.focusProjectId === request.params.id) {
+      const oldTask = oldProjects.find((p) => p.id === request.params.id)?.tasks.find((t) => t.id === config.focusTaskId)
+      const newTask = ((request.body as any)?.tasks as Task[] | undefined)?.find((t) => t.id === config.focusTaskId)
+      if (oldTask && !oldTask.completed && newTask?.completed) {
+        completedFocusTaskId = config.focusTaskId
+      }
+    }
+
     const result = projectService.updateProject(request.params.id, request.body)
     if (isServiceError(result)) return reply.status(errorToHttpStatus(result.error)).send({ ok: false, error: result.error })
+
+    if (completedFocusTaskId) stopFocusForCompletedTask(completedFocusTaskId)
+
     notifyAllWindows()
     return { ok: true, data: result }
   })
@@ -72,6 +89,12 @@ export function registerProjectRoutes(fastify: FastifyInstance): void {
     return { ok: true, data: result }
   })
 
+  fastify.get<{ Params: { pid: string; tid: string } }>('/api/v1/projects/:pid/tasks/:tid', async (request, reply) => {
+    const result = projectService.getTask(request.params.pid, request.params.tid)
+    if (isServiceError(result)) return reply.status(404).send({ ok: false, error: result.error })
+    return { ok: true, data: result }
+  })
+
   fastify.post<{ Params: { pid: string; tid: string } }>('/api/v1/projects/:pid/tasks/:tid/toggle-in-progress', async (request, reply) => {
     const result = projectService.toggleTaskInProgress(request.params.pid, request.params.tid)
     if (isServiceError(result)) return reply.status(404).send({ ok: false, error: result.error })
@@ -107,6 +130,12 @@ export function registerProjectRoutes(fastify: FastifyInstance): void {
     const result = projectService.moveTaskToProject(request.params.pid, toProjectId, request.params.tid)
     if (isServiceError(result)) return reply.status(errorToHttpStatus(result.error)).send({ ok: false, error: result.error })
     notifyAllWindows()
+    return { ok: true, data: result }
+  })
+
+  fastify.post<{ Params: { pid: string; tid: string } }>('/api/v1/projects/:pid/tasks/:tid/send-to-mycc', async (request, reply) => {
+    const result = myccService.sendTaskToMyCC(request.params.pid, request.params.tid)
+    if (isServiceError(result)) return reply.status(404).send({ ok: false, error: result.error })
     return { ok: true, data: result }
   })
 
