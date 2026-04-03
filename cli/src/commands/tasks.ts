@@ -376,7 +376,8 @@ export function register(program: Command): void {
     .command('send')
     .description('Send a project task to MyCC inbox')
     .argument('<task-code>', 'Task code (e.g. PRJ-3) or task ID')
-    .action(async (taskRef: string, _opts, cmd) => {
+    .option('-c, --comment <text>', 'Comment to include as prompt context')
+    .action(async (taskRef: string, opts, cmd) => {
       const globalOpts = cmd.optsWithGlobals()
       const client = createClient(globalOpts)
 
@@ -386,8 +387,10 @@ export function register(program: Command): void {
           task: Task
         }
 
+        const body = opts.comment ? { comment: opts.comment } : undefined
         const result = await client.post<{ taskCode: string; projectCode: string; projectName: string; title: string; noteRef?: string }>(
-          `/api/v1/projects/${project.id}/tasks/${task.id}/send-to-mycc`
+          `/api/v1/projects/${project.id}/tasks/${task.id}/send-to-mycc`,
+          body
         )
 
         printResult(result, {

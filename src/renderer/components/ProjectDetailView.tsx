@@ -36,6 +36,8 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
   const [dueDatePickerId, setDueDatePickerId] = useState<string | null>(null)
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null)
   const [linksEditId, setLinksEditId] = useState<string | null>(null)
+  const [myccCommentId, setMyccCommentId] = useState<string | null>(null)
+  const [myccComment, setMyccComment] = useState('')
   const addInputRef = useRef<HTMLInputElement | null>(null)
   const draggedTaskId = useRef<string | null>(null)
   const [dragOverTaskId, setDragOverTaskId] = useState<string | null>(null)
@@ -343,7 +345,7 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
                 {config.obsidianStoragePath && (
                   <button className="task-overflow-item" onClick={() => { window.api.openTaskNote(task.id, task.title, project.name, formatTaskId(task.taskNumber, project.code), task.noteRef); setMenuOpenId(null) }}><span className="toi-icon">📝</span>Open note</button>
                 )}
-                <button className="task-overflow-item" onClick={() => { window.api.sendTaskToMyCC(project.id, task.id); setMenuOpenId(null) }}><span className="toi-icon">➤</span>Send to MyCC</button>
+                <button className="task-overflow-item" onClick={() => { setMenuOpenId(null); setMyccComment(''); setMyccCommentId(task.id) }}><span className="toi-icon">➤</span>Send to MyCC</button>
                 <div className="task-overflow-sep" />
                 <button className="task-overflow-item" onClick={() => { toggleSomeday(task.id); setMenuOpenId(null) }}><span className="toi-icon">⏳</span>{task.someday ? 'Move to active' : 'Move to Someday'}</button>
                 <button className="task-overflow-item danger" onClick={() => { removeTask(task.id); setMenuOpenId(null) }}><span className="toi-icon">×</span>Delete</button>
@@ -367,6 +369,30 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
                 onClose={() => setLinksEditId(null)}
                 projectName={project.name}
               />
+            )}
+            {myccCommentId === task.id && (
+              <div className="mycc-comment-popover">
+                <textarea
+                  className="mycc-comment-input"
+                  placeholder="Comment (optional)..."
+                  value={myccComment}
+                  onChange={(e) => setMyccComment(e.target.value)}
+                  autoFocus
+                  rows={3}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault()
+                      window.api.sendTaskToMyCC(project.id, task.id, myccComment.trim() || undefined)
+                      setMyccCommentId(null)
+                    }
+                    if (e.key === 'Escape') setMyccCommentId(null)
+                  }}
+                />
+                <div className="mycc-comment-actions">
+                  <button className="mycc-comment-cancel" onClick={() => setMyccCommentId(null)}>Cancel</button>
+                  <button className="mycc-comment-send" onClick={() => { window.api.sendTaskToMyCC(project.id, task.id, myccComment.trim() || undefined); setMyccCommentId(null) }}>Send</button>
+                </div>
+              </div>
             )}
           </>
         )}

@@ -95,7 +95,7 @@ declare global {
       selectDirectory: () => Promise<string | null>
       openTaskNote: (taskId: string, taskTitle: string, projectName?: string, taskBadge?: string, noteRef?: string) => Promise<{ ok?: boolean; error?: string }>
       appendNoteDoneEntry: (noteRef: string, description: string, focusMinutes: number) => Promise<{ ok?: boolean; error?: string }>
-      sendTaskToMyCC: (projectId: string, taskId: string) => Promise<{ taskCode: string; projectCode: string; projectName: string; title: string; noteRef?: string } | null>
+      sendTaskToMyCC: (projectId: string, taskId: string, comment?: string) => Promise<{ taskCode: string; projectCode: string; projectName: string; title: string; noteRef?: string } | null>
       journalGenerateDaily: (dateStr?: string) => Promise<{ path: string; notePath: string } | null>
       journalGenerateWeekly: (weekKey?: string) => Promise<{ path: string; notePath: string } | null>
       journalGenerateMonthly: (monthKey?: string) => Promise<{ path: string; notePath: string } | null>

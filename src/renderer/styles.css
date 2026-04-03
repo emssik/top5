@@ -1180,6 +1180,58 @@ body {
   margin: 4px 6px;
 }
 
+/* MyCC comment popover */
+.mycc-comment-popover {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  z-index: 100;
+  background: var(--bg-card);
+  border: 1px solid var(--c-border-subtle);
+  border-radius: 8px;
+  padding: 8px;
+  min-width: 260px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+.mycc-comment-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 8px;
+  border: 1px solid var(--c-border-subtle);
+  border-radius: 6px;
+  background: var(--bg-page);
+  color: var(--c-text-primary);
+  font-size: 12px;
+  font-family: inherit;
+  resize: vertical;
+}
+.mycc-comment-input:focus { outline: none; border-color: var(--c-accent, #6366f1); }
+.mycc-comment-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 6px;
+}
+.mycc-comment-cancel,
+.mycc-comment-send {
+  padding: 4px 12px;
+  border: none;
+  border-radius: 5px;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+}
+.mycc-comment-cancel {
+  background: transparent;
+  color: var(--c-text-secondary);
+}
+.mycc-comment-cancel:hover { background: var(--c-hover); }
+.mycc-comment-send {
+  background: var(--c-accent, #6366f1);
+  color: #fff;
+}
+.mycc-comment-send:hover { opacity: 0.9; }
+
 /* Repeat */
 .repeat-item {
   display: flex;

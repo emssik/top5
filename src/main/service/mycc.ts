@@ -15,7 +15,7 @@ export interface MyccInboxItem {
   noteRef?: string
 }
 
-export function sendTaskToMyCC(projectId: string, taskId: string): MyccInboxItem | ServiceError {
+export function sendTaskToMyCC(projectId: string, taskId: string, comment?: string): MyccInboxItem | ServiceError {
   const data = getData()
   const project = data.projects.find((p) => p.id === projectId)
   if (!project) return { error: 'not_found' }
@@ -42,7 +42,7 @@ export function sendTaskToMyCC(projectId: string, taskId: string): MyccInboxItem
     taskId,
     projectCode: project.code ?? '',
     projectName: project.name,
-    title: task.title,
+    title: comment ? `Ważne uwagi operatora: ${comment}\n\n${task.title}` : task.title,
     ...(fullNotePath ? { noteRef: fullNotePath } : {}),
   }
 

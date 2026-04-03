@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.81.0] - 2026-04-03
+
+### Added
+
+- Optional comment popover when sending a task to MyCC — Enter to send, Esc to cancel; comment is prepended to the task title as operator context
+- CLI `top5 send --comment <text>` flag to attach a comment when sending a task to MyCC from the terminal
+
 ## [1.80.1] - 2026-04-03
 
 ### Fixed

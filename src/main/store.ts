@@ -1176,9 +1176,9 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
     return result
   })
 
-  ipcMain.handle('send-task-to-mycc', (_event, projectId: string, taskId: string) => {
+  ipcMain.handle('send-task-to-mycc', (_event, projectId: string, taskId: string, comment?: string) => {
     if (typeof projectId !== 'string' || typeof taskId !== 'string') return null
-    const result = myccService.sendTaskToMyCC(projectId, taskId)
+    const result = myccService.sendTaskToMyCC(projectId, taskId, typeof comment === 'string' ? comment : undefined)
     if (isServiceError(result)) return null
     return result
   })

@@ -129,6 +129,8 @@ export default function TodayView() {
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null)
   const [dueDatePickerId, setDueDatePickerId] = useState<string | null>(null)
   const [linksEditId, setLinksEditId] = useState<string | null>(null)
+  const [myccCommentId, setMyccCommentId] = useState<string | null>(null)
+  const [myccComment, setMyccComment] = useState('')
   const hoveredTaskRef = useRef<{ task: MergedTask; section: string } | null>(null)
   const prevLockedRef = useRef(winsLock?.locked ?? false)
 
@@ -957,7 +959,7 @@ export default function TodayView() {
               <button className="task-overflow-item" onClick={() => { window.api.openTaskNote(task.id, task.title, task.projectName, task.kind === 'quick' ? formatQuickTaskId(task.taskNumber) : formatTaskId(task.taskNumber, task.projectCode), task.noteRef); setMenuOpenId(null) }}><span className="toi-icon">📝</span>Open note</button>
             )}
             {task.kind === 'pinned' && task.projectId && task.taskId && (
-              <button className="task-overflow-item" onClick={() => { window.api.sendTaskToMyCC(task.projectId!, task.taskId!); setMenuOpenId(null) }}><span className="toi-icon">➤</span>Send to MyCC</button>
+              <button className="task-overflow-item" onClick={() => { setMenuOpenId(null); setMyccComment(''); setMyccCommentId(task.id) }}><span className="toi-icon">➤</span>Send to MyCC</button>
             )}
             {!task.repeatingTaskId && (
               <button className="task-overflow-item" onClick={() => { splitTask(task); setMenuOpenId(null) }}><span className="toi-icon">✂</span>Split & Continue</button>
@@ -986,6 +988,30 @@ export default function TodayView() {
             onClose={() => setLinksEditId(null)}
             projectName={task.projectName}
           />
+        )}
+        {myccCommentId === task.id && task.projectId && task.taskId && (
+          <div className="mycc-comment-popover">
+            <textarea
+              className="mycc-comment-input"
+              placeholder="Comment (optional)..."
+              value={myccComment}
+              onChange={(e) => setMyccComment(e.target.value)}
+              autoFocus
+              rows={3}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault()
+                  window.api.sendTaskToMyCC(task.projectId!, task.taskId!, myccComment.trim() || undefined)
+                  setMyccCommentId(null)
+                }
+                if (e.key === 'Escape') setMyccCommentId(null)
+              }}
+            />
+            <div className="mycc-comment-actions">
+              <button className="mycc-comment-cancel" onClick={() => setMyccCommentId(null)}>Cancel</button>
+              <button className="mycc-comment-send" onClick={() => { window.api.sendTaskToMyCC(task.projectId!, task.taskId!, myccComment.trim() || undefined); setMyccCommentId(null) }}>Send</button>
+            </div>
+          </div>
         )}
       </div>
     )

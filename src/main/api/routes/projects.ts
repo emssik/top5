@@ -133,8 +133,10 @@ export function registerProjectRoutes(fastify: FastifyInstance): void {
     return { ok: true, data: result }
   })
 
-  fastify.post<{ Params: { pid: string; tid: string } }>('/api/v1/projects/:pid/tasks/:tid/send-to-mycc', async (request, reply) => {
-    const result = myccService.sendTaskToMyCC(request.params.pid, request.params.tid)
+  fastify.post<{ Params: { pid: string; tid: string }; Body: { comment?: string } }>('/api/v1/projects/:pid/tasks/:tid/send-to-mycc', async (request, reply) => {
+    const body = (request.body ?? {}) as { comment?: string }
+    const comment = typeof body.comment === 'string' ? body.comment : undefined
+    const result = myccService.sendTaskToMyCC(request.params.pid, request.params.tid, comment)
     if (isServiceError(result)) return reply.status(404).send({ ok: false, error: result.error })
     return { ok: true, data: result }
   })
