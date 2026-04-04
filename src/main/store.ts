@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, shell } from 'electron'
 import type { IpcMain } from 'electron'
 import {
   existsSync,
@@ -29,6 +29,7 @@ import * as winsService from './service/wins'
 import * as journalService from './service/journal'
 import * as taskNotesService from './service/task-notes'
 import * as myccService from './service/mycc'
+import * as taskImageService from './service/task-images'
 import { getFocusWindow, stopFocusForCompletedTask } from './focus-window'
 import type {
   Task,
@@ -1181,6 +1182,30 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
     const result = myccService.sendTaskToMyCC(projectId, taskId, typeof comment === 'string' ? comment : undefined)
     if (isServiceError(result)) return null
     return result
+  })
+
+  // --- Task images ---
+
+  ipcMain.handle('paste-image-to-task', (_event, projectId: string, taskId: string) => {
+    if (typeof projectId !== 'string' || typeof taskId !== 'string') return { error: 'validation' }
+    const result = taskImageService.pasteImageToTask(projectId, taskId)
+    if ('error' in result) return result
+    notifyAllWindows()
+    return result
+  })
+
+  ipcMain.handle('remove-task-image', (_event, projectId: string, taskId: string, filename: string) => {
+    if (typeof projectId !== 'string' || typeof taskId !== 'string' || typeof filename !== 'string') return getData().projects
+    const result = taskImageService.removeTaskImage(projectId, taskId, filename)
+    if ('error' in result) return getData().projects
+    notifyAllWindows()
+    return result
+  })
+
+  ipcMain.handle('open-task-image', (_event, filename: string) => {
+    if (typeof filename !== 'string' || filename.includes('..') || filename.includes('/') || filename.includes('\\')) return
+    const filePath = join(taskImageService.getImagesDirPath(), filename)
+    shell.openPath(filePath)
   })
 
   // --- Wins ---

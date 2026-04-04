@@ -38,6 +38,7 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null)
   const [linksEditId, setLinksEditId] = useState<string | null>(null)
   const [myccCommentId, setMyccCommentId] = useState<string | null>(null)
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
   const addInputRef = useRef<HTMLInputElement | null>(null)
   const draggedTaskId = useRef<string | null>(null)
   const [dragOverTaskId, setDragOverTaskId] = useState<string | null>(null)
@@ -238,6 +239,10 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && selectedTaskId) {
+        setSelectedTaskId(null)
+        return
+      }
       if (event.key !== 'n' && event.key !== 'N') return
       const target = event.target as HTMLElement
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return
@@ -247,18 +252,48 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [])
+  }, [selectedTaskId])
+
+  useEffect(() => {
+    if (!selectedTaskId) return
+    const handlePaste = (event: ClipboardEvent) => {
+      const target = event.target as HTMLElement
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return
+      const hasImage = Array.from(event.clipboardData?.items || []).some((item) => item.type.startsWith('image/'))
+      if (!hasImage) return
+      event.preventDefault()
+      window.api.pasteImageToTask(project.id, selectedTaskId)
+    }
+    window.addEventListener('paste', handlePaste)
+    return () => window.removeEventListener('paste', handlePaste)
+  }, [selectedTaskId, project.id])
+
+  const handlePasteImageToTask = async (taskId: string) => {
+    setMenuOpenId(null)
+    await window.api.pasteImageToTask(project.id, taskId)
+  }
+
+  const handleRemoveImage = async (taskId: string, filename: string) => {
+    await window.api.removeTaskImage(project.id, taskId, filename)
+  }
 
   const renderTask = (task: Task, done = false) => {
     const isPinned = !done && !!task.isToDoNext
     const taskMinutes = calcTaskTime(focusCheckIns, task.id)
     const isDragOver = !done && dragOverTaskId === task.id && draggedTaskId.current !== task.id
+    const isSelected = !done && selectedTaskId === task.id
 
     return (
       <div
         key={task.id}
-        className={`task-card ${done ? 'done-card' : ''} ${done ? '' : 'draggable-task'} ${isDragOver ? 'drag-over' : ''}`}
+        className={`task-card ${done ? 'done-card' : ''} ${done ? '' : 'draggable-task'} ${isDragOver ? 'drag-over' : ''} ${isSelected ? 'task-selected' : ''}`}
         draggable={!done}
+        onClick={(event) => {
+          if (done) return
+          const target = event.target as HTMLElement
+          if (target.closest('button') || target.closest('input') || target.closest('.task-overflow-menu') || target.closest('.task-image-thumb')) return
+          setSelectedTaskId(selectedTaskId === task.id ? null : task.id)
+        }}
         onDragStart={(event) => {
           if (done) return
           draggedTaskId.current = task.id
@@ -318,6 +353,23 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
               return <span className={`due-date-badge ${overdue ? 'overdue' : ''}`}>📅 {label}</span>
             })()}
           </div>
+          {task.images && task.images.length > 0 && (
+            <div className="task-images">
+              {task.images.map((filename) => (
+                <div key={filename} className="task-image-thumb" onClick={() => window.api.openTaskImage(filename)}>
+                  <img src={`top5-img://${filename}`} />
+                  {!done && (
+                    <button
+                      className="remove-image"
+                      onClick={(e) => { e.stopPropagation(); handleRemoveImage(task.id, filename) }}
+                    >
+                      x
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {!done && isPinned && <div className="pin-corner" />}
@@ -342,6 +394,7 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
                 <button className="task-overflow-item" onClick={() => { setFocus(project.id, task.id); setMenuOpenId(null) }}><span className="toi-icon">▶</span>Focus</button>
                 <button className="task-overflow-item" onClick={() => { setMenuOpenId(null); setDueDatePickerId(task.id) }}><span className="toi-icon">📅</span>{task.dueDate ? 'Change due date' : 'Set due date'}</button>
                 <button className="task-overflow-item" onClick={() => { setMenuOpenId(null); setLinksEditId(task.id) }}><span className="toi-icon">🔗</span>Links{task.links && task.links.length > 0 ? ` (${task.links.length})` : ''}</button>
+                <button className="task-overflow-item" onClick={() => handlePasteImageToTask(task.id)}><span className="toi-icon">📎</span>Paste image</button>
                 {config.obsidianStoragePath && (
                   <button className="task-overflow-item" onClick={() => { window.api.openTaskNote(task.id, task.title, project.name, formatTaskId(task.taskNumber, project.code), task.noteRef); setMenuOpenId(null) }}><span className="toi-icon">📝</span>Open note</button>
                 )}

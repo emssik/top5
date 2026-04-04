@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.82.0] - 2026-04-04
+
+### Added
+
+- Task image attachments in ProjectDetailView — paste an image from clipboard via the task overflow menu or by selecting a task and pressing Cmd+V; thumbnails shown inline with hover-to-remove button
+- Click any thumbnail to open the image in the system default viewer
+- Images included as file paths when sending a task to MyCC (listed under "Załączone obrazki")
+- `top5-img://` custom Electron protocol for secure, sandboxed image serving from the app data directory
+- `images` field on the `Task` type to store attachment filenames
+
 ## [1.81.1] - 2026-04-04
 
 ### Changed

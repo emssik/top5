@@ -2,6 +2,7 @@ import { join, resolve } from 'path'
 import { homedir } from 'os'
 import { mkdirSync, writeFileSync } from 'fs'
 import { getData } from '../store'
+import { getImagesDirPath } from './task-images'
 
 type ServiceError = { error: 'not_found' }
 
@@ -13,6 +14,16 @@ export interface MyccInboxItem {
   projectName: string
   title: string
   noteRef?: string
+}
+
+function buildTitle(taskTitle: string, comment?: string, images?: string[]): string {
+  let title = comment ? `Ważne uwagi operatora: ${comment}\n\n${taskTitle}` : taskTitle
+  if (images && images.length > 0) {
+    const imagesDir = getImagesDirPath()
+    const paths = images.map((f) => join(imagesDir, f))
+    title += '\n\nZałączone obrazki:\n' + paths.map((p) => `- ${p}`).join('\n')
+  }
+  return title
 }
 
 export function sendTaskToMyCC(projectId: string, taskId: string, comment?: string): MyccInboxItem | ServiceError {
@@ -44,7 +55,7 @@ export function sendTaskToMyCC(projectId: string, taskId: string, comment?: stri
     taskId,
     projectCode: project.code ?? '',
     projectName: project.name,
-    title: comment ? `Ważne uwagi operatora: ${comment}\n\n${task.title}` : task.title,
+    title: buildTitle(task.title, comment, task.images),
     ...(fullNotePath ? { noteRef: fullNotePath } : {}),
   }
 

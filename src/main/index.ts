@@ -1,7 +1,8 @@
-import { app, BrowserWindow, shell, ipcMain, globalShortcut, screen, Menu } from 'electron'
+import { app, BrowserWindow, shell, ipcMain, globalShortcut, screen, Menu, protocol, net } from 'electron'
 import { join, resolve } from 'path'
 import { is, optimizer, electronApp } from '@electron-toolkit/utils'
 import { registerStoreHandlers, getAppData, setAppDataKey, IS_DEV, getConfigDir } from './store'
+import { getImagesDirPath } from './service/task-images'
 import { registerLauncherHandlers } from './launchers'
 import { registerFocusHandlers } from './focus-window'
 import { registerGlobalShortcut, registerLocalShortcuts } from './shortcuts'
@@ -64,6 +65,11 @@ function handleDeepLink(url: string): void {
 if (IS_DEV) {
   app.setPath('userData', join(app.getPath('userData'), '-dev'))
 }
+
+// Register custom protocol for serving task images
+protocol.registerSchemesAsPrivileged([
+  { scheme: 'top5-img', privileges: { bypassCSP: true, supportFetchAPI: true } }
+])
 
 // Single instance lock — second launch forwards deep link to first instance
 const gotTheLock = app.requestSingleInstanceLock()
@@ -168,6 +174,15 @@ function createWindow(): void {
 
 app.whenReady().then(() => {
   electronApp.setAppUserModelId('com.top5.app')
+
+  // Handle top5-img:// protocol for task images
+  protocol.handle('top5-img', (request) => {
+    const filename = decodeURIComponent(request.url.replace('top5-img://', ''))
+    if (!filename || filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+      return new Response('Not found', { status: 404 })
+    }
+    return net.fetch(`file://${join(getImagesDirPath(), filename)}`)
+  })
 
   // macOS application menu — enables Cmd+H, Cmd+Q, etc.
   if (process.platform === 'darwin') {
