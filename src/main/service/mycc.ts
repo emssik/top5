@@ -31,7 +31,9 @@ export function sendTaskToMyCC(projectId: string, taskId: string, comment?: stri
     const storagePath = data.config.obsidianStoragePath
     if (storagePath) {
       const vaultPath = resolve(storagePath.replace(/\/+$/, ''))
-      const relPath = task.noteRef.replace('top5.storage/', '')
+      const relPath = task.noteRef.startsWith('top5.storage/')
+        ? task.noteRef.replace('top5.storage/', '')
+        : task.noteRef
       fullNotePath = join(vaultPath, 'top5.storage', `${relPath}.md`)
     }
   }

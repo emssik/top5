@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.81.1] - 2026-04-04
+
+### Changed
+
+- `MyccCommentPopover` extracted into a shared component used by both TodayView and ProjectDetailView; send logic now uses async/await with proper error handling
+
+### Fixed
+
+- `noteRef` prefix stripping in MyCC service now uses a `startsWith` guard to avoid corrupting paths that do not contain the `top5.storage/` prefix
+
 ## [1.81.0] - 2026-04-03
 
 ### Added

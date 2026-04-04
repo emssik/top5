@@ -133,6 +133,16 @@ Returns a single task from a project, enriched with `projectId` and `projectCode
 
 **Errors:** `404` if project or task not found.
 
+#### `POST /projects/:pid/tasks/:tid/send-to-mycc`
+
+Sends a task to the MyCC inbox.
+
+**Body (optional):** `{ "comment": "string" }`
+
+**Response:** `{ ok, data: MyccInboxItem }`
+
+**Errors:** `404` if project or task not found.
+
 #### `POST /projects/:pid/tasks/:tid/toggle-in-progress`
 
 Toggles `inProgress` flag on a task. No-op if task is completed.
