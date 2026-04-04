@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.83.0] - 2026-04-04
+
+### Added
+
+- Completed tasks remain visible in TodayView, ProjectDetailView, and QuickTasksView for 1 hour after completion with a "Restore" button, making it easy to undo accidental completions
+- `task_sent_to_mycc` operation type logged to the operation log each time a task is sent to MyCC, with cyan color indicator
+
 ## [1.82.0] - 2026-04-04
 
 ### Added

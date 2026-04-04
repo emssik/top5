@@ -128,7 +128,7 @@ export type OperationType =
   | 'quick_task_created' | 'quick_task_completed' | 'quick_task_uncompleted' | 'quick_task_deleted'
   | 'project_created' | 'project_updated' | 'project_archived' | 'project_unarchived'
   | 'project_suspended' | 'project_unsuspended' | 'project_deleted'
-  | 'task_moved'
+  | 'task_moved' | 'task_sent_to_mycc'
   | 'focus_started' | 'focus_ended'
   | 'wins_day_won' | 'wins_day_lost'
   | 'wins_week_won' | 'wins_week_lost'

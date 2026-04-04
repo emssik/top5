@@ -12,6 +12,7 @@ import RepeatUpdateModal from './RepeatUpdateModal'
 import { dateKey } from '../../shared/schedule'
 import { Linkify } from './Linkify'
 import TaskLinksIndicator from './TaskLinksIndicator'
+import { isRecentlyCompleted } from '../utils/recentlyCompleted'
 
 function continuationTitle(title: string): string {
   const match = title.match(/^\(✂(\d+)\) (.*)$/)
@@ -326,6 +327,7 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
 
   const renderTask = (task: MergedTask, small = false) => {
     const isCompleted = task.completed
+    const isRecentDone = isCompleted && isRecentlyCompleted(task.completedAt)
     const isDragOver = dragOverId === task.id && draggedId.current !== task.id
 
     // --- Clean view (bullet journal style) ---
@@ -386,7 +388,7 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
               <span
                 onDoubleClick={() => !isCompleted && startEditing(task)}
                 className={`${textSize} leading-snug truncate block cursor-default ${isCompleted ? 'line-through' : ''}`}
-                style={{ opacity: isCompleted ? 0.3 : 1 }}
+                style={{ opacity: isRecentDone ? 0.55 : isCompleted ? 0.3 : 1 }}
                 title={task.title}
               >
                 <Linkify text={cleanView ? task.title.replace(/^\(✂\d+\)\s*/, '') : task.title} />
@@ -396,7 +398,16 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
           </div>
 
           {/* Time + hover actions */}
-          {isCompleted ? (
+          {isRecentDone ? (
+            <button
+              onClick={() => handleUncomplete(task)}
+              className="opacity-50 hover:opacity-80 transition-all text-[11px]"
+              title="Restore"
+              style={{ fontFamily: 'system-ui' }}
+            >
+              ↩
+            </button>
+          ) : isCompleted ? (
             <button
               onClick={() => {
                 if (task.repeatingTaskId) dismissRepeatingProposal(task.repeatingTaskId)
@@ -447,6 +458,42 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
     }
 
     // --- Normal view ---
+
+    // Recently completed — stays in active list with Restore button
+    if (isRecentDone) {
+      return (
+        <div
+          key={task.id}
+          className="group flex items-center gap-2 py-1.5 px-3 rounded-lg bg-card border border-border-subtle"
+          style={{ opacity: 0.6 }}
+        >
+          <button
+            onClick={() => handleUncomplete(task)}
+            className="w-4 h-4 rounded border bg-hover border-border flex-shrink-0 flex items-center justify-center text-[10px] text-t-secondary hover:border-t-secondary transition-colors"
+            title="Mark as not done"
+          >
+            ✓
+          </button>
+          <div className="flex-1 min-w-0">
+            <span className="text-sm text-t-muted line-through truncate block">
+              <TaskIdBadge taskNumber={task.taskNumber} projectCode={task.projectCode} kind={task.kind} />
+              <Linkify text={task.title} />
+            </span>
+            {task.kind === 'pinned' && task.projectName && (
+              <span className="text-[10px] text-blue-400/50">{task.projectName}</span>
+            )}
+          </div>
+          <button
+            onClick={() => handleUncomplete(task)}
+            className="text-[10px] px-2 py-0.5 rounded bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 hover:text-blue-300 transition-colors"
+            title="Restore task"
+          >
+            Restore
+          </button>
+        </div>
+      )
+    }
+
     if (isCompleted) {
       return (
         <div

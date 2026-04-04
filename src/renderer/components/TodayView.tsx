@@ -16,6 +16,7 @@ import { formatTaskId, formatQuickTaskId, computeNotePath } from '../../shared/t
 import { dateKey } from '../../shared/schedule'
 import RepeatUpdateModal from './RepeatUpdateModal'
 import { Linkify } from './Linkify'
+import { isRecentlyCompleted } from '../utils/recentlyCompleted'
 
 function formatFocusTimer(seconds: number): string {
   const mm = Math.floor(seconds / 60)
@@ -876,6 +877,32 @@ export default function TodayView() {
     const isDragOver = dragOverId === task.id && draggedId.current !== task.id
     const locked = isTaskLocked(task)
     const isOverflow = section === 'overflow'
+    const isRecentDone = task.completed && isRecentlyCompleted(task.completedAt)
+
+    if (isRecentDone) {
+      return (
+        <div key={task.id} className="task-card done-card">
+          <button className="task-checkbox checked" onClick={() => uncompleteTask(task)} />
+          <div className="task-content">
+            <div className="task-title completed">
+              <TaskIdBadge taskNumber={task.taskNumber} projectCode={task.projectCode} kind={task.kind} />
+              <Linkify text={task.title} />
+            </div>
+            {task.kind === 'pinned' && task.projectName && (
+              <div className="task-meta"><span style={{ color: 'rgba(96,165,250,0.5)' }}>{task.projectName}</span></div>
+            )}
+          </div>
+          <button
+            className="task-action-btn btn-focus"
+            style={{ display: 'inline-block', fontSize: 11 }}
+            onClick={() => uncompleteTask(task)}
+            title="Restore task"
+          >
+            Restore
+          </button>
+        </div>
+      )
+    }
 
     return (
       <div

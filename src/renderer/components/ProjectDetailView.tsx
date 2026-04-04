@@ -8,6 +8,7 @@ import TaskIdBadge from './TaskIdBadge'
 import { formatTaskId } from '../../shared/taskId'
 import { dateKey } from '../../shared/schedule'
 import { Linkify } from './Linkify'
+import { isRecentlyCompleted } from '../utils/recentlyCompleted'
 import TaskLinksPopover from './TaskLinksPopover'
 import { MyccCommentPopover } from './MyccCommentPopover'
 import TaskLinksIndicator from './TaskLinksIndicator'
@@ -43,18 +44,27 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
   const draggedTaskId = useRef<string | null>(null)
   const [dragOverTaskId, setDragOverTaskId] = useState<string | null>(null)
 
+  // Re-render every minute so recently-completed tasks expire after 1h
+  const [tick, setTick] = useState(0)
+  useEffect(() => {
+    const interval = setInterval(() => setTick((t) => t + 1), 60_000)
+    return () => clearInterval(interval)
+  }, [])
+
   const activeTasks = useMemo(() => {
-    const active = project.tasks.filter((task) => !task.completed && !task.someday)
+    const active = project.tasks.filter((task) =>
+      (!task.completed && !task.someday) || (task.completed && isRecentlyCompleted(task.completedAt))
+    )
     const pinned = active.filter((task) => task.isToDoNext).sort((a, b) => (a.toDoNextOrder ?? 999) - (b.toDoNextOrder ?? 999))
     const unpinned = active.filter((task) => !task.isToDoNext)
     return [...pinned, ...unpinned]
-  }, [project.tasks])
+  }, [project.tasks, tick])
   const somedayTasks = useMemo(() => project.tasks.filter((task) => !task.completed && task.someday), [project.tasks])
   const doneTasks = useMemo(() =>
     project.tasks
-      .filter((task) => task.completed)
+      .filter((task) => task.completed && !isRecentlyCompleted(task.completedAt))
       .sort((a, b) => (b.completedAt ?? '').localeCompare(a.completedAt ?? '')),
-    [project.tasks]
+    [project.tasks, tick]
   )
   const pinnedCount = useMemo(() => activeTasks.filter((task) => task.isToDoNext).length, [activeTasks])
   const projectMinutes = useMemo(() => calcProjectTime(focusCheckIns, project.id), [focusCheckIns, project.id])
@@ -278,6 +288,7 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
   }
 
   const renderTask = (task: Task, done = false) => {
+    const isRecentDone = task.completed && isRecentlyCompleted(task.completedAt)
     const isPinned = !done && !!task.isToDoNext
     const taskMinutes = calcTaskTime(focusCheckIns, task.id)
     const isDragOver = !done && dragOverTaskId === task.id && draggedTaskId.current !== task.id
@@ -286,16 +297,16 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
     return (
       <div
         key={task.id}
-        className={`task-card ${done ? 'done-card' : ''} ${done ? '' : 'draggable-task'} ${isDragOver ? 'drag-over' : ''} ${isSelected ? 'task-selected' : ''}`}
-        draggable={!done}
+        className={`task-card ${done || isRecentDone ? 'done-card' : ''} ${done || isRecentDone ? '' : 'draggable-task'} ${isDragOver ? 'drag-over' : ''} ${isSelected ? 'task-selected' : ''}`}
+        draggable={!done && !isRecentDone}
         onClick={(event) => {
-          if (done) return
+          if (done || isRecentDone) return
           const target = event.target as HTMLElement
           if (target.closest('button') || target.closest('input') || target.closest('.task-overflow-menu') || target.closest('.task-image-thumb')) return
           setSelectedTaskId(selectedTaskId === task.id ? null : task.id)
         }}
         onDragStart={(event) => {
-          if (done) return
+          if (done || isRecentDone) return
           draggedTaskId.current = task.id
           event.dataTransfer.setData('application/top5-task', JSON.stringify({
             kind: 'project',
@@ -322,7 +333,7 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
         }}
         onDragEnd={clearTaskDragState}
       >
-        <button className={`task-checkbox ${done ? 'checked' : ''}`} onClick={() => toggleTask(task.id)} />
+        <button className={`task-checkbox ${done || isRecentDone ? 'checked' : ''}`} onClick={() => toggleTask(task.id)} />
         <div className="task-content">
           {editingId === task.id ? (
             <input
@@ -337,7 +348,7 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
               }}
             />
           ) : (
-            <div className={`task-title ${done ? 'completed' : ''}`} onDoubleClick={() => !done && startEditing(task)}>
+            <div className={`task-title ${done || isRecentDone ? 'completed' : ''}`} onDoubleClick={() => !done && !isRecentDone && startEditing(task)}>
               <TaskIdBadge taskNumber={task.taskNumber} projectCode={project.code} kind="project" />
               <Linkify text={task.title} />
               <TaskLinksIndicator links={task.links ?? []} projectName={project.name} />
@@ -374,7 +385,16 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
 
         {!done && isPinned && <div className="pin-corner" />}
 
-        {done ? (
+        {isRecentDone ? (
+          <button
+            className="task-action-btn btn-focus"
+            style={{ display: 'inline-block', fontSize: 11 }}
+            onClick={() => toggleTask(task.id)}
+            title="Restore task"
+          >
+            Restore
+          </button>
+        ) : done ? (
           <div className="task-actions">
             <button className="task-action-btn btn-remove" onClick={() => removeTask(task.id)} title="Delete">×</button>
           </div>

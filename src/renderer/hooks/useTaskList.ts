@@ -1,10 +1,11 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useProjects } from './useProjects'
 import type { RepeatingTask, Task, Project, ProjectLink } from '../types'
 import { normalizeLinks } from '../utils/projects'
 import { getRepeatingTaskProposals, getDueDateProposals, dateKey } from '../../shared/schedule'
 import type { DueDateProposal } from '../../shared/schedule'
 import { STANDALONE_PROJECT_ID } from '../utils/constants'
+import { isRecentlyCompleted } from '../utils/recentlyCompleted'
 
 export interface MergedTask {
   kind: 'quick' | 'pinned'
@@ -12,6 +13,7 @@ export interface MergedTask {
   title: string
   order: number
   completed?: boolean
+  completedAt?: string | null
   projectId?: string
   projectName?: string
   projectCode?: string
@@ -76,6 +78,13 @@ export function useTaskList(opts?: { excludeFocus?: boolean }): TaskListData {
   const isLocked = winsLock?.locked ?? false
   const excludeFocus = opts?.excludeFocus ?? false
 
+  // Re-render every minute so recently-completed tasks expire after 1h
+  const [, setTick] = useState(0)
+  useEffect(() => {
+    const interval = setInterval(() => setTick((t) => t + 1), 60_000)
+    return () => clearInterval(interval)
+  }, [])
+
   const lockedTaskIds = useMemo(() => {
     if (!winsLock?.locked || !winsLock.lockedTasks) return new Set<string>()
     const ids = new Set<string>()
@@ -94,12 +103,14 @@ export function useTaskList(opts?: { excludeFocus?: boolean }): TaskListData {
   // --- Build all active tasks ---
 
   const standaloneTasks: MergedTask[] = quickTasks
-    .filter((t) => !t.completed)
+    .filter((t) => !t.completed || isRecentlyCompleted(t.completedAt))
     .map((t) => ({
       kind: 'quick' as const,
       id: t.id,
       title: t.title,
       order: t.order,
+      completed: t.completed || undefined,
+      completedAt: t.completedAt,
       taskNumber: t.taskNumber,
       repeatingTaskId: t.repeatingTaskId,
       inProgress: t.inProgress,
@@ -110,7 +121,7 @@ export function useTaskList(opts?: { excludeFocus?: boolean }): TaskListData {
 
   const pinnedTasks: MergedTask[] = activeProjects.flatMap((p) =>
     p.tasks
-      .filter((t) => t.isToDoNext && !t.completed)
+      .filter((t) => t.isToDoNext && (!t.completed || isRecentlyCompleted(t.completedAt)))
       .map((t) => {
         const links = normalizeLinks(t.links)
         return {
@@ -118,6 +129,8 @@ export function useTaskList(opts?: { excludeFocus?: boolean }): TaskListData {
           id: `pinned-${p.id}-${t.id}`,
           title: t.title,
           order: t.toDoNextOrder ?? 999,
+          completed: t.completed || undefined,
+          completedAt: t.completedAt,
           projectId: p.id,
           projectName: p.name,
           projectCode: p.code,
@@ -204,18 +217,19 @@ export function useTaskList(opts?: { excludeFocus?: boolean }): TaskListData {
   // --- Completed today ---
 
   const todayCompletedStandalone: MergedTask[] = quickTasks
-    .filter((t) => t.completed && t.completedAt?.startsWith(today))
+    .filter((t) => t.completed && t.completedAt?.startsWith(today) && !isRecentlyCompleted(t.completedAt))
     .map((t) => ({
       kind: 'quick' as const, id: t.id, title: t.title, order: t.order,
-      completed: true, taskNumber: t.taskNumber, repeatingTaskId: t.repeatingTaskId
+      completed: true, completedAt: t.completedAt, taskNumber: t.taskNumber, repeatingTaskId: t.repeatingTaskId
     }))
 
   const todayCompletedPinned: MergedTask[] = activeProjects.flatMap((p) =>
     p.tasks
-      .filter((t) => t.isToDoNext && t.completed && t.completedAt?.startsWith(today))
+      .filter((t) => t.isToDoNext && t.completed && t.completedAt?.startsWith(today) && !isRecentlyCompleted(t.completedAt))
       .map((t) => ({
         kind: 'pinned' as const, id: `pinned-${p.id}-${t.id}`,
         title: t.title, order: t.toDoNextOrder ?? 999, completed: true,
+        completedAt: t.completedAt,
         projectId: p.id, projectName: p.name, projectCode: p.code,
         taskId: t.id, taskNumber: t.taskNumber
       }))
