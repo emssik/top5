@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.83.1] - 2026-04-05
+
+### Added
+
+- `useMinuteTick` hook extracted from duplicated interval logic in `useTaskList` and `ProjectDetailView`
+- `isSafeFilename` shared utility extracted from duplicated path-traversal checks in `task-images` service and `store`
+
+### Fixed
+
+- `sendTaskToMyCC` now returns `taskTitle` in the result, so the operation log entry correctly shows the task name instead of `undefined`
+- Pasting an image no longer writes the file to disk when the target project or task does not exist
+- `MyccCommentPopover` no longer calls `onClose()` after a failed send — dialog stays open on error
+- Remove-image button on task thumbnails no longer appears for recently-completed (read-only) tasks in ProjectDetailView
+
 ## [1.83.0] - 2026-04-04
 
 ### Added

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { useProjects } from './useProjects'
 import type { RepeatingTask, Task, Project, ProjectLink } from '../types'
 import { normalizeLinks } from '../utils/projects'
@@ -6,6 +6,7 @@ import { getRepeatingTaskProposals, getDueDateProposals, dateKey } from '../../s
 import type { DueDateProposal } from '../../shared/schedule'
 import { STANDALONE_PROJECT_ID } from '../utils/constants'
 import { isRecentlyCompleted } from '../utils/recentlyCompleted'
+import { useMinuteTick } from './useMinuteTick'
 
 export interface MergedTask {
   kind: 'quick' | 'pinned'
@@ -79,11 +80,7 @@ export function useTaskList(opts?: { excludeFocus?: boolean }): TaskListData {
   const excludeFocus = opts?.excludeFocus ?? false
 
   // Re-render every minute so recently-completed tasks expire after 1h
-  const [, setTick] = useState(0)
-  useEffect(() => {
-    const interval = setInterval(() => setTick((t) => t + 1), 60_000)
-    return () => clearInterval(interval)
-  }, [])
+  useMinuteTick()
 
   const lockedTaskIds = useMemo(() => {
     if (!winsLock?.locked || !winsLock.lockedTasks) return new Set<string>()

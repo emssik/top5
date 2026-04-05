@@ -26,7 +26,7 @@ function buildTitle(taskTitle: string, comment?: string, images?: string[]): str
   return title
 }
 
-export function sendTaskToMyCC(projectId: string, taskId: string, comment?: string): MyccInboxItem | ServiceError {
+export function sendTaskToMyCC(projectId: string, taskId: string, comment?: string): (MyccInboxItem & { taskTitle: string }) | ServiceError {
   const data = getData()
   const project = data.projects.find((p) => p.id === projectId)
   if (!project) return { error: 'not_found' }
@@ -64,5 +64,5 @@ export function sendTaskToMyCC(projectId: string, taskId: string, comment?: stri
   const fileName = `${Date.now()}-${taskCode}.json`
   writeFileSync(join(inboxDir, fileName), JSON.stringify(item, null, 2) + '\n')
 
-  return item
+  return { ...item, taskTitle: task.title }
 }

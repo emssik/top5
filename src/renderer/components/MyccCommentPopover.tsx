@@ -13,6 +13,7 @@ export function MyccCommentPopover({ projectId, taskId, onClose }: Props) {
     const result = await window.api.sendTaskToMyCC(projectId, taskId, comment.trim() || undefined)
     if (!result) {
       alert('Failed to send task to MyCC')
+      return
     }
     onClose()
   }

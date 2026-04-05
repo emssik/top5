@@ -11,6 +11,7 @@ import { Linkify } from './Linkify'
 import { isRecentlyCompleted } from '../utils/recentlyCompleted'
 import TaskLinksPopover from './TaskLinksPopover'
 import { MyccCommentPopover } from './MyccCommentPopover'
+import { useMinuteTick } from '../hooks/useMinuteTick'
 import TaskLinksIndicator from './TaskLinksIndicator'
 
 function addDays(days: number): string {
@@ -45,11 +46,7 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
   const [dragOverTaskId, setDragOverTaskId] = useState<string | null>(null)
 
   // Re-render every minute so recently-completed tasks expire after 1h
-  const [tick, setTick] = useState(0)
-  useEffect(() => {
-    const interval = setInterval(() => setTick((t) => t + 1), 60_000)
-    return () => clearInterval(interval)
-  }, [])
+  const tick = useMinuteTick()
 
   const activeTasks = useMemo(() => {
     const active = project.tasks.filter((task) =>
@@ -369,7 +366,7 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
               {task.images.map((filename) => (
                 <div key={filename} className="task-image-thumb" onClick={() => window.api.openTaskImage(filename)}>
                   <img src={`top5-img://${filename}`} />
-                  {!done && (
+                  {!done && !isRecentDone && (
                     <button
                       className="remove-image"
                       onClick={(e) => { e.stopPropagation(); handleRemoveImage(task.id, filename) }}

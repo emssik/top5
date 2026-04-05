@@ -4,6 +4,7 @@ import { writeFileSync, mkdirSync, existsSync, unlinkSync } from 'fs'
 import { randomUUID } from 'crypto'
 import { getData, setData, getConfigDir } from '../store'
 import type { Project } from '../../shared/types'
+import { isSafeFilename } from '../../shared/filename'
 
 function getImagesDir(): string {
   const dir = join(getConfigDir(), 'images')
@@ -22,16 +23,16 @@ export function pasteImageToTask(
   const img = clipboard.readImage()
   if (img.isEmpty()) return { error: 'no_image' }
 
-  const filename = `${randomUUID()}.png`
-  const filePath = join(getImagesDir(), filename)
-  writeFileSync(filePath, img.toPNG())
-
   const data = getData()
   const projects = [...data.projects]
   const project = projects.find((p) => p.id === projectId)
   if (!project) return { error: 'not_found' }
   const task = project.tasks.find((t) => t.id === taskId)
   if (!task) return { error: 'not_found' }
+
+  const filename = `${randomUUID()}.png`
+  const filePath = join(getImagesDir(), filename)
+  writeFileSync(filePath, img.toPNG())
 
   if (!task.images) task.images = []
   task.images.push(filename)
@@ -45,7 +46,7 @@ export function removeTaskImage(
   taskId: string,
   filename: string
 ): Project[] | { error: string } {
-  if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+  if (!isSafeFilename(filename)) {
     return { error: 'validation' }
   }
 

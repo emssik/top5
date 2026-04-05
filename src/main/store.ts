@@ -30,6 +30,7 @@ import * as journalService from './service/journal'
 import * as taskNotesService from './service/task-notes'
 import * as myccService from './service/mycc'
 import * as taskImageService from './service/task-images'
+import { isSafeFilename } from '../shared/filename'
 import { getFocusWindow, stopFocusForCompletedTask } from './focus-window'
 import type {
   Task,
@@ -1185,7 +1186,7 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
       type: 'task_sent_to_mycc',
       projectId,
       projectName: result.projectName,
-      taskTitle: result.title,
+      taskTitle: result.taskTitle,
       taskCode: result.taskCode
     })
     return result
@@ -1210,7 +1211,7 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
   })
 
   ipcMain.handle('open-task-image', (_event, filename: string) => {
-    if (typeof filename !== 'string' || filename.includes('..') || filename.includes('/') || filename.includes('\\')) return
+    if (typeof filename !== 'string' || !isSafeFilename(filename)) return
     const filePath = join(taskImageService.getImagesDirPath(), filename)
     shell.openPath(filePath)
   })
