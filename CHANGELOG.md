@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.83.2] - 2026-04-06
+
+### Security
+
+- `isSafeFilename` now rejects empty strings and filenames containing null bytes (`\0`), closing two edge-case bypass vectors
+
 ## [1.83.1] - 2026-04-05
 
 ### Added

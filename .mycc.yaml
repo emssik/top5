@@ -1,3 +1,26 @@
+context:
+  stack: typescript, electron, react, zustand, tailwind, fastify
+  description: >
+    Aplikacja desktopowa do zarządzania zadaniami — limit 5 aktywnych projektów.
+    Używana lokalnie przez jednego użytkownika, nie jest wystawiona publicznie.
+  structure: |
+    src/main/       — proces główny Electron (IPC handlery w store.ts, service layer w service/)
+    src/preload/    — bridge IPC (index.ts)
+    src/renderer/   — React UI (komponenty, hooki, Zustand store)
+    src/shared/     — typy i logika współdzielona (types.ts, schedule.ts)
+    data.yaml       — dane projektów/tasków (iCloud sync)
+    checkins.jsonl  — dziennik check-inów
+  testing: |
+    npm run test       — unit testy schedule (tsc + node --test)
+    npm run test:api   — testy HTTP API (vitest, 66 testów, mock Electron)
+  security: |
+    HTTP API tylko na 127.0.0.1 z Bearer token auth.
+    Podatności wymagające dostępu sieciowego lub reverse proxy nie stanowią zagrożenia.
+  notes: |
+    Solo project, local-first. Sandbox Electron wyłączony (nie zmieniać).
+    Build wymaga clean przed electron-vite build (stale .js artefakty z tsc).
+    Deploy: ./build.sh (instalacja lokalna).
+
 actions:
   - name: commit
     cmd: "/c.commit --version"
