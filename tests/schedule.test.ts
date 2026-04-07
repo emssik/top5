@@ -113,6 +113,183 @@ test('monthly schedules are evaluated consistently', () => {
   )
 })
 
+test('monthlyDay catch-up: missed day still proposed later the same month', () => {
+  // Day 5 schedule, viewing on day 7 — should still be proposed (catch-up).
+  const onDate = new Date(2026, 3, 7, 12, 0, 0) // 2026-04-07 Tue
+  const repeatingTasks = [
+    {
+      id: 'r1',
+      order: 0,
+      schedule: { type: 'monthlyDay' as const, day: 5 },
+      createdAt: '2026-03-09T11:41:05.203Z',
+      lastCompletedAt: null
+    }
+  ]
+  const proposals = getRepeatingTaskProposals({
+    repeatingTasks,
+    quickTasks: [],
+    dismissedRepeating: {},
+    date: onDate
+  })
+  assert.equal(proposals.length, 1)
+  assert.equal(proposals[0].id, 'r1')
+})
+
+test('monthlyDay catch-up: skipped when completed earlier this month', () => {
+  const onDate = new Date(2026, 3, 7, 12, 0, 0)
+  const repeatingTasks = [
+    {
+      id: 'r1',
+      order: 0,
+      schedule: { type: 'monthlyDay' as const, day: 5 },
+      createdAt: '2026-03-09T11:41:05.203Z',
+      lastCompletedAt: null
+    }
+  ]
+  const quickTasks = [
+    { repeatingTaskId: 'r1', completed: true, completedAt: '2026-04-05T08:00:00.000Z' }
+  ]
+  const proposals = getRepeatingTaskProposals({
+    repeatingTasks,
+    quickTasks,
+    dismissedRepeating: {},
+    date: onDate
+  })
+  assert.equal(proposals.length, 0)
+})
+
+test('monthlyDay catch-up: skipped when active quick task already exists', () => {
+  const onDate = new Date(2026, 3, 7, 12, 0, 0)
+  const repeatingTasks = [
+    {
+      id: 'r1',
+      order: 0,
+      schedule: { type: 'monthlyDay' as const, day: 5 },
+      createdAt: '2026-03-09T11:41:05.203Z',
+      lastCompletedAt: null
+    }
+  ]
+  const quickTasks = [
+    { repeatingTaskId: 'r1', completed: false, completedAt: null }
+  ]
+  const proposals = getRepeatingTaskProposals({
+    repeatingTasks,
+    quickTasks,
+    dismissedRepeating: {},
+    date: onDate
+  })
+  assert.equal(proposals.length, 0)
+})
+
+test('monthlyDay catch-up: does not reach back into previous month', () => {
+  // Day 28 of March, viewing on April 2 — should NOT catch up (different month)
+  const onDate = new Date(2026, 3, 2, 12, 0, 0) // 2026-04-02
+  const repeatingTasks = [
+    {
+      id: 'r1',
+      order: 0,
+      schedule: { type: 'monthlyDay' as const, day: 28 },
+      createdAt: '2026-01-01T00:00:00.000Z',
+      lastCompletedAt: null
+    }
+  ]
+  const proposals = getRepeatingTaskProposals({
+    repeatingTasks,
+    quickTasks: [],
+    dismissedRepeating: {},
+    date: onDate
+  })
+  assert.equal(proposals.length, 0)
+})
+
+test('monthlyDay catch-up: respects dismissal for today', () => {
+  const onDate = new Date(2026, 3, 7, 12, 0, 0)
+  const repeatingTasks = [
+    {
+      id: 'r1',
+      order: 0,
+      schedule: { type: 'monthlyDay' as const, day: 5 },
+      createdAt: '2026-03-09T11:41:05.203Z',
+      lastCompletedAt: null
+    }
+  ]
+  const proposals = getRepeatingTaskProposals({
+    repeatingTasks,
+    quickTasks: [],
+    dismissedRepeating: { '2026-04-07': ['r1'] },
+    date: onDate
+  })
+  assert.equal(proposals.length, 0)
+})
+
+test('monthlyDay catch-up: not triggered when due day is in the future this month', () => {
+  // Day 15 schedule, viewing on day 7 — day hasn't arrived yet, no catch-up
+  const onDate = new Date(2026, 3, 7, 12, 0, 0)
+  const repeatingTasks = [
+    {
+      id: 'r1',
+      order: 0,
+      schedule: { type: 'monthlyDay' as const, day: 15 },
+      createdAt: '2026-01-01T00:00:00.000Z',
+      lastCompletedAt: null
+    }
+  ]
+  const proposals = getRepeatingTaskProposals({
+    repeatingTasks,
+    quickTasks: [],
+    dismissedRepeating: {},
+    date: onDate
+  })
+  assert.equal(proposals.length, 0)
+})
+
+test('catchUp: false disables monthly catch-up (used for Tomorrow preview)', () => {
+  // Same setup as first catch-up test, but catchUp disabled → no proposal.
+  const onDate = new Date(2026, 3, 7, 12, 0, 0)
+  const repeatingTasks = [
+    {
+      id: 'r1',
+      order: 0,
+      schedule: { type: 'monthlyDay' as const, day: 5 },
+      createdAt: '2026-03-09T11:41:05.203Z',
+      lastCompletedAt: null
+    }
+  ]
+  const proposals = getRepeatingTaskProposals({
+    repeatingTasks,
+    quickTasks: [],
+    dismissedRepeating: {},
+    date: onDate,
+    catchUp: false
+  })
+  assert.equal(proposals.length, 0)
+})
+
+test('daily schedule does NOT get catch-up treatment', () => {
+  // Daily tasks are not monthly; catch-up should not apply.
+  // If it's completed today, it should still be suppressed normally.
+  const onDate = new Date(2026, 3, 7, 12, 0, 0)
+  const repeatingTasks = [
+    {
+      id: 'r1',
+      order: 0,
+      schedule: { type: 'daily' as const },
+      createdAt: '2026-01-01T00:00:00.000Z',
+      lastCompletedAt: null
+    }
+  ]
+  const quickTasks = [
+    { repeatingTaskId: 'r1', completed: true, completedAt: '2026-04-07T10:00:00.000Z' }
+  ]
+  const proposals = getRepeatingTaskProposals({
+    repeatingTasks,
+    quickTasks,
+    dismissedRepeating: {},
+    date: onDate
+  })
+  assert.equal(proposals.length, 0)
+})
+
 test('monthlyLastDay is due on last day of each month', () => {
   const schedule = { type: 'monthlyLastDay' as const }
   const created = '2026-01-01T00:00:00.000Z'

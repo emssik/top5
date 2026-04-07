@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { nanoid } from 'nanoid'
 import { useProjects } from '../hooks/useProjects'
 import type { RepeatSchedule, RepeatingTask } from '../types'
-import { formatSchedule, DAY_LABELS, ORDINAL, WEEKDAY_NAMES } from '../../shared/schedule'
+import { formatSchedule, isMonthlyType, DAY_LABELS, ORDINAL, WEEKDAY_NAMES } from '../../shared/schedule'
 import { Linkify } from './Linkify'
 
 type ScheduleMode = 'daily' | 'weekly' | 'interval' | 'monthly'
@@ -16,7 +16,7 @@ function scheduleToMode(schedule: RepeatSchedule): ScheduleMode {
   if (schedule.type === 'daily') return 'daily'
   if (schedule.type === 'interval' || schedule.type === 'afterCompletion') return 'interval'
   if (schedule.type === 'weekdays') return 'weekly'
-  if (schedule.type === 'monthlyDay' || schedule.type === 'monthlyNthWeekday' || schedule.type === 'everyNMonths' || schedule.type === 'monthlyLastDay') return 'monthly'
+  if (isMonthlyType(schedule)) return 'monthly'
   return 'daily'
 }
 

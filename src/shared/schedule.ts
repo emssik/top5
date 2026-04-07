@@ -144,6 +144,55 @@ export function isRepeatingTaskDueOnDate(task: RepeatingTaskLike, onDate: Date =
   return isScheduleDueOnDate(task.schedule, task.createdAt, task.lastCompletedAt, onDate)
 }
 
+export function isMonthlyType(schedule: RepeatScheduleLike): boolean {
+  return (
+    schedule.type === 'monthlyDay' ||
+    schedule.type === 'monthlyNthWeekday' ||
+    schedule.type === 'monthlyLastDay' ||
+    schedule.type === 'everyNMonths'
+  )
+}
+
+/**
+ * Was the schedule due on any day earlier in the current calendar month, from
+ * max(createdAt, monthStart) up to (but not including) onDate? Used so that
+ * missed monthly tasks still surface as proposals within the same month
+ * instead of disappearing until next month.
+ */
+export function wasMonthlyScheduleDueEarlierThisMonth(
+  schedule: RepeatScheduleLike,
+  createdAt: string,
+  onDate: Date
+): boolean {
+  if (!isMonthlyType(schedule)) return false
+  const monthStart = new Date(onDate.getFullYear(), onDate.getMonth(), 1)
+  const created = dayStart(new Date(createdAt))
+  const startIter = created > monthStart ? created : monthStart
+  const end = dayStart(onDate)
+  if (startIter >= end) return false
+
+  // Fast paths for single-day-per-month schedules — avoid iterating up to 31 days.
+  if (schedule.type === 'monthlyDay') {
+    const target = new Date(onDate.getFullYear(), onDate.getMonth(), schedule.day)
+    if (target.getMonth() !== onDate.getMonth()) return false // e.g. Feb 31 → Mar
+    return target >= startIter && target < end
+  }
+  if (schedule.type === 'monthlyLastDay') {
+    const lastDay = new Date(onDate.getFullYear(), onDate.getMonth() + 1, 0)
+    return lastDay >= startIter && lastDay < end
+  }
+
+  // General iteration for monthlyNthWeekday and everyNMonths.
+  const cursor = new Date(startIter)
+  while (cursor < end) {
+    if (isScheduleDueOnDate(schedule, createdAt, null, cursor)) {
+      return true
+    }
+    cursor.setDate(cursor.getDate() + 1)
+  }
+  return false
+}
+
 export interface DueDateTaskLike {
   id: string
   completed: boolean
@@ -192,30 +241,60 @@ export function getRepeatingTaskProposals<T extends RepeatingTaskLike, Q extends
   quickTasks: Q[]
   dismissedRepeating: Record<string, string[]>
   date?: Date
+  /**
+   * When true (default), monthly-type schedules that were due earlier in the
+   * current month but never acted on stay visible as proposals. Pass `false`
+   * for forward-looking queries (e.g. tomorrow preview) so missed tasks don't
+   * leak into the "Tomorrow" section.
+   */
+  catchUp?: boolean
 }): T[] {
   const {
     repeatingTasks,
     quickTasks,
     dismissedRepeating,
-    date = new Date()
+    date = new Date(),
+    catchUp: allowCatchUp = true
   } = params
   const key = dateKey(date)
   const dismissed = dismissedRepeating[key] ?? []
+  const monthStartIso = new Date(date.getFullYear(), date.getMonth(), 1).toISOString()
+
+  // Single pass over quickTasks → O(1) lookups in the filter loop.
+  const activeByRepeating = new Set<string>()
+  const completedTimesByRepeating = new Map<string, string[]>()
+  for (const qt of quickTasks) {
+    const rid = qt.repeatingTaskId
+    if (!rid) continue
+    if (!qt.completed) {
+      activeByRepeating.add(rid)
+    } else if (qt.completedAt) {
+      const list = completedTimesByRepeating.get(rid)
+      if (list) list.push(qt.completedAt)
+      else completedTimesByRepeating.set(rid, [qt.completedAt])
+    }
+  }
 
   return repeatingTasks
     .filter((task) => {
-      if (!isRepeatingTaskDueOnDate(task, date)) return false
+      const dueToday = isRepeatingTaskDueOnDate(task, date)
+      let catchUp = false
+      if (allowCatchUp && !dueToday && isMonthlyType(task.schedule)) {
+        if (task.startDate && key < task.startDate) return false
+        if (task.endDate && key > task.endDate) return false
+        catchUp = wasMonthlyScheduleDueEarlierThisMonth(task.schedule, task.createdAt, date)
+      }
+      if (!dueToday && !catchUp) return false
+
       if (dismissed.includes(task.id)) return false
-      if (quickTasks.some((quickTask) => quickTask.repeatingTaskId === task.id && !quickTask.completed)) return false
-      if (
-        quickTasks.some(
-          (quickTask) =>
-            quickTask.repeatingTaskId === task.id &&
-            quickTask.completed &&
-            quickTask.completedAt?.startsWith(key)
-        )
-      ) {
-        return false
+      if (activeByRepeating.has(task.id)) return false
+
+      const completedTimes = completedTimesByRepeating.get(task.id)
+      if (completedTimes) {
+        const blocked = catchUp
+          ? completedTimes.some((at) => at >= monthStartIso)
+          : completedTimes.some((at) => at.startsWith(key))
+        if (blocked) return false
       }
       return true
     })

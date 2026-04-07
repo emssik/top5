@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.83.4] - 2026-04-07
+
+### Fixed
+
+- Monthly repeating tasks (monthlyDay, monthlyNthWeekday, monthlyLastDay, everyNMonths) missed earlier in the current calendar month now surface as catch-up proposals for the rest of that month, instead of disappearing until next month (TOP-59)
+- Tomorrow preview no longer shows catch-up proposals for overdue monthly tasks — `catchUp: false` is passed for forward-looking queries
+
+### Added
+
+- `isMonthlyType()` helper exported from `schedule.ts` and reused in `RepeatView` for schedule-mode detection
+- Optimised `getRepeatingTaskProposals` quickTask lookup from O(3·N·M) to O(M+N) via a single pre-pass Set/Map
+
 ## [1.83.3] - 2026-04-07
 
 ### Security

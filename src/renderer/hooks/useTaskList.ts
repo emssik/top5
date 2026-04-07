@@ -165,7 +165,8 @@ export function useTaskList(opts?: { excludeFocus?: boolean }): TaskListData {
       repeatingTasks,
       quickTasks,
       dismissedRepeating,
-      date: tomorrowDate
+      date: tomorrowDate,
+      catchUp: false
     })
   }, [repeatingTasks, quickTasks, dismissedRepeating, tomorrowDate])
 
