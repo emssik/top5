@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.83.3] - 2026-04-07
+
+### Security
+
+- Upgraded fastify v4 → v5 and @fastify/cors v9 → v11, closing GHSA-jx2c-rxcm-jvmq (Content-Type bypass, high severity), GHSA-mrq3-vjjr-p77c (DoS), and GHSA-444r-cwp2-x5xf (prototype spoofing); no source changes required
+
 ## [1.83.2] - 2026-04-06
 
 ### Security

@@ -1,13 +1,13 @@
 {
   "name": "top5",
-  "version": "1.83.2",
+  "version": "1.83.3",
   "description": "Focus management app - limit yourself to 5 projects",
   "license": "MIT WITH Commons-Clause",
   "main": "./out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",
     "clean": "find src -name '*.js' -not -name 'electron.vite.config.js' -delete && rm -f tsconfig.node.tsbuildinfo tsconfig.web.tsbuildinfo",
-    "test": "rm -rf .tmp-tests && tsc -p tsconfig.tests.json && node --test '.tmp-tests/tests/schedule.test.js' && rm -rf .tmp-tests",
+    "test": "rm -rf .tmp-tests && tsc -p tsconfig.tests.json && node --test '.tmp-tests/tests/schedule.test.js' '.tmp-tests/tests/filename.test.js' && rm -rf .tmp-tests",
     "test:api": "vitest run",
     "lint": "eslint src/",
     "typecheck": "tsc --build",
@@ -18,8 +18,8 @@
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
-    "@fastify/cors": "^9.0.1",
-    "fastify": "^4.29.1",
+    "@fastify/cors": "^11.2.0",
+    "fastify": "^5.8.4",
     "js-yaml": "^4.1.1",
     "nanoid": "^5.0.9",
     "react": "^18.3.1",
