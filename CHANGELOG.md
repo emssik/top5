@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.83.5] - 2026-04-08
+
+### Changed
+
+- Translated `.mycc.yaml` context section from Polish to English for broader readability
+- Added `review_guide` section to `.mycc.yaml` with 8 rules to reduce false alarms and improve code-review signal quality
+
 ## [1.83.4] - 2026-04-07
 
 ### Fixed

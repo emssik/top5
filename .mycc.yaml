@@ -1,25 +1,62 @@
 context:
   stack: typescript, electron, react, zustand, tailwind, fastify
   description: >
-    Aplikacja desktopowa do zarządzania zadaniami — limit 5 aktywnych projektów.
-    Używana lokalnie przez jednego użytkownika, nie jest wystawiona publicznie.
+    Desktop task management app — limited to 5 active projects at a time.
+    Used locally by a single user, never exposed publicly.
   structure: |
-    src/main/       — proces główny Electron (IPC handlery w store.ts, service layer w service/)
-    src/preload/    — bridge IPC (index.ts)
-    src/renderer/   — React UI (komponenty, hooki, Zustand store)
-    src/shared/     — typy i logika współdzielona (types.ts, schedule.ts)
-    data.yaml       — dane projektów/tasków (iCloud sync)
-    checkins.jsonl  — dziennik check-inów
+    src/main/       — Electron main process (IPC handlers in store.ts, service layer in service/)
+    src/preload/    — IPC bridge (index.ts)
+    src/renderer/   — React UI (components, hooks, Zustand store)
+    src/shared/     — shared types and logic (types.ts, schedule.ts)
+    data.yaml       — projects/tasks data (iCloud sync)
+    checkins.jsonl  — check-in journal
   testing: |
-    npm run test       — unit testy schedule (tsc + node --test)
-    npm run test:api   — testy HTTP API (vitest, 66 testów, mock Electron)
+    npm run test       — schedule unit tests (tsc + node --test)
+    npm run test:api   — HTTP API tests (vitest, 66 tests, Electron mocked)
   security: |
-    HTTP API tylko na 127.0.0.1 z Bearer token auth.
-    Podatności wymagające dostępu sieciowego lub reverse proxy nie stanowią zagrożenia.
+    HTTP API listens only on 127.0.0.1 with Bearer token auth.
+    Vulnerabilities that require network access or a reverse proxy are not a real threat.
   notes: |
-    Solo project, local-first. Sandbox Electron wyłączony (nie zmieniać).
-    Build wymaga clean przed electron-vite build (stale .js artefakty z tsc).
-    Deploy: ./build.sh (instalacja lokalna).
+    Solo project, local-first. Electron sandbox is disabled (do NOT change it).
+    Build requires `clean` before `electron-vite build` (stale .js artifacts from tsc).
+    Deploy: ./build.sh (local install).
+  review_guide: |
+    Rules for the reviewer — to avoid false alarms and useless recommendations:
+
+    1. Before labeling a bug "critical", trace a REAL code path that can actually
+       reach the problematic state. It's not enough that a branch of logic looks
+       wrong in isolation — verify whether any existing code path (UI, IPC, HTTP
+       API, data import) can trigger it. If none can, it's at most a defensive
+       improvement, not a critical bug.
+
+    2. When proposing a dependency upgrade, ALWAYS check the peer dependencies of
+       intermediate consumers. Example trap: `electron-vite@5.0.0` only supports
+       `vite ^5 || ^6 || ^7`, so suggesting `vite@8` will break the build. Run
+       `npm view <pkg> peerDependencies` before proposing a version.
+
+    3. Security context: this is a local, single-user app with no network exposure.
+       Dev-server vulnerabilities (vite, esbuild) and any threats that require
+       external access are LOW priority — worth mentioning, but never escalate to
+       critical. HTTP API listens only on 127.0.0.1 behind a Bearer token.
+
+    4. Per CLAUDE.md: "simplicity beats flexibility unless flexibility is needed
+       now". Do not propose abstractions, validation layers, feature flags, or
+       backward-compat shims "just in case". A one-line fix beats a refactor.
+
+    5. Do not propose adding ESLint config, type guards, docstrings, tests, or
+       other "quality improvements" unless explicitly requested. This project
+       intentionally keeps process overhead minimal.
+
+    6. If a finding involves `src/shared/schedule.ts`, validate it against
+       `tests/schedule.test.ts` — 27 tests cover the real paths. If your
+       hypothesis isn't reflected in the tests, it's probably not real.
+
+    7. Distinguish a "bug" (user sees broken behavior) from a "code smell" (code
+       could be cleaner). Only the former qualifies as critical/important.
+
+    8. For every suggested change, state: (a) the concrete user-facing path it
+       fixes, (b) the implementation cost, (c) whether it breaks anything
+       existing. Without this, the finding is hard to verify.
 
 actions:
   - name: commit
