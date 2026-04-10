@@ -119,6 +119,28 @@ export function register(program: Command): void {
       }
     })
 
+  // top5 qt rm <ref>
+  qt.command('rm')
+    .description('Delete a quick task')
+    .argument('<ref>', 'Quick task code (e.g. QT-5) or ID')
+    .action(async (ref: string, _opts, cmd) => {
+      const globalOpts = cmd.optsWithGlobals()
+      const client = createClient(globalOpts)
+
+      try {
+        const task = await resolveQuickTask(client, ref) as QuickTask
+
+        await client.delete(`/api/v1/quick-tasks/${task.id}`)
+
+        printResult(task, {
+          json: globalOpts.json,
+          formatFn: () => `Deleted: ${qtCode(task)} ${task.title}`,
+        })
+      } catch (err: unknown) {
+        die((err as Error).message)
+      }
+    })
+
   // top5 qt due <ref> [date]
   qt.command('due')
     .description('Set or clear due date for a quick task')

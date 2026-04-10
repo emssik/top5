@@ -95,6 +95,19 @@ export function registerProjectRoutes(fastify: FastifyInstance): void {
     return { ok: true, data: result }
   })
 
+  fastify.delete<{ Params: { pid: string; tid: string } }>('/api/v1/projects/:pid/tasks/:tid', async (request, reply) => {
+    // Stop focus if the deleted task is the focus task
+    const { config } = getData()
+    if (config.focusTaskId === request.params.tid && config.focusProjectId === request.params.pid) {
+      stopFocusForCompletedTask(request.params.tid)
+    }
+
+    const result = projectService.deleteTask(request.params.pid, request.params.tid)
+    if (isServiceError(result)) return reply.status(404).send({ ok: false, error: result.error })
+    notifyAllWindows()
+    return { ok: true, data: result }
+  })
+
   fastify.post<{ Params: { pid: string; tid: string } }>('/api/v1/projects/:pid/tasks/:tid/toggle-in-progress', async (request, reply) => {
     const result = projectService.toggleTaskInProgress(request.params.pid, request.params.tid)
     if (isServiceError(result)) return reply.status(404).send({ ok: false, error: result.error })

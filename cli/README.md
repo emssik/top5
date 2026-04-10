@@ -282,6 +282,23 @@ Akceptuje:
 
 ---
 
+### `top5 rm <task-code>`
+
+Kasuje task z projektu.
+
+```bash
+top5 rm PRJ-3
+# Deleted: PRJ-3 Frontend
+
+top5 rm PRJ-3 --json
+```
+
+Akceptuje:
+- kod tasku: `PRJ-3`, `APP-12`
+- UUID tasku
+
+---
+
 ### `top5 done <task-code>`
 
 Oznacza task jako ukończony.
@@ -344,6 +361,15 @@ top5 qt add "Wysłać fakturę" --due friday
 top5 qt add "Research tool" --note --due +3d
 # Created: QT-6 Research tool (due: 2026-04-02)
 # Note: /path/to/vault/top5.storage/QuickTasks/QT-6 Research tool.md
+```
+
+#### `top5 qt rm <ref>`
+
+Kasuje quick task.
+
+```bash
+top5 qt rm QT-5
+# Deleted: QT-5 Buy groceries
 ```
 
 #### `top5 qt due <ref> [date]`
@@ -529,8 +555,8 @@ CLI używa czytelnych kodów do identyfikacji tasków:
 
 | Format  | Przykład | Opis                       | Dotyczy                  |
 |---------|----------|----------------------------|--------------------------|
-| `PRJ-N` | `PRJ-3`  | Task nr 3 w projekcie PRJ  | tasks, done, due, pin    |
-| `QT-N`  | `QT-5`   | Quick task nr 5            | qt done, qt due, note    |
+| `PRJ-N` | `PRJ-3`  | Task nr 3 w projekcie PRJ  | tasks, done, due, pin, rm |
+| `QT-N`  | `QT-5`   | Quick task nr 5            | qt done, qt due, qt rm, note |
 | `N`     | `1`      | Pozycja na liście (1-based)| rt, rt accept, rt dismiss|
 | UUID    | `abc-...`| Surowy ID (fallback)       | wszędzie                 |
 
@@ -608,8 +634,8 @@ cli/
     main.ts               # entry point
     commands/
       projects.ts         # top5 projects
-      tasks.ts            # top5 tasks, add, pin, due, done, undone
-      quick-tasks.ts      # top5 qt, qt add, qt due, qt done, qt undone
+      tasks.ts            # top5 tasks, add, rm, pin, due, done, undone
+      quick-tasks.ts      # top5 qt, qt add, qt rm, qt due, qt done, qt undone
       repeating-tasks.ts  # top5 rt, rt add, rt edit, rt rm, rt accept, rt dismiss
       notes.ts            # top5 note
       focus.ts            # top5 focus, focus stop, focus ping

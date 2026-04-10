@@ -3,14 +3,15 @@ name: top5-cli
 description: >
   Manage projects and tasks in the top5 task manager via the `top5` CLI tool.
   Use when the user asks to: list projects, list tasks in a project, show task details,
-  add tasks, mark tasks as done/undone, manage quick tasks, set due dates, create task notes,
-  start/stop focus mode, send a focus heartbeat/ping, or manage repeating tasks.
-  Triggers: "top5", "projects list", "add task", "mark done", "quick tasks",
-  "task note", "show my tasks", "show task", "task details", "what projects do I have",
-  "focus", "start focus", "stop focus", "focus ping", "heartbeat",
+  add tasks, delete tasks, mark tasks as done/undone, manage quick tasks, set due dates,
+  create task notes, start/stop focus mode, send a focus heartbeat/ping, or manage repeating tasks.
+  Triggers: "top5", "projects list", "add task", "delete task", "remove task", "mark done",
+  "quick tasks", "task note", "show my tasks", "show task", "task details",
+  "what projects do I have", "focus", "start focus", "stop focus", "focus ping", "heartbeat",
   "today", "today tasks", "what's on today", "dzisiejsze taski",
   "due date", "set deadline", "termin", "ustaw datę", "pin", "pin to today", "przypnij",
-  "repeating", "repeating tasks", "recurring", "cykliczne", "powtarzalne".
+  "repeating", "repeating tasks", "recurring", "cykliczne", "powtarzalne",
+  "usuń task", "skasuj task", "usuń zadanie".
 ---
 
 # top5-cli
@@ -113,6 +114,15 @@ top5 pin PRJ-3             # toggle pin — if unpinned, pins to today; if pinne
 
 Pinned tasks appear in the "today" view as "up-next". Toggle behavior: running `pin` again unpins the task.
 
+### Delete a task
+
+```bash
+top5 rm PRJ-3
+top5 rm PRJ-3 --json
+```
+
+Permanently deletes the task from the project. `<task-code>` accepts: `PRJ-N` format or UUID.
+
 ### Mark task done / undone
 
 ```bash
@@ -130,6 +140,7 @@ top5 qt --all              # include completed
 top5 qt add "Buy coffee"
 top5 qt add "Buy coffee" --due friday
 top5 qt add "Research" --note
+top5 qt rm QT-5             # delete quick task
 top5 qt due QT-5 tomorrow  # set due date
 top5 qt due QT-5           # show due date
 top5 qt due QT-5 clear     # remove due date
@@ -218,8 +229,8 @@ Config file: `~/.config/top5/cli.json`. Env vars (`TOP5_API_KEY`, `TOP5_API_PORT
 
 | Format  | Example | Description                        | Used by              |
 |---------|---------|------------------------------------|-----------------------|
-| `PRJ-N` | `PRJ-3` | Task #3 in project PRJ             | tasks, done, due, pin |
-| `QT-N`  | `QT-5`  | Quick task #5                      | qt done, qt due, note |
+| `PRJ-N` | `PRJ-3` | Task #3 in project PRJ             | tasks, done, due, pin, rm |
+| `QT-N`  | `QT-5`  | Quick task #5                      | qt done, qt due, qt rm, note |
 | `N`     | `1`     | 1-based position from list         | rt, rt accept/dismiss |
 | UUID    | `abc-…` | Raw ID (fallback)                  | everywhere            |
 

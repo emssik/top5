@@ -253,6 +253,20 @@ export function setBeyondLimitPinnedTasks(updates: unknown): Project[] | Service
   return projects
 }
 
+export function deleteTask(projectId: string, taskId: string): Project[] | ServiceError {
+  const data = getData()
+  const projects = [...data.projects]
+  const project = projects.find((p) => p.id === projectId)
+  if (!project) return { error: 'not_found' }
+  const taskIndex = project.tasks.findIndex((t) => t.id === taskId)
+  if (taskIndex < 0) return { error: 'not_found' }
+  const [removed] = project.tasks.splice(taskIndex, 1)
+  setData('projects', projects)
+  const tc = formatTaskId(removed.taskNumber, project.code) || undefined
+  appendOperation({ type: 'task_deleted', projectId, projectName: project.name, taskTitle: removed.title, taskCode: tc })
+  return projects
+}
+
 export function toggleTaskInProgress(projectId: string, taskId: string): Project[] | ServiceError {
   const data = getData()
   const projects = [...data.projects]

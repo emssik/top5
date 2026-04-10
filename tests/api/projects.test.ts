@@ -418,4 +418,50 @@ describe('Projects API', () => {
       expect(res.statusCode).toBe(400)
     })
   })
+
+  describe('DELETE /projects/:pid/tasks/:tid', () => {
+    it('deletes a task from a project', async () => {
+      const server = await getTestServer()
+      const project = makeProject({
+        tasks: [
+          { id: 'task-1', title: 'Keep', completed: false, createdAt: new Date().toISOString() },
+          { id: 'task-2', title: 'Remove', completed: false, createdAt: new Date().toISOString() }
+        ]
+      })
+      await server.inject({ method: 'POST', url: '/api/v1/projects', headers: { ...auth, 'content-type': 'application/json' }, payload: project })
+
+      const res = await server.inject({
+        method: 'DELETE',
+        url: `/api/v1/projects/${project.id}/tasks/task-2`,
+        headers: auth
+      })
+      expect(res.statusCode).toBe(200)
+      const tasks = res.json().data.find((p: any) => p.id === project.id).tasks
+      expect(tasks).toHaveLength(1)
+      expect(tasks[0].id).toBe('task-1')
+    })
+
+    it('returns 404 for unknown project', async () => {
+      const server = await getTestServer()
+      const res = await server.inject({
+        method: 'DELETE',
+        url: '/api/v1/projects/nonexistent/tasks/task-1',
+        headers: auth
+      })
+      expect(res.statusCode).toBe(404)
+    })
+
+    it('returns 404 for unknown task', async () => {
+      const server = await getTestServer()
+      const project = makeProject({ tasks: [] })
+      await server.inject({ method: 'POST', url: '/api/v1/projects', headers: { ...auth, 'content-type': 'application/json' }, payload: project })
+
+      const res = await server.inject({
+        method: 'DELETE',
+        url: `/api/v1/projects/${project.id}/tasks/nonexistent`,
+        headers: auth
+      })
+      expect(res.statusCode).toBe(404)
+    })
+  })
 })

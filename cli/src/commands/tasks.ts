@@ -371,6 +371,35 @@ export function register(program: Command): void {
       }
     })
 
+  // top5 rm <task-code>
+  program
+    .command('rm')
+    .description('Delete a project task')
+    .argument('<task-code>', 'Task code (e.g. PRJ-3) or task ID')
+    .action(async (taskRef: string, _opts, cmd) => {
+      const globalOpts = cmd.optsWithGlobals()
+      const client = createClient(globalOpts)
+
+      try {
+        const { project, task } = await resolveProjectTask(client, taskRef) as {
+          project: Project
+          task: Task
+        }
+
+        await client.delete(`/api/v1/projects/${project.id}/tasks/${task.id}`)
+
+        printResult(task, {
+          json: globalOpts.json,
+          formatFn: () => {
+            const code = taskCode(task, project.code)
+            return `Deleted: ${code !== '-' ? code + ' ' : ''}${task.title}`
+          },
+        })
+      } catch (err: unknown) {
+        die((err as Error).message)
+      }
+    })
+
   // top5 send <task-code>
   program
     .command('send')

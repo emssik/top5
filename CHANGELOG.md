@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.84.0] - 2026-04-10
+
+### Added
+
+- `top5 rm <task-code>` CLI command to permanently delete a project task by code or UUID
+- `top5 qt rm <ref>` CLI command to permanently delete a quick task
+- `DELETE /api/v1/projects/:pid/tasks/:tid` API endpoint with 404 handling and focus-task cleanup on deletion
+
 ## [1.83.5] - 2026-04-08
 
 ### Changed
