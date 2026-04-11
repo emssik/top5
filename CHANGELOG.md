@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.84.1] - 2026-04-11
+
+### Fixed
+
+- Focus session now stops correctly when a focused quick task is deleted via CLI, API, or IPC — previously the focus window would display an undefined task after deletion
+- `top5 qt rm` output no longer shows a stray dash prefix when the quick task has no task number
+
 ## [1.84.0] - 2026-04-10
 
 ### Added

@@ -1,7 +1,9 @@
 import type { FastifyInstance } from 'fastify'
-import { notifyAllWindows } from '../../store'
+import { getData, notifyAllWindows } from '../../store'
+import { stopFocusForCompletedTask } from '../../focus-window'
 import * as quickTaskService from '../../service/quick-tasks'
 import { isServiceError, errorToHttpStatus } from '../utils'
+import { STANDALONE_PROJECT_ID } from '../../../shared/constants'
 
 export function registerQuickTaskRoutes(fastify: FastifyInstance): void {
   fastify.get('/api/v1/quick-tasks', async () => {
@@ -28,6 +30,12 @@ export function registerQuickTaskRoutes(fastify: FastifyInstance): void {
   })
 
   fastify.delete<{ Params: { id: string } }>('/api/v1/quick-tasks/:id', async (request, reply) => {
+    // Stop focus if the deleted quick task is currently focused
+    const { config } = getData()
+    if (config.focusProjectId === STANDALONE_PROJECT_ID && config.focusTaskId === request.params.id) {
+      stopFocusForCompletedTask(request.params.id)
+    }
+
     const result = quickTaskService.removeQuickTask(request.params.id)
     if (isServiceError(result)) return reply.status(404).send({ ok: false, error: result.error })
     notifyAllWindows()

@@ -51,6 +51,7 @@ import type {
   WinEntry,
   StreakStats
 } from '../shared/types'
+import { STANDALONE_PROJECT_ID } from '../shared/constants'
 
 // Re-export types for convenience
 export type { Task, RepeatSchedule, RepeatingTask, QuickTask, ProjectColor, ProjectLink, Project, AppConfig, FocusCheckIn, OperationLogEntry, AppData, ApiConfig, ApiConfigPublic, LockedTaskRef, WinsLockState, WinEntry, StreakStats }
@@ -1018,6 +1019,16 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
 
   ipcMain.handle('remove-quick-task', (_event, id: string) => {
     if (typeof id !== 'string') return getData().quickTasks
+
+    // Stop focus if the deleted quick task is currently focused
+    const { config } = getData()
+    if (config.focusProjectId === STANDALONE_PROJECT_ID && config.focusTaskId === id) {
+      const focusWin = getFocusWindow()
+      if (!focusWin || focusWin.isDestroyed() || _event.sender !== focusWin.webContents) {
+        stopFocusForCompletedTask(id)
+      }
+    }
+
     const result = quickTaskService.removeQuickTask(id)
     if (isServiceError(result)) return getData().quickTasks
     notifyAllWindows()

@@ -134,7 +134,10 @@ export function register(program: Command): void {
 
         printResult(task, {
           json: globalOpts.json,
-          formatFn: () => `Deleted: ${qtCode(task)} ${task.title}`,
+          formatFn: () => {
+            const code = qtCode(task)
+            return `Deleted: ${code !== '-' ? code + ' ' : ''}${task.title}`
+          },
         })
       } catch (err: unknown) {
         die((err as Error).message)
