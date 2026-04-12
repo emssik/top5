@@ -25,3 +25,9 @@ This repository is a small, solo-maintained app.
 
 W tym projekcie **nie zmieniaj** `webPreferences.sandbox` na `true` (main/focus/quick-add/check-in/operation-log), bo historycznie kończy się to białym oknem.
 Sandbox można ruszyć tylko po wyraźnej decyzji użytkownika i osobnej, pełnej migracji preload/IPC z testem runtime.
+
+## Decision records
+
+Zanim modyfikujesz obszar pokryty przez ADR — przeczytaj plik.
+
+- [ADR-0001](docs/adr/0001-brak-cache-projektow-w-skillu-top5-cli.md) — Nie cache'ujemy wyników `top5 projects --json` w skillu; odpytujemy bezpośrednio przy ~60ms latency
