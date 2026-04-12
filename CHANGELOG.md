@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.84.2] - 2026-04-12
+
+### Fixed
+
+- `top5 qt done` and `top5 qt undone` no longer show a stray dash prefix for quick tasks without a task number
+
 ## [1.84.1] - 2026-04-11
 
 ### Fixed

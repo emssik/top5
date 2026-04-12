@@ -210,7 +210,10 @@ export function register(program: Command): void {
 
         printResult({ ...task, completed: true }, {
           json: globalOpts.json,
-          formatFn: () => `Done: ${qtCode(task)} ${task.title}`,
+          formatFn: () => {
+            const code = qtCode(task)
+            return `Done: ${code !== '-' ? code + ' ' : ''}${task.title}`
+          },
         })
       } catch (err: unknown) {
         die((err as Error).message)
@@ -240,7 +243,10 @@ export function register(program: Command): void {
 
         printResult({ ...task, completed: false }, {
           json: globalOpts.json,
-          formatFn: () => `Undone: ${qtCode(task)} ${task.title}`,
+          formatFn: () => {
+            const code = qtCode(task)
+            return `Undone: ${code !== '-' ? code + ' ' : ''}${task.title}`
+          },
         })
       } catch (err: unknown) {
         die((err as Error).message)
