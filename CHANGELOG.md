@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.84.3] - 2026-04-12
+
+### Added
+
+- First ADR: document why the top5-cli skill does not cache project data
+
 ## [1.84.2] - 2026-04-12
 
 ### Fixed
