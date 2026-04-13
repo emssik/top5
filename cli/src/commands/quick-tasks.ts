@@ -91,7 +91,7 @@ export function register(program: Command): void {
         const result = await client.post<QuickTask[]>('/api/v1/quick-tasks', newTask)
         const savedTask = result.find((t) => t.id === newTask.id)
 
-        const code = savedTask?.taskNumber != null ? `QT-${savedTask.taskNumber} ` : ''
+        const code = savedTask ? qtCode(savedTask) : '-'
 
         let notePath: string | undefined
         if (opts.note && savedTask) {
@@ -108,7 +108,7 @@ export function register(program: Command): void {
         printResult(savedTask ?? newTask, {
           json: globalOpts.json,
           formatFn: () => {
-            let msg = `Created: ${code}${title}`
+            let msg = `Created: ${code !== '-' ? code + ' ' : ''}${title}`
             if (dueDate) msg += ` (due: ${formatDueDate(dueDate)})`
             if (notePath) msg += `\nNote: ${notePath}`
             return msg

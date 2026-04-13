@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.84.4] - 2026-04-13
+
+### Fixed
+
+- `top5 qt add` now uses shared `qtCode()` formatter, consistent with all other quick-task commands
+
 ## [1.84.3] - 2026-04-12
 
 ### Added
