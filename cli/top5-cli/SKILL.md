@@ -10,6 +10,7 @@ description: >
   "what projects do I have", "focus", "start focus", "stop focus", "focus ping", "heartbeat",
   "today", "today tasks", "what's on today", "dzisiejsze taski",
   "due date", "set deadline", "termin", "ustaw datę", "pin", "pin to today", "przypnij",
+  "beyond", "beyond the limit", "overflow", "push to overflow", "poza limit", "zepchnij",
   "repeating", "repeating tasks", "recurring", "cykliczne", "powtarzalne",
   "usuń task", "skasuj task", "usuń zadanie".
 ---
@@ -113,6 +114,18 @@ top5 pin PRJ-3             # toggle pin — if unpinned, pins to today; if pinne
 ```
 
 Pinned tasks appear in the "today" view as "up-next". Toggle behavior: running `pin` again unpins the task.
+
+### Move task to / from "beyond the limit"
+
+```bash
+top5 beyond PRJ-3          # toggle: push to overflow (if visible) or bring back (if already beyond)
+top5 beyond QT-5           # same for quick tasks
+top5 beyond PRJ-3 --json
+```
+
+Sets the `beyondLimit` flag on a task. When `true`, the task is forced into the Today "overflow" (beyond-the-limit) zone even if the limit isn't exceeded. When `false`, the task returns to normal Today ordering. Toggles — running again flips the flag.
+
+Works for both project tasks (`PRJ-N`) and quick tasks (`QT-N`). Accepts UUIDs.
 
 ### Delete a task
 
@@ -258,6 +271,13 @@ top5 done PRJ-5
 ```bash
 top5 pin PRJ-3             # pin (appears in today view)
 top5 pin PRJ-3             # unpin (toggle)
+```
+
+**Push a task beyond the Today limit:**
+```bash
+top5 beyond PRJ-3          # send to overflow zone
+top5 beyond PRJ-3          # bring back (toggle)
+top5 beyond QT-5           # works for quick tasks too
 ```
 
 **Manage due dates:**

@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.85.0] - 2026-04-19
+
+### Added
+
+- `top5 beyond <task-code>` CLI command to push a task into the Today "beyond-the-limit" overflow zone, or bring it back (toggle). Works for both project tasks (`PRJ-N`) and quick tasks (`QT-N`)
+- HTTP API endpoint `PUT /api/v1/quick-tasks/beyond-limit` so external clients can toggle the `beyondLimit` flag on quick tasks
+
 ## [1.84.4] - 2026-04-13
 
 ### Fixed

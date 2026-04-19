@@ -77,4 +77,15 @@ export function registerQuickTaskRoutes(fastify: FastifyInstance): void {
     notifyAllWindows()
     return { ok: true, data: result }
   })
+
+  fastify.put('/api/v1/quick-tasks/beyond-limit', async (request, reply) => {
+    const body = request.body as { ids?: unknown; beyondLimit?: unknown } | null
+    if (!body || typeof body.beyondLimit !== 'boolean') {
+      return reply.status(400).send({ ok: false, error: 'validation' })
+    }
+    const result = quickTaskService.setBeyondLimitQuickTasks(body.ids as string[], body.beyondLimit)
+    if (isServiceError(result)) return reply.status(400).send({ ok: false, error: result.error })
+    notifyAllWindows()
+    return { ok: true, data: result }
+  })
 }

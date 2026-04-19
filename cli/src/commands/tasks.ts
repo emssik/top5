@@ -1,6 +1,6 @@
 import type { Command } from 'commander'
 import { createClient } from '../lib/client.js'
-import { resolveProject, resolveProjectTask } from '../lib/resolve.js'
+import { resolveProject, resolveProjectTask, resolveQuickTask, parseTaskCode } from '../lib/resolve.js'
 import { printResult, formatTable, die, warn } from '../lib/output.js'
 import { parseDate, formatDueDate } from '../lib/date.js'
 
@@ -11,6 +11,7 @@ interface Task {
   taskNumber?: number
   isToDoNext?: boolean
   inProgress?: boolean
+  beyondLimit?: boolean
   dueDate?: string | null
   noteRef?: string
 }
@@ -429,6 +430,78 @@ export function register(program: Command): void {
             return `Sent to MyCC: ${code !== '-' ? code + ' ' : ''}${task.title}`
           },
         })
+      } catch (err: unknown) {
+        die((err as Error).message)
+      }
+    })
+
+  // top5 beyond <task-code>
+  program
+    .command('beyond')
+    .description('Toggle beyond-the-limit flag on a task (moves it to overflow on Today)')
+    .argument('<task-code>', 'Task code (e.g. PRJ-3, QT-5) or task ID')
+    .action(async (taskRef: string, _opts, cmd) => {
+      const globalOpts = cmd.optsWithGlobals()
+      const client = createClient(globalOpts)
+
+      try {
+        const parsed = parseTaskCode(taskRef)
+        const isQuickRef = parsed?.projectCode === 'QT'
+
+        if (isQuickRef) {
+          const task = await resolveQuickTask(client, taskRef) as Task
+          const next = !task.beyondLimit
+          await client.put('/api/v1/quick-tasks/beyond-limit', { ids: [task.id], beyondLimit: next })
+          const code = task.taskNumber != null ? `QT-${task.taskNumber}` : '-'
+          printResult({ ...task, beyondLimit: next }, {
+            json: globalOpts.json,
+            formatFn: () => {
+              const prefix = code !== '-' ? code + ' ' : ''
+              return next
+                ? `Beyond limit: ${prefix}${task.title}`
+                : `Back in limit: ${prefix}${task.title}`
+            },
+          })
+          return
+        }
+
+        // Project task (PRJ-N or raw UUID — try project first)
+        try {
+          const { project, task } = await resolveProjectTask(client, taskRef) as {
+            project: Project
+            task: Task
+          }
+          const next = !task.beyondLimit
+          await client.put('/api/v1/projects/pinned-tasks/beyond-limit', [
+            { projectId: project.id, taskId: task.id, beyondLimit: next },
+          ])
+          printResult({ ...task, beyondLimit: next }, {
+            json: globalOpts.json,
+            formatFn: () => {
+              const code = taskCode(task, project.code)
+              const prefix = code !== '-' ? code + ' ' : ''
+              return next
+                ? `Beyond limit: ${prefix}${task.title}`
+                : `Back in limit: ${prefix}${task.title}`
+            },
+          })
+        } catch (projErr) {
+          // Fallback: maybe it's a quick task UUID (not PRJ-N format)
+          if (parsed) throw projErr
+          const task = await resolveQuickTask(client, taskRef) as Task
+          const next = !task.beyondLimit
+          await client.put('/api/v1/quick-tasks/beyond-limit', { ids: [task.id], beyondLimit: next })
+          const code = task.taskNumber != null ? `QT-${task.taskNumber}` : '-'
+          printResult({ ...task, beyondLimit: next }, {
+            json: globalOpts.json,
+            formatFn: () => {
+              const prefix = code !== '-' ? code + ' ' : ''
+              return next
+                ? `Beyond limit: ${prefix}${task.title}`
+                : `Back in limit: ${prefix}${task.title}`
+            },
+          })
+        }
       } catch (err: unknown) {
         die((err as Error).message)
       }
