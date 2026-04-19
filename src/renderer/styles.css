@@ -852,7 +852,7 @@ body {
 }
 
 .done-list.open {
-  max-height: 1000px;
+  max-height: 5000px;
 }
 
 .add-task-btn {

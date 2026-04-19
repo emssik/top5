@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - `top5 beyond <task-code>` now freezes current natural-overflow tasks when pushing a task beyond the Today limit, so other tasks no longer slide up to fill the vacated slot — matches drag-and-drop behavior in the UI
+- "Beyond limit" and "Done today" sections no longer hide tasks past the ~14th entry — `max-height` bumped so long lists render in full
 
 ## [1.85.0] - 2026-04-19
 
