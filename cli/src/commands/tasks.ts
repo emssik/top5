@@ -448,60 +448,49 @@ export function register(program: Command): void {
         const parsed = parseTaskCode(taskRef)
         const isQuickRef = parsed?.projectCode === 'QT'
 
-        if (isQuickRef) {
+        const resolveQuick = async (): Promise<{ task: Task; code: string }> => {
           const task = await resolveQuickTask(client, taskRef) as Task
-          const next = !task.beyondLimit
-          await client.put('/api/v1/quick-tasks/beyond-limit', { ids: [task.id], beyondLimit: next })
-          const code = task.taskNumber != null ? `QT-${task.taskNumber}` : '-'
-          printResult({ ...task, beyondLimit: next }, {
-            json: globalOpts.json,
-            formatFn: () => {
-              const prefix = code !== '-' ? code + ' ' : ''
-              return next
-                ? `Beyond limit: ${prefix}${task.title}`
-                : `Back in limit: ${prefix}${task.title}`
-            },
-          })
-          return
+          return { task, code: task.taskNumber != null ? `QT-${task.taskNumber}` : '-' }
         }
 
-        // Project task (PRJ-N or raw UUID — try project first)
-        try {
-          const { project, task } = await resolveProjectTask(client, taskRef) as {
-            project: Project
-            task: Task
+        let kind: 'quick' | 'pinned'
+        let task: Task
+        let code: string
+        let projectId: string | undefined
+
+        if (isQuickRef) {
+          const q = await resolveQuick()
+          kind = 'quick'; task = q.task; code = q.code
+        } else {
+          try {
+            const { project, task: t } = await resolveProjectTask(client, taskRef) as {
+              project: Project
+              task: Task
+            }
+            kind = 'pinned'; task = t; projectId = project.id
+            code = taskCode(t, project.code)
+          } catch (projErr) {
+            if (parsed) throw projErr
+            const q = await resolveQuick()
+            kind = 'quick'; task = q.task; code = q.code
           }
-          const next = !task.beyondLimit
-          await client.put('/api/v1/projects/pinned-tasks/beyond-limit', [
-            { projectId: project.id, taskId: task.id, beyondLimit: next },
-          ])
-          printResult({ ...task, beyondLimit: next }, {
-            json: globalOpts.json,
-            formatFn: () => {
-              const code = taskCode(task, project.code)
-              const prefix = code !== '-' ? code + ' ' : ''
-              return next
-                ? `Beyond limit: ${prefix}${task.title}`
-                : `Back in limit: ${prefix}${task.title}`
-            },
-          })
-        } catch (projErr) {
-          // Fallback: maybe it's a quick task UUID (not PRJ-N format)
-          if (parsed) throw projErr
-          const task = await resolveQuickTask(client, taskRef) as Task
-          const next = !task.beyondLimit
-          await client.put('/api/v1/quick-tasks/beyond-limit', { ids: [task.id], beyondLimit: next })
-          const code = task.taskNumber != null ? `QT-${task.taskNumber}` : '-'
-          printResult({ ...task, beyondLimit: next }, {
-            json: globalOpts.json,
-            formatFn: () => {
-              const prefix = code !== '-' ? code + ' ' : ''
-              return next
-                ? `Beyond limit: ${prefix}${task.title}`
-                : `Back in limit: ${prefix}${task.title}`
-            },
-          })
         }
+
+        const next = !task.beyondLimit
+        const body = kind === 'quick'
+          ? { quickTaskIds: [task.id], beyondLimit: next }
+          : { pinnedTasks: [{ projectId: projectId!, taskId: task.id }], beyondLimit: next }
+        await client.post('/api/v1/today/beyond-limit', body)
+
+        printResult({ ...task, beyondLimit: next }, {
+          json: globalOpts.json,
+          formatFn: () => {
+            const prefix = code !== '-' ? code + ' ' : ''
+            return next
+              ? `Beyond limit: ${prefix}${task.title}`
+              : `Back in limit: ${prefix}${task.title}`
+          },
+        })
       } catch (err: unknown) {
         die((err as Error).message)
       }

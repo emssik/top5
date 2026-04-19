@@ -125,6 +125,8 @@ top5 beyond PRJ-3 --json
 
 Sets the `beyondLimit` flag on a task. When `true`, the task is forced into the Today "overflow" (beyond-the-limit) zone even if the limit isn't exceeded. When `false`, the task returns to normal Today ordering. Toggles — running again flips the flag.
 
+Matches drag-and-drop semantics: when pushing a task beyond the limit, any currently natural-overflow tasks are also frozen as `beyondLimit`, so nothing slides up to fill the vacated slot.
+
 Works for both project tasks (`PRJ-N`) and quick tasks (`QT-N`). Accepts UUIDs.
 
 ### Delete a task
