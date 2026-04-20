@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer, webFrame } from 'electron'
 import type { IpcRendererEvent } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
-import type { AppConfig, FocusCheckIn, OperationLogEntry, Project, QuickTask, RepeatingTask, ApiConfig, LockedTaskRef, WinsLockState, WinEntry, StreakStats } from '../shared/types'
+import type { AppConfig, FocusCheckIn, OperationLogEntry, Project, QuickTask, RepeatingTask, ApiConfig, LockedTaskRef, WinsLockState, WinEntry, StreakStats, Habit, HabitTodayEntry } from '../shared/types'
 
 interface ShortcutActionPayload {
   action: string
@@ -88,6 +88,13 @@ export const api = {
   pasteImageToTask: (projectId: string, taskId: string) => ipcRenderer.invoke('paste-image-to-task', projectId, taskId),
   removeTaskImage: (projectId: string, taskId: string, filename: string) => ipcRenderer.invoke('remove-task-image', projectId, taskId, filename),
   openTaskImage: (filename: string) => ipcRenderer.invoke('open-task-image', filename),
+  saveHabit: (h: Habit) => ipcRenderer.invoke('save-habit', h),
+  removeHabit: (id: string) => ipcRenderer.invoke('remove-habit', id),
+  reorderHabits: (ids: string[]) => ipcRenderer.invoke('reorder-habits', ids),
+  habitTick: (id: string, mode: 'done' | 'freeze' | 'skip' | 'undo') => ipcRenderer.invoke('habit-tick', id, mode),
+  habitRetroTick: (id: string, dk: string, action: 'done' | 'freeze' | 'skip' | 'clear') => ipcRenderer.invoke('habit-retro-tick', id, dk, action),
+  habitLogMinutes: (id: string, minutes: number) => ipcRenderer.invoke('habit-log-minutes', id, minutes),
+  habitsToday: (): Promise<HabitTodayEntry[]> => ipcRenderer.invoke('habits-today'),
   journalGenerateDaily: (dateStr?: string) => ipcRenderer.invoke('journal-generate-daily', dateStr),
   journalGenerateWeekly: (weekKey?: string) => ipcRenderer.invoke('journal-generate-weekly', weekKey),
   journalGenerateMonthly: (monthKey?: string) => ipcRenderer.invoke('journal-generate-monthly', monthKey),

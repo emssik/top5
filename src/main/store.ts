@@ -30,6 +30,7 @@ import * as journalService from './service/journal'
 import * as taskNotesService from './service/task-notes'
 import * as myccService from './service/mycc'
 import * as taskImageService from './service/task-images'
+import * as habitService from './service/habits'
 import { isSafeFilename } from '../shared/filename'
 import { getFocusWindow, stopFocusForCompletedTask } from './focus-window'
 import type {
@@ -62,6 +63,7 @@ const defaultData: AppData = {
   quickNotes: '',
   repeatingTasks: [],
   dismissedRepeating: {},
+  habits: [],
   config: {
     globalShortcut: 'CommandOrControl+Shift+Space',
     actionShortcuts: {
@@ -764,7 +766,8 @@ function loadData(): AppData {
       config,
       apiConfig: getApiConfigPublic(),
       nextQuickTaskNumber: typeof parsed?.nextQuickTaskNumber === 'number' ? parsed.nextQuickTaskNumber : undefined,
-      winsLock: isRecord(parsed?.winsLock) ? parsed.winsLock as WinsLockState : undefined
+      winsLock: isRecord(parsed?.winsLock) ? parsed.winsLock as WinsLockState : undefined,
+      habits: parsed?.habits ?? []
     }
 
     if (migrateTaskNumbers(data)) {
@@ -1145,6 +1148,55 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
     const result = repeatingTaskService.dismissRepeatingProposal(repeatingTaskId, forDate)
     if (isServiceError(result)) return
     notifyAllWindows()
+  })
+
+  ipcMain.handle('save-habit', (_event, habit: unknown) => {
+    const result = habitService.saveHabit(habit)
+    if (isServiceError(result)) return getData().habits ?? []
+    notifyAllWindows()
+    return result
+  })
+
+  ipcMain.handle('remove-habit', (_event, id: string) => {
+    if (typeof id !== 'string') return getData().habits ?? []
+    const result = habitService.removeHabit(id)
+    if (isServiceError(result)) return getData().habits ?? []
+    notifyAllWindows()
+    return result
+  })
+
+  ipcMain.handle('reorder-habits', (_event, ids: unknown) => {
+    const result = habitService.reorderHabits(ids)
+    if (isServiceError(result)) return getData().habits ?? []
+    return result
+  })
+
+  ipcMain.handle('habit-tick', (_event, id: string, mode: string) => {
+    if (typeof id !== 'string' || typeof mode !== 'string') return getData().habits ?? []
+    const result = habitService.tickHabit(id, mode as 'done' | 'freeze' | 'skip' | 'undo')
+    if (isServiceError(result)) return getData().habits ?? []
+    notifyAllWindows()
+    return result
+  })
+
+  ipcMain.handle('habit-retro-tick', (_event, id: string, dk: string, action: string) => {
+    if (typeof id !== 'string' || typeof dk !== 'string' || typeof action !== 'string') return getData().habits ?? []
+    const result = habitService.retroTickHabit(id, dk, action as 'done' | 'freeze' | 'skip' | 'clear')
+    if (isServiceError(result)) return getData().habits ?? []
+    notifyAllWindows()
+    return result
+  })
+
+  ipcMain.handle('habit-log-minutes', (_event, id: string, minutes: number) => {
+    if (typeof id !== 'string' || typeof minutes !== 'number') return getData().habits ?? []
+    const result = habitService.logHabitMinutes(id, minutes)
+    if (isServiceError(result)) return getData().habits ?? []
+    notifyAllWindows()
+    return result
+  })
+
+  ipcMain.handle('habits-today', () => {
+    return habitService.getTodayHabits()
   })
 
   ipcMain.handle('toggle-task-in-progress', (_event, projectId: string, taskId: string) => {

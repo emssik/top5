@@ -103,6 +103,13 @@ declare global {
       pasteImageToTask: (projectId: string, taskId: string) => Promise<{ filename: string } | { error: string }>
       removeTaskImage: (projectId: string, taskId: string, filename: string) => Promise<import('../../shared/types').Project[]>
       openTaskImage: (filename: string) => Promise<void>
+      saveHabit: (h: import('../../shared/types').Habit) => Promise<import('../../shared/types').Habit[]>
+      removeHabit: (id: string) => Promise<import('../../shared/types').Habit[]>
+      reorderHabits: (ids: string[]) => Promise<import('../../shared/types').Habit[]>
+      habitTick: (id: string, mode: 'done' | 'freeze' | 'skip' | 'undo') => Promise<import('../../shared/types').Habit[]>
+      habitRetroTick: (id: string, dk: string, action: 'done' | 'freeze' | 'skip' | 'clear') => Promise<import('../../shared/types').Habit[]>
+      habitLogMinutes: (id: string, minutes: number) => Promise<import('../../shared/types').Habit[]>
+      habitsToday: () => Promise<import('../../shared/types').HabitTodayEntry[]>
       journalGenerateDaily: (dateStr?: string) => Promise<{ path: string; notePath: string } | null>
       journalGenerateWeekly: (weekKey?: string) => Promise<{ path: string; notePath: string } | null>
       journalGenerateMonthly: (monthKey?: string) => Promise<{ path: string; notePath: string } | null>
