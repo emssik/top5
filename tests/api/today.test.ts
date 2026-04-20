@@ -28,6 +28,18 @@ async function seedQuickTasks(server: Awaited<ReturnType<typeof getTestServer>>,
   }
 }
 
+describe('GET /api/v1/today', () => {
+  it('returns ok with data and habits fields', async () => {
+    const server = await getTestServer()
+    const res = await server.inject({ method: 'GET', url: '/api/v1/today', headers: auth })
+    expect(res.statusCode).toBe(200)
+    const body = res.json()
+    expect(body.ok).toBe(true)
+    expect(Array.isArray(body.data)).toBe(true)
+    expect(Array.isArray(body.habits)).toBe(true)
+  })
+})
+
 describe('POST /today/beyond-limit', () => {
   it('marks only target when there is no natural overflow', async () => {
     const server = await getTestServer()

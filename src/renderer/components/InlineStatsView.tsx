@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import { useProjects } from '../hooks/useProjects'
 import { checkInMinutes, formatCheckInTime } from '../utils/checkInTime'
 import { projectColorValue } from '../utils/projects'
 import { STANDALONE_PROJECT_ID } from '../utils/constants'
+import { computeStreak, dayStatus, isScheduledOn } from '../../shared/habit-schedule'
+import { HabitIcon } from './habits/HabitIcon'
 import type { WinEntry, StreakStats } from '../types'
 import { dateKey } from '../../shared/schedule'
 
@@ -178,7 +180,7 @@ function WinsCalendar({ entries }: { entries: WinEntry[] }) {
 }
 
 export default function InlineStatsView() {
-  const { projects, quickTasks, focusCheckIns } = useProjects()
+  const { projects, quickTasks, focusCheckIns, habits } = useProjects()
   const [range, setRange] = useState<Range>('7d')
   const [streaks, setStreaks] = useState<StreakStats | null>(null)
   const [winHistory, setWinHistory] = useState<WinEntry[]>([])
@@ -394,6 +396,87 @@ export default function InlineStatsView() {
           </table>
         </div>
       )}
+
+      {habits.filter((h) => !h.archivedAt).length > 0 && (() => {
+        const activeHabits = habits.filter((h) => !h.archivedAt)
+        const today = new Date()
+        const todayKey = today.toISOString().split('T')[0]
+        const doneToday = activeHabits.filter((h) => h.log[todayKey]?.done).length
+        const scheduledToday = activeHabits.filter((h) => isScheduledOn(h, today)).length
+        const totalStreak = activeHabits.reduce((s, h) => s + computeStreak(h).streak, 0)
+        const longestEver = Math.max(...activeHabits.map((h) => computeStreak(h).best), 0)
+        const DAYS = 14
+        const addDays = (d: Date, n: number) => { const r = new Date(d); r.setDate(r.getDate() + n); return r }
+        const startD = addDays(today, -(DAYS - 1))
+        const dayKeys = Array.from({ length: DAYS }, (_, i) => {
+          const d = addDays(startD, i)
+          return d.toISOString().split('T')[0]
+        })
+        return (
+          <>
+            <div className="section-label" style={{ marginTop: 28 }}>
+              <HabitIcon name="flame" size={12} stroke="#e9a825" /> Habit Stats
+            </div>
+            <div className="stat-grid" style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}>
+              <div className="stat-card">
+                <div className="stat-num green">{doneToday}/{scheduledToday}</div>
+                <div className="stat-label">Today</div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-num">{totalStreak}</div>
+                <div className="stat-label">Suma streaków</div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-num blue">{activeHabits.length}</div>
+                <div className="stat-label">Habits</div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-num orange">{longestEver}</div>
+                <div className="stat-label">Longest ever</div>
+              </div>
+            </div>
+            <div className="habit-stats-grid" style={{ display: 'grid', gridTemplateColumns: `180px repeat(${DAYS}, 1fr) 60px`, gap: 4, alignItems: 'center', marginTop: 12 }}>
+              <div />
+              {dayKeys.map((k, i) => {
+                const d = addDays(startD, i)
+                const isToday = k === todayKey
+                return (
+                  <div key={k} style={{ fontSize: 9, color: isToday ? '#e9a825' : 'var(--c-text-muted)', textAlign: 'center', fontWeight: isToday ? 700 : 400 }}>
+                    {d.getDate()}
+                  </div>
+                )
+              })}
+              <div style={{ fontSize: 9, color: 'var(--c-text-muted)', textAlign: 'right' }}>STREAK</div>
+              {activeHabits.map((h) => {
+                const { streak, unit } = computeStreak(h)
+                return (
+                  <Fragment key={h.id}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, padding: '4px 0', borderTop: '1px solid rgba(0,0,0,0.04)', overflow: 'hidden' }}>
+                      <HabitIcon name={h.icon} size={13} stroke="var(--c-text-secondary)" />
+                      <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.name}</span>
+                    </div>
+                    {dayKeys.map((k, i) => {
+                      const d = addDays(startD, i)
+                      const st = dayStatus(h, k)
+                      const scheduled = isScheduledOn(h, d)
+                      let cls = 'heat-cell'
+                      if (d > today) cls += ' future'
+                      else if (st === 'l1' || st === 'l2' || st === 'l3' || st === 'l4') cls += ' ' + st
+                      else if (st === 'freeze') cls += ' freeze'
+                      else if (st === 'skip') cls += ' skip'
+                      else if (scheduled) cls += ' miss'
+                      return <div key={`${h.id}-${k}`} className={cls} style={{ width: 14, height: 14, margin: '0 auto' }} />
+                    })}
+                    <div style={{ fontSize: 11.5, color: streak > 0 ? '#5a8f47' : 'var(--c-text-muted)', textAlign: 'right', fontWeight: 600, padding: '4px 0', borderTop: '1px solid rgba(0,0,0,0.04)' }}>
+                      {streak} {unit}
+                    </div>
+                  </Fragment>
+                )
+              })}
+            </div>
+          </>
+        )
+      })()}
 
     </div>
   )

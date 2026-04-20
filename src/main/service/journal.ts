@@ -6,6 +6,7 @@ import { getData, loadCheckIns } from '../store'
 import { loadWinHistory } from './wins'
 import type { FocusCheckIn } from '../../shared/types'
 import { formatTaskId, formatQuickTaskId } from '../../shared/taskId'
+import { isScheduledOn, computeStreak } from '../../shared/habit-schedule'
 
 // --- Helpers ---
 
@@ -71,11 +72,33 @@ interface ProjectFocus {
   minutes: number
 }
 
+interface HabitStat {
+  name: string
+  icon: string
+  status: 'done' | 'freeze' | 'skip' | 'pending'
+  streak: number
+  streakUnit: 'dni' | 'tyg'
+}
+
 interface DayStats {
   tasksCompleted: number
   focusMinutes: number
   completedTasks: CompletedTask[]
   focusPerProject: ProjectFocus[]
+  habitsToday: HabitStat[]
+}
+
+const HABIT_ICON_EMOJI: Record<string, string> = {
+  flame: '🔥',
+  book: '📖',
+  dumbbell: '💪',
+  leaf: '🌿',
+  mic: '🎤',
+  pen: '✏️',
+  code: '💻',
+  'no-sugar': '🚫',
+  note: '🗒️',
+  clock: '⏱️'
 }
 
 function gatherDayStats(dateStr: string): DayStats {
@@ -132,7 +155,23 @@ function gatherDayStats(dateStr: string): DayStats {
 
   const totalFocusMinutes = focusPerProject.reduce((sum, p) => sum + p.minutes, 0)
 
-  return { tasksCompleted: completed.length, focusMinutes: totalFocusMinutes, completedTasks: completed, focusPerProject }
+  const dateObj = new Date(dateStr + 'T12:00:00')
+  const dk = dateStr
+  const habits = data.habits ?? []
+  const habitsToday: HabitStat[] = habits
+    .filter((h) => !h.archivedAt && isScheduledOn(h, dateObj))
+    .sort((a, b) => a.order - b.order)
+    .map((h): HabitStat => {
+      const logEntry = h.log[dk]
+      let status: HabitStat['status'] = 'pending'
+      if (logEntry?.done) status = 'done'
+      else if (logEntry?.freeze) status = 'freeze'
+      else if (logEntry?.skip) status = 'skip'
+      const { streak, unit } = computeStreak(h, dateObj)
+      return { name: h.name, icon: h.icon, status, streak, streakUnit: unit }
+    })
+
+  return { tasksCompleted: completed.length, focusMinutes: totalFocusMinutes, completedTasks: completed, focusPerProject, habitsToday }
 }
 
 // --- Parse existing note ---
@@ -212,6 +251,35 @@ function generateDailyMarkdown(dateStr: string, stats: DayStats, existing?: Pars
     for (const task of stats.completedTasks) {
       const prefix = task.badge ? `${task.badge} — ` : ''
       lines.push(`- [x] ${prefix}${task.title}`)
+    }
+    lines.push('')
+    lines.push('---')
+    lines.push('')
+  }
+
+  // Nawyki
+  if (stats.habitsToday.length > 0) {
+    lines.push('## Nawyki')
+    lines.push('')
+    for (const h of stats.habitsToday) {
+      const emoji = HABIT_ICON_EMOJI[h.icon] ?? h.icon
+      const streakStr = `(streak ${h.streak} ${h.streakUnit})`
+      let checkbox: string
+      let suffix: string
+      if (h.status === 'done') {
+        checkbox = '[x]'
+        suffix = ` ${streakStr}`
+      } else if (h.status === 'freeze') {
+        checkbox = '[🛡]'
+        suffix = ` — freeze ${streakStr}`
+      } else if (h.status === 'skip') {
+        checkbox = '[⏸]'
+        suffix = ` — skip ${streakStr}`
+      } else {
+        checkbox = '[ ]'
+        suffix = ` — pending ${streakStr}`
+      }
+      lines.push(`- ${checkbox} ${emoji} ${h.name}${suffix}`)
     }
     lines.push('')
     lines.push('---')

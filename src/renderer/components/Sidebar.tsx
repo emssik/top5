@@ -405,6 +405,7 @@ export default function Sidebar({
         <div className="sidebar-divider" />
         <div className="sidebar-section">
           <SidebarItem active={activeView === 'repeat'} icon="↻" label="Repeat" onClick={() => onSelectView('repeat')} />
+          <SidebarItem active={activeView === 'habits'} icon="🔥" label="Habits" onClick={() => onSelectView('habits')} />
           <SidebarItem active={activeView === 'stats'} icon="📊" label="Stats" onClick={() => onSelectView('stats')} />
           <SidebarItem icon="⚙️" label="Settings" onClick={onToggleSettings} />
           <div className="sidebar-divider" />

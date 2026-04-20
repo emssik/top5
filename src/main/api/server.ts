@@ -9,6 +9,7 @@ import { registerMetaRoutes } from './routes/meta'
 import { registerNoteRoutes } from './routes/notes'
 import { registerFocusRoutes } from './routes/focus'
 import { registerTodayRoutes } from './routes/today'
+import { registerHabitRoutes } from './routes/habits'
 
 let server: FastifyInstance | null = null
 
@@ -36,6 +37,7 @@ function createServer(): FastifyInstance {
   registerNoteRoutes(fastify)
   registerFocusRoutes(fastify)
   registerTodayRoutes(fastify)
+  registerHabitRoutes(fastify)
 
   return fastify
 }

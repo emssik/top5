@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.87.0] - 2026-04-20
+
+### Added
+
+- Habits module — powtarzalne nawyki typu "don't break the chain". Typ `Habit` z 6 harmonogramami (codziennie, wybrane dni tygodnia, N× w tygodniu, co N dni, N min dziennie, N min tygodniowo), streak z freeze (tarcza) i skip (planowana przerwa), retroaktywne oznaczanie przeszłych dni przez kliknięcie kafelka heatmapy, timer dla nawyków czasowych. Nowy widok "Habits" (🔥 w sidebarze) z listą kart i heatmapami 26/32 tyg., sekcja "Habits today · N/M" w widoku Today (nad sekcją Tomorrow), sekcja Habit Stats w widoku Stats, sekcja "Nawyki" w dziennym notatniku Obsidian.
+- `GET /api/v1/habits` — read-only endpoint zwracający aktywne nawyki z aktualnym statusem na dziś i streak-iem. Dla asystenta AI, żeby wiedział jakie konkretnie nawyki Daniel utrzymuje.
+- `GET /api/v1/today` — pole `habits` z nawykami zaplanowanymi na dziś (filtrowane do `isScheduled: true`).
+- `top5 habits [--json]` — komenda CLI listująca nawyki (schedule, today status, streak).
+- Operation log zapisuje teraz `habit_ticked`, `habit_freeze`, `habit_skip`.
+
+### Fixed
+
+- Sekcje "Beyond limit" i "Done today" nie rozwijały się po kliknięciu (regresja z v1.85.1) — animacja `max-height: auto` z `interpolate-size` nie działała w bieżącej wersji Electronu. Przywrócono stały `max-height: 5000px`.
+
 ## [1.86.0] - 2026-04-20
 
 ### Removed

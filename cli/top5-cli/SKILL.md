@@ -4,7 +4,8 @@ description: >
   Manage projects and tasks in the top5 task manager via the `top5` CLI tool.
   Use when the user asks to: list projects, list tasks in a project, show task details,
   add tasks, delete tasks, mark tasks as done/undone, manage quick tasks, set due dates,
-  create task notes, start/stop focus mode, send a focus heartbeat/ping, or manage repeating tasks.
+  create task notes, start/stop focus mode, send a focus heartbeat/ping, manage repeating tasks,
+  or list habits (read-only — what recurring habits the user keeps and their current streak).
   Triggers: "top5", "projects list", "add task", "delete task", "remove task", "mark done",
   "quick tasks", "task note", "show my tasks", "show task", "task details",
   "what projects do I have", "focus", "start focus", "stop focus", "focus ping", "heartbeat",
@@ -12,7 +13,9 @@ description: >
   "due date", "set deadline", "termin", "ustaw datę", "pin", "pin to today", "przypnij",
   "beyond", "beyond the limit", "overflow", "push to overflow", "poza limit", "zepchnij",
   "repeating", "repeating tasks", "recurring", "cykliczne", "powtarzalne",
-  "usuń task", "skasuj task", "usuń zadanie".
+  "usuń task", "skasuj task", "usuń zadanie",
+  "habits", "nawyki", "list habits", "pokaż habity", "co ma za nawyki", "streak", "chain",
+  "don't break the chain".
 ---
 
 # top5-cli
@@ -222,6 +225,27 @@ top5 rt dismiss 1                      # dismiss proposal for today
 `<ref>` accepts: 1-based position from `top5 rt` list, or raw UUID.
 `accept` and `dismiss` resolve from proposals list (not full list).
 
+### Habits (read-only)
+
+```bash
+top5 habits                # list all active habits
+top5 habits --json         # JSON array for AI consumption
+```
+
+Returns all non-archived habits with: `id`, `name`, `icon`, `projectId`, `schedule`,
+`isScheduled` (whether scheduled for today), `status` (`done`/`freeze`/`skip`/`pending`;
+`—` when not scheduled today), `streak`, `streakUnit` (`dni` / `tyg`), optional
+`minutesToday` / `minutesGoal` for time-based habits.
+
+Output columns: #, NAME, SCHEDULE, TODAY, STREAK.
+
+**Read-only.** No commands to create / edit / tick / delete habits via CLI — habits
+are managed through the Electron UI only. Use this to tell the user / AI what habits
+exist, what's on today, and how the streaks are doing.
+
+**Habit IDs in the `#` column** use the `HB-xxx` prefix (first 3 chars of the UUID) —
+purely decorative for the table; CLI does not accept these as references today.
+
 ### Health check
 
 ```bash
@@ -295,6 +319,12 @@ top5 focus PRJ-3
 top5 focus             # check status
 top5 focus ping        # heartbeat — suppress check-in popup
 top5 focus stop        # done
+```
+
+**Check habits (what's on today, how streaks are doing):**
+```bash
+top5 habits                 # tabela: schedule, today status, streak
+top5 habits --json          # dla AI asystenta
 ```
 
 **Manage repeating tasks:**

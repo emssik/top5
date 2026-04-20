@@ -10,6 +10,7 @@ import { register as registerNotes } from './commands/notes.js'
 import { register as registerFocus } from './commands/focus.js'
 import { register as registerToday } from './commands/today.js'
 import { register as registerRepeatingTasks } from './commands/repeating-tasks.js'
+import { register as registerHabits } from './commands/habits.js'
 
 const program = new Command()
 
@@ -30,5 +31,6 @@ registerNotes(program)
 registerFocus(program)
 registerToday(program)
 registerRepeatingTasks(program)
+registerHabits(program)
 
 program.parse()
