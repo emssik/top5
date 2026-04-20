@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useRef } from 'react'
 import { dateKey } from '../../../shared/schedule'
 import { dayStatus, isScheduledOn } from '../../../shared/habit-schedule'
 import type { Habit } from '../../types'
@@ -80,12 +80,20 @@ export function Heatmap({ habit, weeks = 32, onCellClick }: HeatmapProps) {
   const gridTemplateColumns = `repeat(${columns}, ${CELL}px)`
   const heatmapWidth = columns * CELL + (columns - 1) * GAP
 
+  const scrollRef = useRef<HTMLDivElement | null>(null)
+  useEffect(() => {
+    const el = scrollRef.current
+    if (el && el.scrollWidth > el.clientWidth) {
+      el.scrollLeft = el.scrollWidth
+    }
+  }, [habit.id, heatmapWidth])
+
   return (
     <div className="heatmap-wrapper">
       <div className="heatmap-weekdays">
         <span>Pn</span><span></span><span>Śr</span><span></span><span>Pt</span><span></span><span>Nd</span>
       </div>
-      <div style={{ flex: 1, minWidth: 0, overflowX: 'auto' }}>
+      <div ref={scrollRef} style={{ flex: 1, minWidth: 0, overflowX: 'auto' }}>
         <div className="heatmap-months" style={{ width: heatmapWidth }}>
           {visibleMarkers.map(({ label, col, span }) => (
             <span
