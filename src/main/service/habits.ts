@@ -143,7 +143,7 @@ export function getTodayHabits(date?: Date): HabitTodayEntry[] {
   const habits = getData().habits ?? []
 
   return habits
-    .filter((h) => !h.archivedAt)
+    .filter((h) => !h.archivedAt && isScheduledOn(h, today))
     .sort((a, b) => a.order - b.order)
     .map((habit): HabitTodayEntry => {
       const isScheduled = isScheduledOn(habit, today)
