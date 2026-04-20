@@ -2611,3 +2611,201 @@ body {
   from { opacity: 0; transform: translateX(-50%) translateY(8px); }
   to   { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
+
+/* Habit form controls */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  font-size: 12.5px;
+  border-radius: 7px;
+  border: 1px solid var(--c-border);
+  background: var(--bg-surface);
+  color: var(--c-text-primary);
+  cursor: pointer;
+  transition: background 0.1s, border-color 0.1s;
+}
+.btn:hover { background: var(--bg-hover); }
+.btn.primary {
+  background: var(--pc-amber, #e9a825);
+  border-color: transparent;
+  color: #fff;
+}
+.btn.primary:hover { opacity: 0.88; }
+.btn.ghost {
+  border-color: transparent;
+  background: transparent;
+}
+.btn.ghost:hover { background: var(--bg-hover); }
+.btn.small { padding: 3px 8px; font-size: 11.5px; }
+.btn.danger { color: var(--pc-red, #ef4444); border-color: var(--pc-red, #ef4444); }
+.btn.danger:hover { background: rgba(239,68,68,0.08); }
+.btn.left { margin-right: auto; }
+.btn:disabled { opacity: 0.45; cursor: default; }
+
+.input {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid var(--c-border);
+  border-radius: 7px;
+  background: var(--bg-surface);
+  color: var(--c-text-primary);
+  font-size: 13px;
+  outline: none;
+  box-sizing: border-box;
+}
+.input:focus { border-color: var(--pc-amber, #e9a825); }
+textarea.input { font-family: inherit; }
+
+.select {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid var(--c-border);
+  border-radius: 7px;
+  background: var(--bg-surface);
+  color: var(--c-text-primary);
+  font-size: 13px;
+  outline: none;
+  box-sizing: border-box;
+}
+.select:focus { border-color: var(--pc-amber, #e9a825); }
+
+.field-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--c-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 12px 0 5px;
+}
+
+.pill-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.pill-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 10px;
+  font-size: 12px;
+  border-radius: 20px;
+  border: 1px solid var(--c-border);
+  background: var(--bg-surface);
+  color: var(--c-text-secondary);
+  cursor: pointer;
+  transition: background 0.1s, border-color 0.1s;
+}
+.pill-btn:hover { background: var(--bg-hover); color: var(--c-text-primary); }
+.pill-btn.selected {
+  background: var(--pc-amber, #e9a825);
+  border-color: transparent;
+  color: #fff;
+  font-weight: 600;
+}
+
+.modal-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 18px;
+  justify-content: flex-end;
+}
+
+.divider {
+  height: 1px;
+  background: var(--c-border-subtle);
+  margin: 16px 0;
+}
+
+/* stat-card / stat-num / stat-label for InlineStatsView Habit section */
+.stat-num { font-size: 22px; font-weight: 700; color: var(--c-text-primary); line-height: 1.2; }
+.stat-num.green  { color: var(--pc-green); }
+.stat-num.blue   { color: var(--pc-blue); }
+.stat-num.orange { color: var(--pc-orange); }
+.stat-label { font-size: 11px; color: var(--c-text-muted); margin-top: 2px; }
+.stat-sub   { font-size: 9px; color: var(--c-text-muted); margin-top: 1px; }
+
+/* Today habits section */
+.today-habits-section {
+  margin: 10px 0 8px;
+  padding: 10px 12px;
+  background: var(--bg-surface);
+  border-radius: 8px;
+  border: 1px solid var(--c-border-subtle);
+}
+.today-habits-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.today-habits-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--c-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.today-habits-link {
+  font-size: 11px;
+  color: var(--pc-amber, #e9a825);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+.today-habits-list { display: flex; flex-direction: column; gap: 5px; }
+.today-habit-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  color: var(--c-text-primary);
+  padding: 3px 0;
+}
+.today-habit-row.done { opacity: 0.55; }
+.today-habit-check {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1.5px solid var(--c-border);
+  background: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  padding: 0;
+  flex-shrink: 0;
+}
+.today-habit-check:disabled { cursor: default; border-color: var(--pc-green); color: var(--pc-green); }
+.today-habit-code { font-size: 10px; color: var(--c-text-muted); font-family: monospace; flex-shrink: 0; }
+.today-habit-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* heat-cell hover */
+.heat-cell:hover { transform: scale(1.25); transition: transform 0.1s; }
+.habit-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+
+/* Dark theme overrides for habits */
+.dark .heat-cell { background: rgba(255,255,255,0.06); }
+.dark .heat-cell.l1 { background: rgba(127, 174, 109, 0.35); }
+.dark .heat-cell.l2 { background: rgba(127, 174, 109, 0.55); }
+.dark .heat-cell.l3 { background: rgba(127, 174, 109, 0.78); }
+.dark .heat-cell.l4 { background: #7fae6d; }
+.dark .heat-cell.freeze { background: rgba(96, 165, 250, 0.55); }
+.dark .heat-cell.skip { background: rgba(234, 179, 8, 0.45); }
+.dark .heat-cell.miss { background: rgba(239, 68, 68, 0.3); }
+.dark .pill-btn { border-color: rgba(255,255,255,0.12); background: rgba(255,255,255,0.04); }
+.dark .pill-btn:hover { background: rgba(255,255,255,0.09); }
+.dark .input, .dark .select { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.12); }
+.dark .btn { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.12); }
+.dark .btn:hover { background: rgba(255,255,255,0.1); }
+.dark .btn.primary { background: var(--pc-amber, #e9a825); border-color: transparent; }
+.dark .btn.ghost { background: transparent; border-color: transparent; }
+.dark .btn.ghost:hover { background: rgba(255,255,255,0.07); }
+.dark .today-habits-section { border-color: rgba(255,255,255,0.08); background: rgba(255,255,255,0.03); }
+.dark .stat-num { color: var(--c-text-primary); }

@@ -55,7 +55,7 @@ export function HabitEditor({ habit, onSave, onCancel, onDelete }: HabitEditorPr
   }
 
   return (
-    <div className="modal-overlay" onClick={onCancel}>
+    <div className="modal-overlay open" onClick={onCancel}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <h2>{habit ? 'Edytuj nawyk' : 'Nowy nawyk'}</h2>
 

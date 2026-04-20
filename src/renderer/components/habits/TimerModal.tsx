@@ -33,7 +33,7 @@ export function TimerModal({ habit, onSave, onCancel }: TimerModalProps) {
   }
 
   return (
-    <div className="modal-overlay" onClick={onCancel}>
+    <div className="modal-overlay open" onClick={onCancel}>
       <div className="modal" style={{ width: 420 }} onClick={(e) => e.stopPropagation()}>
         <h2>Timer · {habit.name}</h2>
         <div style={{ textAlign: 'center', padding: '20px 0' }}>

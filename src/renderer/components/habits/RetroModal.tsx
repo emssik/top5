@@ -20,7 +20,7 @@ export function RetroModal({ habit, dateKey: dk, onApply, onCancel }: RetroModal
   const currentState = entry.done ? 'zrobione' : entry.freeze ? 'freeze' : entry.skip ? 'skip' : 'pusty'
 
   return (
-    <div className="modal-overlay" onClick={onCancel}>
+    <div className="modal-overlay open" onClick={onCancel}>
       <div className="modal" style={{ width: 380 }} onClick={(e) => e.stopPropagation()}>
         <h2>{label}</h2>
         <div style={{ fontSize: 12.5, color: 'var(--c-text-muted)', marginBottom: 12 }}>
