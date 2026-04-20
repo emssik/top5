@@ -2389,11 +2389,16 @@ body {
   flex-shrink: 0;
 }
 .heatmap-months {
-  display: flex;
+  display: grid;
   font-size: 9px;
   color: var(--c-text-muted);
   margin-bottom: 2px;
   min-height: 14px;
+  gap: 2px;
+  white-space: nowrap;
+}
+.heatmap-months span {
+  overflow: visible;
 }
 .heatmap {
   display: grid;
