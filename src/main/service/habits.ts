@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto'
 import type { Habit, HabitTodayEntry } from '../../shared/types'
-import { getData, setData, isRecord } from '../store'
+import { getData, setData, isRecord, appendOperation } from '../store'
 import { dateKey } from '../../shared/schedule'
 import { isScheduledOn, computeStreak } from '../../shared/habit-schedule'
 
@@ -85,6 +85,9 @@ export function tickHabit(id: string, mode: 'done' | 'freeze' | 'skip' | 'undo')
   }
 
   setData('habits', habits)
+  if (mode === 'done') appendOperation({ type: 'habit_ticked', taskTitle: habit.name, details: today })
+  else if (mode === 'freeze') appendOperation({ type: 'habit_freeze', taskTitle: habit.name, details: today })
+  else if (mode === 'skip') appendOperation({ type: 'habit_skip', taskTitle: habit.name, details: today })
   return habits
 }
 
@@ -117,6 +120,9 @@ export function retroTickHabit(id: string, dk: string, action: 'done' | 'freeze'
   }
 
   setData('habits', habits)
+  if (action === 'done') appendOperation({ type: 'habit_ticked', taskTitle: habit.name, details: dk })
+  else if (action === 'freeze') appendOperation({ type: 'habit_freeze', taskTitle: habit.name, details: dk })
+  else if (action === 'skip') appendOperation({ type: 'habit_skip', taskTitle: habit.name, details: dk })
   return habits
 }
 

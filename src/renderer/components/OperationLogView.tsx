@@ -73,6 +73,9 @@ function describeOperation(entry: OperationLogEntry): string {
     case 'wins_week_lost': return `Week streak lost`
     case 'wins_month_won': return `🏆 Month won!${details}`
     case 'wins_month_lost': return `Month streak lost`
+    case 'habit_ticked': return `🔥 ${entry.taskTitle ?? ''}: done${details}`
+    case 'habit_freeze': return `🛡 ${entry.taskTitle ?? ''}: freeze${details}`
+    case 'habit_skip': return `⏸ ${entry.taskTitle ?? ''}: skip${details}`
     default: return entry.type
   }
 }
