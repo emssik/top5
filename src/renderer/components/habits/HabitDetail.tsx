@@ -1,9 +1,13 @@
-import React from 'react'
+import React, { useState } from 'react'
+import { useProjects } from '../../hooks/useProjects'
 import { HabitIcon } from './HabitIcon'
+import { HabitEditor } from './HabitEditor'
+import { TimerModal } from './TimerModal'
+import { RetroModal } from './RetroModal'
 import { Heatmap } from './Heatmap'
 import { HeatmapLegend } from './HeatmapLegend'
-import { computeStreak, scheduleLabel } from '../../../../shared/habit-schedule'
-import { dateKey } from '../../../../shared/schedule'
+import { computeStreak, scheduleLabel } from '../../../shared/habit-schedule'
+import { dateKey } from '../../../shared/schedule'
 import type { Habit, Project } from '../../types'
 
 function fireConfetti(anchor: HTMLElement) {
@@ -39,6 +43,11 @@ interface HabitDetailProps {
 }
 
 export function HabitDetail({ habit, projects, onClose, onEdit, onTick, onRetroCell }: HabitDetailProps) {
+  const { saveHabit, removeHabit, habitLogMinutes, habitRetroTick } = useProjects()
+  const [showEditor, setShowEditor] = useState(false)
+  const [showTimer, setShowTimer] = useState(false)
+  const [retroDateKey, setRetroDateKey] = useState<string | null>(null)
+
   const proj = projects.find((p) => p.id === habit.projectId)
   const { streak, best, unit } = computeStreak(habit)
   const today = dateKey(new Date())
@@ -53,6 +62,35 @@ export function HabitDetail({ habit, projects, onClose, onEdit, onTick, onRetroC
     await onTick(habit.id, 'done')
     fireConfetti(e.currentTarget)
     showToast('Chain nie pęka. ✓')
+  }
+
+  const handleCellClick = (dk: string) => {
+    setRetroDateKey(dk)
+    if (onRetroCell) onRetroCell(dk)
+  }
+
+  const handleRetroApply = async (action: 'done' | 'freeze' | 'skip' | 'clear') => {
+    if (!retroDateKey) return
+    await habitRetroTick(habit.id, retroDateKey, action)
+    setRetroDateKey(null)
+  }
+
+  const handleSaveEdit = async (h: Habit) => {
+    await saveHabit(h)
+    setShowEditor(false)
+    onEdit(h)
+  }
+
+  const handleDelete = async (id: string) => {
+    await removeHabit(id)
+    setShowEditor(false)
+    onClose()
+  }
+
+  const handleTimerSave = async (minutes: number) => {
+    await habitLogMinutes(habit.id, minutes)
+    setShowTimer(false)
+    showToast(`Zapisano ${minutes} min. ✓`)
   }
 
   return (
@@ -76,11 +114,16 @@ export function HabitDetail({ habit, projects, onClose, onEdit, onTick, onRetroC
           </div>
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
-          <button className="btn ghost small" onClick={() => onEdit(habit)}>
+          <button className="btn ghost small" onClick={() => setShowEditor(true)}>
             <HabitIcon name="pen" size={14} />
           </button>
+          {isTimeBased && !habit.log[today]?.done && (
+            <button className="btn ghost small" onClick={() => setShowTimer(true)}>
+              <HabitIcon name="clock" size={14} />
+            </button>
+          )}
           <button className="btn ghost small" onClick={onClose}>
-            <HabitIcon name="clock" size={14} />
+            <HabitIcon name="no-sugar" size={14} />
           </button>
         </div>
       </div>
@@ -112,7 +155,7 @@ export function HabitDetail({ habit, projects, onClose, onEdit, onTick, onRetroC
       <div className="section-label">
         <HabitIcon name="flame" size={12} /> Chain
       </div>
-      <Heatmap habit={habit} weeks={32} onCellClick={onRetroCell} />
+      <Heatmap habit={habit} weeks={32} onCellClick={handleCellClick} />
       <HeatmapLegend />
 
       <div style={{ display: 'flex', gap: 8, marginTop: 14, flexWrap: 'wrap' }}>
@@ -126,7 +169,7 @@ export function HabitDetail({ habit, projects, onClose, onEdit, onTick, onRetroC
           </button>
         )}
         {isTimeBased && !habit.log[today]?.done && (
-          <button className="btn" onClick={() => onTick(habit.id, 'done')}>
+          <button className="btn" onClick={() => setShowTimer(true)}>
             <HabitIcon name="clock" size={13} /> Uruchom timer
           </button>
         )}
@@ -144,6 +187,32 @@ export function HabitDetail({ habit, projects, onClose, onEdit, onTick, onRetroC
       <div style={{ fontSize: 11.5, color: 'var(--c-text-muted)', marginTop: 10 }}>
         Kliknij dowolny kafelek na chainie, żeby retroaktywnie oznaczyć dzień.
       </div>
+
+      {showEditor && (
+        <HabitEditor
+          habit={habit}
+          onSave={handleSaveEdit}
+          onCancel={() => setShowEditor(false)}
+          onDelete={handleDelete}
+        />
+      )}
+
+      {showTimer && (
+        <TimerModal
+          habit={habit}
+          onSave={handleTimerSave}
+          onCancel={() => setShowTimer(false)}
+        />
+      )}
+
+      {retroDateKey !== null && (
+        <RetroModal
+          habit={habit}
+          dateKey={retroDateKey}
+          onApply={handleRetroApply}
+          onCancel={() => setRetroDateKey(null)}
+        />
+      )}
     </div>
   )
 }
