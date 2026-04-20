@@ -36,12 +36,12 @@ export function HabitEditor({ habit, onSave, onCancel, onDelete }: HabitEditorPr
   const save = () => {
     if (!name.trim()) return
     if (habit) {
-      onSave({ ...habit, name: name.trim(), projectId: projectId || undefined, icon, note, freezeAvailable, schedule })
+      onSave({ ...habit, name: name.trim(), projectId: projectId || null, icon, note, freezeAvailable, schedule })
     } else {
       onSave({
         id: '',
         name: name.trim(),
-        projectId: projectId || undefined,
+        projectId: projectId || null,
         icon,
         note,
         createdAt: new Date().toISOString().split('T')[0],
