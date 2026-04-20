@@ -1,9 +1,8 @@
-import React from 'react'
 import { HabitIcon } from './HabitIcon'
 import { Heatmap } from './Heatmap'
 import { HeatmapLegend } from './HeatmapLegend'
-import { computeStreak, scheduleLabel } from '../../../../shared/habit-schedule'
-import { dateKey } from '../../../../shared/schedule'
+import { computeStreak, scheduleLabel } from '../../../shared/habit-schedule'
+import { dateKey } from '../../../shared/schedule'
 import type { Habit } from '../../types'
 import type { Project } from '../../types'
 

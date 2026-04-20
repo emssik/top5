@@ -1,6 +1,6 @@
 import React from 'react'
-import { dateKey } from '../../../../shared/schedule'
-import { dayStatus, isScheduledOn } from '../../../../shared/habit-schedule'
+import { dateKey } from '../../../shared/schedule'
+import { dayStatus, isScheduledOn } from '../../../shared/habit-schedule'
 import type { Habit } from '../../types'
 
 interface HeatmapProps {

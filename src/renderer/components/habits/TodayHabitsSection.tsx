@@ -3,29 +3,7 @@ import { isScheduledOn } from '../../../shared/habit-schedule'
 import { dateKey } from '../../../shared/schedule'
 import { HabitIcon } from './HabitIcon'
 import { computeStreak } from '../../../shared/habit-schedule'
-
-function fireConfetti(anchor: HTMLElement) {
-  const rect = anchor.getBoundingClientRect()
-  const colors = ['#7fae6d', '#e9a825', '#3c6aa8', '#d88a3e', '#d67bb0']
-  for (let i = 0; i < 14; i++) {
-    const el = document.createElement('div')
-    el.className = 'confetti'
-    el.style.left = (rect.left + rect.width / 2) + 'px'
-    el.style.top = (rect.top + rect.height / 2) + 'px'
-    el.style.background = colors[i % colors.length]
-    el.style.transform = `rotate(${Math.random() * 360}deg) translateX(${(Math.random() - 0.5) * 60}px)`
-    document.body.appendChild(el)
-    setTimeout(() => el.remove(), 1100)
-  }
-}
-
-function showToast(msg: string) {
-  const el = document.createElement('div')
-  el.className = 'habit-toast'
-  el.textContent = msg
-  document.body.appendChild(el)
-  setTimeout(() => el.remove(), 2000)
-}
+import { fireConfetti, showHabitToast } from './effects'
 
 interface TodayHabitsSectionProps {
   onSelectView: (view: string) => void
@@ -45,7 +23,7 @@ export function TodayHabitsSection({ onSelectView }: TodayHabitsSectionProps) {
     e.stopPropagation()
     await habitTick(id, 'done')
     fireConfetti(e.currentTarget)
-    showToast('Chain nie pęka. ✓')
+    showHabitToast('Chain nie pęka. ✓')
   }
 
   return (
