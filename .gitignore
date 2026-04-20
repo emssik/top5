@@ -47,3 +47,6 @@ src/renderer/**/*.d.ts
 electron.vite.config.js
 electron.vite.config.d.ts
 .claude/skills
+
+# Local scratch / design handoffs — not part of the product
+working/
