@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "electron-vite dev",
     "clean": "find src -name '*.js' -not -name 'electron.vite.config.js' -delete && rm -f tsconfig.node.tsbuildinfo tsconfig.web.tsbuildinfo",
-    "test": "rm -rf .tmp-tests && tsc -p tsconfig.tests.json && node --test '.tmp-tests/tests/schedule.test.js' '.tmp-tests/tests/filename.test.js' && rm -rf .tmp-tests",
+    "test": "rm -rf .tmp-tests && tsc -p tsconfig.tests.json && node --test '.tmp-tests/tests/schedule.test.js' '.tmp-tests/tests/filename.test.js' '.tmp-tests/tests/habit-schedule.test.js' && rm -rf .tmp-tests",
     "test:api": "vitest run",
     "lint": "eslint src/",
     "typecheck": "tsc --build",
