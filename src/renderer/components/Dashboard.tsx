@@ -13,6 +13,7 @@ import TodayView from './TodayView'
 import ProjectDetailView from './ProjectDetailView'
 import RepeatView from './RepeatView'
 import InlineStatsView from './InlineStatsView'
+import { HabitsView } from './habits/HabitsView'
 
 export default function Dashboard() {
   const { projects, config, saveConfig, saveProject, archiveProject, unarchiveProject, unsuspendProject, suspendProject, reorderProjects, moveTaskToProject } = useProjects()
@@ -265,6 +266,7 @@ export default function Dashboard() {
 
           {activeView === 'today' && <TodayView onSelectView={setActiveView} />}
           {activeView === 'repeat' && <RepeatView />}
+          {activeView === 'habits' && <HabitsView />}
           {activeView === 'stats' && <InlineStatsView />}
 
           {selectedProject && (
