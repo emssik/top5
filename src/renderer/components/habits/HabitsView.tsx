@@ -43,6 +43,33 @@ export function HabitsView() {
     if (habit) setDetailHabit(habit)
   }
 
+  const currentDetail = detailHabit ? habits.find((h) => h.id === detailHabit.id) ?? null : null
+
+  if (currentDetail) {
+    return (
+      <div className="habits-view">
+        <button className="habits-back-btn" onClick={() => setDetailHabit(null)}>
+          ← Wszystkie habity
+        </button>
+        <HabitDetail
+          habit={currentDetail}
+          projects={projects}
+          onClose={() => setDetailHabit(null)}
+          onEdit={(h) => setEditingHabit(h)}
+          onTick={async (id, mode) => { await habitTick(id, mode) }}
+        />
+        {editingHabit !== null && editingHabit !== 'new' && (
+          <HabitEditor
+            habit={editingHabit}
+            onSave={async (h) => { await saveHabit(h); setEditingHabit(null) }}
+            onCancel={() => setEditingHabit(null)}
+            onDelete={async (id) => { await removeHabit(id); setEditingHabit(null); setDetailHabit(null) }}
+          />
+        )}
+      </div>
+    )
+  }
+
   return (
     <div className="habits-view">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
@@ -98,16 +125,6 @@ export function HabitsView() {
         <div style={{ textAlign: 'center', color: 'var(--c-text-muted)', padding: '32px 0', fontSize: 13 }}>
           Brak nawyków do pokazania.
         </div>
-      )}
-
-      {detailHabit && (
-        <HabitDetail
-          habit={detailHabit}
-          projects={projects}
-          onClose={() => setDetailHabit(null)}
-          onEdit={(h) => { setEditingHabit(h); setDetailHabit(null) }}
-          onTick={async (id, mode) => { await habitTick(id, mode) }}
-        />
       )}
 
       {editingHabit !== null && (

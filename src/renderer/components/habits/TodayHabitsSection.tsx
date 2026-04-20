@@ -1,8 +1,7 @@
 import { useProjects } from '../../hooks/useProjects'
-import { isScheduledOn } from '../../../shared/habit-schedule'
+import { isScheduledOn, computeStreak, scheduleLabel } from '../../../shared/habit-schedule'
 import { dateKey } from '../../../shared/schedule'
 import { HabitIcon } from './HabitIcon'
-import { computeStreak } from '../../../shared/habit-schedule'
 import { fireConfetti, showHabitToast } from './effects'
 
 interface TodayHabitsSectionProps {
@@ -10,7 +9,7 @@ interface TodayHabitsSectionProps {
 }
 
 export function TodayHabitsSection({ onSelectView }: TodayHabitsSectionProps) {
-  const { habits, habitTick } = useProjects()
+  const { habits, projects, habitTick } = useProjects()
   const todayKey = dateKey(new Date())
   const today = new Date()
 
@@ -29,7 +28,9 @@ export function TodayHabitsSection({ onSelectView }: TodayHabitsSectionProps) {
   return (
     <div className="today-habits-section">
       <div className="today-habits-header">
-        <span className="today-habits-title">Habits today · {done}/{scheduled.length}</span>
+        <span className="today-habits-title">
+          <HabitIcon name="flame" size={11} /> Habits today · {done}/{scheduled.length}
+        </span>
         <button
           className="today-habits-link"
           onClick={() => onSelectView('habits')}
@@ -41,6 +42,7 @@ export function TodayHabitsSection({ onSelectView }: TodayHabitsSectionProps) {
         {scheduled.map((h) => {
           const isDone = !!h.log[todayKey]?.done
           const { streak, unit } = computeStreak(h)
+          const proj = projects.find((p) => p.id === h.projectId)
           return (
             <div key={h.id} className={`today-habit-row${isDone ? ' done' : ''}`}>
               <button
@@ -49,16 +51,20 @@ export function TodayHabitsSection({ onSelectView }: TodayHabitsSectionProps) {
                 disabled={isDone}
                 aria-label={isDone ? 'Zrobione' : 'Oznacz jako zrobione'}
               >
-                {isDone ? '✓' : '○'}
+                {isDone ? '✓' : ''}
               </button>
               <HabitIcon name={h.icon} size={14} stroke="var(--c-text-secondary)" />
               <span className="today-habit-code">HB-{h.id.slice(0, 3)}</span>
               <span className="today-habit-name">{h.name}</span>
-              {streak > 0 && (
-                <span className="streak-chip">
-                  <HabitIcon name="flame" size={11} /> {streak} {unit}
-                </span>
-              )}
+              <span
+                className="today-habit-bullet"
+                style={{ background: proj?.color ? `var(--pc-${proj.color})` : 'var(--c-border)' }}
+                title={proj?.name ?? ''}
+              />
+              <span className="today-habit-schedule">{scheduleLabel(h.schedule)}</span>
+              <span className={`streak-chip${streak === 0 ? ' cold' : ''}`}>
+                <HabitIcon name="flame" size={11} /> {streak} {streak > 0 ? unit : ''}
+              </span>
             </div>
           )
         })}

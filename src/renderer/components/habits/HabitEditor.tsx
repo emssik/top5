@@ -202,7 +202,14 @@ export function HabitEditor({ habit, onSave, onCancel, onDelete }: HabitEditorPr
 
         <div className="modal-actions">
           {habit && onDelete && (
-            <button className="btn danger left" onClick={() => onDelete(habit.id)}>Usuń</button>
+            <button
+              className="btn danger left"
+              onClick={() => {
+                if (window.confirm(`Usunąć habit „${habit.name}"? Tego nie można cofnąć.`)) {
+                  onDelete(habit.id)
+                }
+              }}
+            >Usuń</button>
           )}
           <button className="btn ghost" onClick={onCancel}>Anuluj</button>
           <button className="btn primary" onClick={save} disabled={!name.trim()}>Zapisz</button>
