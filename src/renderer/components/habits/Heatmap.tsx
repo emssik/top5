@@ -74,9 +74,11 @@ export function Heatmap({ habit, weeks = 32, onCellClick }: HeatmapProps) {
   // Pierwszy miesiąc może być częściowy (1-2 tygodnie) — za wąski dla czytelnego labela
   const visibleMarkers = monthMarkers.filter((m, i) => i !== 0 || m.span >= 2)
 
-  const gridTemplateColumns = `repeat(${columns}, 10px)`
-  const COL_STRIDE = 12 // 10px cell + 2px gap
-  const heatmapWidth = columns * 10 + (columns - 1) * 2
+  const CELL = 14
+  const GAP = 3
+  const COL_STRIDE = CELL + GAP
+  const gridTemplateColumns = `repeat(${columns}, ${CELL}px)`
+  const heatmapWidth = columns * CELL + (columns - 1) * GAP
 
   return (
     <div className="heatmap-wrapper">
@@ -90,7 +92,7 @@ export function Heatmap({ habit, weeks = 32, onCellClick }: HeatmapProps) {
               key={col}
               style={{
                 left: `${col * COL_STRIDE}px`,
-                width: `${span * 10 + (span - 1) * 2}px`,
+                width: `${span * CELL + (span - 1) * GAP}px`,
               }}
             >
               {label}

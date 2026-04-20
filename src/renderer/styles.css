@@ -2355,9 +2355,9 @@ body {
 /* ── Habits ── */
 
 .heat-cell {
-  width: 10px;
-  height: 10px;
-  border-radius: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
   background: var(--bg-surface);
   cursor: pointer;
   flex-shrink: 0;
@@ -2368,7 +2368,7 @@ body {
 .heat-cell.l4 { background: #7fae6d; }
 .heat-cell.freeze { background: rgba(59, 130, 246, 0.5); }
 .heat-cell.skip { background: rgba(234, 179, 8, 0.4); }
-.heat-cell.miss { background: rgba(239, 68, 68, 0.25); }
+.heat-cell.miss { background: rgba(239, 68, 68, 0.13); }
 .heat-cell.future { background: transparent; cursor: default; }
 .heat-cell.today { outline: 1.5px solid var(--pc-amber); outline-offset: 1px; }
 
@@ -2380,12 +2380,12 @@ body {
 }
 .heatmap-weekdays {
   display: grid;
-  grid-template-rows: repeat(7, 10px);
-  gap: 2px;
+  grid-template-rows: repeat(7, 14px);
+  gap: 3px;
   padding-top: 14px;
-  font-size: 9px;
+  font-size: 10px;
   color: var(--c-text-muted);
-  line-height: 10px;
+  line-height: 14px;
   flex-shrink: 0;
 }
 .heatmap-months {
@@ -2404,9 +2404,9 @@ body {
 }
 .heatmap {
   display: grid;
-  grid-template-rows: repeat(7, 10px);
+  grid-template-rows: repeat(7, 14px);
   grid-auto-flow: column;
-  gap: 2px;
+  gap: 3px;
 }
 
 .legend {
@@ -2830,7 +2830,7 @@ textarea.input { font-family: inherit; }
 .dark .heat-cell.l4 { background: #7fae6d; }
 .dark .heat-cell.freeze { background: rgba(96, 165, 250, 0.55); }
 .dark .heat-cell.skip { background: rgba(234, 179, 8, 0.45); }
-.dark .heat-cell.miss { background: rgba(239, 68, 68, 0.3); }
+.dark .heat-cell.miss { background: rgba(239, 68, 68, 0.16); }
 .dark .pill-btn { border-color: rgba(255,255,255,0.12); background: rgba(255,255,255,0.04); }
 .dark .pill-btn:hover { background: rgba(255,255,255,0.09); }
 .dark .input, .dark .select { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.12); }
