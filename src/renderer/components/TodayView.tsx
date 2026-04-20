@@ -1427,6 +1427,8 @@ export default function TodayView({ onSelectView }: { onSelectView?: (view: stri
         </>
       )}
 
+      {onSelectView && <TodayHabitsSection onSelectView={onSelectView} />}
+
       {tomorrowProposals.length > 0 && (
         <>
           <div className="section-label mt-section" style={{ opacity: 0.7 }}>
@@ -1464,8 +1466,6 @@ export default function TodayView({ onSelectView }: { onSelectView?: (view: stri
           </button>
         )}
       </div>
-
-      {onSelectView && <TodayHabitsSection onSelectView={onSelectView} />}
 
       {dueDateTomorrowProposals.length > 0 && (
         <>
