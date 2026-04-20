@@ -71,6 +71,9 @@ export function Heatmap({ habit, weeks = 32, onCellClick }: HeatmapProps) {
     last.span = columns - last.col
   }
 
+  // Pierwszy miesiąc może być częściowy (1-2 tygodnie) — za wąski dla czytelnego labela
+  const visibleMarkers = monthMarkers.filter((m, i) => i !== 0 || m.span >= 2)
+
   const gridTemplateColumns = `repeat(${columns}, 10px)`
   const COL_STRIDE = 12 // 10px cell + 2px gap
   const heatmapWidth = columns * 10 + (columns - 1) * 2
@@ -82,7 +85,7 @@ export function Heatmap({ habit, weeks = 32, onCellClick }: HeatmapProps) {
       </div>
       <div style={{ flex: 1, minWidth: 0, overflowX: 'auto' }}>
         <div className="heatmap-months" style={{ width: heatmapWidth }}>
-          {monthMarkers.map(({ label, col, span }) => (
+          {visibleMarkers.map(({ label, col, span }) => (
             <span
               key={col}
               style={{
