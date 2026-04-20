@@ -1168,6 +1168,7 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
   ipcMain.handle('reorder-habits', (_event, ids: unknown) => {
     const result = habitService.reorderHabits(ids)
     if (isServiceError(result)) return getData().habits ?? []
+    notifyAllWindows()
     return result
   })
 
