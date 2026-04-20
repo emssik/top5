@@ -484,7 +484,7 @@ Wymaganie dodatkowe od użytkownika (Q2): HTTP API dla habbitów **nie** jest po
   nic nie restartujemy. Trzymaj walidację minimalną (jak
   `isValidRepeatingTask` — type + required fields).
 
-### Step 6: Rozszerz `src/renderer/hooks/useProjects.ts` o habits
+### Step 6: Rozszerz `src/renderer/hooks/useProjects.ts` o habits [x]
 
 - **What:** Dodać `habits: Habit[]` do store + akcje analogiczne do
   `repeatingTasks`.
@@ -505,12 +505,12 @@ Wymaganie dodatkowe od użytkownika (Q2): HTTP API dla habbitów **nie** jest po
   z `repeatingTasks` i `quickTasks`.
 - **Confidence: 10/10**
 - **Acceptance criteria:**
-  - [ ] `useProjects().habits` zwraca poprawnie tablicę z YAML
-  - [ ] `saveHabit({...})` aktualizuje store i powoduje re-render konsumenta
-  - [ ] `reload-data` event z main (po save w innym oknie) odświeża `habits`
+  - [x] `useProjects().habits` zwraca poprawnie tablicę z YAML
+  - [x] `saveHabit({...})` aktualizuje store i powoduje re-render konsumenta
+  - [x] `reload-data` event z main (po save w innym oknie) odświeża `habits`
 - **Notes:** Reload-data listener już jest zbiorczy — nie wymaga rozszerzeń.
 
-### Step 7: Shared constants + ikony habbitów
+### Step 7: Shared constants + ikony habbitów [x]
 
 - **What:** Helper do ikon inline SVG w stylu lucide (10 ikon: flame, book,
   dumbbell, leaf, mic, pen, code, no-sugar, note, clock).
@@ -525,13 +525,13 @@ Wymaganie dodatkowe od użytkownika (Q2): HTTP API dla habbitów **nie** jest po
   dopasowania do theme.
 - **Confidence: 9/10**
 - **Acceptance criteria:**
-  - [ ] Komponent `HabitIcon` renderuje każdą z 10 ikon bez błędów
-  - [ ] Fallback "default" gdy nazwa nieznana (prosty circle)
+  - [x] Komponent `HabitIcon` renderuje każdą z 10 ikon bez błędów
+  - [x] Fallback "default" gdy nazwa nieznana (prosty circle)
 - **Notes:** Alternatywa: `lucide-react` (package już w projekcie? sprawdzić
   package.json). **Jeśli tak** — użyj `lucide-react` zamiast inline, mniej kodu.
   Jeśli nie — inline SVG. Założenie w planie: inline (minimize deps).
 
-### Step 8: Komponenty habits — Heatmap + HeatmapLegend
+### Step 8: Komponenty habits — Heatmap + HeatmapLegend [x]
 
 - **What:** `src/renderer/components/habits/Heatmap.tsx` + `HeatmapLegend.tsx`.
 - **How:**
@@ -549,15 +549,15 @@ Wymaganie dodatkowe od użytkownika (Q2): HTTP API dla habbitów **nie** jest po
   trivialne do dostosowania.
 - **Confidence: 8/10**
 - **Acceptance criteria:**
-  - [ ] Heatmap renderuje 32 tygodnie × 7 dni = 224 komórki bez błędów
-  - [ ] Klik komórki wywołuje `onCellClick(dateKey)` (gdy callback przekazany)
-  - [ ] Każdy status (empty/done/freeze/skip/miss/future) ma inny kolor
+  - [x] Heatmap renderuje 32 tygodnie × 7 dni = 224 komórki bez błędów
+  - [x] Klik komórki wywołuje `onCellClick(dateKey)` (gdy callback przekazany)
+  - [x] Każdy status (empty/done/freeze/skip/miss/future) ma inny kolor
         zgodny z Design Tokens
 - **Notes:** Dark theme — upewnij się że heat levels są widoczne (jaśniejsze
   kolory na ciemnym tle). W razie potrzeby — oddzielna zmienna
   `--heat-l1` w `.dark` prefix.
 
-### Step 9: Komponenty habits — HabitRow, HabitsView, HabitDetail
+### Step 9: Komponenty habits — HabitRow, HabitsView, HabitDetail [x]
 
 - **What:** Trzy komponenty w `src/renderer/components/habits/`.
 - **How:**
@@ -575,11 +575,11 @@ Wymaganie dodatkowe od użytkownika (Q2): HTTP API dla habbitów **nie** jest po
   Dekompozycja z handoffu jest rozsądna, nie trzeba jej zmieniać.
 - **Confidence: 8/10**
 - **Acceptance criteria:**
-  - [ ] `HabitsView` renderuje stat grid: Dziś / Aktywne chainy / Total / Best
-  - [ ] Sub-tabs filtrują: all / today-pending / active-streaks
-  - [ ] `HabitRow` klik na CTA → tick z konfetti (toast "Chain nie pęka. ✓")
-  - [ ] `HabitDetail` otwiera się po kliknięciu karty, pokazuje 32w heatmapę
-  - [ ] Klik kafelka w heatmapie w detail → otwiera RetroModal
+  - [x] `HabitsView` renderuje stat grid: Dziś / Aktywne chainy / Total / Best
+  - [x] Sub-tabs filtrują: all / today-pending / active-streaks
+  - [x] `HabitRow` klik na CTA → tick z konfetti (toast "Chain nie pęka. ✓")
+  - [x] `HabitDetail` otwiera się po kliknięciu karty, pokazuje 32w heatmapę
+  - [x] Klik kafelka w heatmapie w detail → otwiera RetroModal
 - **Notes:** Konfetti — najprościej: przy kliknięciu tworzymy 14 divów
   `className="confetti"` z CSS `@keyframes fall`, po 1100ms `.remove()`.
   Bez bibliotek.
@@ -779,9 +779,9 @@ Wymaganie dodatkowe od użytkownika (Q2): HTTP API dla habbitów **nie** jest po
   Build check eliminuje typowe błędy stale .js.
 - **Confidence: 9/10**
 - **Acceptance criteria:**
-  - [ ] `npm run build` zielony
-  - [ ] `npm run test` zielony (schedule + habit-schedule + filename)
-  - [ ] `npm run test:api` zielony (69+ testów)
+  - [x] `npm run build` zielony
+  - [x] `npm run test` zielony (schedule + habit-schedule + filename)
+  - [x] `npm run test:api` zielony (69+ testów)
   - [ ] Manualny smoke: create habit → tick → confetti → reload app → habit+log
         persists
 - **Notes:** Pamiętać o `npm run clean` przed build (stale .js z tsc — CLAUDE.md).
@@ -898,17 +898,17 @@ Zadanie jest ukończone gdy WSZYSTKIE poniższe są prawdą:
 
 - [ ] Wszystkie 17 kroków ma `[x]` w heading i wszystkie ich acceptance criteria
       są zaznaczone
-- [ ] `npm run build` przechodzi bez błędów i warningów
-- [ ] `npm run test` zielony (nowy `habit-schedule.test.ts` dołączony)
-- [ ] `npm run test:api` zielony (rozszerzony `/api/v1/today` test, jeśli dodany)
+- [x] `npm run build` przechodzi bez błędów i warningów
+- [x] `npm run test` zielony (nowy `habit-schedule.test.ts` dołączony)
+- [x] `npm run test:api` zielony (rozszerzony `/api/v1/today` test, jeśli dodany)
 - [ ] Manualny smoke test (Step 17) udany: create → tick → persist → reload
       → heatmapa poprawna
 - [ ] Dark i light theme — heatmapa, konfetti, toast czytelne na obu
-- [ ] `data.yaml` zawiera klucz `habits` po pierwszej mutacji; deserializacja
+- [x] `data.yaml` zawiera klucz `habits` po pierwszej mutacji; deserializacja
       bez `habits` (stare installs) daje pustą tablicę, nie crash
-- [ ] Obsidian journal dla dnia z habbitami zaplanowanymi zawiera sekcję
+- [x] Obsidian journal dla dnia z habbitami zaplanowanymi zawiera sekcję
       "Nawyki"
-- [ ] `GET /api/v1/today` (gdy API enabled) zwraca pole `habits` — AI ma wgląd
+- [x] `GET /api/v1/today` (gdy API enabled) zwraca pole `habits` — AI ma wgląd
       w to co user dziś robi
 - [ ] Żadna istniejąca ścieżka (projekt create/edit, task complete, wins
       lock/unlock, repeat accept/dismiss, focus mode, quick add, journal daily)
