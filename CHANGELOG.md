@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.86.0] - 2026-04-20
+
+### Removed
+
+- HTTP API endpoints `PUT /api/v1/quick-tasks/beyond-limit` and `PUT /api/v1/projects/pinned-tasks/beyond-limit` — redundant with `POST /api/v1/today/beyond-limit` and missing the natural-overflow freeze that matches drag-and-drop semantics. External clients should use `POST /today/beyond-limit` instead.
+
+### Added
+
+- `POST /api/v1/today/beyond-limit` documented in `docs/API.md` alongside the new `GET /today` endpoint.
+
 ## [1.85.1] - 2026-04-20
 
 ### Security

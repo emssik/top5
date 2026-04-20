@@ -150,52 +150,6 @@ describe('Quick Tasks API', () => {
     expect(tasks.find((t: any) => t.id === t1.id).order).toBe(1)
   })
 
-  it('PUT /quick-tasks/beyond-limit — set flag on tasks', async () => {
-    const server = await getTestServer()
-    const t1 = makeQuickTask({ title: 'T1' })
-    const t2 = makeQuickTask({ title: 'T2' })
-    await server.inject({ method: 'POST', url: '/api/v1/quick-tasks', headers: { ...auth, 'content-type': 'application/json' }, payload: t1 })
-    await server.inject({ method: 'POST', url: '/api/v1/quick-tasks', headers: { ...auth, 'content-type': 'application/json' }, payload: t2 })
-
-    const res = await server.inject({
-      method: 'PUT',
-      url: '/api/v1/quick-tasks/beyond-limit',
-      headers: { ...auth, 'content-type': 'application/json' },
-      payload: { ids: [t1.id, t2.id], beyondLimit: true }
-    })
-    expect(res.statusCode).toBe(200)
-    const tasks = res.json().data
-    expect(tasks.find((t: any) => t.id === t1.id).beyondLimit).toBe(true)
-    expect(tasks.find((t: any) => t.id === t2.id).beyondLimit).toBe(true)
-  })
-
-  it('PUT /quick-tasks/beyond-limit — clears flag when false', async () => {
-    const server = await getTestServer()
-    const t1 = makeQuickTask({ title: 'T1', beyondLimit: true })
-    await server.inject({ method: 'POST', url: '/api/v1/quick-tasks', headers: { ...auth, 'content-type': 'application/json' }, payload: t1 })
-
-    const res = await server.inject({
-      method: 'PUT',
-      url: '/api/v1/quick-tasks/beyond-limit',
-      headers: { ...auth, 'content-type': 'application/json' },
-      payload: { ids: [t1.id], beyondLimit: false }
-    })
-    expect(res.statusCode).toBe(200)
-    const tasks = res.json().data
-    expect(tasks.find((t: any) => t.id === t1.id).beyondLimit).toBeUndefined()
-  })
-
-  it('PUT /quick-tasks/beyond-limit — 400 for invalid payload', async () => {
-    const server = await getTestServer()
-    const res = await server.inject({
-      method: 'PUT',
-      url: '/api/v1/quick-tasks/beyond-limit',
-      headers: { ...auth, 'content-type': 'application/json' },
-      payload: { ids: ['x'] } // missing beyondLimit
-    })
-    expect(res.statusCode).toBe(400)
-  })
-
   it('PUT /quick-tasks/:id — not found', async () => {
     const server = await getTestServer()
     const res = await server.inject({

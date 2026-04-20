@@ -381,44 +381,6 @@ describe('Projects API', () => {
     })
   })
 
-  describe('PUT /projects/pinned-tasks/beyond-limit', () => {
-    it('sets beyondLimit flag on tasks', async () => {
-      const server = await getTestServer()
-      const project = makeProject({
-        tasks: [
-          { id: 'task-1', title: 'T1', completed: false, isToDoNext: true, createdAt: new Date().toISOString() },
-          { id: 'task-2', title: 'T2', completed: false, isToDoNext: true, createdAt: new Date().toISOString() }
-        ]
-      })
-      await server.inject({ method: 'POST', url: '/api/v1/projects', headers: { ...auth, 'content-type': 'application/json' }, payload: project })
-
-      const res = await server.inject({
-        method: 'PUT',
-        url: '/api/v1/projects/pinned-tasks/beyond-limit',
-        headers: { ...auth, 'content-type': 'application/json' },
-        payload: [
-          { projectId: project.id, taskId: 'task-1', beyondLimit: true },
-          { projectId: project.id, taskId: 'task-2', beyondLimit: false }
-        ]
-      })
-      expect(res.statusCode).toBe(200)
-      const tasks = res.json().data.find((p: any) => p.id === project.id).tasks
-      expect(tasks.find((t: any) => t.id === 'task-1').beyondLimit).toBe(true)
-      expect(tasks.find((t: any) => t.id === 'task-2').beyondLimit).toBeUndefined()
-    })
-
-    it('returns 400 for invalid payload', async () => {
-      const server = await getTestServer()
-      const res = await server.inject({
-        method: 'PUT',
-        url: '/api/v1/projects/pinned-tasks/beyond-limit',
-        headers: { ...auth, 'content-type': 'application/json' },
-        payload: 'not-an-array'
-      })
-      expect(res.statusCode).toBe(400)
-    })
-  })
-
   describe('DELETE /projects/:pid/tasks/:tid', () => {
     it('deletes a task from a project', async () => {
       const server = await getTestServer()

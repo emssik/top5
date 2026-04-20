@@ -154,10 +154,4 @@ export function registerProjectRoutes(fastify: FastifyInstance): void {
     return { ok: true, data: result }
   })
 
-  fastify.put('/api/v1/projects/pinned-tasks/beyond-limit', async (request, reply) => {
-    const result = projectService.setBeyondLimitPinnedTasks(request.body)
-    if (isServiceError(result)) return reply.status(400).send({ ok: false, error: result.error })
-    notifyAllWindows()
-    return { ok: true, data: result }
-  })
 }

@@ -211,6 +211,38 @@ Reorders quick tasks.
 
 ---
 
+### Today
+
+#### `GET /today`
+
+Returns the tasks visible in the Today tab (repeating proposals, scheduled, and top-5 regular). Excludes overflow, completed, and unapproved proposals.
+
+**Response:** `{ ok, data: VisibleTask[] }`
+
+#### `POST /today/beyond-limit`
+
+Pushes one or more tasks into the Today "beyond-the-limit" overflow zone — or brings them back.
+
+**Body:**
+
+```json
+{
+  "quickTaskIds": ["qt-1"],
+  "pinnedTasks": [{ "projectId": "proj-1", "taskId": "task-1" }],
+  "beyondLimit": true
+}
+```
+
+`quickTaskIds` and `pinnedTasks` are both optional, but at least one must be non-empty. `beyondLimit` is required.
+
+When `beyondLimit=true`, the endpoint also freezes all current natural-overflow tasks as `beyondLimit=true`, so nothing slides up to fill the vacated slot — matches drag-and-drop semantics in the UI.
+
+**Response:** `{ ok, data: { quickTaskIds, pinnedTasks, beyondLimit } }`
+
+**Errors:** `400` if `beyondLimit` is not a boolean or both id lists are empty.
+
+---
+
 ### Repeating Tasks
 
 #### `GET /repeating-tasks`
