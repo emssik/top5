@@ -846,14 +846,13 @@ body {
 .done-clear-btn:hover { color: var(--c-text-secondary); background: var(--c-bg-surface); }
 
 .done-list {
-  interpolate-size: allow-keywords;
   overflow: hidden;
   max-height: 0;
   transition: max-height 0.3s ease;
 }
 
 .done-list.open {
-  max-height: auto;
+  max-height: 5000px;
 }
 
 .add-task-btn {

@@ -1465,6 +1465,8 @@ export default function TodayView({ onSelectView }: { onSelectView?: (view: stri
         )}
       </div>
 
+      {onSelectView && <TodayHabitsSection onSelectView={onSelectView} />}
+
       {dueDateTomorrowProposals.length > 0 && (
         <>
           <div className="section-label mt-section">
@@ -1552,8 +1554,6 @@ export default function TodayView({ onSelectView }: { onSelectView?: (view: stri
           </div>
         </div>
       )}
-
-      {onSelectView && <TodayHabitsSection onSelectView={onSelectView} />}
 
       <div className="today-add-task-wrap">
         {showAddInput ? (
