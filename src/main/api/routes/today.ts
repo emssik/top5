@@ -3,6 +3,7 @@ import { getData, notifyAllWindows } from '../../store'
 import { getVisibleTasks } from '../../../shared/task-list'
 import * as quickTaskService from '../../service/quick-tasks'
 import * as projectService from '../../service/projects'
+import * as habitService from '../../service/habits'
 
 export function registerTodayRoutes(fastify: FastifyInstance): void {
   fastify.get('/api/v1/today', async () => {
@@ -13,7 +14,7 @@ export function registerTodayRoutes(fastify: FastifyInstance): void {
       configLimit: data.config.quickTasksLimit ?? 5,
       winsLock: data.winsLock
     })
-    return { ok: true, data: result.allVisible }
+    return { ok: true, data: result.allVisible, habits: habitService.getTodayHabits() }
   })
 
   // Push a task to / pull it back from the Today "beyond-the-limit" overflow zone.
