@@ -601,12 +601,12 @@ Wymaganie dodatkowe od użytkownika (Q2): HTTP API dla habbitów **nie** jest po
   bez drugiego.
 - **Confidence: 8/10**
 - **Acceptance criteria:**
-  - [ ] `HabitEditor` zapisuje nowy habit (bez id → service nadaje `randomUUID().slice(0,21)`)
-  - [ ] Zmiana typu schedule w editor aktualizuje odpowiednie dodatkowe pola
+  - [x] `HabitEditor` zapisuje nowy habit (bez id → service nadaje `randomUUID().slice(0,21)`)
+  - [x] Zmiana typu schedule w editor aktualizuje odpowiednie dodatkowe pola
         (dni tyg / N / every / minutes)
-  - [ ] `TimerModal` po zapisie z 25 min akumuluje w log (`minutes: 25`),
+  - [x] `TimerModal` po zapisie z 25 min akumuluje w log (`minutes: 25`),
         `done=true` gdy suma >= `schedule.minutes` (dla dailyMinutes)
-  - [ ] `RetroModal` 'freeze' zmniejsza `freezeAvailable` tylko gdy
+  - [x] `RetroModal` 'freeze' zmniejsza `freezeAvailable` tylko gdy
         poprzedni stan NIE był freeze (unikamy double-decrement)
 - **Notes:** Generowanie id habitu — **w service** (`randomUUID().slice(0,21)`,
   identycznie jak QuickTask). UI wysyła `habit` bez `id` dla nowego, service
@@ -633,10 +633,10 @@ Wymaganie dodatkowe od użytkownika (Q2): HTTP API dla habbitów **nie** jest po
   (habitsToday) — wszystko liczone z `habits` które już są w store.
 - **Confidence: 8/10**
 - **Acceptance criteria:**
-  - [ ] Sekcja pojawia się TYLKO gdy `scheduledToday.length > 0`
-  - [ ] Header pokazuje `done/total` zgodny ze stanem `log[todayKey]?.done`
-  - [ ] Tick → natychmiastowa aktualizacja countera (bez reload)
-  - [ ] Klik "all habits →" zmienia `activeView` na `'habits'`
+  - [x] Sekcja pojawia się TYLKO gdy `scheduledToday.length > 0`
+  - [x] Header pokazuje `done/total` zgodny ze stanem `log[todayKey]?.done`
+  - [x] Tick → natychmiastowa aktualizacja countera (bez reload)
+  - [x] Klik "all habits →" zmienia `activeView` na `'habits'`
 - **Notes:** Sekcja jest **poza** Wins lock scope — nie wołamy
   `lockWinsTasks` przy tick. Zgodnie z Decision 3.
 
@@ -656,9 +656,9 @@ Wymaganie dodatkowe od użytkownika (Q2): HTTP API dla habbitów **nie** jest po
   `<HabitIcon name="flame"/>`.
 - **Confidence: 10/10**
 - **Acceptance criteria:**
-  - [ ] Klik "Habits" w sidebarze zmienia widok na `HabitsView`
-  - [ ] Item jest w kolejności Repeat / Habits / Stats
-  - [ ] Aktywny stan (podświetlenie) działa identycznie jak Repeat/Stats
+  - [x] Klik "Habits" w sidebarze zmienia widok na `HabitsView`
+  - [x] Item jest w kolejności Repeat / Habits / Stats
+  - [x] Aktywny stan (podświetlenie) działa identycznie jak Repeat/Stats
 
 ### Step 13: InlineStatsView — sekcja "Habit Stats"
 
@@ -673,10 +673,10 @@ Wymaganie dodatkowe od użytkownika (Q2): HTTP API dla habbitów **nie** jest po
 - **Why this approach:** Stats już istnieje — rozszerzenie, nie nowy widok.
 - **Confidence: 8/10**
 - **Acceptance criteria:**
-  - [ ] Sekcja "Habit Stats" pojawia się PO istniejących statach
-  - [ ] Gdy `habits.length === 0` → sekcja pokazuje placeholder "Dodaj pierwszy
+  - [x] Sekcja "Habit Stats" pojawia się PO istniejących statach
+  - [x] Gdy `habits.length === 0` → sekcja pokazuje placeholder "Dodaj pierwszy
         nawyk" (albo ukryć całkowicie — UX call; preferuj ukrycie)
-  - [ ] Dla każdego habita ostatnia kolumna pokazuje aktualny streak zgodny
+  - [x] Dla każdego habita ostatnia kolumna pokazuje aktualny streak zgodny
         z `computeStreak`
 - **Notes:** Jeśli `InlineStatsView` nie istnieje lub ma inną strukturę niż
   zakładam — przy implementacji dostosuj się do aktualnej wersji. Plik to
@@ -708,11 +708,11 @@ Wymaganie dodatkowe od użytkownika (Q2): HTTP API dla habbitów **nie** jest po
   klas + CSS vars. Zachowujemy konwencję. Nie używamy CSS-in-JS.
 - **Confidence: 7/10**
 - **Acceptance criteria:**
-  - [ ] Light theme: heat levels czytelne (l1 jasnozielony, l4 ciemnozielony)
-  - [ ] Dark theme: heat levels czytelne (jaśniejsze odcienie, nie mergują się z tłem)
-  - [ ] Heatmap cell hover → `transform: scale(1.25)` 100ms (z design tokens)
-  - [ ] Card hover → soft shadow (z design tokens)
-  - [ ] Confetti animacja nie powoduje layout shiftu (position: fixed)
+  - [x] Light theme: heat levels czytelne (l1 jasnozielony, l4 ciemnozielony)
+  - [x] Dark theme: heat levels czytelne (jaśniejsze odcienie, nie mergują się z tłem)
+  - [x] Heatmap cell hover → `transform: scale(1.25)` 100ms (z design tokens)
+  - [x] Card hover → soft shadow (z design tokens)
+  - [x] Confetti animacja nie powoduje layout shiftu (position: fixed)
 - **Notes:** Kolory w handoffie są dla jasnego theme'u — dark theme wymaga
   adaptacji. Sprawdzić istniejące dark overrides w styles.css i dodać analogiczne.
 
