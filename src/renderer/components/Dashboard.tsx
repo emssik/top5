@@ -263,7 +263,7 @@ export default function Dashboard() {
             </div>
           )}
 
-          {activeView === 'today' && <TodayView />}
+          {activeView === 'today' && <TodayView onSelectView={setActiveView} />}
           {activeView === 'repeat' && <RepeatView />}
           {activeView === 'stats' && <InlineStatsView />}
 

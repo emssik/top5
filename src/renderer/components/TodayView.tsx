@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { nanoid } from 'nanoid'
 import { useProjects } from '../hooks/useProjects'
+import { TodayHabitsSection } from './habits/TodayHabitsSection'
 import { useTaskList } from '../hooks/useTaskList'
 import type { MergedTask } from '../hooks/useTaskList'
 import { calcQuickTaskTime, calcTaskTime, formatCheckInTime } from '../utils/checkInTime'
@@ -63,7 +64,7 @@ function taskToRef(task: MergedTask): LockedTaskRef {
   return { kind: 'pinned', projectId: task.projectId, taskId: task.taskId }
 }
 
-export default function TodayView() {
+export default function TodayView({ onSelectView }: { onSelectView?: (view: string) => void } = {}) {
   const {
     projects,
     quickTasks,
@@ -1551,6 +1552,8 @@ export default function TodayView() {
           </div>
         </div>
       )}
+
+      {onSelectView && <TodayHabitsSection onSelectView={onSelectView} />}
 
       <div className="today-add-task-wrap">
         {showAddInput ? (
