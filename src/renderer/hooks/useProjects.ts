@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { Project, QuickTask, AppConfig, FocusCheckIn, RepeatingTask, LockedTaskRef, WinsLockState } from '../types'
+import type { Project, QuickTask, AppConfig, FocusCheckIn, RepeatingTask, LockedTaskRef, WinsLockState, Habit } from '../types'
 import { assignMissingProjectColors, normalizeProject } from '../utils/projects'
 import { dateKey } from '../../shared/schedule'
 
@@ -12,6 +12,7 @@ interface ProjectsState {
   repeatingTasks: RepeatingTask[]
   dismissedRepeating: Record<string, string[]>
   winsLock: WinsLockState | null
+  habits: Habit[]
   loaded: boolean
 
   loadData: () => Promise<void>
@@ -42,6 +43,12 @@ interface ProjectsState {
   lockWinsTasks: (tasks: LockedTaskRef[]) => Promise<void>
   unlockWinsTasks: () => Promise<void>
   loadWinsLock: () => Promise<void>
+  saveHabit: (habit: Habit) => Promise<void>
+  removeHabit: (id: string) => Promise<void>
+  reorderHabits: (orderedIds: string[]) => Promise<void>
+  habitTick: (id: string, mode: 'done' | 'freeze' | 'skip' | 'undo') => Promise<void>
+  habitRetroTick: (id: string, dk: string, action: 'done' | 'freeze' | 'skip' | 'clear') => Promise<void>
+  habitLogMinutes: (id: string, minutes: number) => Promise<void>
 }
 
 export const useProjects = create<ProjectsState>((set, get) => ({
@@ -64,6 +71,7 @@ export const useProjects = create<ProjectsState>((set, get) => ({
   repeatingTasks: [],
   dismissedRepeating: {},
   winsLock: null,
+  habits: [],
   loaded: false,
 
   // Normalize project shape (links/color) when data comes from main process.
@@ -84,6 +92,7 @@ export const useProjects = create<ProjectsState>((set, get) => ({
         repeatingTasks: data.repeatingTasks ?? [],
         dismissedRepeating: data.dismissedRepeating ?? {},
         winsLock: data.winsLock ?? null,
+        habits: data.habits ?? [],
         loaded: true
       })
     } catch (error) {
@@ -248,5 +257,35 @@ export const useProjects = create<ProjectsState>((set, get) => ({
   loadWinsLock: async () => {
     const lockState = await window.api.winsGetLockState()
     set({ winsLock: lockState })
-  }
+  },
+
+  saveHabit: async (habit: Habit) => {
+    const updated = await window.api.saveHabit(habit)
+    set({ habits: updated })
+  },
+
+  removeHabit: async (id: string) => {
+    const updated = await window.api.removeHabit(id)
+    set({ habits: updated })
+  },
+
+  reorderHabits: async (orderedIds: string[]) => {
+    const updated = await window.api.reorderHabits(orderedIds)
+    set({ habits: updated })
+  },
+
+  habitTick: async (id: string, mode: 'done' | 'freeze' | 'skip' | 'undo') => {
+    const updated = await window.api.habitTick(id, mode)
+    set({ habits: updated })
+  },
+
+  habitRetroTick: async (id: string, dk: string, action: 'done' | 'freeze' | 'skip' | 'clear') => {
+    const updated = await window.api.habitRetroTick(id, dk, action)
+    set({ habits: updated })
+  },
+
+  habitLogMinutes: async (id: string, minutes: number) => {
+    const updated = await window.api.habitLogMinutes(id, minutes)
+    set({ habits: updated })
+  },
 }))
