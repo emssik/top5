@@ -716,7 +716,7 @@ Wymaganie dodatkowe od użytkownika (Q2): HTTP API dla habbitów **nie** jest po
 - **Notes:** Kolory w handoffie są dla jasnego theme'u — dark theme wymaga
   adaptacji. Sprawdzić istniejące dark overrides w styles.css i dodać analogiczne.
 
-### Step 15: Obsidian journal — sekcja "Nawyki" w daily note
+### Step 15: Obsidian journal — sekcja "Nawyki" w daily note [x]
 
 - **What:** Rozszerzyć `generateDailyMarkdown` o sekcję z listą habbitów
   zaplanowanych danego dnia.
@@ -739,10 +739,10 @@ Wymaganie dodatkowe od użytkownika (Q2): HTTP API dla habbitów **nie** jest po
   Nie trzeba osobnego raportu habbitów.
 - **Confidence: 7/10**
 - **Acceptance criteria:**
-  - [ ] Dla dnia z 3 habbitami zaplanowanymi, notka zawiera 3 bullets w sekcji
+  - [x] Dla dnia z 3 habbitami zaplanowanymi, notka zawiera 3 bullets w sekcji
         "Nawyki"
-  - [ ] Re-generowanie notki nie nadpisuje "Refleksja" i "Notatki"
-  - [ ] Gdy brak habbitów zaplanowanych → sekcja nie pojawia się (nie pustka)
+  - [x] Re-generowanie notki nie nadpisuje "Refleksja" i "Notatki"
+  - [x] Gdy brak habbitów zaplanowanych → sekcja nie pojawia się (nie pustka)
 - **Notes:** W testach wins.ts `resolveDay()` woła `generateDailyNote()` —
   musi dalej działać po naszym rozszerzeniu (żadnych rzuconych wyjątków).
 
