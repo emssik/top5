@@ -2389,18 +2389,18 @@ body {
   flex-shrink: 0;
 }
 .heatmap-months {
-  display: grid;
+  position: relative;
   font-size: 9px;
   color: var(--c-text-muted);
   margin-bottom: 2px;
-  min-height: 14px;
-  gap: 2px;
-  white-space: nowrap;
+  height: 14px;
 }
 .heatmap-months span {
+  position: absolute;
+  top: 0;
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
 .heatmap {
   display: grid;
