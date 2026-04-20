@@ -2398,7 +2398,9 @@ body {
   white-space: nowrap;
 }
 .heatmap-months span {
-  overflow: visible;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .heatmap {
   display: grid;
