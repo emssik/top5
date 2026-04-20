@@ -17,7 +17,11 @@ export type {
   LockedTaskRef,
   WinsLockState,
   WinEntry,
-  StreakStats
+  StreakStats,
+  Habit,
+  HabitSchedule,
+  HabitLogEntry,
+  HabitTodayEntry
 } from '../../shared/types'
 
 interface ShortcutActionPayload {

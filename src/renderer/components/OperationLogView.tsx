@@ -35,7 +35,10 @@ const typeColors: Record<OperationType, string> = {
   wins_week_won: '#4ade80',
   wins_week_lost: '#f87171',
   wins_month_won: '#4ade80',
-  wins_month_lost: '#f87171'
+  wins_month_lost: '#f87171',
+  habit_ticked: '#3b82f6',
+  habit_freeze: '#a855f7',
+  habit_skip: '#f59e0b'
 }
 
 function describeOperation(entry: OperationLogEntry): string {

@@ -123,6 +123,49 @@ export interface FocusCheckIn {
   minutes?: number
 }
 
+export type HabitSchedule =
+  | { type: 'daily' }
+  | { type: 'weekdays'; days: number[] } // 0=Sun..6=Sat (JS Date convention)
+  | { type: 'nPerWeek'; count: number }
+  | { type: 'interval'; every: number }
+  | { type: 'dailyMinutes'; minutes: number }
+  | { type: 'weeklyMinutes'; minutes: number }
+
+export interface HabitLogEntry {
+  done?: boolean
+  minutes?: number
+  freeze?: boolean
+  skip?: boolean
+}
+
+export interface Habit {
+  id: string
+  name: string
+  projectId?: string | null
+  icon: string
+  note: string
+  createdAt: string // 'YYYY-MM-DD'
+  freezeAvailable: number
+  order: number
+  schedule: HabitSchedule
+  log: Record<string, HabitLogEntry> // 'YYYY-MM-DD' -> entry
+  archivedAt?: string | null
+}
+
+export interface HabitTodayEntry {
+  id: string
+  name: string
+  icon: string
+  projectId: string | null
+  schedule: HabitSchedule
+  isScheduled: boolean
+  status: 'done' | 'freeze' | 'skip' | 'pending'
+  streak: number
+  streakUnit: 'dni' | 'tyg'
+  minutesToday?: number
+  minutesGoal?: number
+}
+
 export type OperationType =
   | 'task_created' | 'task_completed' | 'task_uncompleted' | 'task_deleted'
   | 'quick_task_created' | 'quick_task_completed' | 'quick_task_uncompleted' | 'quick_task_deleted'
@@ -133,6 +176,7 @@ export type OperationType =
   | 'wins_day_won' | 'wins_day_lost'
   | 'wins_week_won' | 'wins_week_lost'
   | 'wins_month_won' | 'wins_month_lost'
+  | 'habit_ticked' | 'habit_freeze' | 'habit_skip'
 
 export interface OperationLogEntry {
   id: string
@@ -202,4 +246,5 @@ export interface AppData {
   apiConfig?: ApiConfigPublic
   nextQuickTaskNumber?: number
   winsLock?: WinsLockState
+  habits?: Habit[]
 }
