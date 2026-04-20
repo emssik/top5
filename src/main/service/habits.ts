@@ -144,45 +144,54 @@ export function logHabitMinutes(id: string, minutes: number): Habit[] | ServiceE
   return habits
 }
 
+function buildHabitEntry(habit: Habit, today: Date, dk: string): HabitTodayEntry {
+  const isScheduled = isScheduledOn(habit, today)
+  const logEntry = habit.log[dk]
+  let status: HabitTodayEntry['status'] = 'pending'
+  if (logEntry?.done) status = 'done'
+  else if (logEntry?.freeze) status = 'freeze'
+  else if (logEntry?.skip) status = 'skip'
+
+  const { streak, unit } = computeStreak(habit, today)
+
+  const entry: HabitTodayEntry = {
+    id: habit.id,
+    name: habit.name,
+    icon: habit.icon,
+    projectId: habit.projectId ?? null,
+    schedule: habit.schedule,
+    isScheduled,
+    status,
+    streak,
+    streakUnit: unit
+  }
+
+  if (habit.schedule.type === 'dailyMinutes') {
+    entry.minutesToday = logEntry?.minutes ?? 0
+    entry.minutesGoal = habit.schedule.minutes
+  } else if (habit.schedule.type === 'weeklyMinutes') {
+    entry.minutesGoal = habit.schedule.minutes
+  }
+
+  return entry
+}
+
 export function getTodayHabits(date?: Date): HabitTodayEntry[] {
   const today = date ?? new Date()
   const dk = dateKey(today)
-  const habits = getData().habits ?? []
-
-  return habits
+  return (getData().habits ?? [])
     .filter((h) => !h.archivedAt && isScheduledOn(h, today))
     .sort((a, b) => a.order - b.order)
-    .map((habit): HabitTodayEntry => {
-      const isScheduled = isScheduledOn(habit, today)
-      const logEntry = habit.log[dk]
-      let status: HabitTodayEntry['status'] = 'pending'
-      if (logEntry?.done) status = 'done'
-      else if (logEntry?.freeze) status = 'freeze'
-      else if (logEntry?.skip) status = 'skip'
+    .map((h) => buildHabitEntry(h, today, dk))
+}
 
-      const { streak, unit } = computeStreak(habit, today)
-
-      const entry: HabitTodayEntry = {
-        id: habit.id,
-        name: habit.name,
-        icon: habit.icon,
-        projectId: habit.projectId ?? null,
-        schedule: habit.schedule,
-        isScheduled,
-        status,
-        streak,
-        streakUnit: unit
-      }
-
-      if (habit.schedule.type === 'dailyMinutes') {
-        entry.minutesToday = logEntry?.minutes ?? 0
-        entry.minutesGoal = habit.schedule.minutes
-      } else if (habit.schedule.type === 'weeklyMinutes') {
-        entry.minutesGoal = habit.schedule.minutes
-      }
-
-      return entry
-    })
+export function getHabitsSummary(date?: Date): HabitTodayEntry[] {
+  const today = date ?? new Date()
+  const dk = dateKey(today)
+  return (getData().habits ?? [])
+    .filter((h) => !h.archivedAt)
+    .sort((a, b) => a.order - b.order)
+    .map((h) => buildHabitEntry(h, today, dk))
 }
 
 // Re-export for use in IPC type narrowing
