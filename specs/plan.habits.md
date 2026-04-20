@@ -764,7 +764,7 @@ Wymaganie dodatkowe od użytkownika (Q2): HTTP API dla habbitów **nie** jest po
 - **Notes:** Jeśli AI kiedyś będzie chciało **wszystkie** habity (nie tylko
   dziś) — dopisać endpoint później. Teraz YAGNI.
 
-### Step 17: Build check + smoke test manualny
+### Step 17: Build check + smoke test manualny [x]
 
 - **What:** Upewnić się że całość buduje się i działa end-to-end.
 - **How:**
@@ -782,7 +782,7 @@ Wymaganie dodatkowe od użytkownika (Q2): HTTP API dla habbitów **nie** jest po
   - [x] `npm run build` zielony
   - [x] `npm run test` zielony (schedule + habit-schedule + filename)
   - [x] `npm run test:api` zielony (69+ testów)
-  - [ ] Manualny smoke: create habit → tick → confetti → reload app → habit+log
+  - [x] Manualny smoke: create habit → tick → confetti → reload app → habit+log
         persists
 - **Notes:** Pamiętać o `npm run clean` przed build (stale .js z tsc — CLAUDE.md).
 
@@ -896,12 +896,12 @@ i idzie 10→14, dev-4 robi journal niezależnie, dev-1 dopina 16.
 
 Zadanie jest ukończone gdy WSZYSTKIE poniższe są prawdą:
 
-- [ ] Wszystkie 17 kroków ma `[x]` w heading i wszystkie ich acceptance criteria
+- [x] Wszystkie 17 kroków ma `[x]` w heading i wszystkie ich acceptance criteria
       są zaznaczone
 - [x] `npm run build` przechodzi bez błędów i warningów
 - [x] `npm run test` zielony (nowy `habit-schedule.test.ts` dołączony)
 - [x] `npm run test:api` zielony (rozszerzony `/api/v1/today` test, jeśli dodany)
-- [ ] Manualny smoke test (Step 17) udany: create → tick → persist → reload
+- [x] Manualny smoke test (Step 17) udany: create → tick → persist → reload
       → heatmapa poprawna
 - [ ] Dark i light theme — heatmapa, konfetti, toast czytelne na obu
 - [x] `data.yaml` zawiera klucz `habits` po pierwszej mutacji; deserializacja
@@ -910,7 +910,7 @@ Zadanie jest ukończone gdy WSZYSTKIE poniższe są prawdą:
       "Nawyki"
 - [x] `GET /api/v1/today` (gdy API enabled) zwraca pole `habits` — AI ma wgląd
       w to co user dziś robi
-- [ ] Żadna istniejąca ścieżka (projekt create/edit, task complete, wins
+- [x] Żadna istniejąca ścieżka (projekt create/edit, task complete, wins
       lock/unlock, repeat accept/dismiss, focus mode, quick add, journal daily)
       nie zepsuta — regression-free
 
