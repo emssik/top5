@@ -23,23 +23,21 @@ export function Heatmap({ habit, weeks = 32, onCellClick }: HeatmapProps) {
   const today = new Date()
   const todayKey = dateKey(today)
   const dow = dayOfWeekMon(today)
-  const endOfWeek = addDays(today, 6 - dow)
-  const start = addDays(endOfWeek, -(weeks * 7 - 1))
+  // ostatnia kolumna: od Pn bieżącego tygodnia do dziś (brak przyszłości)
+  const start = addDays(today, -dow - (weeks - 1) * 7)
+  const total = (weeks - 1) * 7 + dow + 1
 
   const cells: React.ReactNode[] = []
   const monthMarkers: Record<string, number> = {}
 
-  for (let i = 0; i < weeks * 7; i++) {
+  for (let i = 0; i < total; i++) {
     const d = addDays(start, i)
     const key = dateKey(d)
-    const isFuture = d > today
-    const status = isFuture ? 'future' : dayStatus(habit, key)
+    const status = dayStatus(habit, key)
     const scheduled = isScheduledOn(habit, d)
 
     let cls = 'heat-cell'
-    if (isFuture) {
-      cls += ' future'
-    } else if (status === 'empty' && scheduled) {
+    if (status === 'empty' && scheduled) {
       cls += ' miss'
     } else if (status !== 'empty') {
       cls += ' ' + status
@@ -57,9 +55,7 @@ export function Heatmap({ habit, weeks = 32, onCellClick }: HeatmapProps) {
         key={key}
         className={cls}
         title={`${key}${minutesNote}`}
-        onClick={() => {
-          if (!isFuture && onCellClick) onCellClick(key)
-        }}
+        onClick={() => { if (onCellClick) onCellClick(key) }}
       />
     )
   }
