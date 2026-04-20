@@ -12,7 +12,8 @@ export function isValidHabit(v: unknown): v is Habit {
   if (typeof id !== 'string' || typeof name !== 'string') return false
   if (typeof icon !== 'string' || typeof createdAt !== 'string') return false
   if (typeof order !== 'number') return false
-  if (!isRecord(schedule) || typeof (schedule as Record<string, unknown>).type !== 'string') return false
+  const validScheduleTypes = ['daily', 'weekdays', 'nPerWeek', 'interval', 'dailyMinutes', 'weeklyMinutes']
+  if (!isRecord(schedule) || !validScheduleTypes.includes((schedule as Record<string, unknown>).type as string)) return false
   if (!isRecord(log)) return false
   return true
 }
