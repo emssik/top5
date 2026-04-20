@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import { useProjects } from '../hooks/useProjects'
 import { checkInMinutes, formatCheckInTime } from '../utils/checkInTime'
 import { projectColorValue } from '../utils/projects'
@@ -450,8 +450,8 @@ export default function InlineStatsView() {
               {activeHabits.map((h) => {
                 const { streak, unit } = computeStreak(h)
                 return (
-                  <>
-                    <div key={`${h.id}-name`} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, padding: '4px 0', borderTop: '1px solid rgba(0,0,0,0.04)', overflow: 'hidden' }}>
+                  <Fragment key={h.id}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, padding: '4px 0', borderTop: '1px solid rgba(0,0,0,0.04)', overflow: 'hidden' }}>
                       <HabitIcon name={h.icon} size={13} stroke="var(--c-text-secondary)" />
                       <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.name}</span>
                     </div>
@@ -467,10 +467,10 @@ export default function InlineStatsView() {
                       else if (scheduled) cls += ' miss'
                       return <div key={`${h.id}-${k}`} className={cls} style={{ width: 14, height: 14, margin: '0 auto' }} />
                     })}
-                    <div key={`${h.id}-streak`} style={{ fontSize: 11.5, color: streak > 0 ? '#5a8f47' : 'var(--c-text-muted)', textAlign: 'right', fontWeight: 600, padding: '4px 0', borderTop: '1px solid rgba(0,0,0,0.04)' }}>
+                    <div style={{ fontSize: 11.5, color: streak > 0 ? '#5a8f47' : 'var(--c-text-muted)', textAlign: 'right', fontWeight: 600, padding: '4px 0', borderTop: '1px solid rgba(0,0,0,0.04)' }}>
                       {streak} {unit}
                     </div>
-                  </>
+                  </Fragment>
                 )
               })}
             </div>
