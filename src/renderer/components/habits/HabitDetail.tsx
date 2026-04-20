@@ -6,32 +6,10 @@ import { TimerModal } from './TimerModal'
 import { RetroModal } from './RetroModal'
 import { Heatmap } from './Heatmap'
 import { HeatmapLegend } from './HeatmapLegend'
+import { fireConfetti, showHabitToast } from './effects'
 import { computeStreak, scheduleLabel } from '../../../shared/habit-schedule'
 import { dateKey } from '../../../shared/schedule'
 import type { Habit, Project } from '../../types'
-
-function fireConfetti(anchor: HTMLElement) {
-  const rect = anchor.getBoundingClientRect()
-  const colors = ['#7fae6d', '#e9a825', '#3c6aa8', '#d88a3e', '#d67bb0']
-  for (let i = 0; i < 14; i++) {
-    const el = document.createElement('div')
-    el.className = 'confetti'
-    el.style.left = (rect.left + rect.width / 2) + 'px'
-    el.style.top = (rect.top + rect.height / 2) + 'px'
-    el.style.background = colors[i % colors.length]
-    el.style.transform = `rotate(${Math.random() * 360}deg) translateX(${(Math.random() - 0.5) * 60}px)`
-    document.body.appendChild(el)
-    setTimeout(() => el.remove(), 1100)
-  }
-}
-
-function showToast(msg: string) {
-  const el = document.createElement('div')
-  el.className = 'habit-toast'
-  el.textContent = msg
-  document.body.appendChild(el)
-  setTimeout(() => el.remove(), 2000)
-}
 
 interface HabitDetailProps {
   habit: Habit
@@ -61,7 +39,7 @@ export function HabitDetail({ habit, projects, onClose, onEdit, onTick, onRetroC
   const handleTickDone = async (e: React.MouseEvent<HTMLButtonElement>) => {
     await onTick(habit.id, 'done')
     fireConfetti(e.currentTarget)
-    showToast('Chain nie pęka. ✓')
+    showHabitToast('Chain nie pęka. ✓')
   }
 
   const handleCellClick = (dk: string) => {
@@ -90,7 +68,7 @@ export function HabitDetail({ habit, projects, onClose, onEdit, onTick, onRetroC
   const handleTimerSave = async (minutes: number) => {
     await habitLogMinutes(habit.id, minutes)
     setShowTimer(false)
-    showToast(`Zapisano ${minutes} min. ✓`)
+    showHabitToast(`Zapisano ${minutes} min. ✓`)
   }
 
   return (

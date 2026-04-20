@@ -3,41 +3,17 @@ import { useProjects } from '../../hooks/useProjects'
 import { HabitRow } from './HabitRow'
 import { HabitIcon } from './HabitIcon'
 import { HabitEditor } from './HabitEditor'
+import { HabitDetail } from './HabitDetail'
+import { fireConfetti, showHabitToast } from './effects'
 import { computeStreak, isScheduledOn } from '../../../shared/habit-schedule'
 import { dateKey } from '../../../shared/schedule'
 import type { Habit } from '../../types'
 
-function fireConfetti(anchor: HTMLElement) {
-  const rect = anchor.getBoundingClientRect()
-  const colors = ['#7fae6d', '#e9a825', '#3c6aa8', '#d88a3e', '#d67bb0']
-  for (let i = 0; i < 14; i++) {
-    const el = document.createElement('div')
-    el.className = 'confetti'
-    el.style.left = (rect.left + rect.width / 2) + 'px'
-    el.style.top = (rect.top + rect.height / 2) + 'px'
-    el.style.background = colors[i % colors.length]
-    el.style.transform = `rotate(${Math.random() * 360}deg) translateX(${(Math.random() - 0.5) * 60}px)`
-    document.body.appendChild(el)
-    setTimeout(() => el.remove(), 1100)
-  }
-}
-
-function showToast(msg: string) {
-  const el = document.createElement('div')
-  el.className = 'habit-toast'
-  el.textContent = msg
-  document.body.appendChild(el)
-  setTimeout(() => el.remove(), 2000)
-}
-
-interface HabitsViewProps {
-  onOpenDetail?: (habit: Habit) => void
-}
-
-export function HabitsView({ onOpenDetail }: HabitsViewProps) {
+export function HabitsView() {
   const { habits, projects, habitTick, saveHabit, removeHabit } = useProjects()
   const [filter, setFilter] = useState<'all' | 'today' | 'active'>('all')
   const [editingHabit, setEditingHabit] = useState<Habit | 'new' | null>(null)
+  const [detailHabit, setDetailHabit] = useState<Habit | null>(null)
 
   const todayKey = dateKey(new Date())
   const today = new Date()
@@ -59,26 +35,12 @@ export function HabitsView({ onOpenDetail }: HabitsViewProps) {
   const handleTick = async (id: string, anchorEl: HTMLElement) => {
     await habitTick(id, 'done')
     fireConfetti(anchorEl)
-    showToast('Chain nie pęka. ✓')
+    showHabitToast('Chain nie pęka. ✓')
   }
 
   const handleOpen = (id: string) => {
     const habit = habits.find((h) => h.id === id)
-    if (habit && onOpenDetail) onOpenDetail(habit)
-  }
-
-  const handleEdit = (habit: Habit) => {
-    setEditingHabit(habit)
-  }
-
-  const handleSave = async (h: Habit) => {
-    await saveHabit(h)
-    setEditingHabit(null)
-  }
-
-  const handleDelete = async (id: string) => {
-    await removeHabit(id)
-    setEditingHabit(null)
+    if (habit) setDetailHabit(habit)
   }
 
   return (
@@ -128,7 +90,7 @@ export function HabitsView({ onOpenDetail }: HabitsViewProps) {
           projects={projects}
           onTick={handleTick}
           onOpen={handleOpen}
-          onEdit={handleEdit}
+          onEdit={(habit) => setEditingHabit(habit)}
         />
       ))}
 
@@ -138,12 +100,22 @@ export function HabitsView({ onOpenDetail }: HabitsViewProps) {
         </div>
       )}
 
+      {detailHabit && (
+        <HabitDetail
+          habit={detailHabit}
+          projects={projects}
+          onClose={() => setDetailHabit(null)}
+          onEdit={(h) => { setEditingHabit(h); setDetailHabit(null) }}
+          onTick={async (id, mode) => { await habitTick(id, mode) }}
+        />
+      )}
+
       {editingHabit !== null && (
         <HabitEditor
           habit={editingHabit === 'new' ? undefined : editingHabit}
-          onSave={handleSave}
+          onSave={async (h) => { await saveHabit(h); setEditingHabit(null) }}
           onCancel={() => setEditingHabit(null)}
-          onDelete={editingHabit !== 'new' ? handleDelete : undefined}
+          onDelete={editingHabit !== 'new' ? async (id) => { await removeHabit(id); setEditingHabit(null) } : undefined}
         />
       )}
     </div>
