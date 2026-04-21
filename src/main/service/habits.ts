@@ -2,7 +2,7 @@ import { randomUUID } from 'crypto'
 import type { Habit, HabitTodayEntry } from '../../shared/types'
 import { getData, setData, isRecord, appendOperation } from '../store'
 import { dateKey } from '../../shared/schedule'
-import { isScheduledOn, computeStreak } from '../../shared/habit-schedule'
+import { addDays, isoWeekStart, isScheduledOn, computeStreak } from '../../shared/habit-schedule'
 
 type ServiceError = { error: 'not_found' | 'validation' }
 
@@ -128,16 +128,30 @@ export function retroTickHabit(id: string, dk: string, action: 'done' | 'freeze'
 }
 
 export function logHabitMinutes(id: string, minutes: number): Habit[] | ServiceError {
+  if (typeof minutes !== 'number' || !Number.isFinite(minutes) || minutes <= 0) return { error: 'validation' }
   const data = getData()
   const habits = [...(data.habits ?? [])]
   const habit = habits.find((h) => h.id === id)
   if (!habit) return { error: 'not_found' }
 
-  const today = dateKey(new Date())
+  const now = new Date()
+  const today = dateKey(now)
   const existing = habit.log[today] ?? {}
   const total = (existing.minutes ?? 0) + minutes
-  const goalMinutes = habit.schedule.type === 'dailyMinutes' ? habit.schedule.minutes : undefined
-  const isDone = goalMinutes != null ? total >= goalMinutes : existing.done ?? false
+
+  let isDone = existing.done ?? false
+  if (habit.schedule.type === 'dailyMinutes') {
+    isDone = total >= habit.schedule.minutes
+  } else if (habit.schedule.type === 'weeklyMinutes') {
+    const weekStart = isoWeekStart(now)
+    let weekSum = 0
+    for (let d = 0; d < 7; d++) {
+      const k = dateKey(addDays(weekStart, d))
+      weekSum += k === today ? total : (habit.log[k]?.minutes ?? 0)
+    }
+    isDone = weekSum >= habit.schedule.minutes
+  }
+
   habit.log = { ...habit.log, [today]: { ...existing, minutes: total, done: isDone } }
 
   setData('habits', habits)
@@ -170,6 +184,7 @@ function buildHabitEntry(habit: Habit, today: Date, dk: string): HabitTodayEntry
     entry.minutesToday = logEntry?.minutes ?? 0
     entry.minutesGoal = habit.schedule.minutes
   } else if (habit.schedule.type === 'weeklyMinutes') {
+    entry.minutesToday = logEntry?.minutes ?? 0
     entry.minutesGoal = habit.schedule.minutes
   }
 

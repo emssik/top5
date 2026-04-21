@@ -1173,16 +1173,18 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
   })
 
   ipcMain.handle('habit-tick', (_event, id: string, mode: string) => {
-    if (typeof id !== 'string' || typeof mode !== 'string') return getData().habits ?? []
-    const result = habitService.tickHabit(id, mode as 'done' | 'freeze' | 'skip' | 'undo')
+    const validModes = ['done', 'freeze', 'skip', 'undo'] as const
+    if (typeof id !== 'string' || !validModes.includes(mode as typeof validModes[number])) return getData().habits ?? []
+    const result = habitService.tickHabit(id, mode as typeof validModes[number])
     if (isServiceError(result)) return getData().habits ?? []
     notifyAllWindows()
     return result
   })
 
   ipcMain.handle('habit-retro-tick', (_event, id: string, dk: string, action: string) => {
-    if (typeof id !== 'string' || typeof dk !== 'string' || typeof action !== 'string') return getData().habits ?? []
-    const result = habitService.retroTickHabit(id, dk, action as 'done' | 'freeze' | 'skip' | 'clear')
+    const validActions = ['done', 'freeze', 'skip', 'clear'] as const
+    if (typeof id !== 'string' || typeof dk !== 'string' || !validActions.includes(action as typeof validActions[number])) return getData().habits ?? []
+    const result = habitService.retroTickHabit(id, dk, action as typeof validActions[number])
     if (isServiceError(result)) return getData().habits ?? []
     notifyAllWindows()
     return result

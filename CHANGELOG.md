@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.87.1] - 2026-04-21
+
+### Fixed
+
+- Habits weeklyMinutes — pole `minutesToday` (CLI/API) było zawsze `0`, niezależnie od zalogowanych minut. Postęp dnia teraz widoczny w `top5 habits`.
+- Habits mini-heatmap w widoku Stats używał UTC do generowania kluczy dni — przez kilkanaście minut po północy w strefie UTC+1/+2 pokazywał niewłaściwy dzień. Zastąpione lokalnym `dateKey`.
+- `isScheduledOn` dla typu `weekdays` crashował, gdy `schedule.days` było `undefined` (osiągalne przez ręczną edycję `data.yaml`). Dodano defensywny fallback.
+- `logHabitMinutes` akceptował ujemne i nieskończone wartości minut — dodano walidację (`minutes > 0`, finite number).
+- IPC handlery `habit-tick` / `habit-retro-tick` nie walidowały wartości `mode`/`action` — nieznany tryb trafiał do `else` i oznaczał nawyk jako wykonany. Dodano whitelisty.
+
+### Changed
+
+- `logHabitMinutes` dla typu `weeklyMinutes` auto-kończy nawyk, gdy tygodniowa suma minut (Pn–Nd) osiągnie cel. Symetrycznie do `dailyMinutes`.
+- `addDays` wydzielone jako eksport z `habit-schedule.ts`; usunięto duplikat z `Heatmap.tsx`.
+- `vitest` transitive `vite` bumped 7.3.1 → 7.3.2.
+
+### Documentation
+
+- `docs/API.md` — dodano sekcję "Habits" (`GET /api/v1/habits`), zaktualizowano schemat `/today` o pole `habits`, dodano typy `HabitTodayEntry` i `HabitSchedule`.
+- ADR-0005 oznaczony jako "Amended" — nota o dodaniu read-only `GET /api/v1/habits` dla potrzeb CLI.
+
 ## [1.87.0] - 2026-04-20
 
 ### Added

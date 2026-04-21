@@ -1,18 +1,12 @@
 import React, { useEffect, useRef } from 'react'
 import { dateKey } from '../../../shared/schedule'
-import { dayStatus, isScheduledOn } from '../../../shared/habit-schedule'
+import { addDays, dayStatus, isScheduledOn } from '../../../shared/habit-schedule'
 import type { Habit } from '../../types'
 
 interface HeatmapProps {
   habit: Habit
   weeks?: number
   onCellClick?: (dateKey: string) => void
-}
-
-function addDays(date: Date, n: number): Date {
-  const d = new Date(date)
-  d.setDate(d.getDate() + n)
-  return d
 }
 
 function dayOfWeekMon(d: Date): number {

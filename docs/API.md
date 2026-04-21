@@ -215,9 +215,9 @@ Reorders quick tasks.
 
 #### `GET /today`
 
-Returns the tasks visible in the Today tab (repeating proposals, scheduled, and top-5 regular). Excludes overflow, completed, and unapproved proposals.
+Returns the tasks visible in the Today tab (repeating proposals, scheduled, and top-5 regular). Excludes overflow, completed, and unapproved proposals. Also returns habits scheduled for today.
 
-**Response:** `{ ok, data: VisibleTask[] }`
+**Response:** `{ ok, data: VisibleTask[], habits: HabitTodayEntry[] }`
 
 #### `POST /today/beyond-limit`
 
@@ -291,6 +291,18 @@ Dismisses a repeating task proposal for today.
 
 ---
 
+### Habits
+
+Read-only. Full CRUD (create/edit/tick) is handled in the Electron UI. See [ADR-0005](adr/0005-habits-read-only-api-przez-rozszerzenie-today.md).
+
+#### `GET /habits`
+
+Returns all non-archived habits as today-summary entries (schedule, today status, streak). Unlike `/today`, this includes habits that are not scheduled for today (`isScheduled: false`).
+
+**Response:** `{ ok, data: HabitTodayEntry[] }`
+
+---
+
 ## Data types
 
 ### Project
@@ -357,6 +369,35 @@ Dismisses a repeating task proposal for today.
   startDate?: string | null
   endDate?: string | null
 }
+```
+
+### HabitTodayEntry
+
+```typescript
+{
+  id: string
+  name: string
+  icon: string
+  projectId: string | null
+  schedule: HabitSchedule
+  isScheduled: boolean           // whether habit is scheduled today
+  status: 'done' | 'freeze' | 'skip' | 'pending'
+  streak: number                 // current streak (days or weeks, see streakUnit)
+  streakUnit: 'dni' | 'tyg'      // Polish: dni=days, tyg=weeks
+  minutesToday?: number          // for dailyMinutes/weeklyMinutes: today's logged minutes
+  minutesGoal?: number           // for dailyMinutes/weeklyMinutes: target minutes
+}
+```
+
+### HabitSchedule
+
+```typescript
+| { type: 'daily' }
+| { type: 'weekdays', days: number[] }          // 0=Sun, 6=Sat
+| { type: 'nPerWeek', count: number }           // N completions per ISO week
+| { type: 'interval', every: number }           // every N days since createdAt
+| { type: 'dailyMinutes', minutes: number }     // minutes/day goal
+| { type: 'weeklyMinutes', minutes: number }    // minutes/week goal
 ```
 
 ### RepeatSchedule

@@ -89,7 +89,7 @@ Wymaganie dodatkowe od użytkownika (Q2): HTTP API dla habbitów **nie** jest po
 - Klonowanie / archiwizacja habbitów (na razie delete + kreowanie od nowa).
 - Integracja z FocusMode (timer habit-u NIE uruchamia focus mode top5 — to osobny,
   lżejszy timer).
-- CLI `top5 habits` — poza scope; skill top5 nie dostaje habbitów w v1.
+- ~~CLI `top5 habits` — poza scope; skill top5 nie dostaje habbitów w v1.~~ [shipped 2026-04-21 — read-only list w CLI + skill]
 
 ### Constraints
 - **TypeScript strict** — typy zunifikowane w `src/shared/types.ts`.

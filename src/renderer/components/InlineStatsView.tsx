@@ -400,7 +400,7 @@ export default function InlineStatsView() {
       {habits.filter((h) => !h.archivedAt).length > 0 && (() => {
         const activeHabits = habits.filter((h) => !h.archivedAt)
         const today = new Date()
-        const todayKey = today.toISOString().split('T')[0]
+        const todayKey = dateKey(today)
         const doneToday = activeHabits.filter((h) => h.log[todayKey]?.done).length
         const scheduledToday = activeHabits.filter((h) => isScheduledOn(h, today)).length
         const totalStreak = activeHabits.reduce((s, h) => s + computeStreak(h).streak, 0)
@@ -410,7 +410,7 @@ export default function InlineStatsView() {
         const startD = addDays(today, -(DAYS - 1))
         const dayKeys = Array.from({ length: DAYS }, (_, i) => {
           const d = addDays(startD, i)
-          return d.toISOString().split('T')[0]
+          return dateKey(d)
         })
         return (
           <>

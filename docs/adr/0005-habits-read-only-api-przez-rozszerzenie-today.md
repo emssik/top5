@@ -1,8 +1,15 @@
 # 0005. Habits read-only API przez rozszerzenie `/api/v1/today` (bez pełnego CRUD)
 
-- **Status:** Accepted
+- **Status:** Amended (2026-04-21)
 - **Date:** 2026-04-20
 - **Source plan:** specs/plan.habits.md
+
+> **Amendment (2026-04-21):** W praktyce dodano też dedykowany read-only endpoint
+> `GET /api/v1/habits` (zwraca `HabitTodayEntry[]` dla wszystkich nie-zarchiwizowanych
+> habbitów, nie tylko zaplanowanych dziś) — potrzebny przez CLI `top5 habits`, który
+> pojawił się po podjęciu tej decyzji. Nadal **brak CRUD** (POST/PUT/DELETE); decyzja
+> o braku zapisu przez HTTP obowiązuje. `/api/v1/today` dalej zwraca `habits` dla
+> kontekstu "co robi dziś".
 
 ## Context
 

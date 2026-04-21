@@ -12,14 +12,14 @@ function parseDate(dateStr: string): Date {
   return new Date(y, m - 1, d)
 }
 
-function addDays(date: Date, n: number): Date {
+export function addDays(date: Date, n: number): Date {
   const result = new Date(date)
   result.setDate(result.getDate() + n)
   return result
 }
 
 // Returns ISO week start (Monday) for a given date
-function isoWeekStart(date: Date): Date {
+export function isoWeekStart(date: Date): Date {
   const d = new Date(date.getFullYear(), date.getMonth(), date.getDate())
   const day = d.getDay()
   const diff = day === 0 ? -6 : 1 - day // adjust to Monday
@@ -30,7 +30,7 @@ function isoWeekStart(date: Date): Date {
 export function isScheduledOn(habit: Habit, date: Date): boolean {
   const s = habit.schedule
   if (s.type === 'daily') return true
-  if (s.type === 'weekdays') return s.days.includes(date.getDay()) // 0=Sun..6=Sat
+  if (s.type === 'weekdays') return s.days?.includes(date.getDay()) ?? false // 0=Sun..6=Sat
   if (s.type === 'interval') {
     const start = parseDate(habit.createdAt)
     const startMs = new Date(start.getFullYear(), start.getMonth(), start.getDate()).getTime()
