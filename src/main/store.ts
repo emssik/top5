@@ -1184,6 +1184,7 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
   ipcMain.handle('habit-retro-tick', (_event, id: string, dk: string, action: string) => {
     const validActions = ['done', 'freeze', 'skip', 'clear'] as const
     if (typeof id !== 'string' || typeof dk !== 'string' || !validActions.includes(action as typeof validActions[number])) return getData().habits ?? []
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dk)) return getData().habits ?? []
     const result = habitService.retroTickHabit(id, dk, action as typeof validActions[number])
     if (isServiceError(result)) return getData().habits ?? []
     notifyAllWindows()

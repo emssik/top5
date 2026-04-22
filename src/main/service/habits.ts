@@ -184,7 +184,12 @@ function buildHabitEntry(habit: Habit, today: Date, dk: string): HabitTodayEntry
     entry.minutesToday = logEntry?.minutes ?? 0
     entry.minutesGoal = habit.schedule.minutes
   } else if (habit.schedule.type === 'weeklyMinutes') {
-    entry.minutesToday = logEntry?.minutes ?? 0
+    const weekStart = isoWeekStart(today)
+    let weekSum = 0
+    for (let d = 0; d < 7; d++) {
+      weekSum += habit.log[dateKey(addDays(weekStart, d))]?.minutes ?? 0
+    }
+    entry.minutesToday = weekSum
     entry.minutesGoal = habit.schedule.minutes
   }
 

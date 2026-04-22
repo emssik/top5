@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.87.2] - 2026-04-22
+
+### Fixed
+
+- Habits weeklyMinutes — pole `minutesToday` pokazywało tylko dzisiejsze minuty, mimo że `isDone` sprawdza tygodniową sumę. Pasek postępu w CLI/API był mylący (`30/300`, gdy realnie `280/300`). Teraz `minutesToday` = suma Pn–Nd.
+- `habit-retro-tick` IPC nie walidował formatu `dk` — dowolny string trafiał jako klucz do `habit.log`. Dodano guard `/^\d{4}-\d{2}-\d{2}$/` (defensywny, brak znanej ścieżki UI wysyłającej zły format).
+
+### Changed
+
+- `InlineStatsView` używa teraz wspólnego `addDays` z `habit-schedule.ts` (domknięcie deduplikacji rozpoczętej w 1.87.1).
+
 ## [1.87.1] - 2026-04-21
 
 ### Fixed

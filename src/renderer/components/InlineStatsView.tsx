@@ -3,7 +3,7 @@ import { useProjects } from '../hooks/useProjects'
 import { checkInMinutes, formatCheckInTime } from '../utils/checkInTime'
 import { projectColorValue } from '../utils/projects'
 import { STANDALONE_PROJECT_ID } from '../utils/constants'
-import { computeStreak, dayStatus, isScheduledOn } from '../../shared/habit-schedule'
+import { addDays, computeStreak, dayStatus, isScheduledOn } from '../../shared/habit-schedule'
 import { HabitIcon } from './habits/HabitIcon'
 import type { WinEntry, StreakStats } from '../types'
 import { dateKey } from '../../shared/schedule'
@@ -406,7 +406,6 @@ export default function InlineStatsView() {
         const totalStreak = activeHabits.reduce((s, h) => s + computeStreak(h).streak, 0)
         const longestEver = Math.max(...activeHabits.map((h) => computeStreak(h).best), 0)
         const DAYS = 14
-        const addDays = (d: Date, n: number) => { const r = new Date(d); r.setDate(r.getDate() + n); return r }
         const startD = addDays(today, -(DAYS - 1))
         const dayKeys = Array.from({ length: DAYS }, (_, i) => {
           const d = addDays(startD, i)
