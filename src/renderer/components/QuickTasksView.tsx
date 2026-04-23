@@ -255,6 +255,7 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
         createdAt: new Date().toISOString(),
         isToDoNext: true,
         toDoNextOrder: origTask?.toDoNextOrder ?? task.order,
+        beyondLimit: true,
         noteRef
       }
       await saveProject({ ...project, tasks: [...project.tasks, newTask] })
@@ -266,6 +267,7 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
         createdAt: new Date().toISOString(),
         completedAt: null,
         order: task.order,
+        beyondLimit: true,
         noteRef
       }
       await saveQuickTask(qt)

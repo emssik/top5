@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.88.2] - 2026-04-23
+
+### Fixed
+
+- Clean view — Split & Continue ustawia `beyondLimit: true` na kopii taska (pinned i quick), dzięki czemu kopia trafia do overflow tak jak w Today. Wcześniej kopia pojawiała się obok skreślonego oryginału w głównej liście.
+
 ## [1.88.1] - 2026-04-23
 
 ### Changed
