@@ -38,11 +38,11 @@ export default function CleanViewHeader() {
 
   return (
     <div className="text-center mb-4">
-      <div className="text-[22px] font-semibold">{dateLabel}</div>
-      <div className="text-[15px] opacity-40 mt-0.5">
+      <div className="text-[22px] font-semibold" style={{ color: 'var(--cv-ink)' }}>{dateLabel}</div>
+      <div className="text-[15px] mt-0.5" style={{ color: 'var(--cv-ink-faint)' }}>
         {timeLabel}{todayMinutes > 0 && <span className="ml-1.5">({formatCheckInTime(todayMinutes)})</span>}
       </div>
-      <div className="mt-3 mx-auto w-full h-px opacity-15" style={{ backgroundColor: 'currentColor' }} />
+      <div className="mt-3 mx-auto w-full h-px" style={{ backgroundColor: 'var(--cv-ink-faint)', opacity: 0.33 }} />
     </div>
   )
 }

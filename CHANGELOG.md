@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.88.0] - 2026-04-23
+
+### Added
+
+- Clean view — sekcja nawyków pod listą tasków: ○/⊘ toggle, streak w zwięzłym formacie (`Nd`/`Nt`), złoty akcent dla serii ≥ 7.
+- `getScheduledHabits(habits, date)` — helper w `shared/habit-schedule.ts` (`!archived && isScheduledOn`).
+
+### Changed
+
+- Clean view — przeprojektowana paleta papieru: tokeny `--cv-paper/ink/ink-faint/ink-done/gold` scoped na `.clean-view-dots`. Light: chłodny gray paper `#f3f3f1` + ink `#262b36`. Mocniejszy kontrast tekstu (fontWeight 500), węższy odstęp wierszy (`py-[2px]`).
+- Clean view — szerokość okna 340 → 460px, `CLEAN_VIEW_ROW_HEIGHT` 34 → 28 pod nowe gęściejsze rzędy.
+
 ## [1.87.2] - 2026-04-22
 
 ### Fixed

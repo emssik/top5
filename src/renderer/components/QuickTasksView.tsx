@@ -343,7 +343,7 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
       return (
         <div
           key={task.id}
-          className={`group flex items-baseline gap-2.5 py-[6px] transition-colors ${!isCompleted ? 'cursor-grab active:cursor-grabbing' : ''}`}
+          className={`group flex items-baseline gap-2.5 py-[2px] transition-colors ${!isCompleted ? 'cursor-grab active:cursor-grabbing' : ''}`}
           style={isDragOver ? { opacity: 0.6 } : undefined}
           draggable={!isCompleted}
           onDragStart={!isCompleted ? () => handleDragStart(task.id) : undefined}
@@ -362,8 +362,8 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
           {/* Bullet marker — clickable */}
           <button
             onClick={() => isCompleted ? handleUncomplete(task) : handleComplete(task)}
-            className={`w-5 flex-shrink-0 text-center ${textSize} leading-none transition-opacity`}
-            style={{ opacity: isCompleted ? 0.3 : 0.5 }}
+            className={`w-5 flex-shrink-0 text-center ${textSize} leading-none transition-colors`}
+            style={{ color: isCompleted ? 'var(--cv-ink-done)' : 'var(--cv-ink-faint)' }}
             title={isCompleted ? 'Mark as not done' : 'Complete'}
           >
             {marker}
@@ -388,7 +388,7 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
               <span
                 onDoubleClick={() => !isCompleted && startEditing(task)}
                 className={`${textSize} leading-snug truncate block cursor-default ${isCompleted ? 'line-through' : ''}`}
-                style={{ opacity: isRecentDone ? 0.55 : isCompleted ? 0.3 : 1 }}
+                style={{ color: isCompleted ? 'var(--cv-ink-done)' : 'var(--cv-ink)', fontWeight: 500 }}
                 title={task.title}
               >
                 <Linkify text={cleanView ? task.title.replace(/^\(✂\d+\)\s*/, '') : task.title} />
@@ -423,7 +423,7 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
           ) : (
             <div className="flex items-center gap-1.5 flex-shrink-0">
               {mins > 0 && (
-                <span className="text-[15px]" style={{ opacity: 0.25 }}>{formatCheckInTime(mins)}</span>
+                <span className="text-[15px]" style={{ color: 'var(--cv-ink-faint)' }}>{formatCheckInTime(mins)}</span>
               )}
               <button
                 onClick={() => handleToggleInProgress(task)}
@@ -620,7 +620,7 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
   const renderProposal = (rt: RepeatingTask) => {
     if (cleanView) {
       return (
-        <div key={`proposal-${rt.id}`} className="group flex items-baseline gap-2.5 py-[6px]" style={{ opacity: 0.45 }}>
+        <div key={`proposal-${rt.id}`} className="group flex items-baseline gap-2.5 py-[2px]" style={{ opacity: 0.45 }}>
           <button
             onClick={() => acceptRepeatingProposal(rt.id)}
             className="w-5 flex-shrink-0 text-center text-[15px] leading-none transition-opacity hover:opacity-80"

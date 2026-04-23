@@ -11,6 +11,7 @@ import { showWindowVisible } from './window-utils'
 import { existsSync, readFileSync, writeFileSync } from 'fs'
 import { registerNudgeHandlers, startNudgeMonitor, stopNudgeMonitor } from './nudge'
 import { getRepeatingTaskProposals, dateKey } from '../shared/schedule'
+import { getScheduledHabits } from '../shared/habit-schedule'
 import type { QuickTask } from '../shared/types'
 import { getVisibleTasks } from '../shared/task-list'
 import { CLEAN_VIEW_ROW_HEIGHT, CLEAN_VIEW_SEPARATOR_HEIGHT, CLEAN_VIEW_HEADER_HEIGHT, CLEAN_VIEW_MIN_HEIGHT, CLEAN_VIEW_WIDTH } from '../shared/constants'
@@ -277,11 +278,16 @@ app.whenReady().then(() => {
     }).length
     const visibleRegularCount = scheduled.length + withinLimit.length
     const repeatingActiveCount = repeating.length
-    const totalRows = visibleRegularCount + repeatingActiveCount + proposalCount + completedToday.length
+    const habitCount = getScheduledHabits(data.habits ?? []).length
+    const totalRows = visibleRegularCount + repeatingActiveCount + proposalCount + completedToday.length + habitCount
     // Separators: only when preceding section has content
     const hasRepeating = repeatingActiveCount + proposalCount > 0
     const hasCompleted = completedToday.length > 0
-    const separators = (hasRepeating && visibleRegularCount > 0 ? 1 : 0) + (hasCompleted && (visibleRegularCount > 0 || hasRepeating) ? 1 : 0)
+    const hasAnyTasksAbove = visibleRegularCount > 0 || hasRepeating || hasCompleted
+    const separators =
+      (hasRepeating && visibleRegularCount > 0 ? 1 : 0) +
+      (hasCompleted && (visibleRegularCount > 0 || hasRepeating) ? 1 : 0) +
+      (habitCount > 0 && hasAnyTasksAbove ? 1 : 0)
     // Header ≈ 130, each row ≈ 34px, each separator ≈ 20px, bottom padding 12px
     const height = Math.min(Math.max(totalRows * CLEAN_VIEW_ROW_HEIGHT + separators * CLEAN_VIEW_SEPARATOR_HEIGHT + CLEAN_VIEW_HEADER_HEIGHT, CLEAN_VIEW_MIN_HEIGHT), workArea.height)
     mainWindow.setMinimumSize(width, 100)

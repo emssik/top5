@@ -42,6 +42,10 @@ export function isScheduledOn(habit: Habit, date: Date): boolean {
   return true
 }
 
+export function getScheduledHabits(habits: Habit[], date: Date = new Date()): Habit[] {
+  return habits.filter((h) => !h.archivedAt && isScheduledOn(h, date))
+}
+
 export function dayStatus(habit: Habit, dk: string): 'empty' | 'l1' | 'l2' | 'l3' | 'l4' | 'freeze' | 'skip' {
   const entry: HabitLogEntry | undefined = habit.log[dk]
   if (!entry) return 'empty'

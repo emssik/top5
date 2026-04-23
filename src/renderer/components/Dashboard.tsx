@@ -6,6 +6,7 @@ import Sidebar from './Sidebar'
 import QuickNotesPanel from './QuickNotesPanel'
 import Settings from './Settings'
 import CleanViewHeader from './CleanViewHeader'
+import CleanViewHabitsSection from './CleanViewHabitsSection'
 import QuickTasksView from './QuickTasksView'
 import ProjectEditor from './ProjectEditor'
 import ProjectCodeMigration from './ProjectCodeMigration'
@@ -218,6 +219,7 @@ export default function Dashboard() {
         <div className="flex-1 overflow-auto px-5 pb-3">
           <CleanViewHeader />
           <QuickTasksView cleanView />
+          <CleanViewHabitsSection />
         </div>
       </div>
     )

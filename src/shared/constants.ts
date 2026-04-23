@@ -12,8 +12,8 @@ export const LINK_LABELS: Record<keyof ProjectLaunchers, string> = {
 export const STANDALONE_PROJECT_ID = '__standalone__'
 
 // UI layout constants for clean view
-export const CLEAN_VIEW_ROW_HEIGHT = 34
+export const CLEAN_VIEW_ROW_HEIGHT = 28
 export const CLEAN_VIEW_SEPARATOR_HEIGHT = 20
 export const CLEAN_VIEW_HEADER_HEIGHT = 142
 export const CLEAN_VIEW_MIN_HEIGHT = 240
-export const CLEAN_VIEW_WIDTH = 340
+export const CLEAN_VIEW_WIDTH = 460

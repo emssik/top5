@@ -71,7 +71,7 @@ html, body {
 
 /* Light theme — Catppuccin Latte */
 [data-theme="light"] {
-  --bg-clean-view: #eff1f5;     /* Base */
+  --bg-clean-view: #f3f3f1;     /* paper */
 
   --bg-base: #e6e9ef;           /* Mantle */
   --bg-card: #eff1f5;           /* Base */
@@ -143,26 +143,48 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Clean view */
+/* Clean view — tokens from designer spec (cool gray paper) */
 .clean-view-dots {
-  background-color: #eff1f5;    /* Latte Base */
-  background-image: radial-gradient(circle, #bcc0cc 0.6px, transparent 0.6px); /* Latte Surface 1 */
+  --cv-paper: #2a2520;
+  --cv-ink: #e8dcc8;
+  --cv-ink-faint: #8c847a;
+  --cv-ink-done: #6b6358;
+  --cv-gold: #d4a82d;
+
+  background-color: var(--cv-paper);
+  background-image: radial-gradient(circle, var(--cv-ink-faint) 0.7px, transparent 0.7px);
   background-size: 18px 18px;
   background-position: 9px 9px;
-  color: #4c4f69;               /* Latte Text */
-}
-
-[data-theme="dark"] .clean-view-dots,
-:root .clean-view-dots {
-  background-color: #2a2520;
-  background-image: radial-gradient(circle, #4a4035 0.6px, transparent 0.6px);
-  color: #e8dcc8;
+  color: var(--cv-ink);
 }
 
 [data-theme="light"] .clean-view-dots {
-  background-color: #eff1f5;    /* Latte Base */
-  background-image: radial-gradient(circle, #bcc0cc 0.6px, transparent 0.6px); /* Latte Surface 1 */
-  color: #4c4f69;               /* Latte Text */
+  --cv-paper: #f3f3f1;
+  --cv-ink: #262b36;
+  --cv-ink-faint: #9aa0ae;
+  --cv-ink-done: #b7bcc7;
+  --cv-gold: #b8860b;
+}
+
+/* Clean view — labeled divider (e.g. "nawyki") */
+.clean-view-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 14px 0 6px;
+}
+.clean-view-divider::before,
+.clean-view-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--cv-ink-faint);
+  opacity: 0.33;
+}
+.clean-view-divider > span {
+  font-size: 14px;
+  letter-spacing: 0.02em;
+  color: var(--cv-ink-faint);
 }
 
 /* App layout */
