@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.88.1] - 2026-04-23
+
+### Changed
+
+- Habits service — komentarz dokumentujący inwariant `buildHabitEntry` (musi być wołany po `setData`, bo `weeklyMinutes` sumuje wyłącznie z `habit.log`). Bez zmiany zachowania.
+
 ## [1.88.0] - 2026-04-23
 
 ### Added

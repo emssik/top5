@@ -158,6 +158,7 @@ export function logHabitMinutes(id: string, minutes: number): Habit[] | ServiceE
   return habits
 }
 
+// Wymaga post-persist habit (weeklyMinutes sumuje tylko z habit.log, nie doliczy dzisiejszych minut przed setData).
 function buildHabitEntry(habit: Habit, today: Date, dk: string): HabitTodayEntry {
   const isScheduled = isScheduledOn(habit, today)
   const logEntry = habit.log[dk]
