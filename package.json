@@ -1,6 +1,6 @@
 {
   "name": "top5",
-  "version": "1.88.2",
+  "version": "1.88.3",
   "description": "Focus management app - limit yourself to 5 projects",
   "license": "MIT WITH Commons-Clause",
   "main": "./out/main/index.js",

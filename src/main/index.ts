@@ -283,13 +283,14 @@ app.whenReady().then(() => {
     // Separators: only when preceding section has content
     const hasRepeating = repeatingActiveCount + proposalCount > 0
     const hasCompleted = completedToday.length > 0
-    const hasAnyTasksAbove = visibleRegularCount > 0 || hasRepeating || hasCompleted
     const separators =
       (hasRepeating && visibleRegularCount > 0 ? 1 : 0) +
       (hasCompleted && (visibleRegularCount > 0 || hasRepeating) ? 1 : 0) +
-      (habitCount > 0 && hasAnyTasksAbove ? 1 : 0)
+      (habitCount > 0 ? 1 : 0)
+    // QuickTasksView renders a 64px empty state when there are no tasks/repeating/completed
+    const emptyStateHeight = totalRows === habitCount && habitCount > 0 ? 64 : 0
     // Header ≈ 130, each row ≈ 34px, each separator ≈ 20px, bottom padding 12px
-    const height = Math.min(Math.max(totalRows * CLEAN_VIEW_ROW_HEIGHT + separators * CLEAN_VIEW_SEPARATOR_HEIGHT + CLEAN_VIEW_HEADER_HEIGHT, CLEAN_VIEW_MIN_HEIGHT), workArea.height)
+    const height = Math.min(Math.max(totalRows * CLEAN_VIEW_ROW_HEIGHT + separators * CLEAN_VIEW_SEPARATOR_HEIGHT + CLEAN_VIEW_HEADER_HEIGHT + emptyStateHeight, CLEAN_VIEW_MIN_HEIGHT), workArea.height)
     mainWindow.setMinimumSize(width, 100)
     mainWindow.setBounds({
       x: bounds.x + Math.round((bounds.width - width) / 2),

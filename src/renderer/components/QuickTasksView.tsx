@@ -390,7 +390,7 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
               <span
                 onDoubleClick={() => !isCompleted && startEditing(task)}
                 className={`${textSize} leading-snug truncate block cursor-default ${isCompleted ? 'line-through' : ''}`}
-                style={{ color: isCompleted ? 'var(--cv-ink-done)' : 'var(--cv-ink)', fontWeight: 500 }}
+                style={{ color: isRecentDone ? 'var(--cv-ink-faint)' : isCompleted ? 'var(--cv-ink-done)' : 'var(--cv-ink)', fontWeight: 500 }}
                 title={task.title}
               >
                 <Linkify text={cleanView ? task.title.replace(/^\(✂\d+\)\s*/, '') : task.title} />

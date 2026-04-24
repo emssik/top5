@@ -1,5 +1,5 @@
 import { useProjects } from '../../hooks/useProjects'
-import { isScheduledOn, computeStreak, scheduleLabel } from '../../../shared/habit-schedule'
+import { getScheduledHabits, computeStreak, scheduleLabel } from '../../../shared/habit-schedule'
 import { dateKey } from '../../../shared/schedule'
 import { HabitIcon } from './HabitIcon'
 import { fireConfetti, showHabitToast } from './effects'
@@ -13,7 +13,7 @@ export function TodayHabitsSection({ onSelectView }: TodayHabitsSectionProps) {
   const todayKey = dateKey(new Date())
   const today = new Date()
 
-  const scheduled = habits.filter((h) => !h.archivedAt && isScheduledOn(h, today))
+  const scheduled = getScheduledHabits(habits, today)
   if (scheduled.length === 0) return null
 
   const done = scheduled.filter((h) => h.log[todayKey]?.done).length

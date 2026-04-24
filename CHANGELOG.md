@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.88.3] - 2026-04-24
+
+### Fixed
+
+- Clean view — poprawna wysokość okna gdy na liście są tylko nawyki: separator "nawyki" renderowany bez tasków nie był wliczany do kalkulacji, a 64px empty state ("Brak zadań") pominięty. Dzięki temu ostatni wiersz nie jest już obcinany.
+- Clean view — przywrócono wizualne rozróżnienie dla świeżo zrobionych tasków (`isRecentDone`): używają `--cv-ink-faint` zamiast `--cv-ink-done`, co sygnalizuje „można jeszcze przywrócić".
+- Clean view — nawyki odświeżają się o północy przy otwartym oknie (setInterval 60s w `CleanViewHabitsSection`). Wcześniej `today` było łapane raz przy renderze.
+
+### Changed
+
+- `TodayHabitsSection` używa helpera `getScheduledHabits` zamiast inline'owego filtra — zgodnie z `CleanViewHabitsSection` i `main/index.ts`.
+- `CleanViewHabitsSection` — inline'owy wybór koloru streaka zamiast warunkowo obliczanej zmiennej pomocniczej.
+
 ## [1.88.2] - 2026-04-23
 
 ### Fixed

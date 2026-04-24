@@ -1,10 +1,16 @@
+import { useState, useEffect } from 'react'
 import { useProjects } from '../hooks/useProjects'
 import { getScheduledHabits, computeStreak } from '../../shared/habit-schedule'
 import { dateKey } from '../../shared/schedule'
 
 export default function CleanViewHabitsSection() {
   const { habits, habitTick } = useProjects()
-  const today = new Date()
+  const [today, setToday] = useState(() => new Date())
+  useEffect(() => {
+    const tick = () => setToday(new Date())
+    const interval = setInterval(tick, 60_000)
+    return () => clearInterval(interval)
+  }, [])
   const todayKey = dateKey(today)
 
   const scheduled = getScheduledHabits(habits, today)
@@ -23,7 +29,6 @@ export default function CleanViewHabitsSection() {
         const { streak, unit } = computeStreak(h)
         const shortUnit = unit === 'tyg' ? 't' : 'd'
         const marker = isDone ? '⊘' : '○'
-        const streakColor = streak >= 7 ? 'var(--cv-gold)' : 'var(--cv-ink-faint)'
         return (
           <div key={h.id} className="group flex items-baseline gap-2.5 py-[2px]">
             <button
@@ -44,7 +49,7 @@ export default function CleanViewHabitsSection() {
             </span>
             <span
               className="text-[15px] flex-shrink-0"
-              style={{ color: isDone ? 'var(--cv-ink-done)' : streakColor }}
+              style={{ color: isDone ? 'var(--cv-ink-done)' : streak >= 7 ? 'var(--cv-gold)' : 'var(--cv-ink-faint)' }}
             >
               {streak > 0 ? `${streak}${shortUnit}` : '—'}
             </span>
