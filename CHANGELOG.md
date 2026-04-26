@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.88.4] - 2026-04-26
+
+### Security
+
+- Override `@xmldom/xmldom` na `^0.8.13` (z 0.8.12) w `package.json` — łata 4 advisory (DoS, XML injection: GHSA-2v35, GHSA-f6ww, GHSA-x6wf, GHSA-j759). Zależność tranzytywna z `electron-builder` (build-time only, brak runtime exposure).
+- Override `postcss` na `^8.5.10` (z 8.5.6) — łata XSS w CSS stringify (GHSA-qx2v-qp2m-jg93).
+
 ## [1.88.3] - 2026-04-24
 
 ### Fixed
