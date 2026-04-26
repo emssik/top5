@@ -5,6 +5,7 @@ import { is } from '@electron-toolkit/utils'
 import type { IpcMain } from 'electron'
 import { getFocusWindow, enterFocusMode } from './focus-window'
 import { createQuickAddWindow } from './quick-add-window'
+import { isEnergyWindowOpen } from './energy-tracker'
 import { getData, getAppData, setAppDataKey } from './store'
 import { getVisibleTasks } from '../shared/task-list'
 import { dateKey } from '../shared/schedule'
@@ -118,6 +119,9 @@ function tick(): void {
   if (idleSeconds < IDLE_THRESHOLD_S) {
     cumulativeActiveMs += POLL_INTERVAL_MS
   }
+
+  // Energy check-in has priority — defer nudge until energy popup is closed.
+  if (isEnergyWindowOpen()) return
 
   // Threshold reached → show nudge
   if (cumulativeActiveMs >= nudgeThresholdMs) {

@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer, webFrame } from 'electron'
 import type { IpcRendererEvent } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
-import type { AppConfig, FocusCheckIn, OperationLogEntry, Project, QuickTask, RepeatingTask, ApiConfig, LockedTaskRef, WinsLockState, WinEntry, StreakStats, Habit, HabitTodayEntry } from '../shared/types'
+import type { AppConfig, FocusCheckIn, OperationLogEntry, Project, QuickTask, RepeatingTask, ApiConfig, EnergyTrackerConfig, LockedTaskRef, WinsLockState, WinEntry, StreakStats, Habit, HabitTodayEntry } from '../shared/types'
 
 interface ShortcutActionPayload {
   action: string
@@ -118,6 +118,12 @@ export const api = {
   nudgeGetTasks: () => ipcRenderer.invoke('nudge-get-tasks'),
   nudgeStartFocus: (projectId: string, taskId: string) => ipcRenderer.invoke('nudge-start-focus', projectId, taskId),
   nudgeOpenQuickAdd: () => ipcRenderer.invoke('nudge-open-quick-add'),
+  getEnergyTrackerConfig: (): Promise<EnergyTrackerConfig> => ipcRenderer.invoke('get-energy-tracker-config'),
+  saveEnergyTrackerConfig: (config: EnergyTrackerConfig): Promise<EnergyTrackerConfig> => ipcRenderer.invoke('save-energy-tracker-config', config),
+  energyPauseUntil: (isoTimestamp: string): Promise<EnergyTrackerConfig> => ipcRenderer.invoke('energy-pause-until', isoTimestamp),
+  energyResume: (): Promise<EnergyTrackerConfig> => ipcRenderer.invoke('energy-resume'),
+  energySkip: () => ipcRenderer.invoke('energy-skip'),
+  energySubmit: (payload: { energy: 1 | 2 | 3; mood: 1 | 2 | 3; hungry: boolean; note?: string }) => ipcRenderer.invoke('energy-submit', payload),
   onCheckInRespond: (callback: (response: 'yes' | 'a_little' | 'no') => void) => {
     const handler = (_event: IpcRendererEvent, response: 'yes' | 'a_little' | 'no') => callback(response)
     ipcRenderer.on('checkin-respond', handler)

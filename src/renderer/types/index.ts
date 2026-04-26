@@ -14,6 +14,9 @@ export type {
   AppData,
   ApiConfig,
   ApiConfigPublic,
+  EnergyCheckIn,
+  EnergyRating,
+  EnergyTrackerConfig,
   LockedTaskRef,
   WinsLockState,
   WinEntry,
@@ -119,6 +122,12 @@ declare global {
       nudgeGetTasks: () => Promise<{ projectId: string; taskId: string; title: string; projectName?: string; projectCode?: string }[]>
       nudgeStartFocus: (projectId: string, taskId: string) => Promise<void>
       nudgeOpenQuickAdd: () => Promise<void>
+      getEnergyTrackerConfig: () => Promise<import('../../shared/types').EnergyTrackerConfig>
+      saveEnergyTrackerConfig: (config: import('../../shared/types').EnergyTrackerConfig) => Promise<import('../../shared/types').EnergyTrackerConfig>
+      energyPauseUntil: (isoTimestamp: string) => Promise<import('../../shared/types').EnergyTrackerConfig>
+      energyResume: () => Promise<import('../../shared/types').EnergyTrackerConfig>
+      energySkip: () => Promise<void>
+      energySubmit: (payload: { energy: 1 | 2 | 3; mood: 1 | 2 | 3; hungry: boolean; note?: string }) => Promise<{ ok: true } | { error: string }>
       onReloadData: (callback: () => void) => () => void
       onShortcutAction: (callback: (data: ShortcutActionPayload) => void) => () => void
       onCheckInCountdown: (callback: (remainingMs: number) => void) => () => void

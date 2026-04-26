@@ -7,6 +7,7 @@ import FocusMenuPopup from './components/FocusMenuPopup'
 import OperationLogView from './components/OperationLogView'
 import QuickAddWindow from './components/QuickAddWindow'
 import NudgePopup from './components/NudgePopup'
+import EnergyPopup from './components/EnergyPopup'
 
 export default function App() {
   const { loaded, loadData, config } = useProjects()
@@ -17,7 +18,8 @@ export default function App() {
   const isOperationLogWindow = windowHash.startsWith('#operation-log')
   const isQuickAddWindow = windowHash === '#quick-add'
   const isNudgeWindow = windowHash === '#nudge'
-  const isAuxWindow = isCheckInWindow || isFocusMenuWindow || isOperationLogWindow || isQuickAddWindow || isNudgeWindow
+  const isEnergyWindow = windowHash === '#energy'
+  const isAuxWindow = isCheckInWindow || isFocusMenuWindow || isOperationLogWindow || isQuickAddWindow || isNudgeWindow || isEnergyWindow
   const isMainOrFocus = !isAuxWindow
 
   // Separate windows with hash routing — apply theme from stored config.
@@ -71,6 +73,7 @@ export default function App() {
   if (isOperationLogWindow) return <OperationLogView />
   if (isQuickAddWindow) return <QuickAddWindow />
   if (isNudgeWindow) return <NudgePopup />
+  if (isEnergyWindow) return <EnergyPopup />
 
   if (!loaded) {
     return (

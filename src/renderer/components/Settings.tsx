@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useProjects } from '../hooks/useProjects'
-import type { ApiConfig } from '../types'
+import type { ApiConfig, EnergyTrackerConfig } from '../types'
 
 interface Props {
   open: boolean
@@ -31,6 +31,10 @@ export default function Settings({ open, onClose }: Props) {
   const [apiConfig, setApiConfig] = useState<ApiConfig | null>(null)
   const [showApiKey, setShowApiKey] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [showEnergy, setShowEnergy] = useState(false)
+  const [energyConfig, setEnergyConfig] = useState<EnergyTrackerConfig | null>(null)
+  const [energyMin, setEnergyMin] = useState(60)
+  const [energyMax, setEnergyMax] = useState(120)
 
   useEffect(() => {
     setQuickTasksLimit(config.quickTasksLimit ?? 5)
@@ -44,6 +48,11 @@ export default function Settings({ open, onClose }: Props) {
   useEffect(() => {
     if (open) {
       window.api.getApiConfig().then(setApiConfig)
+      window.api.getEnergyTrackerConfig().then((cfg) => {
+        setEnergyConfig(cfg)
+        setEnergyMin(cfg.intervalMinMin)
+        setEnergyMax(cfg.intervalMaxMin)
+      })
     }
   }, [open])
 
@@ -72,6 +81,43 @@ export default function Settings({ open, onClose }: Props) {
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }, [apiConfig])
+
+  const handleToggleEnergy = useCallback(async () => {
+    if (!energyConfig) return
+    const next = await window.api.saveEnergyTrackerConfig({ ...energyConfig, enabled: !energyConfig.enabled })
+    setEnergyConfig(next)
+  }, [energyConfig])
+
+  const handleSaveEnergyInterval = useCallback(async () => {
+    if (!energyConfig) return
+    const next = await window.api.saveEnergyTrackerConfig({
+      ...energyConfig,
+      intervalMinMin: energyMin,
+      intervalMaxMin: energyMax
+    })
+    setEnergyConfig(next)
+    setEnergyMin(next.intervalMinMin)
+    setEnergyMax(next.intervalMaxMin)
+  }, [energyConfig, energyMin, energyMax])
+
+  const handlePauseEnergy = useCallback(async (kind: '1h' | '2h' | 'eod') => {
+    let isoTimestamp: string
+    if (kind === 'eod') {
+      const eod = new Date()
+      eod.setHours(23, 59, 59, 999)
+      isoTimestamp = eod.toISOString()
+    } else {
+      const minutes = kind === '1h' ? 60 : 120
+      isoTimestamp = new Date(Date.now() + minutes * 60_000).toISOString()
+    }
+    const next = await window.api.energyPauseUntil(isoTimestamp)
+    setEnergyConfig(next)
+  }, [])
+
+  const handleResumeEnergy = useCallback(async () => {
+    const next = await window.api.energyResume()
+    setEnergyConfig(next)
+  }, [])
 
   if (!open) return null
 
@@ -273,6 +319,83 @@ export default function Settings({ open, onClose }: Props) {
                     </div>
                   </>
                 )}
+              </>
+            )}
+          </div>
+        </div>
+
+        <div style={{ marginTop: 16, borderTop: '1px solid var(--c-border-subtle)', paddingTop: 12 }}>
+          <div className={`done-toggle ${showEnergy ? 'open' : ''}`} onClick={() => setShowEnergy((v) => !v)} style={{ fontWeight: 600, color: 'var(--c-text-heading)' }}>
+            <span>Energy tracker</span>
+            <span className="chevron">▸</span>
+          </div>
+          <div className={`done-list ${showEnergy ? 'open' : ''}`}>
+            {energyConfig && (
+              <>
+                <div className="modal-row">
+                  <label>Status</label>
+                  <button
+                    className={`form-btn ${energyConfig.enabled ? 'form-btn-primary' : 'form-btn-secondary'}`}
+                    style={{ padding: '4px 12px', fontSize: 12 }}
+                    onClick={handleToggleEnergy}
+                  >
+                    {energyConfig.enabled ? 'Enabled' : 'Disabled'}
+                  </button>
+                </div>
+                <div className="modal-row">
+                  <label>Interval (min)</label>
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    <input
+                      type="number"
+                      min={1}
+                      max={480}
+                      value={energyMin}
+                      onChange={(e) => setEnergyMin(Math.max(1, Math.min(480, Number(e.target.value) || 1)))}
+                      onBlur={handleSaveEnergyInterval}
+                      className="form-input"
+                      style={{ width: 60, textAlign: 'center', padding: '5px 8px' }}
+                    />
+                    <span style={{ opacity: 0.5, fontSize: 11 }}>–</span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={480}
+                      value={energyMax}
+                      onChange={(e) => setEnergyMax(Math.max(1, Math.min(480, Number(e.target.value) || 1)))}
+                      onBlur={handleSaveEnergyInterval}
+                      className="form-input"
+                      style={{ width: 60, textAlign: 'center', padding: '5px 8px' }}
+                    />
+                    <span style={{ opacity: 0.5, fontSize: 11 }}>min</span>
+                  </div>
+                </div>
+                <div className="modal-row">
+                  <label>Pauza</label>
+                  {energyConfig.pausedUntil && Date.parse(energyConfig.pausedUntil) > Date.now() ? (
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                      <span className="value" style={{ fontSize: 11, opacity: 0.75 }}>
+                        do {new Date(energyConfig.pausedUntil).toLocaleTimeString('pl', { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                      <button
+                        className="form-btn form-btn-secondary"
+                        style={{ padding: '2px 8px', fontSize: 11 }}
+                        onClick={handleResumeEnergy}
+                      >
+                        Wznów
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', gap: 4 }}>
+                      <button className="form-btn form-btn-secondary" style={{ padding: '2px 8px', fontSize: 11 }} onClick={() => handlePauseEnergy('1h')}>1h</button>
+                      <button className="form-btn form-btn-secondary" style={{ padding: '2px 8px', fontSize: 11 }} onClick={() => handlePauseEnergy('2h')}>2h</button>
+                      <button className="form-btn form-btn-secondary" style={{ padding: '2px 8px', fontSize: 11 }} onClick={() => handlePauseEnergy('eod')}>do końca dnia</button>
+                    </div>
+                  )}
+                </div>
+                <div className="modal-row">
+                  <label />
+                  <span className="value" style={{ fontSize: 11, opacity: 0.5 }}>energy.jsonl</span>
+                </div>
               </>
             )}
           </div>

@@ -200,6 +200,24 @@ export interface ApiConfigPublic {
   port: number
 }
 
+export type EnergyRating = 1 | 2 | 3
+
+export interface EnergyCheckIn {
+  id: string
+  timestamp: string
+  energy: EnergyRating
+  mood: EnergyRating
+  hungry: boolean
+  note?: string
+}
+
+export interface EnergyTrackerConfig {
+  enabled: boolean
+  intervalMinMin: number
+  intervalMaxMin: number
+  pausedUntil: string | null
+}
+
 export interface LockedTaskRef {
   kind: 'quick' | 'pinned'
   quickTaskId?: string
@@ -244,6 +262,7 @@ export interface AppData {
   repeatingTasks: RepeatingTask[]
   dismissedRepeating: Record<string, string[]>
   apiConfig?: ApiConfigPublic
+  energyTracker?: EnergyTrackerConfig
   nextQuickTaskNumber?: number
   winsLock?: WinsLockState
   habits?: Habit[]

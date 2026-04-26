@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.89.0] - 2026-04-26
+
+### Added
+
+- Energy tracker — losowe check-iny co 60-120 min (konfigurowalne): krótki popup w środku ekranu z oceną energii i nastroju (1-3), głód (y/n) oraz opcjonalna notatka. Klawiatura: `1`/`2`/`3` → `1`/`2`/`3` → `y`/`n` → `Enter` (zapisz) lub `Esc` (skip). Cały check-in <5s. Dane zapisywane do `energy.jsonl` (append-only, w dziennym backupie). Pauza 1h/2h/do końca dnia dostępna w popupie i w Settings → Energy tracker. Pomija check-in gdy idle >2 min lub focus na innym popupie; ma priorytet nad istniejącym nudgem. Domyślnie wyłączony — włączasz ręcznie w Settings.
+
 ## [1.88.4] - 2026-04-26
 
 ### Security
