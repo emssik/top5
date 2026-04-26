@@ -11,9 +11,21 @@ import {
   notifyAllWindows
 } from './store'
 import type { EnergyCheckIn, EnergyTrackerConfig } from '../shared/types'
+import { dateKey } from '../shared/schedule'
 
 const IDLE_THRESHOLD_S = 120
 const IDLE_RECHECK_MS = 60_000
+const FIRST_ACTIVITY_IDLE_THRESHOLD_S = 60
+const FIRST_CHECKIN_MIN_MS = 5 * 60_000
+const FIRST_CHECKIN_MAX_MS = 15 * 60_000
+const DAY_START_HOUR = 6
+
+// Day rolls over at 6:00 local time, not midnight — so working past midnight
+// stays in the same day for first-activity detection.
+function currentLogicalDay(): string {
+  const shifted = new Date(Date.now() - DAY_START_HOUR * 60 * 60_000)
+  return dateKey(shifted)
+}
 
 let scheduledTimeout: ReturnType<typeof setTimeout> | null = null
 let energyWindow: BrowserWindow | null = null
@@ -30,6 +42,10 @@ function randomIntervalMs(config: EnergyTrackerConfig): number {
   const maxMs = config.intervalMaxMin * 60_000
   if (maxMs <= minMs) return minMs
   return Math.round(minMs + Math.random() * (maxMs - minMs))
+}
+
+function randomFirstCheckInMs(): number {
+  return Math.round(FIRST_CHECKIN_MIN_MS + Math.random() * (FIRST_CHECKIN_MAX_MS - FIRST_CHECKIN_MIN_MS))
 }
 
 function pauseRemainingMs(config: EnergyTrackerConfig): number {
@@ -108,7 +124,20 @@ function tick(): void {
     return
   }
 
+  const today = currentLogicalDay()
   const idleSeconds = powerMonitor.getSystemIdleTime()
+
+  // First activity of the day → schedule the first check-in 5-15 min later
+  if (config.lastFirstActivityDate !== today) {
+    if (idleSeconds < FIRST_ACTIVITY_IDLE_THRESHOLD_S) {
+      saveEnergyTrackerConfig({ ...config, lastFirstActivityDate: today })
+      scheduledTimeout = setTimeout(tick, randomFirstCheckInMs())
+    } else {
+      scheduledTimeout = setTimeout(tick, IDLE_RECHECK_MS)
+    }
+    return
+  }
+
   if (idleSeconds >= IDLE_THRESHOLD_S) {
     scheduledTimeout = setTimeout(tick, IDLE_RECHECK_MS)
     return
@@ -129,7 +158,12 @@ export function startEnergyScheduler(): void {
   if (scheduledTimeout) return
   const config = getEnergyTrackerConfig()
   if (!config.enabled) return
-  scheduleNext()
+  const today = currentLogicalDay()
+  if (config.lastFirstActivityDate !== today) {
+    scheduledTimeout = setTimeout(tick, IDLE_RECHECK_MS)
+  } else {
+    scheduleNext()
+  }
 }
 
 export function stopEnergyScheduler(): void {

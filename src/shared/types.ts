@@ -216,6 +216,7 @@ export interface EnergyTrackerConfig {
   intervalMinMin: number
   intervalMaxMin: number
   pausedUntil: string | null
+  lastFirstActivityDate: string | null
 }
 
 export interface LockedTaskRef {

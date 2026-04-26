@@ -175,7 +175,8 @@ const DEFAULT_ENERGY_TRACKER_CONFIG: EnergyTrackerConfig = {
   enabled: false,
   intervalMinMin: 60,
   intervalMaxMin: 120,
-  pausedUntil: null
+  pausedUntil: null,
+  lastFirstActivityDate: null
 }
 
 // --- Daily backup ---
@@ -254,11 +255,16 @@ function normalizeEnergyTrackerConfig(value: unknown): EnergyTrackerConfig {
     const t = Date.parse(value.pausedUntil)
     if (!Number.isNaN(t) && t > Date.now()) pausedUntil = value.pausedUntil
   }
+  const lastFirstActivityDate = typeof value.lastFirstActivityDate === 'string'
+    && /^\d{4}-\d{2}-\d{2}$/.test(value.lastFirstActivityDate)
+      ? value.lastFirstActivityDate
+      : null
   return {
     enabled: typeof value.enabled === 'boolean' ? value.enabled : DEFAULT_ENERGY_TRACKER_CONFIG.enabled,
     intervalMinMin,
     intervalMaxMin,
-    pausedUntil
+    pausedUntil,
+    lastFirstActivityDate
   }
 }
 

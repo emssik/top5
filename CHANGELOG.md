@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.89.1] - 2026-04-26
+
+### Changed
+
+- Energy tracker — pierwszy check-in dnia jest losowany w przedziale 5-15 min od pierwszej aktywności (idle <60 s), nie z normalnego interwału 60-120 min. Dzień rozliczeniowy zaczyna się o 6:00 lokalnie (a nie o północy), więc praca po północy nie wyzwala nowego "first activity". Wykrywanie raz na dzień, persisted w `EnergyTrackerConfig.lastFirstActivityDate`.
+
 ## [1.89.0] - 2026-04-26
 
 ### Added
