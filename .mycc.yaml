@@ -74,7 +74,8 @@ actions:
 
   - name: dev
     cmd: "npm run dev"
-    pane: 3
+    pane: 4
+    daemon: true
 
   - name: build
     cmd: "npm run build"
