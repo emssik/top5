@@ -47,6 +47,9 @@ import type {
   AppData,
   ApiConfig,
   ApiConfigPublic,
+  EnergyCheckIn,
+  EnergyRating,
+  EnergyTrackerConfig,
   LockedTaskRef,
   WinsLockState,
   WinEntry,
@@ -55,7 +58,7 @@ import type {
 import { STANDALONE_PROJECT_ID } from '../shared/constants'
 
 // Re-export types for convenience
-export type { Task, RepeatSchedule, RepeatingTask, QuickTask, ProjectColor, ProjectLink, Project, AppConfig, FocusCheckIn, OperationLogEntry, AppData, ApiConfig, ApiConfigPublic, LockedTaskRef, WinsLockState, WinEntry, StreakStats }
+export type { Task, RepeatSchedule, RepeatingTask, QuickTask, ProjectColor, ProjectLink, Project, AppConfig, FocusCheckIn, OperationLogEntry, AppData, ApiConfig, ApiConfigPublic, EnergyCheckIn, EnergyRating, EnergyTrackerConfig, LockedTaskRef, WinsLockState, WinEntry, StreakStats }
 
 const defaultData: AppData = {
   projects: [],
@@ -166,6 +169,14 @@ export function getConfigDir(): string {
 const DATA_FILE = join(CONFIG_DIR, 'data.yaml')
 const CHECKINS_FILE = join(CONFIG_DIR, 'checkins.jsonl')
 const OPERATIONS_FILE = join(CONFIG_DIR, 'operations.jsonl')
+const ENERGY_FILE = join(CONFIG_DIR, 'energy.jsonl')
+
+const DEFAULT_ENERGY_TRACKER_CONFIG: EnergyTrackerConfig = {
+  enabled: false,
+  intervalMinMin: 60,
+  intervalMaxMin: 120,
+  pausedUntil: null
+}
 
 // --- Daily backup ---
 
@@ -212,6 +223,43 @@ function toFocusCheckIn(value: unknown): FocusCheckIn | null {
   const { minutes } = value
   if (typeof minutes === 'number' && minutes >= 0) result.minutes = minutes
   return result
+}
+
+export function isEnergyRating(value: unknown): value is EnergyRating {
+  return value === 1 || value === 2 || value === 3
+}
+
+function toEnergyCheckIn(value: unknown): EnergyCheckIn | null {
+  if (!isRecord(value)) return null
+  const { id, timestamp, energy, mood, hungry, note } = value
+  if (typeof id !== 'string' || typeof timestamp !== 'string') return null
+  if (!isEnergyRating(energy) || !isEnergyRating(mood)) return null
+  if (typeof hungry !== 'boolean') return null
+  const result: EnergyCheckIn = { id, timestamp, energy, mood, hungry }
+  if (typeof note === 'string' && note.trim().length > 0) {
+    result.note = note.trim().slice(0, 500)
+  }
+  return result
+}
+
+function normalizeEnergyTrackerConfig(value: unknown): EnergyTrackerConfig {
+  if (!isRecord(value)) return { ...DEFAULT_ENERGY_TRACKER_CONFIG }
+  const minRaw = typeof value.intervalMinMin === 'number' ? value.intervalMinMin : DEFAULT_ENERGY_TRACKER_CONFIG.intervalMinMin
+  const maxRaw = typeof value.intervalMaxMin === 'number' ? value.intervalMaxMin : DEFAULT_ENERGY_TRACKER_CONFIG.intervalMaxMin
+  // Clamp: min 1 minute (testing), max 480 (8h). Min must be ≤ max.
+  const intervalMinMin = Math.max(1, Math.min(480, Math.round(minRaw)))
+  const intervalMaxMin = Math.max(intervalMinMin, Math.min(480, Math.round(maxRaw)))
+  let pausedUntil: string | null = null
+  if (typeof value.pausedUntil === 'string') {
+    const t = Date.parse(value.pausedUntil)
+    if (!Number.isNaN(t) && t > Date.now()) pausedUntil = value.pausedUntil
+  }
+  return {
+    enabled: typeof value.enabled === 'boolean' ? value.enabled : DEFAULT_ENERGY_TRACKER_CONFIG.enabled,
+    intervalMinMin,
+    intervalMaxMin,
+    pausedUntil
+  }
 }
 
 function isValidTask(value: unknown): value is Task {
@@ -476,7 +524,7 @@ function dailyBackup(): void {
 
   // Collect files to backup and check if anything changed since last backup
   const WINS_FILE = join(CONFIG_DIR, 'wins.jsonl')
-  const filesToBackup = [DATA_FILE, CHECKINS_FILE, OPERATIONS_FILE, WINS_FILE].filter((f) => existsSync(f))
+  const filesToBackup = [DATA_FILE, CHECKINS_FILE, OPERATIONS_FILE, WINS_FILE, ENERGY_FILE].filter((f) => existsSync(f))
   if (filesToBackup.length === 0) return
 
   // Hash current content
@@ -569,6 +617,78 @@ export function loadCheckIns(): FocusCheckIn[] {
 export function taskTimeMinutes(taskId: string): number {
   ensureCheckInCaches()
   return taskMinutesById?.get(taskId) ?? 0
+}
+
+// --- Energy check-ins ---
+
+export function appendEnergyCheckIn(checkIn: EnergyCheckIn): void {
+  mkdirSync(CONFIG_DIR, { recursive: true })
+  appendFileSync(ENERGY_FILE, JSON.stringify(checkIn) + '\n', 'utf-8')
+}
+
+export function loadEnergyCheckIns(): EnergyCheckIn[] {
+  if (!existsSync(ENERGY_FILE)) return []
+  try {
+    const raw = readFileSync(ENERGY_FILE, 'utf-8')
+    const parsed: EnergyCheckIn[] = []
+    for (const line of raw.split('\n')) {
+      if (!line.trim()) continue
+      try {
+        const entry = toEnergyCheckIn(JSON.parse(line))
+        if (entry) parsed.push(entry)
+      } catch {
+        // ignore malformed
+      }
+    }
+    return parsed
+  } catch {
+    return []
+  }
+}
+
+// --- EnergyTracker config ---
+
+let cachedEnergyTrackerConfig: EnergyTrackerConfig | null = null
+
+function loadEnergyTrackerConfig(): EnergyTrackerConfig {
+  if (cachedEnergyTrackerConfig) return cachedEnergyTrackerConfig
+  if (!existsSync(DATA_FILE)) {
+    cachedEnergyTrackerConfig = { ...DEFAULT_ENERGY_TRACKER_CONFIG }
+    return cachedEnergyTrackerConfig
+  }
+  try {
+    const raw = readFileSync(DATA_FILE, 'utf-8')
+    const parsed = yaml.load(raw) as any
+    cachedEnergyTrackerConfig = normalizeEnergyTrackerConfig(parsed?.energyTracker)
+  } catch {
+    cachedEnergyTrackerConfig = { ...DEFAULT_ENERGY_TRACKER_CONFIG }
+  }
+  return cachedEnergyTrackerConfig
+}
+
+function saveEnergyTrackerConfigToFile(config: EnergyTrackerConfig): void {
+  cachedEnergyTrackerConfig = config
+  let parsed: any = {}
+  if (existsSync(DATA_FILE)) {
+    try {
+      parsed = yaml.load(readFileSync(DATA_FILE, 'utf-8')) ?? {}
+    } catch {
+      parsed = {}
+    }
+  }
+  parsed.energyTracker = config
+  mkdirSync(CONFIG_DIR, { recursive: true })
+  writeFileSync(DATA_FILE, yaml.dump(parsed, { lineWidth: 120, noRefs: true }), 'utf-8')
+}
+
+export function getEnergyTrackerConfig(): EnergyTrackerConfig {
+  return loadEnergyTrackerConfig()
+}
+
+export function saveEnergyTrackerConfig(config: EnergyTrackerConfig): EnergyTrackerConfig {
+  const normalized = normalizeEnergyTrackerConfig(config)
+  saveEnergyTrackerConfigToFile(normalized)
+  return normalized
 }
 
 // --- Operation log ---
@@ -785,12 +905,16 @@ function saveData(data: AppData): void {
   // Preserve apiConfig in YAML (full version with key) — don't overwrite it from AppData
   const toSave: any = { ...data }
   delete toSave.apiConfig // Don't save the public version; full apiConfig is managed separately
-  // Merge with existing apiConfig in file
+  delete toSave.energyTracker // Managed separately via saveEnergyTrackerConfigToFile
+  // Merge with existing apiConfig + energyTracker in file
   if (existsSync(DATA_FILE)) {
     try {
       const existing = yaml.load(readFileSync(DATA_FILE, 'utf-8')) as any
       if (existing?.apiConfig) {
         toSave.apiConfig = existing.apiConfig
+      }
+      if (existing?.energyTracker) {
+        toSave.energyTracker = existing.energyTracker
       }
     } catch {
       // ignore
@@ -836,7 +960,7 @@ export function setData(key: keyof AppData, value: AppData[keyof AppData]): void
 
 export function getAppData(): AppData {
   const data = getData()
-  return { ...data, apiConfig: getApiConfigPublic() }
+  return { ...data, apiConfig: getApiConfigPublic(), energyTracker: getEnergyTrackerConfig() }
 }
 
 export function setAppDataKey(key: keyof AppData, value: AppData[keyof AppData]): void {

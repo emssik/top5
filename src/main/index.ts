@@ -10,6 +10,7 @@ import { registerQuickAddHandlers } from './quick-add-window'
 import { showWindowVisible } from './window-utils'
 import { existsSync, readFileSync, writeFileSync } from 'fs'
 import { registerNudgeHandlers, startNudgeMonitor, stopNudgeMonitor } from './nudge'
+import { registerEnergyHandlers, startEnergyScheduler, stopEnergyScheduler } from './energy-tracker'
 import { getRepeatingTaskProposals, dateKey } from '../shared/schedule'
 import { getScheduledHabits } from '../shared/habit-schedule'
 import type { QuickTask } from '../shared/types'
@@ -238,11 +239,13 @@ app.whenReady().then(() => {
   registerFocusHandlers(ipcMain, () => mainWindow)
   registerQuickAddHandlers(ipcMain)
   registerNudgeHandlers(ipcMain)
+  registerEnergyHandlers(ipcMain)
   registerGlobalShortcut(globalShortcut, () => mainWindow)
   createWindow()
   registerLocalShortcuts(mainWindow!)
 
   startNudgeMonitor()
+  startEnergyScheduler()
 
   // Start HTTP API server (if enabled in config)
   import('./api/server').then(({ startApiServer }) =>
@@ -346,4 +349,5 @@ app.on('window-all-closed', () => {
 app.on('before-quit', () => {
   ;(app as unknown as Record<string, unknown>).isQuitting = true
   stopNudgeMonitor()
+  stopEnergyScheduler()
 })
