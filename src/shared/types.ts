@@ -208,7 +208,17 @@ export interface EnergyCheckIn {
   energy: EnergyRating
   mood: EnergyRating
   hungry: boolean
+  hadCoffee: boolean
   note?: string
+}
+
+export interface NudgeTask {
+  projectId: string
+  taskId: string
+  title: string
+  projectName?: string
+  projectCode?: string
+  projectColor?: ProjectColor
 }
 
 export interface EnergyTrackerConfig {

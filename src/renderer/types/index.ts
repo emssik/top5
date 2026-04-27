@@ -17,6 +17,7 @@ export type {
   EnergyCheckIn,
   EnergyRating,
   EnergyTrackerConfig,
+  NudgeTask,
   LockedTaskRef,
   WinsLockState,
   WinEntry,
@@ -119,7 +120,7 @@ declare global {
       journalOpen: (notePath: string) => Promise<void>
       nudgeSnooze: (minutes: number) => Promise<void>
       nudgeDismiss: () => Promise<void>
-      nudgeGetTasks: () => Promise<{ projectId: string; taskId: string; title: string; projectName?: string; projectCode?: string }[]>
+      nudgeGetTasks: () => Promise<import('../../shared/types').NudgeTask[]>
       nudgeStartFocus: (projectId: string, taskId: string) => Promise<void>
       nudgeOpenQuickAdd: () => Promise<void>
       getEnergyTrackerConfig: () => Promise<import('../../shared/types').EnergyTrackerConfig>
@@ -127,7 +128,7 @@ declare global {
       energyPauseUntil: (isoTimestamp: string) => Promise<import('../../shared/types').EnergyTrackerConfig>
       energyResume: () => Promise<import('../../shared/types').EnergyTrackerConfig>
       energySkip: () => Promise<void>
-      energySubmit: (payload: { energy: 1 | 2 | 3; mood: 1 | 2 | 3; hungry: boolean; note?: string }) => Promise<{ ok: true } | { error: string }>
+      energySubmit: (payload: { energy: 1 | 2 | 3; mood: 1 | 2 | 3; hungry: boolean; hadCoffee: boolean; note?: string }) => Promise<{ ok: true } | { error: string }>
       onReloadData: (callback: () => void) => () => void
       onShortcutAction: (callback: (data: ShortcutActionPayload) => void) => () => void
       onCheckInCountdown: (callback: (remainingMs: number) => void) => () => void

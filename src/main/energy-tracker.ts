@@ -60,8 +60,8 @@ function showEnergyWindow(): void {
   const display = screen.getPrimaryDisplay()
   const { width: workWidth, height: workHeight, x: workX, y: workY } = display.workArea
 
-  const popupWidth = 380
-  const popupHeight = 320
+  const popupWidth = 540
+  const popupHeight = 410
   const x = workX + Math.round((workWidth - popupWidth) / 2)
   const y = workY + Math.round((workHeight - popupHeight) / 2)
 
@@ -179,15 +179,17 @@ export function restartEnergyScheduler(): void {
 
 function buildCheckIn(payload: unknown): EnergyCheckIn | null {
   if (typeof payload !== 'object' || payload === null) return null
-  const p = payload as { energy?: unknown; mood?: unknown; hungry?: unknown; note?: unknown }
+  const p = payload as { energy?: unknown; mood?: unknown; hungry?: unknown; hadCoffee?: unknown; note?: unknown }
   if (!isEnergyRating(p.energy) || !isEnergyRating(p.mood)) return null
   if (typeof p.hungry !== 'boolean') return null
+  if (typeof p.hadCoffee !== 'boolean') return null
   const result: EnergyCheckIn = {
     id: randomUUID().slice(0, 21),
     timestamp: new Date().toISOString(),
     energy: p.energy,
     mood: p.mood,
-    hungry: p.hungry
+    hungry: p.hungry,
+    hadCoffee: p.hadCoffee
   }
   if (typeof p.note === 'string' && p.note.trim().length > 0) {
     result.note = p.note.trim().slice(0, 500)

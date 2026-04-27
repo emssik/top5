@@ -1,0 +1,460 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8" />
+<title>Top5 — popupy energy &amp; nudge (mockup dla designera)</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  /* ---- Theme tokens (skopiowane 1:1 z src/renderer/styles.css) ---- */
+  .theme-dark {
+    --bg-base: #0a0a0a;
+    --bg-card: #171717;
+    --bg-surface: #262626;
+    --c-border: #404040;
+    --c-text-primary: #f5f5f5;
+    --c-text-heading: #e5e5e5;
+    --c-text-secondary: #a3a3a3;
+    --bg-hover: #404040;
+    color-scheme: dark;
+  }
+  .theme-light {
+    --bg-base: #e6e9ef;
+    --bg-card: #eff1f5;
+    --bg-surface: #ccd0da;
+    --c-border: #bcc0cc;
+    --c-text-primary: #4c4f69;
+    --c-text-heading: #4c4f69;
+    --c-text-secondary: #6c6f85;
+    --bg-hover: #dce0e8;
+    color-scheme: light;
+  }
+
+  body {
+    background: linear-gradient(135deg, #1f2937 0%, #111827 50%, #1f2937 100%);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  }
+
+  /* okno popupu — symuluje frameless + transparent + drop shadow z Electrona */
+  .popup-frame {
+    border-radius: 12px;
+    box-shadow: 0 25px 60px rgba(0,0,0,0.55), 0 8px 16px rgba(0,0,0,0.35);
+    overflow: hidden;
+  }
+
+  /* tłumaczenia tokenów na tailwindowe utility (bez konfiga) */
+  .bg-card        { background: color-mix(in srgb, var(--bg-card) 95%, transparent); }
+  .bg-card-solid  { background: var(--bg-card); }
+  .bg-surface-80  { background: color-mix(in srgb, var(--bg-surface) 80%, transparent); }
+  .bg-surface-60  { background: color-mix(in srgb, var(--bg-surface) 60%, transparent); }
+  .bg-surface-40  { background: color-mix(in srgb, var(--bg-surface) 40%, transparent); }
+  .border-border  { border-color: color-mix(in srgb, var(--c-border) 50%, transparent); }
+  .border-border-strong { border-color: var(--c-border); }
+  .text-t-primary   { color: var(--c-text-primary); }
+  .text-t-heading   { color: var(--c-text-heading); }
+  .text-t-secondary { color: var(--c-text-secondary); }
+  .placeholder-t-secondary::placeholder { color: color-mix(in srgb, var(--c-text-secondary) 60%, transparent); }
+  .hover-bg-hover:hover { background: color-mix(in srgb, var(--bg-hover) 80%, transparent); }
+
+  /* przyciski emerald (zaznaczona opcja / submit) */
+  .btn-emerald      { background: #059669; color: #ffffff; }
+  .btn-emerald-soft { background: rgba(16, 185, 129, 0.12); color: #34d399; }
+
+  /* karta projektu (tło sceny dla popupu) */
+  .stage {
+    background:
+      radial-gradient(circle at 30% 20%, rgba(16,185,129,0.08), transparent 50%),
+      radial-gradient(circle at 70% 80%, rgba(59,130,246,0.08), transparent 50%);
+    border-radius: 16px;
+    padding: 48px 32px;
+  }
+</style>
+</head>
+<body class="min-h-screen p-8 text-slate-100">
+
+<div class="max-w-[1400px] mx-auto">
+
+  <header class="mb-8">
+    <h1 class="text-2xl font-semibold mb-1">Top5 — popupy do redesignu</h1>
+    <p class="text-sm text-slate-400">
+      Dwa frameless okna Electrona które pojawiają się na środku ekranu.
+      Wymiary realne: <code class="text-emerald-400">energy 380×360 px</code>,
+      <code class="text-emerald-400">nudge 400×360 px</code>.
+      Pokazane w obu motywach (dark domyślny, light Catppuccin Latte).
+      Element interaktywny: po kliknięciu w opcję podświetla się na zielono.
+      Klawiatura: cyfry 1/2/3 dla skali, y/n dla tak-nie, Enter zapisz, Esc skip.
+    </p>
+  </header>
+
+  <!-- ============ ENERGY POPUP ============ -->
+  <section class="mb-12">
+    <h2 class="text-lg font-medium mb-1">1. Energy popup — losowy check-in</h2>
+    <p class="text-sm text-slate-400 mb-4">
+      Pojawia się losowo co 60–120 min (konfigurowalne). Pyta o energię, nastrój, głód i kawę w ostatnich 2h.
+      Notatka jest opcjonalna. Pauza 1h / 2h / do końca dnia w prawym dolnym rogu.
+    </p>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+
+      <!-- DARK · stan początkowy -->
+      <div>
+        <div class="text-xs uppercase tracking-wider text-slate-500 mb-3">Dark · stan początkowy (nic nie wybrane)</div>
+        <div class="stage flex justify-center">
+          <div class="popup-frame theme-dark bg-card-solid" style="width:380px;height:360px;">
+            <div class="h-full flex flex-col p-4 select-none">
+              <p class="text-[14px] text-t-primary font-semibold mb-3">Jak się czujesz?</p>
+
+              <div class="flex flex-col gap-2 mb-3">
+                <!-- Energia -->
+                <div class="flex items-center gap-2">
+                  <span class="text-[12px] text-t-secondary w-[60px] shrink-0">Energia</span>
+                  <div class="flex gap-1.5">
+                    <button class="px-2.5 py-1 rounded-md text-[11px] font-medium bg-surface-80 hover-bg-hover text-t-heading min-w-[58px]"><span class="font-mono opacity-70 mr-1">1</span>źle</button>
+                    <button class="px-2.5 py-1 rounded-md text-[11px] font-medium bg-surface-80 hover-bg-hover text-t-heading min-w-[58px]"><span class="font-mono opacity-70 mr-1">2</span>dobrze</button>
+                    <button class="px-2.5 py-1 rounded-md text-[11px] font-medium bg-surface-80 hover-bg-hover text-t-heading min-w-[58px]"><span class="font-mono opacity-70 mr-1">3</span>super</button>
+                  </div>
+                </div>
+                <!-- Nastrój -->
+                <div class="flex items-center gap-2">
+                  <span class="text-[12px] text-t-secondary w-[60px] shrink-0">Nastrój</span>
+                  <div class="flex gap-1.5">
+                    <button class="px-2.5 py-1 rounded-md text-[11px] font-medium bg-surface-80 hover-bg-hover text-t-heading min-w-[58px]"><span class="font-mono opacity-70 mr-1">1</span>dół</button>
+                    <button class="px-2.5 py-1 rounded-md text-[11px] font-medium bg-surface-80 hover-bg-hover text-t-heading min-w-[58px]"><span class="font-mono opacity-70 mr-1">2</span>ok</button>
+                    <button class="px-2.5 py-1 rounded-md text-[11px] font-medium bg-surface-80 hover-bg-hover text-t-heading min-w-[58px]"><span class="font-mono opacity-70 mr-1">3</span>super</button>
+                  </div>
+                </div>
+                <!-- Głód -->
+                <div class="flex items-center gap-2">
+                  <span class="text-[12px] text-t-secondary w-[60px] shrink-0">Głód</span>
+                  <div class="flex gap-1.5">
+                    <button class="px-2.5 py-1 rounded-md text-[11px] font-medium bg-surface-80 hover-bg-hover text-t-heading min-w-[58px]"><span class="font-mono opacity-70 mr-1">y</span>tak</button>
+                    <button class="px-2.5 py-1 rounded-md text-[11px] font-medium bg-surface-80 hover-bg-hover text-t-heading min-w-[58px]"><span class="font-mono opacity-70 mr-1">n</span>nie</button>
+                  </div>
+                </div>
+                <!-- Kawa -->
+                <div class="flex items-center gap-2">
+                  <span class="text-[12px] text-t-secondary w-[60px] shrink-0">Kawa &lt;2h</span>
+                  <div class="flex gap-1.5">
+                    <button class="px-2.5 py-1 rounded-md text-[11px] font-medium bg-surface-80 hover-bg-hover text-t-heading min-w-[58px]"><span class="font-mono opacity-70 mr-1">y</span>tak</button>
+                    <button class="px-2.5 py-1 rounded-md text-[11px] font-medium bg-surface-80 hover-bg-hover text-t-heading min-w-[58px]"><span class="font-mono opacity-70 mr-1">n</span>nie</button>
+                  </div>
+                </div>
+              </div>
+
+              <textarea
+                placeholder="opcjonalna notatka..."
+                rows="2"
+                class="w-full text-[12px] text-t-primary bg-surface-60 border border-border rounded-md px-2 py-1.5 mb-3 resize-none placeholder-t-secondary focus:outline-none"
+              ></textarea>
+
+              <div class="flex items-center gap-1.5 text-[10px] mt-auto">
+                <span class="text-t-secondary mr-0.5">pauza:</span>
+                <button class="px-2 py-0.5 rounded bg-surface-80 hover-bg-hover text-t-heading">1h</button>
+                <button class="px-2 py-0.5 rounded bg-surface-80 hover-bg-hover text-t-heading">2h</button>
+                <button class="px-2 py-0.5 rounded bg-surface-80 hover-bg-hover text-t-heading">eod</button>
+                <button class="ml-auto px-2 py-0.5 rounded text-t-secondary hover-bg-hover">skip</button>
+                <button class="px-3 py-1 rounded font-medium text-[11px] bg-surface-40 text-t-secondary cursor-not-allowed" style="opacity:.5">Zapisz ⏎</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DARK · stan wypełniony -->
+      <div>
+        <div class="text-xs uppercase tracking-wider text-slate-500 mb-3">Dark · po wypełnieniu (Zapisz aktywne)</div>
+        <div class="stage flex justify-center">
+          <div class="popup-frame theme-dark bg-card-solid" style="width:380px;height:360px;">
+            <div class="h-full flex flex-col p-4 select-none">
+              <p class="text-[14px] text-t-primary font-semibold mb-3">Jak się czujesz?</p>
+
+              <div class="flex flex-col gap-2 mb-3">
+                <div class="flex items-center gap-2">
+                  <span class="text-[12px] text-t-secondary w-[60px] shrink-0">Energia</span>
+                  <div class="flex gap-1.5">
+                    <button class="px-2.5 py-1 rounded-md text-[11px] font-medium bg-surface-80 text-t-heading min-w-[58px]"><span class="font-mono opacity-70 mr-1">1</span>źle</button>
+                    <button class="px-2.5 py-1 rounded-md text-[11px] font-medium btn-emerald min-w-[58px]"><span class="font-mono opacity-70 mr-1">2</span>dobrze</button>
+                    <button class="px-2.5 py-1 rounded-md text-[11px] font-medium bg-surface-80 text-t-heading min-w-[58px]"><span class="font-mono opacity-70 mr-1">3</span>super</button>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="text-[12px] text-t-secondary w-[60px] shrink-0">Nastrój</span>
+                  <div class="flex gap-1.5">
+                    <button class="px-2.5 py-1 rounded-md text-[11px] font-medium bg-surface-80 text-t-heading min-w-[58px]"><span class="font-mono opacity-70 mr-1">1</span>dół</button>
+                    <button class="px-2.5 py-1 rounded-md text-[11px] font-medium bg-surface-80 text-t-heading min-w-[58px]"><span class="font-mono opacity-70 mr-1">2</span>ok</button>
+                    <button class="px-2.5 py-1 rounded-md text-[11px] font-medium btn-emerald min-w-[58px]"><span class="font-mono opacity-70 mr-1">3</span>super</button>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="text-[12px] text-t-secondary w-[60px] shrink-0">Głód</span>
+                  <div class="flex gap-1.5">
+                    <button class="px-2.5 py-1 rounded-md text-[11px] font-medium bg-surface-80 text-t-heading min-w-[58px]"><span class="font-mono opacity-70 mr-1">y</span>tak</button>
+                    <button class="px-2.5 py-1 rounded-md text-[11px] font-medium btn-emerald min-w-[58px]"><span class="font-mono opacity-70 mr-1">n</span>nie</button>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="text-[12px] text-t-secondary w-[60px] shrink-0">Kawa &lt;2h</span>
+                  <div class="flex gap-1.5">
+                    <button class="px-2.5 py-1 rounded-md text-[11px] font-medium btn-emerald min-w-[58px]"><span class="font-mono opacity-70 mr-1">y</span>tak</button>
+                    <button class="px-2.5 py-1 rounded-md text-[11px] font-medium bg-surface-80 text-t-heading min-w-[58px]"><span class="font-mono opacity-70 mr-1">n</span>nie</button>
+                  </div>
+                </div>
+              </div>
+
+              <textarea
+                rows="2"
+                class="w-full text-[12px] text-t-primary bg-surface-60 border border-border rounded-md px-2 py-1.5 mb-3 resize-none placeholder-t-secondary focus:outline-none"
+              >druga kawa, lekko nakręcony</textarea>
+
+              <div class="flex items-center gap-1.5 text-[10px] mt-auto">
+                <span class="text-t-secondary mr-0.5">pauza:</span>
+                <button class="px-2 py-0.5 rounded bg-surface-80 hover-bg-hover text-t-heading">1h</button>
+                <button class="px-2 py-0.5 rounded bg-surface-80 hover-bg-hover text-t-heading">2h</button>
+                <button class="px-2 py-0.5 rounded bg-surface-80 hover-bg-hover text-t-heading">eod</button>
+                <button class="ml-auto px-2 py-0.5 rounded text-t-secondary hover-bg-hover">skip</button>
+                <button class="px-3 py-1 rounded font-medium text-[11px] btn-emerald">Zapisz ⏎</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LIGHT · stan początkowy -->
+      <div>
+        <div class="text-xs uppercase tracking-wider text-slate-500 mb-3">Light · stan początkowy</div>
+        <div class="stage flex justify-center" style="background: radial-gradient(circle at 30% 20%, rgba(64,160,43,0.10), transparent 50%), radial-gradient(circle at 70% 80%, rgba(30,102,245,0.08), transparent 50%);">
+          <div class="popup-frame theme-light bg-card-solid" style="width:380px;height:360px;">
+            <div class="h-full flex flex-col p-4 select-none">
+              <p class="text-[14px] text-t-primary font-semibold mb-3">Jak się czujesz?</p>
+
+              <div class="flex flex-col gap-2 mb-3">
+                <div class="flex items-center gap-2">
+                  <span class="text-[12px] text-t-secondary w-[60px] shrink-0">Energia</span>
+                  <div class="flex gap-1.5">
+                    <button class="px-2.5 py-1 rounded-md text-[11px] font-medium bg-surface-80 hover-bg-hover text-t-heading min-w-[58px]"><span class="font-mono opacity-70 mr-1">1</span>źle</button>
+                    <button class="px-2.5 py-1 rounded-md text-[11px] font-medium bg-surface-80 hover-bg-hover text-t-heading min-w-[58px]"><span class="font-mono opacity-70 mr-1">2</span>dobrze</button>
+                    <button class="px-2.5 py-1 rounded-md text-[11px] font-medium bg-surface-80 hover-bg-hover text-t-heading min-w-[58px]"><span class="font-mono opacity-70 mr-1">3</span>super</button>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="text-[12px] text-t-secondary w-[60px] shrink-0">Nastrój</span>
+                  <div class="flex gap-1.5">
+                    <button class="px-2.5 py-1 rounded-md text-[11px] font-medium bg-surface-80 hover-bg-hover text-t-heading min-w-[58px]"><span class="font-mono opacity-70 mr-1">1</span>dół</button>
+                    <button class="px-2.5 py-1 rounded-md text-[11px] font-medium bg-surface-80 hover-bg-hover text-t-heading min-w-[58px]"><span class="font-mono opacity-70 mr-1">2</span>ok</button>
+                    <button class="px-2.5 py-1 rounded-md text-[11px] font-medium bg-surface-80 hover-bg-hover text-t-heading min-w-[58px]"><span class="font-mono opacity-70 mr-1">3</span>super</button>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="text-[12px] text-t-secondary w-[60px] shrink-0">Głód</span>
+                  <div class="flex gap-1.5">
+                    <button class="px-2.5 py-1 rounded-md text-[11px] font-medium bg-surface-80 hover-bg-hover text-t-heading min-w-[58px]"><span class="font-mono opacity-70 mr-1">y</span>tak</button>
+                    <button class="px-2.5 py-1 rounded-md text-[11px] font-medium bg-surface-80 hover-bg-hover text-t-heading min-w-[58px]"><span class="font-mono opacity-70 mr-1">n</span>nie</button>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="text-[12px] text-t-secondary w-[60px] shrink-0">Kawa &lt;2h</span>
+                  <div class="flex gap-1.5">
+                    <button class="px-2.5 py-1 rounded-md text-[11px] font-medium bg-surface-80 hover-bg-hover text-t-heading min-w-[58px]"><span class="font-mono opacity-70 mr-1">y</span>tak</button>
+                    <button class="px-2.5 py-1 rounded-md text-[11px] font-medium bg-surface-80 hover-bg-hover text-t-heading min-w-[58px]"><span class="font-mono opacity-70 mr-1">n</span>nie</button>
+                  </div>
+                </div>
+              </div>
+
+              <textarea
+                placeholder="opcjonalna notatka..."
+                rows="2"
+                class="w-full text-[12px] text-t-primary bg-surface-60 border border-border rounded-md px-2 py-1.5 mb-3 resize-none placeholder-t-secondary focus:outline-none"
+              ></textarea>
+
+              <div class="flex items-center gap-1.5 text-[10px] mt-auto">
+                <span class="text-t-secondary mr-0.5">pauza:</span>
+                <button class="px-2 py-0.5 rounded bg-surface-80 hover-bg-hover text-t-heading">1h</button>
+                <button class="px-2 py-0.5 rounded bg-surface-80 hover-bg-hover text-t-heading">2h</button>
+                <button class="px-2 py-0.5 rounded bg-surface-80 hover-bg-hover text-t-heading">eod</button>
+                <button class="ml-auto px-2 py-0.5 rounded text-t-secondary hover-bg-hover">skip</button>
+                <button class="px-3 py-1 rounded font-medium text-[11px] bg-surface-40 text-t-secondary cursor-not-allowed" style="opacity:.5">Zapisz ⏎</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LIGHT · stan wypełniony -->
+      <div>
+        <div class="text-xs uppercase tracking-wider text-slate-500 mb-3">Light · po wypełnieniu</div>
+        <div class="stage flex justify-center" style="background: radial-gradient(circle at 30% 20%, rgba(64,160,43,0.10), transparent 50%), radial-gradient(circle at 70% 80%, rgba(30,102,245,0.08), transparent 50%);">
+          <div class="popup-frame theme-light bg-card-solid" style="width:380px;height:360px;">
+            <div class="h-full flex flex-col p-4 select-none">
+              <p class="text-[14px] text-t-primary font-semibold mb-3">Jak się czujesz?</p>
+
+              <div class="flex flex-col gap-2 mb-3">
+                <div class="flex items-center gap-2">
+                  <span class="text-[12px] text-t-secondary w-[60px] shrink-0">Energia</span>
+                  <div class="flex gap-1.5">
+                    <button class="px-2.5 py-1 rounded-md text-[11px] font-medium bg-surface-80 text-t-heading min-w-[58px]"><span class="font-mono opacity-70 mr-1">1</span>źle</button>
+                    <button class="px-2.5 py-1 rounded-md text-[11px] font-medium btn-emerald min-w-[58px]"><span class="font-mono opacity-70 mr-1">2</span>dobrze</button>
+                    <button class="px-2.5 py-1 rounded-md text-[11px] font-medium bg-surface-80 text-t-heading min-w-[58px]"><span class="font-mono opacity-70 mr-1">3</span>super</button>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="text-[12px] text-t-secondary w-[60px] shrink-0">Nastrój</span>
+                  <div class="flex gap-1.5">
+                    <button class="px-2.5 py-1 rounded-md text-[11px] font-medium bg-surface-80 text-t-heading min-w-[58px]"><span class="font-mono opacity-70 mr-1">1</span>dół</button>
+                    <button class="px-2.5 py-1 rounded-md text-[11px] font-medium bg-surface-80 text-t-heading min-w-[58px]"><span class="font-mono opacity-70 mr-1">2</span>ok</button>
+                    <button class="px-2.5 py-1 rounded-md text-[11px] font-medium btn-emerald min-w-[58px]"><span class="font-mono opacity-70 mr-1">3</span>super</button>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="text-[12px] text-t-secondary w-[60px] shrink-0">Głód</span>
+                  <div class="flex gap-1.5">
+                    <button class="px-2.5 py-1 rounded-md text-[11px] font-medium bg-surface-80 text-t-heading min-w-[58px]"><span class="font-mono opacity-70 mr-1">y</span>tak</button>
+                    <button class="px-2.5 py-1 rounded-md text-[11px] font-medium btn-emerald min-w-[58px]"><span class="font-mono opacity-70 mr-1">n</span>nie</button>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="text-[12px] text-t-secondary w-[60px] shrink-0">Kawa &lt;2h</span>
+                  <div class="flex gap-1.5">
+                    <button class="px-2.5 py-1 rounded-md text-[11px] font-medium btn-emerald min-w-[58px]"><span class="font-mono opacity-70 mr-1">y</span>tak</button>
+                    <button class="px-2.5 py-1 rounded-md text-[11px] font-medium bg-surface-80 text-t-heading min-w-[58px]"><span class="font-mono opacity-70 mr-1">n</span>nie</button>
+                  </div>
+                </div>
+              </div>
+
+              <textarea
+                rows="2"
+                class="w-full text-[12px] text-t-primary bg-surface-60 border border-border rounded-md px-2 py-1.5 mb-3 resize-none placeholder-t-secondary focus:outline-none"
+              >druga kawa, lekko nakręcony</textarea>
+
+              <div class="flex items-center gap-1.5 text-[10px] mt-auto">
+                <span class="text-t-secondary mr-0.5">pauza:</span>
+                <button class="px-2 py-0.5 rounded bg-surface-80 hover-bg-hover text-t-heading">1h</button>
+                <button class="px-2 py-0.5 rounded bg-surface-80 hover-bg-hover text-t-heading">2h</button>
+                <button class="px-2 py-0.5 rounded bg-surface-80 hover-bg-hover text-t-heading">eod</button>
+                <button class="ml-auto px-2 py-0.5 rounded text-t-secondary hover-bg-hover">skip</button>
+                <button class="px-3 py-1 rounded font-medium text-[11px] btn-emerald">Zapisz ⏎</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============ NUDGE POPUP ============ -->
+  <section class="mb-8">
+    <h2 class="text-lg font-medium mb-1">2. Nudge popup — brak focusa na zadaniu</h2>
+    <p class="text-sm text-slate-400 mb-4">
+      Pojawia się gdy użytkownik nic nie robi (nie ma aktywnego focusu na żadnym tasku) — przypomina o zadaniach na dziś.
+      Klik w task uruchamia focus mode, plus opcja „nowe zadanie" i snooze 5–60 min.
+    </p>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+
+      <!-- DARK -->
+      <div>
+        <div class="text-xs uppercase tracking-wider text-slate-500 mb-3">Dark · z 3 zadaniami</div>
+        <div class="stage flex justify-center">
+          <div class="popup-frame theme-dark bg-card-solid" style="width:400px;height:360px;">
+            <div class="h-full flex flex-col items-center justify-center p-5 select-none">
+              <p class="text-[15px] text-t-primary font-semibold text-center mb-0.5">
+                Masz zadania do zrobienia.
+              </p>
+              <p class="text-[12px] text-t-secondary text-center mb-3">
+                Nie opierdalaj się — wybierz zadanie i do roboty!
+              </p>
+
+              <div class="w-full max-w-[340px] mb-3 max-h-[160px] overflow-y-auto">
+                <button class="w-full text-left px-3 py-1.5 rounded-lg text-[12px] hover-bg-hover transition-colors flex items-center gap-2 group">
+                  <span class="text-[10px] font-mono text-t-secondary opacity-60 shrink-0">TOP</span>
+                  <span class="text-t-primary truncate">Dodać pytanie o kawę do energy popupu</span>
+                  <span class="ml-auto text-[10px] shrink-0" style="color:#34d399;opacity:0">Focus ▸</span>
+                </button>
+                <button class="w-full text-left px-3 py-1.5 rounded-lg text-[12px] flex items-center gap-2 group" style="background:color-mix(in srgb, var(--bg-hover) 80%, transparent)">
+                  <span class="text-[10px] font-mono text-t-secondary opacity-60 shrink-0">BLG</span>
+                  <span class="text-t-primary truncate">Dokończyć post o decision fatigue</span>
+                  <span class="ml-auto text-[10px] shrink-0" style="color:#34d399">Focus ▸</span>
+                </button>
+                <button class="w-full text-left px-3 py-1.5 rounded-lg text-[12px] hover-bg-hover transition-colors flex items-center gap-2 group">
+                  <span class="text-[10px] font-mono text-t-secondary opacity-60 shrink-0">DOM</span>
+                  <span class="text-t-primary truncate">Zrobić zakupy na sobotę</span>
+                  <span class="ml-auto text-[10px] shrink-0" style="color:#34d399;opacity:0">Focus ▸</span>
+                </button>
+              </div>
+
+              <button class="w-full max-w-[340px] text-center px-3 py-1.5 rounded-lg text-[12px] text-t-secondary hover-bg-hover transition-colors mb-3 border border-dashed border-border">
+                + Nowe zadanie
+              </button>
+
+              <div class="flex gap-1.5">
+                <button class="px-2.5 py-1 rounded-md text-[10px] font-medium bg-surface-80 hover-bg-hover text-t-heading">5m</button>
+                <button class="px-2.5 py-1 rounded-md text-[10px] font-medium bg-surface-80 hover-bg-hover text-t-heading">10m</button>
+                <button class="px-2.5 py-1 rounded-md text-[10px] font-medium bg-surface-80 hover-bg-hover text-t-heading">15m</button>
+                <button class="px-2.5 py-1 rounded-md text-[10px] font-medium bg-surface-80 hover-bg-hover text-t-heading">30m</button>
+                <button class="px-2.5 py-1 rounded-md text-[10px] font-medium bg-surface-80 hover-bg-hover text-t-heading">1h</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LIGHT -->
+      <div>
+        <div class="text-xs uppercase tracking-wider text-slate-500 mb-3">Light · z 3 zadaniami</div>
+        <div class="stage flex justify-center" style="background: radial-gradient(circle at 30% 20%, rgba(64,160,43,0.10), transparent 50%), radial-gradient(circle at 70% 80%, rgba(30,102,245,0.08), transparent 50%);">
+          <div class="popup-frame theme-light bg-card-solid" style="width:400px;height:360px;">
+            <div class="h-full flex flex-col items-center justify-center p-5 select-none">
+              <p class="text-[15px] text-t-primary font-semibold text-center mb-0.5">
+                Masz zadania do zrobienia.
+              </p>
+              <p class="text-[12px] text-t-secondary text-center mb-3">
+                Nie opierdalaj się — wybierz zadanie i do roboty!
+              </p>
+
+              <div class="w-full max-w-[340px] mb-3 max-h-[160px] overflow-y-auto">
+                <button class="w-full text-left px-3 py-1.5 rounded-lg text-[12px] hover-bg-hover transition-colors flex items-center gap-2 group">
+                  <span class="text-[10px] font-mono text-t-secondary opacity-60 shrink-0">TOP</span>
+                  <span class="text-t-primary truncate">Dodać pytanie o kawę do energy popupu</span>
+                  <span class="ml-auto text-[10px] shrink-0" style="color:#40a02b;opacity:0">Focus ▸</span>
+                </button>
+                <button class="w-full text-left px-3 py-1.5 rounded-lg text-[12px] flex items-center gap-2 group" style="background:color-mix(in srgb, var(--bg-hover) 80%, transparent)">
+                  <span class="text-[10px] font-mono text-t-secondary opacity-60 shrink-0">BLG</span>
+                  <span class="text-t-primary truncate">Dokończyć post o decision fatigue</span>
+                  <span class="ml-auto text-[10px] shrink-0" style="color:#40a02b">Focus ▸</span>
+                </button>
+                <button class="w-full text-left px-3 py-1.5 rounded-lg text-[12px] hover-bg-hover transition-colors flex items-center gap-2 group">
+                  <span class="text-[10px] font-mono text-t-secondary opacity-60 shrink-0">DOM</span>
+                  <span class="text-t-primary truncate">Zrobić zakupy na sobotę</span>
+                  <span class="ml-auto text-[10px] shrink-0" style="color:#40a02b;opacity:0">Focus ▸</span>
+                </button>
+              </div>
+
+              <button class="w-full max-w-[340px] text-center px-3 py-1.5 rounded-lg text-[12px] text-t-secondary hover-bg-hover transition-colors mb-3 border border-dashed border-border">
+                + Nowe zadanie
+              </button>
+
+              <div class="flex gap-1.5">
+                <button class="px-2.5 py-1 rounded-md text-[10px] font-medium bg-surface-80 hover-bg-hover text-t-heading">5m</button>
+                <button class="px-2.5 py-1 rounded-md text-[10px] font-medium bg-surface-80 hover-bg-hover text-t-heading">10m</button>
+                <button class="px-2.5 py-1 rounded-md text-[10px] font-medium bg-surface-80 hover-bg-hover text-t-heading">15m</button>
+                <button class="px-2.5 py-1 rounded-md text-[10px] font-medium bg-surface-80 hover-bg-hover text-t-heading">30m</button>
+                <button class="px-2.5 py-1 rounded-md text-[10px] font-medium bg-surface-80 hover-bg-hover text-t-heading">1h</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <footer class="mt-12 text-xs text-slate-500 border-t border-slate-700 pt-4">
+    Źródła:
+    <code class="text-emerald-400">src/renderer/components/EnergyPopup.tsx</code>,
+    <code class="text-emerald-400">src/renderer/components/NudgePopup.tsx</code>,
+    style w <code class="text-emerald-400">src/renderer/styles.css</code>.
+    Mockup statyczny — bez interakcji ani formularza.
+  </footer>
+
+</div>
+</body>
+</html>

@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.90.0] - 2026-04-27
+
+### Added
+
+- Energy popup pyta o kawę w ostatnich 2h (toggle, domyślnie nie). Dane zapisują się do `energy.jsonl` jako `hadCoffee: boolean`.
+
+### Changed
+
+- Energy popup i nudge popup przeprojektowane wg mockupu designera: szersze okna (540 px), segmented control dla skali energii i nastroju, toggle switche dla głodu i kawy (domyślnie off → klik włącza), złoty akcent (`#c9b07a` dark / `#a87c3a` light) zamiast emerald.
+- Nudge popup pokazuje 3 zadania od razu, reszta pod „+ jeszcze N zadań". Każdy task ma kolorową kropkę projektu (z `Project.color`).
+- Skróty klawiaturowe w energy popupie ograniczone do 1/2/3 (energia, nastrój) + Enter/Esc — głód i kawa wymagają klikania (toggle).
+- `NudgeTask` przeniesione do `src/shared/types.ts` — single source of truth dla main + renderer.
+
 ## [1.89.3] - 2026-04-27
 
 ### Security
