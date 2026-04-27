@@ -114,14 +114,16 @@ function tick(): void {
   // Nudge already showing → don't accumulate
   if (nudgeWindow && !nudgeWindow.isDestroyed()) return
 
+  // Energy check-in has priority — defer nudge until energy popup is closed.
+  // Skip BEFORE accumulating, otherwise the counter races past the threshold
+  // while the popup is up and fires the nudge back-to-back when it closes.
+  if (isEnergyWindowOpen()) return
+
   // Check if user is active
   const idleSeconds = powerMonitor.getSystemIdleTime()
   if (idleSeconds < IDLE_THRESHOLD_S) {
     cumulativeActiveMs += POLL_INTERVAL_MS
   }
-
-  // Energy check-in has priority — defer nudge until energy popup is closed.
-  if (isEnergyWindowOpen()) return
 
   // Threshold reached → show nudge
   if (cumulativeActiveMs >= nudgeThresholdMs) {

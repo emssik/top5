@@ -173,6 +173,7 @@ export function stopEnergyScheduler(): void {
 
 export function restartEnergyScheduler(): void {
   clearScheduledTimeout()
+  closeEnergyWindow()
   startEnergyScheduler()
 }
 
@@ -210,7 +211,6 @@ export function registerEnergyHandlers(ipcMain: IpcMain): void {
     if (Number.isNaN(Date.parse(isoTimestamp))) return getEnergyTrackerConfig()
     const current = getEnergyTrackerConfig()
     const next = saveEnergyTrackerConfig({ ...current, pausedUntil: isoTimestamp })
-    closeEnergyWindow()
     restartEnergyScheduler()
     notifyAllWindows()
     return next

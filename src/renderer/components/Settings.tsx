@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useProjects } from '../hooks/useProjects'
 import type { ApiConfig, EnergyTrackerConfig } from '../types'
+import { pauseUntilIso, type EnergyPauseKind } from '../utils/energyPause'
 
 interface Props {
   open: boolean
@@ -100,17 +101,8 @@ export default function Settings({ open, onClose }: Props) {
     setEnergyMax(next.intervalMaxMin)
   }, [energyConfig, energyMin, energyMax])
 
-  const handlePauseEnergy = useCallback(async (kind: '1h' | '2h' | 'eod') => {
-    let isoTimestamp: string
-    if (kind === 'eod') {
-      const eod = new Date()
-      eod.setHours(23, 59, 59, 999)
-      isoTimestamp = eod.toISOString()
-    } else {
-      const minutes = kind === '1h' ? 60 : 120
-      isoTimestamp = new Date(Date.now() + minutes * 60_000).toISOString()
-    }
-    const next = await window.api.energyPauseUntil(isoTimestamp)
+  const handlePauseEnergy = useCallback(async (kind: EnergyPauseKind) => {
+    const next = await window.api.energyPauseUntil(pauseUntilIso(kind))
     setEnergyConfig(next)
   }, [])
 

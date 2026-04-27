@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.89.2] - 2026-04-27
+
+### Fixed
+
+- Energy tracker — wyłączenie w Settings od razu zamyka otwarty popup (wcześniej zostawał na ekranie do ręcznego dismissu).
+- Nudge nie odpala już back-to-back po zamknięciu energy popupu — licznik aktywności nie rośnie podczas energy popupu, więc po jego zamknięciu jest realny dystans do progu.
+
+### Changed
+
+- Wspólny helper `pauseUntilIso` dla EnergyPopup i Settings (deduplikacja logiki pauzy 1h/2h/eod).
+- Usunięto nieużywany `loadEnergyCheckIns` (i pomocniczy `toEnergyCheckIn`) ze `store.ts`.
+
 ## [1.89.1] - 2026-04-26
 
 ### Changed

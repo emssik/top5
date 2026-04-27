@@ -1,19 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
+import { pauseUntilIso } from '../utils/energyPause'
 
 type Rating = 1 | 2 | 3
 
 const ENERGY_LABELS: Record<Rating, string> = { 1: 'źle', 2: 'dobrze', 3: 'super' }
 const MOOD_LABELS: Record<Rating, string> = { 1: 'dół', 2: 'ok', 3: 'super' }
-
-function endOfDayIso(): string {
-  const eod = new Date()
-  eod.setHours(23, 59, 59, 999)
-  return eod.toISOString()
-}
-
-function plusMinutesIso(minutes: number): string {
-  return new Date(Date.now() + minutes * 60_000).toISOString()
-}
 
 interface RatingRowProps {
   label: string
@@ -63,8 +54,7 @@ export default function EnergyPopup() {
   const skip = () => window.api.energySkip()
 
   const pauseFor = (kind: '1h' | '2h' | 'eod') => {
-    const iso = kind === 'eod' ? endOfDayIso() : plusMinutesIso(kind === '1h' ? 60 : 120)
-    window.api.energyPauseUntil(iso)
+    window.api.energyPauseUntil(pauseUntilIso(kind))
   }
 
   useEffect(() => {

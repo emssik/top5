@@ -9,7 +9,8 @@ context:
     src/renderer/   — React UI (components, hooks, Zustand store)
     src/shared/     — shared types and logic (types.ts, schedule.ts)
     data.yaml       — projects/tasks data (iCloud sync)
-    checkins.jsonl  — check-in journal
+    checkins.jsonl  — focus check-in journal
+    energy.jsonl    — energy/mood/hunger check-in journal
   testing: |
     npm run test       — schedule unit tests (tsc + node --test)
     npm run test:api   — HTTP API tests (vitest, 66 tests, Electron mocked)

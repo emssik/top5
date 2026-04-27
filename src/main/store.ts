@@ -230,19 +230,6 @@ export function isEnergyRating(value: unknown): value is EnergyRating {
   return value === 1 || value === 2 || value === 3
 }
 
-function toEnergyCheckIn(value: unknown): EnergyCheckIn | null {
-  if (!isRecord(value)) return null
-  const { id, timestamp, energy, mood, hungry, note } = value
-  if (typeof id !== 'string' || typeof timestamp !== 'string') return null
-  if (!isEnergyRating(energy) || !isEnergyRating(mood)) return null
-  if (typeof hungry !== 'boolean') return null
-  const result: EnergyCheckIn = { id, timestamp, energy, mood, hungry }
-  if (typeof note === 'string' && note.trim().length > 0) {
-    result.note = note.trim().slice(0, 500)
-  }
-  return result
-}
-
 function normalizeEnergyTrackerConfig(value: unknown): EnergyTrackerConfig {
   if (!isRecord(value)) return { ...DEFAULT_ENERGY_TRACKER_CONFIG }
   const minRaw = typeof value.intervalMinMin === 'number' ? value.intervalMinMin : DEFAULT_ENERGY_TRACKER_CONFIG.intervalMinMin
@@ -630,26 +617,6 @@ export function taskTimeMinutes(taskId: string): number {
 export function appendEnergyCheckIn(checkIn: EnergyCheckIn): void {
   mkdirSync(CONFIG_DIR, { recursive: true })
   appendFileSync(ENERGY_FILE, JSON.stringify(checkIn) + '\n', 'utf-8')
-}
-
-export function loadEnergyCheckIns(): EnergyCheckIn[] {
-  if (!existsSync(ENERGY_FILE)) return []
-  try {
-    const raw = readFileSync(ENERGY_FILE, 'utf-8')
-    const parsed: EnergyCheckIn[] = []
-    for (const line of raw.split('\n')) {
-      if (!line.trim()) continue
-      try {
-        const entry = toEnergyCheckIn(JSON.parse(line))
-        if (entry) parsed.push(entry)
-      } catch {
-        // ignore malformed
-      }
-    }
-    return parsed
-  } catch {
-    return []
-  }
 }
 
 // --- EnergyTracker config ---
