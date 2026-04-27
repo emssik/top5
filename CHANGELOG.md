@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.89.3] - 2026-04-27
+
+### Security
+
+- Upgrade `vite` z 5.4.21 do 7.3.2 (i transitive `esbuild` z 0.21.5 do 0.27.x), żeby załatać dwa moderate CVE w devie: `GHSA-67mh-4wv8-2f99` (esbuild dev-server allows any website to read responses, CVSS 5.3) oraz `GHSA-4w7w-66w2-5vf9` (vite path traversal w optimized deps `.map`). `electron-vite@5` oficjalnie wspiera vite ^5||^6||^7, więc upgrade nie wymaga zmian w configu. `npm audit` czysty po upgrade.
+
 ## [1.89.2] - 2026-04-27
 
 ### Fixed
