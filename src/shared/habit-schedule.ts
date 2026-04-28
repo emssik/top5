@@ -105,7 +105,9 @@ export function computeStreak(habit: Habit, today: Date = new Date()): { streak:
     if (!isScheduledOn(habit, d)) continue
     const key = dateKey(d)
     const status = dayStatus(habit, key)
+    const isToday = i === dayCount
     if (status === 'empty') {
+      if (isToday) continue
       best = Math.max(best, cur)
       cur = 0
     } else {
