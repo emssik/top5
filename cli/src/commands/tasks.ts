@@ -12,6 +12,7 @@ interface Task {
   isToDoNext?: boolean
   inProgress?: boolean
   beyondLimit?: boolean
+  important?: boolean
   dueDate?: string | null
   noteRef?: string
 }
@@ -489,6 +490,68 @@ export function register(program: Command): void {
             return next
               ? `Beyond limit: ${prefix}${task.title}`
               : `Back in limit: ${prefix}${task.title}`
+          },
+        })
+      } catch (err: unknown) {
+        die((err as Error).message)
+      }
+    })
+
+  // top5 important <task-code>
+  program
+    .command('important')
+    .description('Toggle the Important star on a task (visible on Today, Focus, Clean view)')
+    .argument('<task-code>', 'Task code (e.g. PRJ-3, QT-5) or task ID')
+    .action(async (taskRef: string, _opts, cmd) => {
+      const globalOpts = cmd.optsWithGlobals()
+      const client = createClient(globalOpts)
+
+      try {
+        const parsed = parseTaskCode(taskRef)
+        const isQuickRef = parsed?.projectCode === 'QT'
+
+        const resolveQuick = async (): Promise<{ task: Task; code: string }> => {
+          const task = await resolveQuickTask(client, taskRef) as Task
+          return { task, code: task.taskNumber != null ? `QT-${task.taskNumber}` : '-' }
+        }
+
+        let kind: 'quick' | 'pinned'
+        let task: Task
+        let code: string
+        let projectId: string | undefined
+
+        if (isQuickRef) {
+          const q = await resolveQuick()
+          kind = 'quick'; task = q.task; code = q.code
+        } else {
+          try {
+            const { project, task: t } = await resolveProjectTask(client, taskRef) as {
+              project: Project
+              task: Task
+            }
+            kind = 'pinned'; task = t; projectId = project.id
+            code = taskCode(t, project.code)
+          } catch (projErr) {
+            if (parsed) throw projErr
+            const q = await resolveQuick()
+            kind = 'quick'; task = q.task; code = q.code
+          }
+        }
+
+        if (kind === 'quick') {
+          await client.post(`/api/v1/quick-tasks/${task.id}/toggle-important`)
+        } else {
+          await client.post(`/api/v1/projects/${projectId}/tasks/${task.id}/toggle-important`)
+        }
+        const next = !task.important
+
+        printResult({ ...task, important: next }, {
+          json: globalOpts.json,
+          formatFn: () => {
+            const prefix = code !== '-' ? code + ' ' : ''
+            return next
+              ? `★ Important: ${prefix}${task.title}`
+              : `Unmarked: ${prefix}${task.title}`
           },
         })
       } catch (err: unknown) {

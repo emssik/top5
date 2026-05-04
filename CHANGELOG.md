@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.91.0] - 2026-05-04
+
+### Added
+
+- Flaga **Important** na zadaniach — gwiazdka (★) przy tytule widoczna w Today, w Focus window oraz w Clean view. Czysto wizualna, nie wpływa na sortowanie, pin ani limit. Toggle: ikona w karcie, pozycja w overflow menu i context menu, klawisz `i` na hover.
+- API: `POST /api/v1/projects/:pid/tasks/:tid/toggle-important` oraz `POST /api/v1/quick-tasks/:id/toggle-important` (patrz `docs/API.md`).
+- CLI: `top5 important <task-code>` — działa dla zadań projektowych (`PRJ-N`) i quick tasków (`QT-N`).
+
 ## [1.90.1] - 2026-04-28
 
 ### Fixed

@@ -155,6 +155,12 @@ Toggles `isToDoNext` (pinned) flag on a task.
 
 **Errors:** `404` if project or task not found.
 
+#### `POST /projects/:pid/tasks/:tid/toggle-important`
+
+Toggles `important` flag on a task. The flag is purely visual — surfaces a star next to the task title in Today, Focus window, and Clean view. Does not affect ordering, pin state, or limit calculations.
+
+**Errors:** `404` if project or task not found.
+
 #### `PUT /projects/pinned-tasks/reorder`
 
 Reorders pinned ("To Do Next") tasks.
@@ -202,6 +208,12 @@ Marks a completed quick task as incomplete.
 #### `POST /quick-tasks/:id/toggle-in-progress`
 
 Toggles `inProgress` flag. No-op if task is completed.
+
+#### `POST /quick-tasks/:id/toggle-important`
+
+Toggles `important` flag on a quick task. Visual marker only — see project task variant above.
+
+**Errors:** `404` if not found.
 
 #### `PUT /quick-tasks/reorder`
 
@@ -335,6 +347,7 @@ Returns all non-archived habits as today-summary entries (schedule, today status
   isToDoNext?: boolean
   toDoNextOrder?: number
   inProgress?: boolean
+  important?: boolean
 }
 ```
 
@@ -350,6 +363,7 @@ Returns all non-archived habits as today-summary entries (schedule, today status
   order: number
   repeatingTaskId?: string | null
   inProgress?: boolean
+  important?: boolean
 }
 ```
 

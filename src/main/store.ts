@@ -1180,6 +1180,14 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
     return result
   })
 
+  ipcMain.handle('toggle-quick-task-important', (_event, id: string) => {
+    if (typeof id !== 'string') return getData().quickTasks
+    const result = quickTaskService.toggleQuickTaskImportant(id)
+    if (isServiceError(result)) return getData().quickTasks
+    notifyAllWindows()
+    return result
+  })
+
   // --- Projects: reorder & toggle --- (thin IPC adapters → service/projects.ts)
 
   ipcMain.handle('reorder-projects', (_event, orderedIds: string[]) => {
@@ -1303,6 +1311,14 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
   ipcMain.handle('toggle-task-in-progress', (_event, projectId: string, taskId: string) => {
     if (typeof projectId !== 'string' || typeof taskId !== 'string') return getData().projects
     const result = projectService.toggleTaskInProgress(projectId, taskId)
+    if (isServiceError(result)) return getData().projects
+    notifyAllWindows()
+    return result
+  })
+
+  ipcMain.handle('toggle-task-important', (_event, projectId: string, taskId: string) => {
+    if (typeof projectId !== 'string' || typeof taskId !== 'string') return getData().projects
+    const result = projectService.toggleTaskImportant(projectId, taskId)
     if (isServiceError(result)) return getData().projects
     notifyAllWindows()
     return result

@@ -282,6 +282,27 @@ Akceptuje:
 
 ---
 
+### `top5 important <task-code>`
+
+Toggluje flagę Important na tasku. Wyświetla gwiazdkę przy tytule w widoku Today, w Focus window oraz w Clean view. Flaga czysto wizualna — nie zmienia kolejności, pin-a, ani logiki limitu.
+
+```bash
+top5 important PRJ-3
+# ★ Important: PRJ-3 Frontend
+
+top5 important PRJ-3        # ponowne wywołanie zdejmuje flagę
+# Unmarked: PRJ-3 Frontend
+
+top5 important QT-5         # działa też dla quick tasks
+```
+
+Akceptuje:
+- kod tasku projektowego: `PRJ-3`, `APP-12`
+- kod quick taska: `QT-5`
+- UUID tasku
+
+---
+
 ### `top5 rm <task-code>`
 
 Kasuje task z projektu.

@@ -404,6 +404,13 @@ export default function FocusMode() {
             {projLabel}
           </button>
         )}
+        {task?.important && (
+          <span
+            className="text-[13px] flex-shrink-0"
+            style={{ color: 'var(--pc-amber)', lineHeight: 1 }}
+            title="Important"
+          >★</span>
+        )}
         <span
           className="text-[14px] font-semibold truncate text-t-primary flex-1 min-w-0 cursor-default"
           onDoubleClick={() => { if (task?.title) navigator.clipboard.writeText(task.title) }}

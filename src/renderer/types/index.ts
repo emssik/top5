@@ -68,10 +68,12 @@ declare global {
       uncompleteQuickTask: (id: string) => Promise<import('../../shared/types').QuickTask[]>
       reorderQuickTasks: (orderedIds: string[]) => Promise<import('../../shared/types').QuickTask[]>
       toggleQuickTaskInProgress: (id: string) => Promise<import('../../shared/types').QuickTask[]>
+      toggleQuickTaskImportant: (id: string) => Promise<import('../../shared/types').QuickTask[]>
       reorderProjects: (orderedIds: string[]) => Promise<import('../../shared/types').Project[]>
       reorderPinnedTasks: (updates: { projectId: string; taskId: string; order: number }[]) => Promise<void>
       setBeyondLimit: (input: { quickTaskIds?: string[]; pinnedTasks?: { projectId: string; taskId: string }[]; beyondLimit: boolean }) => Promise<void>
       toggleTaskInProgress: (projectId: string, taskId: string) => Promise<import('../../shared/types').Project[]>
+      toggleTaskImportant: (projectId: string, taskId: string) => Promise<import('../../shared/types').Project[]>
       moveTaskToProject: (fromProjectId: string, toProjectId: string, taskId: string) => Promise<import('../../shared/types').Project[]>
       toggleTaskToDoNext: (projectId: string, taskId: string) => Promise<import('../../shared/types').Project[]>
       updateTaskDueDate: (projectId: string, taskId: string, dueDate: string | null) => Promise<import('../../shared/types').Project[]>

@@ -1204,6 +1204,23 @@ body {
   flex-shrink: 0;
 }
 
+.task-important-star {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0 2px;
+  margin-right: 2px;
+  font-size: 13px;
+  line-height: 1;
+  color: var(--pc-amber);
+  flex-shrink: 0;
+  transition: filter 0.12s, transform 0.12s;
+}
+.task-important-star:hover {
+  filter: brightness(1.15);
+  transform: scale(1.15);
+}
+
 .task-card:hover .task-overflow-trigger { opacity: 0.4; }
 .task-overflow-trigger:hover { opacity: 0.8 !important; }
 

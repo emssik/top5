@@ -12,6 +12,8 @@ description: >
   "today", "today tasks", "what's on today", "dzisiejsze taski",
   "due date", "set deadline", "termin", "ustaw datę", "pin", "pin to today", "przypnij",
   "beyond", "beyond the limit", "overflow", "push to overflow", "poza limit", "zepchnij",
+  "important", "mark important", "unmark important", "flag important", "star",
+  "oznacz jako ważne", "wazne", "ważne", "wyróżnij", "podświetl", "gwiazdka",
   "repeating", "repeating tasks", "recurring", "cykliczne", "powtarzalne",
   "usuń task", "skasuj task", "usuń zadanie",
   "habits", "nawyki", "list habits", "pokaż habity", "co ma za nawyki", "streak", "chain",
@@ -117,6 +119,18 @@ top5 pin PRJ-3             # toggle pin — if unpinned, pins to today; if pinne
 ```
 
 Pinned tasks appear in the "today" view as "up-next". Toggle behavior: running `pin` again unpins the task.
+
+### Mark / unmark task as Important
+
+```bash
+top5 important PRJ-3       # toggle Important star
+top5 important QT-5        # works for quick tasks too
+top5 important PRJ-3 --json
+```
+
+Sets the `important` flag on a task. When `true`, a star (★) appears next to the task title in the Today view, Focus window, and Clean view. Purely visual — does **not** affect Today ordering, the limit, pin state, or scheduling. Toggles — running again clears the flag.
+
+Use this when the user asks to "mark important", "flag important", "oznacz jako ważne", "podświetl", "wyróżnij".
 
 ### Move task to / from "beyond the limit"
 
@@ -297,6 +311,13 @@ top5 done PRJ-5
 ```bash
 top5 pin PRJ-3             # pin (appears in today view)
 top5 pin PRJ-3             # unpin (toggle)
+```
+
+**Mark a task as Important (visual star in Today / Focus / Clean view):**
+```bash
+top5 important PRJ-3       # mark
+top5 important PRJ-3       # unmark (toggle)
+top5 important QT-5        # works for quick tasks too
 ```
 
 **Push a task beyond the Today limit:**

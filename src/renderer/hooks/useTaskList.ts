@@ -22,6 +22,7 @@ export interface MergedTask {
   taskNumber?: number
   repeatingTaskId?: string | null
   inProgress?: boolean
+  important?: boolean
   noteRef?: string
   dueDate?: string | null
   beyondLimit?: boolean
@@ -111,6 +112,7 @@ export function useTaskList(opts?: { excludeFocus?: boolean }): TaskListData {
       taskNumber: t.taskNumber,
       repeatingTaskId: t.repeatingTaskId,
       inProgress: t.inProgress,
+      important: t.important,
       noteRef: t.noteRef,
       dueDate: t.dueDate,
       beyondLimit: t.beyondLimit
@@ -134,6 +136,7 @@ export function useTaskList(opts?: { excludeFocus?: boolean }): TaskListData {
           taskId: t.id,
           taskNumber: t.taskNumber,
           inProgress: t.inProgress,
+          important: t.important,
           noteRef: t.noteRef,
           dueDate: t.dueDate,
           beyondLimit: t.beyondLimit,
@@ -192,7 +195,7 @@ export function useTaskList(opts?: { excludeFocus?: boolean }): TaskListData {
       if (!qt) return null
       return {
         kind: 'quick', id: qt.id, title: qt.title, order: qt.order,
-        taskNumber: qt.taskNumber, inProgress: qt.inProgress,
+        taskNumber: qt.taskNumber, inProgress: qt.inProgress, important: qt.important,
         repeatingTaskId: qt.repeatingTaskId, noteRef: qt.noteRef
       }
     }
@@ -206,7 +209,7 @@ export function useTaskList(opts?: { excludeFocus?: boolean }): TaskListData {
       title: task.title, order: task.toDoNextOrder ?? 999,
       projectId: project.id, projectName: project.name,
       projectCode: project.code, taskId: task.id,
-      taskNumber: task.taskNumber, inProgress: task.inProgress,
+      taskNumber: task.taskNumber, inProgress: task.inProgress, important: task.important,
       noteRef: task.noteRef,
       links: (() => { const l = normalizeLinks(task.links); return l.length > 0 ? l : undefined })()
     }

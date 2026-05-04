@@ -122,6 +122,13 @@ export function registerProjectRoutes(fastify: FastifyInstance): void {
     return { ok: true, data: result }
   })
 
+  fastify.post<{ Params: { pid: string; tid: string } }>('/api/v1/projects/:pid/tasks/:tid/toggle-important', async (request, reply) => {
+    const result = projectService.toggleTaskImportant(request.params.pid, request.params.tid)
+    if (isServiceError(result)) return reply.status(404).send({ ok: false, error: result.error })
+    notifyAllWindows()
+    return { ok: true, data: result }
+  })
+
   fastify.put('/api/v1/projects/pinned-tasks/reorder', async (request, reply) => {
     const result = projectService.reorderPinnedTasks(request.body)
     if (isServiceError(result)) return reply.status(400).send({ ok: false, error: result.error })

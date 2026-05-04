@@ -393,6 +393,9 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
                 style={{ color: isRecentDone ? 'var(--cv-ink-faint)' : isCompleted ? 'var(--cv-ink-done)' : 'var(--cv-ink)', fontWeight: 500 }}
                 title={task.title}
               >
+                {task.important && !isCompleted && (
+                  <span style={{ color: 'var(--pc-amber)', marginRight: 4 }} title="Important">★</span>
+                )}
                 <Linkify text={cleanView ? task.title.replace(/^\(✂\d+\)\s*/, '') : task.title} />
                 <TaskLinksIndicator links={task.links ?? []} projectName={task.projectName} />
               </span>

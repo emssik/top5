@@ -12,6 +12,7 @@ export interface Task {
   noteRef?: string
   dueDate?: string | null
   beyondLimit?: boolean
+  important?: boolean
   links?: ProjectLink[]
   images?: string[]
 }
@@ -56,6 +57,7 @@ export interface QuickTask {
   dueDate?: string | null
   projectId?: string | null
   beyondLimit?: boolean
+  important?: boolean
 }
 
 export type ProjectColor =
