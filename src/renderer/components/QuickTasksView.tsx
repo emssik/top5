@@ -47,7 +47,7 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
   } = useProjects()
 
   const {
-    activeTasks, repeatingActive, completedTasks, proposals,
+    activeTasks, scheduledTasks, repeatingActive, completedTasks, proposals,
     overflowTasks, allActiveTasks, isLocked,
     hasRepeatingSection, hasCompletedSection
   } = useTaskList()
@@ -97,6 +97,16 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
 
   // Separator for clean view
   const cleanSeparator = <div className="my-1.5 border-t border-current" style={{ opacity: 0.08 }} />
+
+  const todayKey = dateKey(new Date())
+  const overdueTasks = scheduledTasks.filter((t) => !t.completed && t.dueDate && t.dueDate < todayKey)
+  const dueTodayTasks = scheduledTasks.filter((t) => !overdueTasks.includes(t))
+
+  const daysOverdue = (dueDate: string): number => {
+    const due = new Date(dueDate + 'T00:00:00')
+    const now = new Date(todayKey + 'T00:00:00')
+    return Math.max(1, Math.round((now.getTime() - due.getTime()) / 86400000))
+  }
 
   const activeQuickTasks = quickTasks.filter((t) => !t.completed)
 
@@ -334,6 +344,7 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
 
     // --- Clean view (bullet journal style) ---
     if (cleanView) {
+      const isOverdue = !isCompleted && !!task.dueDate && task.dueDate < todayKey
       const marker = isCompleted ? '×' : task.repeatingTaskId ? '↻' : task.inProgress ? '▸' : task.kind === 'pinned' ? '→' : '•'
       const mins = getTaskMinutes(task)
       const isFocused = !isCompleted && (
@@ -365,7 +376,7 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
           <button
             onClick={() => isCompleted ? handleUncomplete(task) : handleComplete(task)}
             className={`w-5 flex-shrink-0 text-center ${textSize} leading-none transition-colors`}
-            style={{ color: isCompleted ? 'var(--cv-ink-done)' : 'var(--cv-ink-faint)' }}
+            style={{ color: isCompleted ? 'var(--cv-ink-done)' : isOverdue ? '#f87171' : 'var(--cv-ink-faint)' }}
             title={isCompleted ? 'Mark as not done' : 'Complete'}
           >
             {marker}
@@ -398,6 +409,15 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
                 )}
                 <Linkify text={cleanView ? task.title.replace(/^\(✂\d+\)\s*/, '') : task.title} />
                 <TaskLinksIndicator links={task.links ?? []} projectName={task.projectName} />
+                {isOverdue && task.dueDate && (
+                  <span
+                    className="ml-2 align-middle text-[11px] px-1.5 py-[1px] rounded"
+                    style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#f87171', fontFamily: 'system-ui', fontWeight: 500 }}
+                    title={`Overdue since ${task.dueDate}`}
+                  >
+                    overdue · {daysOverdue(task.dueDate)}d
+                  </span>
+                )}
               </span>
             )}
           </div>
@@ -723,7 +743,7 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
         </div>
       )}
 
-      {!isLocked && todayWon && activeTasks.length === 0 && !hasRepeatingSection ? (
+      {!isLocked && todayWon && activeTasks.length === 0 && scheduledTasks.length === 0 && !hasRepeatingSection ? (
         <div className={`flex flex-col items-center justify-center ${cleanView ? 'py-6' : 'h-40'}`}>
           <p className={cleanView ? 'text-[20px]' : 'text-base'} style={{ opacity: 0.6 }}>
             🏆 Wygrana!
@@ -732,7 +752,7 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
             Dodaj nowe zadania i zablokuj je, by utrzymać serię
           </p>
         </div>
-      ) : activeTasks.length === 0 && !hasRepeatingSection && !hasCompletedSection ? (
+      ) : activeTasks.length === 0 && scheduledTasks.length === 0 && !hasRepeatingSection && !hasCompletedSection ? (
         <div className={`flex flex-col items-center justify-center text-t-secondary ${cleanView ? 'h-16' : 'h-40'}`}>
           <p className={cleanView ? 'text-[18px]' : 'text-sm'} style={cleanView ? { opacity: 0.25 } : undefined}>
             {cleanView ? 'Brak zadań' : 'No quick tasks yet'}
@@ -741,6 +761,8 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
         </div>
       ) : showAll ? (
         <div className="space-y-1" onDragEnd={handleDragEnd}>
+          {overdueTasks.map((t) => renderTask(t))}
+          {dueTodayTasks.map((t) => renderTask(t))}
           {activeTasks.map((t) => renderTask(t))}
           {hasRepeatingSection && (
             <div className="space-y-1 mt-2">
@@ -757,17 +779,20 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
         </div>
       ) : (
         <div className={cleanView ? '' : 'space-y-1'} onDragEnd={handleDragEnd}>
+          {overdueTasks.map((t) => renderTask(t))}
+          {cleanView && overdueTasks.length > 0 && (dueTodayTasks.length > 0 || activeTasks.length > 0) && cleanSeparator}
+          {dueTodayTasks.map((t) => renderTask(t))}
           {activeTasks.map((t) => renderTask(t))}
           {hasRepeatingSection && (cleanView ? repeatingActive.length > 0 : true) && (
             <>
-              {cleanView && activeTasks.length > 0 && cleanSeparator}
+              {cleanView && (overdueTasks.length > 0 || dueTodayTasks.length > 0 || activeTasks.length > 0) && cleanSeparator}
               {repeatingActive.map((t) => renderTask(t, cleanView))}
               {!cleanView && proposals.map(renderProposal)}
             </>
           )}
           {hasCompletedSection && (
             <>
-              {cleanView && (activeTasks.length > 0 || repeatingActive.length > 0) && cleanSeparator}
+              {cleanView && (overdueTasks.length > 0 || dueTodayTasks.length > 0 || activeTasks.length > 0 || repeatingActive.length > 0) && cleanSeparator}
               {completedTasks.map((t) => renderTask(t))}
             </>
           )}

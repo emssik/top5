@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.91.1] - 2026-05-04
+
+### Fixed
+
+- Clean view nie pokazywał zadań z datą — `useTaskList` wydziela je do `scheduledTasks`, a `QuickTasksView` (cleanView) destrukturyzował tylko `activeTasks`. Teraz przeterminowane są na górze, oznaczone czerwonym markerem i chipem `overdue · Xd`, oddzielone separatorem od pozostałych. Zadania na dziś idą tuż za nimi.
+
 ## [1.91.0] - 2026-05-04
 
 ### Added
