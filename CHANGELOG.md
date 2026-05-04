@@ -7,6 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.91.1] - 2026-05-04
+
+### Fixed
+
+- Clean view nie pokazywał zadań z datą — `useTaskList` wydziela je do `scheduledTasks`, a `QuickTasksView` (cleanView) destrukturyzował tylko `activeTasks`. Teraz przeterminowane są na górze, oznaczone czerwonym markerem i chipem `overdue · Xd`, oddzielone separatorem od pozostałych. Zadania na dziś idą tuż za nimi.
+
+## [1.91.0] - 2026-05-04
+
+### Added
+
+- Flaga **Important** na zadaniach — gwiazdka (★) przy tytule widoczna w Today, w Focus window oraz w Clean view. Czysto wizualna, nie wpływa na sortowanie, pin ani limit. Toggle: ikona w karcie, pozycja w overflow menu i context menu, klawisz `i` na hover.
+- API: `POST /api/v1/projects/:pid/tasks/:tid/toggle-important` oraz `POST /api/v1/quick-tasks/:id/toggle-important` (patrz `docs/API.md`).
+- CLI: `top5 important <task-code>` — działa dla zadań projektowych (`PRJ-N`) i quick tasków (`QT-N`).
+
+## [1.90.1] - 2026-04-28
+
+### Fixed
+
+- Streak nawyków dziennych (Codziennie / weekdays / interval) pokazywał 0 przed odhaczeniem dziennego check-inu — `computeStreak` traktowało dzisiaj jako empty i resetowało chain. Teraz dzisiejszy pusty status jest "w trakcie": streak pokazuje stan z wczoraj, a klik dodaje +1 jak dotąd. Tygodniowe (`nPerWeek`/`weeklyMinutes`) były OK.
+
+## [1.90.0] - 2026-04-27
+
+### Added
+
+- Energy popup pyta o kawę w ostatnich 2h (toggle, domyślnie nie). Dane zapisują się do `energy.jsonl` jako `hadCoffee: boolean`.
+
+### Changed
+
+- Energy popup i nudge popup przeprojektowane wg mockupu designera: szersze okna (540 px), segmented control dla skali energii i nastroju, toggle switche dla głodu i kawy (domyślnie off → klik włącza), złoty akcent (`#c9b07a` dark / `#a87c3a` light) zamiast emerald.
+- Nudge popup pokazuje 3 zadania od razu, reszta pod „+ jeszcze N zadań". Każdy task ma kolorową kropkę projektu (z `Project.color`).
+- Skróty klawiaturowe w energy popupie ograniczone do 1/2/3 (energia, nastrój) + Enter/Esc — głód i kawa wymagają klikania (toggle).
+- `NudgeTask` przeniesione do `src/shared/types.ts` — single source of truth dla main + renderer.
+
+## [1.89.3] - 2026-04-27
+
+### Security
+
+- Upgrade `vite` z 5.4.21 do 7.3.2 (i transitive `esbuild` z 0.21.5 do 0.27.x), żeby załatać dwa moderate CVE w devie: `GHSA-67mh-4wv8-2f99` (esbuild dev-server allows any website to read responses, CVSS 5.3) oraz `GHSA-4w7w-66w2-5vf9` (vite path traversal w optimized deps `.map`). `electron-vite@5` oficjalnie wspiera vite ^5||^6||^7, więc upgrade nie wymaga zmian w configu. `npm audit` czysty po upgrade.
+
 ## [1.89.2] - 2026-04-27
 
 ### Fixed

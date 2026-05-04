@@ -1,12 +1,6 @@
 import { useEffect, useState } from 'react'
-
-interface NudgeTask {
-  projectId: string
-  taskId: string
-  title: string
-  projectName?: string
-  projectCode?: string
-}
+import { projectColorValue } from '../utils/projects'
+import type { NudgeTask } from '../types'
 
 const SNOOZE_OPTIONS = [
   { label: '5m', minutes: 5 },
@@ -16,58 +10,59 @@ const SNOOZE_OPTIONS = [
   { label: '1h', minutes: 60 }
 ]
 
+const VISIBLE_LIMIT = 3
+
 export default function NudgePopup() {
   const [tasks, setTasks] = useState<NudgeTask[]>([])
+  const [showAll, setShowAll] = useState(false)
 
   useEffect(() => {
     window.api.nudgeGetTasks().then(setTasks)
   }, [])
 
+  const visible = showAll ? tasks : tasks.slice(0, VISIBLE_LIMIT)
+  const hiddenCount = Math.max(0, tasks.length - VISIBLE_LIMIT)
+
   return (
-    <div className="h-screen flex flex-col items-center justify-center p-5 rounded-xl bg-card/95 border border-border/50 select-none">
-      <p className="text-[15px] text-t-primary font-semibold text-center mb-0.5">
-        Masz zadania do zrobienia.
-      </p>
-      <p className="text-[12px] text-t-secondary text-center mb-3">
-        Nie opierdalaj się — wybierz zadanie i do roboty!
-      </p>
+    <div className="pop">
+      <div className="head">
+        <h1>Masz zadania do zrobienia.</h1>
+        <p>— wybierz coś i zaczynaj</p>
+      </div>
 
-      {tasks.length > 0 && (
-        <div className="w-full max-w-[340px] mb-3 max-h-[160px] overflow-y-auto">
-          {tasks.map((task) => (
-            <button
-              key={`${task.projectId}-${task.taskId}`}
-              onClick={() => window.api.nudgeStartFocus(task.projectId, task.taskId)}
-              className="w-full text-left px-3 py-1.5 rounded-lg text-[12px] hover:bg-hover/80 transition-colors flex items-center gap-2 group"
-            >
-              {task.projectCode && (
-                <span className="text-[10px] font-mono text-t-secondary opacity-60 shrink-0">
-                  {task.projectCode}
-                </span>
-              )}
-              <span className="text-t-primary truncate">{task.title}</span>
-              <span className="ml-auto text-[10px] text-emerald-500 opacity-0 group-hover:opacity-100 shrink-0 transition-opacity">
-                Focus ▸
-              </span>
-            </button>
-          ))}
-        </div>
-      )}
-
-      <button
-        onClick={() => window.api.nudgeOpenQuickAdd()}
-        className="w-full max-w-[340px] text-center px-3 py-1.5 rounded-lg text-[12px] text-t-secondary hover:bg-hover/80 transition-colors mb-3 border border-dashed border-border/50"
-      >
-        + Nowe zadanie
-      </button>
-
-      <div className="flex gap-1.5">
-        {SNOOZE_OPTIONS.map((opt) => (
+      <div className="nudge-body">
+        {visible.map((task) => (
           <button
-            key={opt.minutes}
-            onClick={() => window.api.nudgeSnooze(opt.minutes)}
-            className="px-2.5 py-1 rounded-md text-[10px] font-medium bg-surface/80 hover:bg-hover/80 text-t-heading transition-colors"
+            key={`${task.projectId}-${task.taskId}`}
+            className="task"
+            onClick={() => window.api.nudgeStartFocus(task.projectId, task.taskId)}
           >
+            {task.projectCode && <span className="proj-tag">{task.projectCode}</span>}
+            <span className="proj" style={{ background: projectColorValue(task.projectColor) }} />
+            <span className="title">{task.title}</span>
+            <span className="arrow">Focus →</span>
+          </button>
+        ))}
+
+        {!showAll && hiddenCount > 0 && (
+          <button className="more-toggle" onClick={() => setShowAll(true)}>
+            + jeszcze {hiddenCount} {hiddenCount === 1 ? 'zadanie' : hiddenCount < 5 ? 'zadania' : 'zadań'}
+          </button>
+        )}
+
+        <button className="new-task" onClick={() => window.api.nudgeOpenQuickAdd()}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+          Nowe zadanie
+        </button>
+      </div>
+
+      <div className="foot">
+        <span className="pause-label">snooze</span>
+        {SNOOZE_OPTIONS.map((opt) => (
+          <button key={opt.minutes} className="pill" onClick={() => window.api.nudgeSnooze(opt.minutes)}>
             {opt.label}
           </button>
         ))}

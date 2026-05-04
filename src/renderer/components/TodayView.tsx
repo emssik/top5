@@ -79,7 +79,9 @@ export default function TodayView({ onSelectView }: { onSelectView?: (view: stri
     uncompleteQuickTask,
     reorderQuickTasks,
     toggleQuickTaskInProgress,
+    toggleQuickTaskImportant,
     toggleTaskInProgress,
+    toggleTaskImportant,
     toggleTaskToDoNext,
     setFocus,
     acceptRepeatingProposal,
@@ -352,6 +354,7 @@ export default function TodayView({ onSelectView }: { onSelectView?: (view: stri
 
       if (key === 'f' && !isFocusCard) { consume(); focusOnTask(task); return }
       if (key === 'p' && !isFocusCard) { consume(); toggleInProgress(task); return }
+      if (key === 'i') { consume(); toggleImportant(task); return }
       if (key === 's' && isFocusCard) { consume(); stopFocus(); return }
       if (key === 'n' && config.obsidianStoragePath) {
         consume()
@@ -506,6 +509,15 @@ export default function TodayView({ onSelectView }: { onSelectView?: (view: stri
 
     if (!task.projectId || !task.taskId) return
     await toggleTaskInProgress(task.projectId, task.taskId)
+  }
+
+  const toggleImportant = async (task: MergedTask) => {
+    if (task.kind === 'quick') {
+      await toggleQuickTaskImportant(task.id)
+      return
+    }
+    if (!task.projectId || !task.taskId) return
+    await toggleTaskImportant(task.projectId, task.taskId)
   }
 
   const updateTaskLinks = async (task: MergedTask, links: ProjectLink[]) => {
@@ -945,6 +957,14 @@ export default function TodayView({ onSelectView }: { onSelectView?: (view: stri
             <div className="task-title" onDoubleClick={() => startEditing(task)}>
               {task.repeatingTaskId && <span style={{ opacity: 0.6, marginRight: 4 }}>↻</span>}
               <TaskIdBadge taskNumber={task.taskNumber} projectCode={task.projectCode} kind={task.kind} />
+              {task.important && (
+                <button
+                  type="button"
+                  className="task-important-star"
+                  title="Important — click to unmark"
+                  onClick={(e) => { e.stopPropagation(); toggleImportant(task) }}
+                >★</button>
+              )}
               <Linkify text={task.title} />
               <TaskLinksIndicator links={task.links ?? []} projectName={task.projectName} />
             </div>
@@ -977,6 +997,7 @@ export default function TodayView({ onSelectView }: { onSelectView?: (view: stri
           }}>
             <button className="task-overflow-item" onClick={() => { focusOnTask(task); setMenuOpenId(null) }}><span className="toi-icon">▶</span>Focus</button>
             <button className="task-overflow-item" onClick={() => { toggleInProgress(task); setMenuOpenId(null) }}><span className="toi-icon">{task.inProgress ? '⏹' : '⏩'}</span>{task.inProgress ? 'Stop In Progress' : 'In Progress'}</button>
+            <button className="task-overflow-item" onClick={() => { toggleImportant(task); setMenuOpenId(null) }}><span className="toi-icon">{task.important ? '☆' : '★'}</span>{task.important ? 'Unmark Important' : 'Mark Important'}</button>
             {task.kind === 'pinned' && task.projectId && task.taskId && (
               <button className="task-overflow-item" onClick={() => { setMenuOpenId(null); setDueDatePickerId(task.id) }}><span className="toi-icon">📅</span>{task.dueDate ? 'Change due date' : 'Set due date'}</button>
             )}
@@ -1089,9 +1110,11 @@ export default function TodayView({ onSelectView }: { onSelectView?: (view: stri
         if (!isFocusCard) {
           items.push({ label: 'Focus', kbd: 'F', action: () => focusOnTask(task) })
           items.push({ label: task.inProgress ? 'Stop In Progress' : 'In Progress', kbd: 'P', action: () => toggleInProgress(task) })
+          items.push({ label: task.important ? 'Unmark Important' : 'Mark Important', kbd: 'I', action: () => toggleImportant(task) })
         }
         if (isFocusCard) {
           items.push({ label: 'Stop Focus', kbd: 'S', action: () => stopFocus() })
+          items.push({ label: task.important ? 'Unmark Important' : 'Mark Important', kbd: 'I', action: () => toggleImportant(task) })
         }
         if (config.obsidianStoragePath) {
           items.push({ label: 'Open Note', kbd: 'N', action: () => window.api.openTaskNote(task.id, task.title, task.projectName, task.kind === 'quick' ? formatQuickTaskId(task.taskNumber) : formatTaskId(task.taskNumber, task.projectCode), task.noteRef) })
@@ -1334,6 +1357,14 @@ export default function TodayView({ onSelectView }: { onSelectView?: (view: stri
               ) : (
                 <div className="task-title" onDoubleClick={() => startEditing(focusTask)}>
                   <TaskIdBadge taskNumber={focusTask.taskNumber} projectCode={focusTask.projectCode} kind={focusTask.kind} />
+                  {focusTask.important && (
+                    <button
+                      type="button"
+                      className="task-important-star"
+                      title="Important — click to unmark"
+                      onClick={(e) => { e.stopPropagation(); toggleImportant(focusTask) }}
+                    >★</button>
+                  )}
                   <Linkify text={focusTask.title} />
                 </div>
               )}

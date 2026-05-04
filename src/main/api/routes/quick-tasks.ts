@@ -71,6 +71,13 @@ export function registerQuickTaskRoutes(fastify: FastifyInstance): void {
     return { ok: true, data: result }
   })
 
+  fastify.post<{ Params: { id: string } }>('/api/v1/quick-tasks/:id/toggle-important', async (request, reply) => {
+    const result = quickTaskService.toggleQuickTaskImportant(request.params.id)
+    if (isServiceError(result)) return reply.status(404).send({ ok: false, error: result.error })
+    notifyAllWindows()
+    return { ok: true, data: result }
+  })
+
   fastify.put('/api/v1/quick-tasks/reorder', async (request, reply) => {
     const result = quickTaskService.reorderQuickTasks(request.body)
     if (isServiceError(result)) return reply.status(400).send({ ok: false, error: result.error })

@@ -250,6 +250,46 @@ describe('Projects API', () => {
     expect(p.tasks[0].isToDoNext).toBe(true)
   })
 
+  it('toggle-important', async () => {
+    const server = await getTestServer()
+    const project = makeProject({
+      tasks: [{ id: 'task-1', title: 'Task 1', completed: false, createdAt: new Date().toISOString() }]
+    })
+    await server.inject({
+      method: 'POST',
+      url: '/api/v1/projects',
+      headers: { ...auth, 'content-type': 'application/json' },
+      payload: project
+    })
+
+    let res = await server.inject({
+      method: 'POST',
+      url: `/api/v1/projects/${project.id}/tasks/task-1/toggle-important`,
+      headers: auth
+    })
+    expect(res.statusCode).toBe(200)
+    let p = res.json().data.find((p: any) => p.id === project.id)
+    expect(p.tasks[0].important).toBe(true)
+
+    // toggle off
+    res = await server.inject({
+      method: 'POST',
+      url: `/api/v1/projects/${project.id}/tasks/task-1/toggle-important`,
+      headers: auth
+    })
+    expect(res.statusCode).toBe(200)
+    p = res.json().data.find((p: any) => p.id === project.id)
+    expect(p.tasks[0].important).toBe(false)
+
+    // 404 for unknown task
+    res = await server.inject({
+      method: 'POST',
+      url: `/api/v1/projects/${project.id}/tasks/task-missing/toggle-important`,
+      headers: auth
+    })
+    expect(res.statusCode).toBe(404)
+  })
+
   describe('PUT /projects/:pid/tasks/:tid/due-date', () => {
     it('sets due date on a task', async () => {
       const server = await getTestServer()

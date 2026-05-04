@@ -40,10 +40,12 @@ export const api = {
   uncompleteQuickTask: (id: string) => ipcRenderer.invoke('uncomplete-quick-task', id),
   reorderQuickTasks: (orderedIds: string[]) => ipcRenderer.invoke('reorder-quick-tasks', orderedIds),
   toggleQuickTaskInProgress: (id: string) => ipcRenderer.invoke('toggle-quick-task-in-progress', id),
+  toggleQuickTaskImportant: (id: string) => ipcRenderer.invoke('toggle-quick-task-important', id),
   reorderProjects: (orderedIds: string[]) => ipcRenderer.invoke('reorder-projects', orderedIds),
   reorderPinnedTasks: (updates: { projectId: string; taskId: string; order: number }[]) => ipcRenderer.invoke('reorder-pinned-tasks', updates),
   setBeyondLimit: (input: { quickTaskIds?: string[]; pinnedTasks?: { projectId: string; taskId: string }[]; beyondLimit: boolean }) => ipcRenderer.invoke('set-beyond-limit', input),
   toggleTaskInProgress: (projectId: string, taskId: string) => ipcRenderer.invoke('toggle-task-in-progress', projectId, taskId),
+  toggleTaskImportant: (projectId: string, taskId: string) => ipcRenderer.invoke('toggle-task-important', projectId, taskId),
   moveTaskToProject: (fromProjectId: string, toProjectId: string, taskId: string) => ipcRenderer.invoke('move-task-to-project', fromProjectId, toProjectId, taskId),
   toggleTaskToDoNext: (projectId: string, taskId: string) => ipcRenderer.invoke('toggle-task-to-do-next', projectId, taskId),
   updateTaskDueDate: (projectId: string, taskId: string, dueDate: string | null) => ipcRenderer.invoke('update-task-due-date', projectId, taskId, dueDate),
@@ -123,7 +125,7 @@ export const api = {
   energyPauseUntil: (isoTimestamp: string): Promise<EnergyTrackerConfig> => ipcRenderer.invoke('energy-pause-until', isoTimestamp),
   energyResume: (): Promise<EnergyTrackerConfig> => ipcRenderer.invoke('energy-resume'),
   energySkip: () => ipcRenderer.invoke('energy-skip'),
-  energySubmit: (payload: { energy: 1 | 2 | 3; mood: 1 | 2 | 3; hungry: boolean; note?: string }) => ipcRenderer.invoke('energy-submit', payload),
+  energySubmit: (payload: { energy: 1 | 2 | 3; mood: 1 | 2 | 3; hungry: boolean; hadCoffee: boolean; note?: string }) => ipcRenderer.invoke('energy-submit', payload),
   onCheckInRespond: (callback: (response: 'yes' | 'a_little' | 'no') => void) => {
     const handler = (_event: IpcRendererEvent, response: 'yes' | 'a_little' | 'no') => callback(response)
     ipcRenderer.on('checkin-respond', handler)

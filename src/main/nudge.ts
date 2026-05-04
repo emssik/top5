@@ -7,6 +7,7 @@ import { getFocusWindow, enterFocusMode } from './focus-window'
 import { createQuickAddWindow } from './quick-add-window'
 import { isEnergyWindowOpen } from './energy-tracker'
 import { getData, getAppData, setAppDataKey } from './store'
+import type { NudgeTask } from '../shared/types'
 import { getVisibleTasks } from '../shared/task-list'
 import { dateKey } from '../shared/schedule'
 import { STANDALONE_PROJECT_ID } from '../shared/constants'
@@ -43,8 +44,8 @@ function showNudgeWindow(): void {
   const display = screen.getPrimaryDisplay()
   const { width: workWidth, height: workHeight, x: workX, y: workY } = display.workArea
 
-  const popupWidth = 400
-  const popupHeight = 360
+  const popupWidth = 540
+  const popupHeight = 460
   const x = workX + Math.round((workWidth - popupWidth) / 2)
   const y = workY + Math.round((workHeight - popupHeight) / 2)
 
@@ -147,21 +148,16 @@ export function stopNudgeMonitor(): void {
   closeNudgeWindow()
 }
 
-export interface NudgeTask {
-  projectId: string // '__standalone__' for quick tasks
-  taskId: string
-  title: string
-  projectName?: string
-  projectCode?: string
-}
-
 function getUncompletedTaskList(): NudgeTask[] {
+  const projects = getData().projects ?? []
+  const colorById = new Map(projects.map((p) => [p.id, p.color]))
   return getVisibleTasksFromStore().allVisible.map((t) => ({
     projectId: t.projectId ?? STANDALONE_PROJECT_ID,
     taskId: t.taskId ?? t.id,
     title: t.title,
     projectName: t.projectName,
-    projectCode: t.projectCode
+    projectCode: t.projectCode,
+    projectColor: t.projectId ? colorById.get(t.projectId) : undefined
   }))
 }
 

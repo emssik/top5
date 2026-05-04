@@ -140,3 +140,13 @@ export function toggleQuickTaskInProgress(id: string): QuickTask[] | ServiceErro
   }
   return quickTasks
 }
+
+export function toggleQuickTaskImportant(id: string): QuickTask[] | ServiceError {
+  const data = getData()
+  const quickTasks = [...data.quickTasks]
+  const task = quickTasks.find((t) => t.id === id)
+  if (!task) return { error: 'not_found' }
+  task.important = !task.important
+  setData('quickTasks', quickTasks)
+  return quickTasks
+}

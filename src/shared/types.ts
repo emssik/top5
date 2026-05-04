@@ -12,6 +12,7 @@ export interface Task {
   noteRef?: string
   dueDate?: string | null
   beyondLimit?: boolean
+  important?: boolean
   links?: ProjectLink[]
   images?: string[]
 }
@@ -56,6 +57,7 @@ export interface QuickTask {
   dueDate?: string | null
   projectId?: string | null
   beyondLimit?: boolean
+  important?: boolean
 }
 
 export type ProjectColor =
@@ -208,7 +210,17 @@ export interface EnergyCheckIn {
   energy: EnergyRating
   mood: EnergyRating
   hungry: boolean
+  hadCoffee: boolean
   note?: string
+}
+
+export interface NudgeTask {
+  projectId: string
+  taskId: string
+  title: string
+  projectName?: string
+  projectCode?: string
+  projectColor?: ProjectColor
 }
 
 export interface EnergyTrackerConfig {

@@ -281,6 +281,18 @@ export function toggleTaskInProgress(projectId: string, taskId: string): Project
   return projects
 }
 
+export function toggleTaskImportant(projectId: string, taskId: string): Project[] | ServiceError {
+  const data = getData()
+  const projects = [...data.projects]
+  const project = projects.find((p) => p.id === projectId)
+  if (!project) return { error: 'not_found' }
+  const task = project.tasks.find((t) => t.id === taskId)
+  if (!task) return { error: 'not_found' }
+  task.important = !task.important
+  setData('projects', projects)
+  return projects
+}
+
 export function moveTaskToProject(fromProjectId: string, toProjectId: string, taskId: string): Project[] | ServiceError {
   if (fromProjectId === toProjectId) return { error: 'validation' }
   const data = getData()

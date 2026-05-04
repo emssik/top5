@@ -6,49 +6,99 @@ type Rating = 1 | 2 | 3
 const ENERGY_LABELS: Record<Rating, string> = { 1: 'źle', 2: 'dobrze', 3: 'super' }
 const MOOD_LABELS: Record<Rating, string> = { 1: 'dół', 2: 'ok', 3: 'super' }
 
-interface RatingRowProps {
-  label: string
-  value: Rating | null
-  onPick: (r: Rating) => void
-  labels: Record<Rating, string>
+function PopupIcons() {
+  return (
+    <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true">
+      <defs>
+        <symbol id="i-energy" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M13 2 L4 14 H11 L10 22 L20 9 H13 L13 2 Z" />
+        </symbol>
+        <symbol id="i-mood" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="9" />
+          <path d="M8 14 Q12 17.5 16 14" />
+          <circle cx="9" cy="10" r="0.6" fill="currentColor" />
+          <circle cx="15" cy="10" r="0.6" fill="currentColor" />
+        </symbol>
+        <symbol id="i-hunger" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M7 2 V10 M5 2 V7 Q5 9.2 7 9.5 V22" />
+          <path d="M17 2 Q14 4 14 8 Q14 11 17 11 V22" />
+        </symbol>
+        <symbol id="i-coffee" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M4 9 H17 V14 Q17 19 10.5 19 Q4 19 4 14 Z" />
+          <path d="M17 11 H19.5 Q21.5 11 21.5 13.5 Q21.5 16 19.5 16 H17" />
+          <path d="M8 3 Q8 4.5 9 5.5 Q10 6.5 10 7.5" />
+          <path d="M13 3 Q13 4.5 14 5.5" />
+        </symbol>
+      </defs>
+    </svg>
+  )
 }
 
-function RatingRow({ label, value, onPick, labels }: RatingRowProps) {
+interface SegRowProps {
+  iconHref: string
+  options: readonly Rating[]
+  labels: Record<Rating, string>
+  value: Rating | null
+  onPick: (r: Rating) => void
+}
+
+function SegRow({ iconHref, options, labels, value, onPick }: SegRowProps) {
   return (
-    <div className="flex items-center gap-2">
-      <span className="text-[12px] text-t-secondary w-[60px] shrink-0">{label}</span>
-      <div className="flex gap-1.5">
-        {([1, 2, 3] as const).map((r) => (
-          <button
-            key={r}
-            onClick={() => onPick(r)}
-            className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors min-w-[58px] ${
-              value === r
-                ? 'bg-emerald-600 text-white'
-                : 'bg-surface/80 hover:bg-hover/80 text-t-heading'
-            }`}
-          >
-            <span className="font-mono opacity-70 mr-1">{r}</span>
-            {labels[r]}
-          </button>
-        ))}
+    <div className="seg-row">
+      <span className="row-icon">
+        <svg>
+          <use href={iconHref} />
+        </svg>
+      </span>
+      <div className="seg">
+        {options.map((r) => {
+          const active = value === r
+          const accent = active ? (r === 2 ? ' energy-mid' : r === 3 ? ' energy-good' : '') : ''
+          return (
+            <button key={r} className={`opt${active ? ' active' : ''}${accent}`} onClick={() => onPick(r)}>
+              {labels[r]}
+            </button>
+          )
+        })}
       </div>
     </div>
+  )
+}
+
+interface ToggleProps {
+  iconHref: string
+  label: string
+  value: boolean
+  onToggle: () => void
+}
+
+function Toggle({ iconHref, label, value, onToggle }: ToggleProps) {
+  return (
+    <button className={`toggle${value ? ' on' : ''}`} onClick={onToggle}>
+      <span className="left">
+        <svg className="icon-inline" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <use href={iconHref} />
+        </svg>
+        <span className="label-text">{label}</span>
+      </span>
+      <span className="switch" />
+    </button>
   )
 }
 
 export default function EnergyPopup() {
   const [energy, setEnergy] = useState<Rating | null>(null)
   const [mood, setMood] = useState<Rating | null>(null)
-  const [hungry, setHungry] = useState<boolean | null>(null)
+  const [hungry, setHungry] = useState(false)
+  const [hadCoffee, setHadCoffee] = useState(false)
   const [note, setNote] = useState('')
   const noteRef = useRef<HTMLTextAreaElement>(null)
 
-  const ready = energy !== null && mood !== null && hungry !== null
+  const ready = energy !== null && mood !== null
 
   const submit = () => {
     if (!ready) return
-    window.api.energySubmit({ energy: energy!, mood: mood!, hungry: hungry!, note })
+    window.api.energySubmit({ energy: energy!, mood: mood!, hungry, hadCoffee, note })
   }
 
   const skip = () => window.api.energySkip()
@@ -67,14 +117,12 @@ export default function EnergyPopup() {
         skip()
         return
       }
-
       if (e.key === 'Enter') {
         if (inTextarea && !e.metaKey && !e.ctrlKey) return
         e.preventDefault()
         if (ready) submit()
         return
       }
-
       if (inTextarea) return
 
       if (energy === null) {
@@ -89,83 +137,53 @@ export default function EnergyPopup() {
           e.preventDefault()
           setMood(Number(e.key) as Rating)
         }
-        return
-      }
-      if (hungry === null) {
-        const k = e.key.toLowerCase()
-        if (k === 'y' || k === 't') {
-          e.preventDefault()
-          setHungry(true)
-        } else if (k === 'n' || e.key === ' ') {
-          e.preventDefault()
-          setHungry(false)
-        }
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [energy, mood, hungry, ready])
+  }, [energy, mood])
 
   useEffect(() => {
-    if (hungry !== null && noteRef.current) {
+    if (mood !== null && noteRef.current) {
       noteRef.current.focus()
     }
-  }, [hungry])
+  }, [mood])
 
   return (
-    <div className="h-screen flex flex-col p-4 rounded-xl bg-card/95 border border-border/50 select-none">
-      <p className="text-[14px] text-t-primary font-semibold mb-3">Jak się czujesz?</p>
+    <div className="pop">
+      <PopupIcons />
 
-      <div className="flex flex-col gap-2 mb-3">
-        <RatingRow label="Energia" value={energy} onPick={setEnergy} labels={ENERGY_LABELS} />
-        <RatingRow label="Nastrój" value={mood} onPick={setMood} labels={MOOD_LABELS} />
-        <div className="flex items-center gap-2">
-          <span className="text-[12px] text-t-secondary w-[60px] shrink-0">Głód</span>
-          <div className="flex gap-1.5">
-            <button
-              onClick={() => setHungry(true)}
-              className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors min-w-[58px] ${
-                hungry === true ? 'bg-emerald-600 text-white' : 'bg-surface/80 hover:bg-hover/80 text-t-heading'
-              }`}
-            >
-              <span className="font-mono opacity-70 mr-1">y</span>tak
-            </button>
-            <button
-              onClick={() => setHungry(false)}
-              className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors min-w-[58px] ${
-                hungry === false ? 'bg-emerald-600 text-white' : 'bg-surface/80 hover:bg-hover/80 text-t-heading'
-              }`}
-            >
-              <span className="font-mono opacity-70 mr-1">n</span>nie
-            </button>
-          </div>
-        </div>
+      <div className="head">
+        <h1>Jak się czujesz?</h1>
+        <p>teraz, krótko</p>
+      </div>
+
+      <div className="seg-rows">
+        <SegRow iconHref="#i-energy" options={[1, 2, 3]} labels={ENERGY_LABELS} value={energy} onPick={setEnergy} />
+        <SegRow iconHref="#i-mood" options={[1, 2, 3]} labels={MOOD_LABELS} value={mood} onPick={setMood} />
+      </div>
+
+      <div className="toggle-pair">
+        <Toggle iconHref="#i-hunger" label="głodny" value={hungry} onToggle={() => setHungry((v) => !v)} />
+        <Toggle iconHref="#i-coffee" label="kawa <2h" value={hadCoffee} onToggle={() => setHadCoffee((v) => !v)} />
       </div>
 
       <textarea
         ref={noteRef}
+        className="e-note"
+        rows={2}
         value={note}
         onChange={(e) => setNote(e.target.value)}
         placeholder="opcjonalna notatka..."
-        rows={2}
-        className="w-full text-[12px] text-t-primary bg-surface/60 border border-border/50 rounded-md px-2 py-1.5 mb-3 resize-none focus:outline-none focus:border-emerald-600/60 placeholder:text-t-secondary/60"
       />
 
-      <div className="flex items-center gap-1.5 text-[10px] mt-auto">
-        <span className="text-t-secondary mr-0.5">pauza:</span>
-        <button onClick={() => pauseFor('1h')} className="px-2 py-0.5 rounded bg-surface/80 hover:bg-hover/80 text-t-heading">1h</button>
-        <button onClick={() => pauseFor('2h')} className="px-2 py-0.5 rounded bg-surface/80 hover:bg-hover/80 text-t-heading">2h</button>
-        <button onClick={() => pauseFor('eod')} className="px-2 py-0.5 rounded bg-surface/80 hover:bg-hover/80 text-t-heading">eod</button>
-        <button onClick={skip} className="ml-auto px-2 py-0.5 rounded text-t-secondary hover:bg-hover/80">skip</button>
-        <button
-          onClick={submit}
-          disabled={!ready}
-          className={`px-3 py-1 rounded font-medium text-[11px] ${
-            ready ? 'bg-emerald-600 text-white hover:bg-emerald-500' : 'bg-surface/40 text-t-secondary/50 cursor-not-allowed'
-          }`}
-        >
-          Zapisz ⏎
-        </button>
+      <div className="foot">
+        <span className="pause-label">pauza</span>
+        <button className="pill" onClick={() => pauseFor('1h')}>1h</button>
+        <button className="pill" onClick={() => pauseFor('2h')}>2h</button>
+        <button className="pill" onClick={() => pauseFor('eod')}>do końca dnia</button>
+        <button className="skip" onClick={skip}>skip</button>
+        <button className="submit" onClick={submit} disabled={!ready}>Zapisz</button>
       </div>
     </div>
   )
