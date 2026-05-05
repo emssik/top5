@@ -102,6 +102,17 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
   const overdueTasks = scheduledTasks.filter((t) => !t.completed && t.dueDate && t.dueDate < todayKey)
   const dueTodayTasks = scheduledTasks.filter((t) => !overdueTasks.includes(t))
 
+  // Clean view: hide completed (incl. recently-completed) and pull important tasks to the very top
+  const importantCleanTasks = cleanView
+    ? [...overdueTasks, ...dueTodayTasks, ...activeTasks, ...repeatingActive].filter((t) => t.important && !t.completed)
+    : []
+  const importantCleanIds = new Set(importantCleanTasks.map((t) => t.id))
+  const hideForClean = (t: MergedTask) => !t.completed && !importantCleanIds.has(t.id)
+  const cleanOverdue = cleanView ? overdueTasks.filter(hideForClean) : overdueTasks
+  const cleanDueToday = cleanView ? dueTodayTasks.filter(hideForClean) : dueTodayTasks
+  const cleanActive = cleanView ? activeTasks.filter(hideForClean) : activeTasks
+  const cleanRepeating = cleanView ? repeatingActive.filter(hideForClean) : repeatingActive
+
   const activeQuickTasks = quickTasks.filter((t) => !t.completed)
 
   const addTask = async () => {
@@ -778,20 +789,25 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
         </div>
       ) : (
         <div className={cleanView ? '' : 'space-y-1'} onDragEnd={handleDragEnd}>
-          {overdueTasks.map((t) => renderTask(t))}
-          {cleanView && overdueTasks.length > 0 && (dueTodayTasks.length > 0 || activeTasks.length > 0) && cleanSeparator}
-          {dueTodayTasks.map((t) => renderTask(t))}
-          {activeTasks.map((t) => renderTask(t))}
-          {hasRepeatingSection && (cleanView ? repeatingActive.length > 0 : true) && (
+          {cleanView && importantCleanTasks.length > 0 && (
             <>
-              {cleanView && (overdueTasks.length > 0 || dueTodayTasks.length > 0 || activeTasks.length > 0) && cleanSeparator}
-              {repeatingActive.map((t) => renderTask(t, cleanView))}
+              {importantCleanTasks.map((t) => renderTask(t))}
+              {(cleanOverdue.length > 0 || cleanDueToday.length > 0 || cleanActive.length > 0 || cleanRepeating.length > 0) && cleanSeparator}
+            </>
+          )}
+          {(cleanView ? cleanOverdue : overdueTasks).map((t) => renderTask(t))}
+          {cleanView && cleanOverdue.length > 0 && (cleanDueToday.length > 0 || cleanActive.length > 0) && cleanSeparator}
+          {(cleanView ? cleanDueToday : dueTodayTasks).map((t) => renderTask(t))}
+          {(cleanView ? cleanActive : activeTasks).map((t) => renderTask(t))}
+          {hasRepeatingSection && (cleanView ? cleanRepeating.length > 0 : true) && (
+            <>
+              {cleanView && (cleanOverdue.length > 0 || cleanDueToday.length > 0 || cleanActive.length > 0) && cleanSeparator}
+              {(cleanView ? cleanRepeating : repeatingActive).map((t) => renderTask(t, cleanView))}
               {!cleanView && proposals.map(renderProposal)}
             </>
           )}
-          {hasCompletedSection && (
+          {!cleanView && hasCompletedSection && (
             <>
-              {cleanView && (overdueTasks.length > 0 || dueTodayTasks.length > 0 || activeTasks.length > 0 || repeatingActive.length > 0) && cleanSeparator}
               {completedTasks.map((t) => renderTask(t))}
             </>
           )}

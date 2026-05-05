@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.92.0] - 2026-05-05
+
+### Changed
+
+- Clean window: zadania oznaczone jako Important (★) wyświetlają się na samej górze, ponad sekcjami overdue / due today / active / repeating.
+- Clean window: ukończone zadania (również recently-completed z markerem ×) nie są już widoczne. W zwykłym widoku Today nadal pojawiają się z przyciskiem Restore.
+
 ## [1.91.3] - 2026-05-05
 
 ### Fixed
