@@ -43,7 +43,7 @@ interface PickerTask {
 
 const FOCUS_WIDTH = 520
 const FOCUS_HEIGHT_NORMAL = 58
-const FOCUS_HEIGHT_PICKER = 320
+const FOCUS_HEIGHT_PICKER = 480
 
 export default function FocusMode() {
   const { projects, quickTasks, focusCheckIns, config, setFocus, repeatingTasks } = useProjects()
@@ -465,7 +465,14 @@ export default function FocusMode() {
           <div className="px-3 py-2 border-b border-border/30">
             <span className="text-[11px] text-t-muted">Następne zadanie:</span>
           </div>
-          <div className="max-h-[200px] overflow-y-auto">
+          <div className="max-h-[400px] overflow-y-auto">
+            <button
+              onClick={handleExitFromPicker}
+              className="w-full text-left px-3 py-2 hover:bg-red-500/10 transition-colors flex items-center gap-2 border-b border-border/20 text-t-secondary"
+            >
+              <span className="text-[10px] flex-shrink-0 opacity-60">✕</span>
+              <span className="text-[12px] truncate">Zakończ bez wybierania nowego zadania</span>
+            </button>
             {pickerTasks.length === 0 ? (
               <div className="px-3 py-3 text-[12px] text-t-muted text-center">
                 Brak dostępnych zadań
@@ -486,14 +493,6 @@ export default function FocusMode() {
                 </button>
               ))
             )}
-          </div>
-          <div className="px-3 py-2 border-t border-border/30">
-            <button
-              onClick={handleExitFromPicker}
-              className="text-[11px] text-t-muted hover:text-t-secondary transition-colors"
-            >
-              Zakończ focus
-            </button>
           </div>
         </div>
       )}

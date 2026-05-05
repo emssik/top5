@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.91.3] - 2026-05-05
+
+### Fixed
+
+- Picker zadań w focus window obciął listę przy większej liczbie pozycji i utrudniał scroll — strefa scrollowania powiększona z 200 → 400 px, okno picker'a 320 → 480 px.
+
+### Added
+
+- Opcja `Zakończ bez wybierania nowego zadania` jako pierwsza pozycja na liście pickera (wcześniej była tylko jako stopka).
+
 ## [1.91.2] - 2026-05-05
 
 ### Fixed
