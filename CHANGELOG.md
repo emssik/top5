@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.91.2] - 2026-05-05
+
+### Fixed
+
+- CLI `top5 important` pokazywał stan sprzed toggle'a, gdy inna sesja zmieniła flagę między GET a POST — teraz odczytuje wartość z odpowiedzi serwera.
+
+### Changed
+
+- Wpis `Mark Important` w context menu TodayView wyciągnięty poza bloki `isFocusCard` (był dodawany dwukrotnie).
+- Helper `daysOverdue` w `QuickTasksView` przeniesiony do brancha clean view (jedyne miejsce użycia).
+
 ## [1.91.1] - 2026-05-04
 
 ### Fixed

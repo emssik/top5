@@ -538,12 +538,16 @@ export function register(program: Command): void {
           }
         }
 
+        let next: boolean
         if (kind === 'quick') {
-          await client.post(`/api/v1/quick-tasks/${task.id}/toggle-important`)
+          const quickTasks = await client.post<Task[]>(`/api/v1/quick-tasks/${task.id}/toggle-important`)
+          const updated = quickTasks.find((t) => t.id === task.id)
+          next = !!updated?.important
         } else {
-          await client.post(`/api/v1/projects/${projectId}/tasks/${task.id}/toggle-important`)
+          const projects = await client.post<Project[]>(`/api/v1/projects/${projectId}/tasks/${task.id}/toggle-important`)
+          const updated = projects.find((p) => p.id === projectId)?.tasks.find((t) => t.id === task.id)
+          next = !!updated?.important
         }
-        const next = !task.important
 
         printResult({ ...task, important: next }, {
           json: globalOpts.json,

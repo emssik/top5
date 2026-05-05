@@ -1110,12 +1110,11 @@ export default function TodayView({ onSelectView }: { onSelectView?: (view: stri
         if (!isFocusCard) {
           items.push({ label: 'Focus', kbd: 'F', action: () => focusOnTask(task) })
           items.push({ label: task.inProgress ? 'Stop In Progress' : 'In Progress', kbd: 'P', action: () => toggleInProgress(task) })
-          items.push({ label: task.important ? 'Unmark Important' : 'Mark Important', kbd: 'I', action: () => toggleImportant(task) })
         }
         if (isFocusCard) {
           items.push({ label: 'Stop Focus', kbd: 'S', action: () => stopFocus() })
-          items.push({ label: task.important ? 'Unmark Important' : 'Mark Important', kbd: 'I', action: () => toggleImportant(task) })
         }
+        items.push({ label: task.important ? 'Unmark Important' : 'Mark Important', kbd: 'I', action: () => toggleImportant(task) })
         if (config.obsidianStoragePath) {
           items.push({ label: 'Open Note', kbd: 'N', action: () => window.api.openTaskNote(task.id, task.title, task.projectName, task.kind === 'quick' ? formatQuickTaskId(task.taskNumber) : formatTaskId(task.taskNumber, task.projectCode), task.noteRef) })
         }

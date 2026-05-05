@@ -102,12 +102,6 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
   const overdueTasks = scheduledTasks.filter((t) => !t.completed && t.dueDate && t.dueDate < todayKey)
   const dueTodayTasks = scheduledTasks.filter((t) => !overdueTasks.includes(t))
 
-  const daysOverdue = (dueDate: string): number => {
-    const due = new Date(dueDate + 'T00:00:00')
-    const now = new Date(todayKey + 'T00:00:00')
-    return Math.max(1, Math.round((now.getTime() - due.getTime()) / 86400000))
-  }
-
   const activeQuickTasks = quickTasks.filter((t) => !t.completed)
 
   const addTask = async () => {
@@ -345,6 +339,11 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
     // --- Clean view (bullet journal style) ---
     if (cleanView) {
       const isOverdue = !isCompleted && !!task.dueDate && task.dueDate < todayKey
+      const daysOverdue = (dueDate: string): number => {
+        const due = new Date(dueDate + 'T00:00:00')
+        const now = new Date(todayKey + 'T00:00:00')
+        return Math.max(1, Math.round((now.getTime() - due.getTime()) / 86400000))
+      }
       const marker = isCompleted ? '×' : task.repeatingTaskId ? '↻' : task.inProgress ? '▸' : task.kind === 'pinned' ? '→' : '•'
       const mins = getTaskMinutes(task)
       const isFocused = !isCompleted && (
