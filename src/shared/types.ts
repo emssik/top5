@@ -8,6 +8,32 @@ export function isCycleRole(value: unknown): value is CycleRole {
 
 export const CYCLE_ROLE_LABELS: Record<CycleRole, string> = { must: 'M', should: 'S', could: 'C' }
 
+export type CycleTaskStatus = 'done' | 'in-progress' | 'up-next' | 'active'
+
+export type CycleStatusFilter = 'active' | 'done' | 'all'
+
+export const CYCLE_STATUS_FILTERS: readonly CycleStatusFilter[] = ['active', 'done', 'all']
+
+export function isCycleStatusFilter(value: unknown): value is CycleStatusFilter {
+  return CYCLE_STATUS_FILTERS.includes(value as CycleStatusFilter)
+}
+
+export interface CycleTaskItem {
+  id: string
+  taskNumber: number | null
+  taskCode: string
+  title: string
+  projectId: string
+  projectCode: string | null
+  projectName: string
+  cycleRole: CycleRole
+  status: CycleTaskStatus
+  due: string | null
+  important: boolean
+  beyondLimit: boolean
+  completed: boolean
+}
+
 export interface Task {
   id: string
   title: string

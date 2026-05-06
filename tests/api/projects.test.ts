@@ -534,6 +534,164 @@ describe('Projects API', () => {
     })
   })
 
+  describe('GET /cycle/tasks', () => {
+    it('returns active tasks across all layers, sorted must→should→could and by due date', async () => {
+      const server = await getTestServer()
+      const a = makeProject({
+        name: 'Alpha',
+        code: 'ALP',
+        tasks: [
+          { id: 'a1', title: 'Alpha must, no due', completed: false, taskNumber: 1, cycleRole: 'must', createdAt: new Date().toISOString() },
+          { id: 'a2', title: 'Alpha should, near due', completed: false, taskNumber: 2, cycleRole: 'should', dueDate: '2026-05-07', createdAt: new Date().toISOString() }
+        ]
+      })
+      const b = makeProject({
+        name: 'Beta',
+        code: 'BET',
+        tasks: [
+          { id: 'b1', title: 'Beta must, near due', completed: false, taskNumber: 1, cycleRole: 'must', dueDate: '2026-05-07', createdAt: new Date().toISOString() },
+          { id: 'b2', title: 'Beta could, no role-changes', completed: false, taskNumber: 2, cycleRole: 'could', createdAt: new Date().toISOString() }
+        ]
+      })
+      const c = makeProject({
+        name: 'Gamma',
+        code: 'GAM',
+        tasks: [
+          { id: 'g1', title: 'Gamma no cycle role — excluded', completed: false, taskNumber: 1, createdAt: new Date().toISOString() }
+        ]
+      })
+      await server.inject({ method: 'POST', url: '/api/v1/projects', headers: { ...auth, 'content-type': 'application/json' }, payload: a })
+      await server.inject({ method: 'POST', url: '/api/v1/projects', headers: { ...auth, 'content-type': 'application/json' }, payload: b })
+      await server.inject({ method: 'POST', url: '/api/v1/projects', headers: { ...auth, 'content-type': 'application/json' }, payload: c })
+
+      const res = await server.inject({ method: 'GET', url: '/api/v1/cycle/tasks', headers: auth })
+      expect(res.statusCode).toBe(200)
+      const items = res.json().data
+      expect(items.map((t: any) => t.id)).toEqual(['b1', 'a1', 'a2', 'b2'])
+      const first = items[0]
+      expect(first.taskCode).toBe('BET-1')
+      expect(first.projectCode).toBe('BET')
+      expect(first.projectName).toBe('Beta')
+      expect(first.cycleRole).toBe('must')
+      expect(first.status).toBe('active')
+      expect(first.due).toBe('2026-05-07')
+      expect(first.important).toBe(false)
+      expect(first.beyondLimit).toBe(false)
+    })
+
+    it('filters by --layer and skips completed when status=active (default)', async () => {
+      const server = await getTestServer()
+      const p = makeProject({
+        name: 'P',
+        code: 'PRJ',
+        tasks: [
+          { id: 'm1', title: 'Must active', completed: false, taskNumber: 1, cycleRole: 'must', createdAt: new Date().toISOString() },
+          { id: 'm2', title: 'Must done', completed: true, taskNumber: 2, cycleRole: 'must', createdAt: new Date().toISOString() },
+          { id: 's1', title: 'Should active', completed: false, taskNumber: 3, cycleRole: 'should', createdAt: new Date().toISOString() }
+        ]
+      })
+      await server.inject({ method: 'POST', url: '/api/v1/projects', headers: { ...auth, 'content-type': 'application/json' }, payload: p })
+
+      const res = await server.inject({ method: 'GET', url: '/api/v1/cycle/tasks?layer=must', headers: auth })
+      expect(res.statusCode).toBe(200)
+      const items = res.json().data
+      expect(items.map((t: any) => t.id)).toEqual(['m1'])
+    })
+
+    it('returns done-only tasks when status=done', async () => {
+      const server = await getTestServer()
+      const p = makeProject({
+        name: 'P',
+        code: 'PRJ',
+        tasks: [
+          { id: 'm1', title: 'Must active', completed: false, taskNumber: 1, cycleRole: 'must', createdAt: new Date().toISOString() },
+          { id: 'm2', title: 'Must done', completed: true, taskNumber: 2, cycleRole: 'must', createdAt: new Date().toISOString() }
+        ]
+      })
+      await server.inject({ method: 'POST', url: '/api/v1/projects', headers: { ...auth, 'content-type': 'application/json' }, payload: p })
+
+      const res = await server.inject({ method: 'GET', url: '/api/v1/cycle/tasks?status=done', headers: auth })
+      expect(res.statusCode).toBe(200)
+      const items = res.json().data
+      expect(items.map((t: any) => t.id)).toEqual(['m2'])
+      expect(items[0].status).toBe('done')
+    })
+
+    it('returns both active and done when status=all', async () => {
+      const server = await getTestServer()
+      const p = makeProject({
+        name: 'P',
+        code: 'PRJ',
+        tasks: [
+          { id: 'm1', title: 'Must active', completed: false, taskNumber: 1, cycleRole: 'must', createdAt: new Date().toISOString() },
+          { id: 'm2', title: 'Must done', completed: true, taskNumber: 2, cycleRole: 'must', createdAt: new Date().toISOString() }
+        ]
+      })
+      await server.inject({ method: 'POST', url: '/api/v1/projects', headers: { ...auth, 'content-type': 'application/json' }, payload: p })
+
+      const res = await server.inject({ method: 'GET', url: '/api/v1/cycle/tasks?status=all', headers: auth })
+      expect(res.statusCode).toBe(200)
+      const items = res.json().data
+      expect(items.length).toBe(2)
+    })
+
+    it('skips tasks from archived projects', async () => {
+      const server = await getTestServer()
+      const live = makeProject({
+        name: 'Live',
+        code: 'LIV',
+        tasks: [{ id: 't1', title: 'Live task', completed: false, taskNumber: 1, cycleRole: 'must', createdAt: new Date().toISOString() }]
+      })
+      const archived = makeProject({
+        name: 'Archived',
+        code: 'ARC',
+        archivedAt: new Date().toISOString(),
+        tasks: [{ id: 't2', title: 'Archived task', completed: false, taskNumber: 1, cycleRole: 'must', createdAt: new Date().toISOString() }]
+      })
+      await server.inject({ method: 'POST', url: '/api/v1/projects', headers: { ...auth, 'content-type': 'application/json' }, payload: live })
+      await server.inject({ method: 'POST', url: '/api/v1/projects', headers: { ...auth, 'content-type': 'application/json' }, payload: archived })
+
+      const res = await server.inject({ method: 'GET', url: '/api/v1/cycle/tasks', headers: auth })
+      expect(res.statusCode).toBe(200)
+      const items = res.json().data
+      expect(items.map((t: any) => t.id)).toEqual(['t1'])
+    })
+
+    it('reflects status field as in-progress / up-next / done', async () => {
+      const server = await getTestServer()
+      const p = makeProject({
+        name: 'P',
+        code: 'PRJ',
+        tasks: [
+          { id: 'ip', title: 'In progress', completed: false, taskNumber: 1, cycleRole: 'must', inProgress: true, createdAt: new Date().toISOString() },
+          { id: 'un', title: 'Up next', completed: false, taskNumber: 2, cycleRole: 'should', isToDoNext: true, createdAt: new Date().toISOString() },
+          { id: 'dn', title: 'Done', completed: true, taskNumber: 3, cycleRole: 'could', createdAt: new Date().toISOString() }
+        ]
+      })
+      await server.inject({ method: 'POST', url: '/api/v1/projects', headers: { ...auth, 'content-type': 'application/json' }, payload: p })
+
+      const res = await server.inject({ method: 'GET', url: '/api/v1/cycle/tasks?status=all', headers: auth })
+      expect(res.statusCode).toBe(200)
+      const items = res.json().data
+      const byId = Object.fromEntries(items.map((t: any) => [t.id, t]))
+      expect(byId.ip.status).toBe('in-progress')
+      expect(byId.un.status).toBe('up-next')
+      expect(byId.dn.status).toBe('done')
+    })
+
+    it('rejects invalid layer with 400', async () => {
+      const server = await getTestServer()
+      const res = await server.inject({ method: 'GET', url: '/api/v1/cycle/tasks?layer=bogus', headers: auth })
+      expect(res.statusCode).toBe(400)
+    })
+
+    it('rejects invalid status with 400', async () => {
+      const server = await getTestServer()
+      const res = await server.inject({ method: 'GET', url: '/api/v1/cycle/tasks?status=bogus', headers: auth })
+      expect(res.statusCode).toBe(400)
+    })
+  })
+
   describe('POST /projects/:pid/tasks/:tid/move', () => {
     it('moves task to another project', async () => {
       const server = await getTestServer()

@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify'
-import type { Task } from '../../../shared/types'
-import { isCycleRole } from '../../../shared/types'
+import type { CycleRole, CycleStatusFilter, Task } from '../../../shared/types'
+import { isCycleRole, isCycleStatusFilter } from '../../../shared/types'
 import { getData, notifyAllWindows } from '../../store'
 import { stopFocusForCompletedTask } from '../../focus-window'
 import * as projectService from '../../service/projects'
@@ -129,6 +129,30 @@ export function registerProjectRoutes(fastify: FastifyInstance): void {
     const result = projectService.setTaskCycleRole(request.params.pid, request.params.tid, value as Parameters<typeof projectService.setTaskCycleRole>[2])
     if (isServiceError(result)) return reply.status(errorToHttpStatus(result.error)).send({ ok: false, error: result.error })
     notifyAllWindows()
+    return { ok: true, data: result }
+  })
+
+  fastify.get('/api/v1/cycle/tasks', async (request, reply) => {
+    const { layer: layerInput, status: statusInput } = (request.query ?? {}) as { layer?: unknown; status?: unknown }
+
+    let layer: CycleRole | null = null
+    if (layerInput != null && layerInput !== '') {
+      if (!isCycleRole(layerInput)) {
+        return reply.status(400).send({ ok: false, error: 'validation' })
+      }
+      layer = layerInput
+    }
+
+    let status: CycleStatusFilter = 'active'
+    if (statusInput != null && statusInput !== '') {
+      if (!isCycleStatusFilter(statusInput)) {
+        return reply.status(400).send({ ok: false, error: 'validation' })
+      }
+      status = statusInput
+    }
+
+    const result = projectService.getCycleTasks({ layer, status })
+    if (isServiceError(result)) return reply.status(errorToHttpStatus(result.error)).send({ ok: false, error: result.error })
     return { ok: true, data: result }
   })
 

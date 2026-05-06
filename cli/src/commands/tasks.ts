@@ -304,10 +304,105 @@ export function register(program: Command): void {
       }
     })
 
+  type CycleStatusFilter = 'active' | 'done' | 'all'
+  const CYCLE_STATUS_FILTERS: ReadonlyArray<CycleStatusFilter> = ['active', 'done', 'all']
+
+  interface CycleTaskItem {
+    id: string
+    taskNumber: number | null
+    taskCode: string
+    title: string
+    projectId: string
+    projectCode: string | null
+    projectName: string
+    cycleRole: CycleRole
+    status: 'done' | 'in-progress' | 'up-next' | 'active'
+    due: string | null
+    important: boolean
+    beyondLimit: boolean
+    completed: boolean
+  }
+
+  type CycleListOpts = { layer?: string; status?: string }
+
+  const ROLE_HEADERS: Record<CycleRole, string> = { must: 'MUST', should: 'SHOULD', could: 'COULD' }
+
+  function formatCycleList(items: CycleTaskItem[], filterLayer: CycleRole | null): string {
+    const layers: ReadonlyArray<CycleRole> = filterLayer ? [filterLayer] : CYCLE_ROLES
+    const buckets: Record<CycleRole, CycleTaskItem[]> = { must: [], should: [], could: [] }
+    const counts: Record<CycleRole, { active: number; done: number }> = {
+      must: { active: 0, done: 0 },
+      should: { active: 0, done: 0 },
+      could: { active: 0, done: 0 }
+    }
+    for (const item of items) {
+      buckets[item.cycleRole].push(item)
+      counts[item.cycleRole][item.completed ? 'done' : 'active']++
+    }
+    return layers.map((layer) => {
+      const { active, done } = counts[layer]
+      const header = `${ROLE_HEADERS[layer]} (${active} active, ${done} done)`
+      const table = formatTable(buckets[layer], [
+        { header: '#', value: (t) => t.taskCode || '-', align: 'right' },
+        { header: 'TITLE', value: (t) => t.title },
+        { header: 'PROJECT', value: (t) => t.projectCode ?? t.projectName },
+        { header: 'STATUS', value: (t) => t.status },
+        { header: 'DUE', value: (t) => formatDueDate(t.due) }
+      ])
+      return `${header}\n${table}`
+    }).join('\n\n')
+  }
+
+  async function runCycleList(opts: CycleListOpts, cmd: import('commander').Command): Promise<void> {
+    const globalOpts = cmd.optsWithGlobals()
+    const client = createClient(globalOpts)
+
+    let layer: CycleRole | null = null
+    if (opts.layer) {
+      const normalized = opts.layer.toLowerCase() as CycleRole
+      if (!CYCLE_ROLES.includes(normalized)) die('Invalid --layer. Use must, should, or could.')
+      layer = normalized
+    }
+
+    const status = (opts.status ?? 'active') as CycleStatusFilter
+    if (!CYCLE_STATUS_FILTERS.includes(status)) {
+      die('Invalid --status. Use active, done, or all.')
+    }
+
+    const params = new URLSearchParams()
+    if (layer) params.set('layer', layer)
+    params.set('status', status)
+    const path = `/api/v1/cycle/tasks?${params.toString()}`
+
+    try {
+      const items = await client.get<CycleTaskItem[]>(path)
+      printResult(items, {
+        json: globalOpts.json,
+        formatFn: () => formatCycleList(items, layer)
+      })
+    } catch (err: unknown) {
+      die((err as Error).message)
+    }
+  }
+
+  program
+    .command('12w')
+    .description('List 12WY cycle tasks (tasks with cycleRole set), grouped by MoSCoW layer')
+    .option('-l, --layer <role>', 'Filter to one layer: must, should, or could')
+    .option('-s, --status <status>', 'Filter by status: active (default), done, or all')
+    .action(runCycleList)
+
   // top5 cycle reset
   const cycleCmd = program
     .command('cycle')
     .description('12WY cycle operations')
+
+  cycleCmd
+    .command('list')
+    .description('List 12WY cycle tasks (alias for `top5 12w`)')
+    .option('-l, --layer <role>', 'Filter to one layer: must, should, or could')
+    .option('-s, --status <status>', 'Filter by status: active (default), done, or all')
+    .action(runCycleList)
 
   cycleCmd
     .command('reset')

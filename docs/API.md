@@ -171,6 +171,39 @@ Sets or clears the 12 Week Year cycle role on a project task. Used by the `biz` 
 
 **Errors:** `400` if `cycleRole` is not one of the allowed values. `404` if project or task not found.
 
+#### `GET /cycle/tasks`
+
+Returns all tasks with `cycleRole` set across non-archived projects, flattened into a single list. Mirrors the UI 12w tab — gives skills (`biz`) and scripts a single-call entry point instead of iterating per project.
+
+**Query params (all optional):**
+
+- `layer` — `must` | `should` | `could`. Filter to one MoSCoW layer.
+- `status` — `active` (default) | `done` | `all`. `active` skips completed tasks; `done` returns only completed; `all` returns both.
+
+**Sort order:** `must` → `should` → `could`. Within each layer: by `due` ascending (null `due` last) → `projectCode` (numeric-aware) → `taskNumber`.
+
+**Response:** `{ ok, data: CycleTaskItem[] }`
+
+```typescript
+interface CycleTaskItem {
+  id: string                  // task id
+  taskNumber: number | null
+  taskCode: string            // e.g. "PRJ-3", or "" if no project code
+  title: string
+  projectId: string
+  projectCode: string | null
+  projectName: string
+  cycleRole: 'must' | 'should' | 'could'
+  status: 'active' | 'in-progress' | 'up-next' | 'done'
+  due: string | null          // YYYY-MM-DD
+  important: boolean
+  beyondLimit: boolean
+  completed: boolean
+}
+```
+
+**Errors:** `400` if `layer` or `status` is not one of the allowed values.
+
 #### `POST /cycle/reset`
 
 Clears `cycleRole` on every task across all projects. Used at end-of-cycle (`/biz 12w end`) so the next cycle can re-classify projects from scratch. Logs a `cycle_closed` operation when at least one task is cleared.

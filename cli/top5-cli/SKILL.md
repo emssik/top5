@@ -275,6 +275,33 @@ top5 cycle-role PRJ-3 none     # clear (also: null / clear)
 top5 add PRJ "Title" -r must   # set role at creation
 ```
 
+**List cycle tasks** — single call returns every task with `cycleRole` across non-archived projects, grouped by MUST → SHOULD → COULD. Replaces iterating `top5 projects` + per-project `top5 tasks` + jq filter (15 calls → 1).
+
+```bash
+top5 12w                                # table: MUST / SHOULD / COULD with active+done counts
+top5 cycle list                         # alias
+top5 12w --json                         # CycleTaskItem[] for scripts / skill biz
+top5 12w --layer must                   # filter to one layer
+top5 12w --layer should --json          # context for biz mode-12w-week scoring
+top5 12w --status all                   # include completed (default: active only)
+top5 12w --status done                  # only completed (e.g. end-eval)
+```
+
+**Sort:** within layer by `due` ascending (null `due` last) → project code → task number. Symmetric with the UI 12w tab.
+
+**JSON shape (per task):**
+
+```typescript
+{
+  id, taskNumber, taskCode,                // e.g. "PRJ-3"
+  title, projectId, projectCode, projectName,
+  cycleRole: 'must' | 'should' | 'could',
+  status: 'active' | 'in-progress' | 'up-next' | 'done',
+  due: string | null,                      // YYYY-MM-DD
+  important, beyondLimit, completed
+}
+```
+
 **End-of-cycle reset** — clears `cycleRole` on every task across all projects so the next cycle can re-classify from scratch. Wywoływane raz na ~12 tygodni z `/biz 12w end`. Logs a `cycle_closed` operation entry.
 
 ```bash

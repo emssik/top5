@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.96.0] - 2026-05-06
+
+### Added
+
+- 12WY: CLI komenda `top5 12w` (alias `top5 cycle list`) listująca wszystkie taski cyklu z `cycleRole != null` w jednym wywołaniu, pogrupowane po MUST/SHOULD/COULD z licznikami active/done. Flagi `--layer must|should|could` (filtr warstwy) i `--status active|done|all` (default: `active`). Sortowanie: `must → should → could`, w warstwie po `due` (najbliższe pierwsze, null na końcu) → kod projektu → numer taska. Symetria z zakładką 12w w UI. Skill `biz` w trybie `mode-12w-week` i `mode-today` zastępuje 15× iteracji `top5 tasks <CODE>` jednym `top5 12w --json`. API: `GET /api/v1/cycle/tasks?layer=&status=` zwraca `CycleTaskItem[]`.
+
 ## [1.95.0] - 2026-05-06
 
 ### Added

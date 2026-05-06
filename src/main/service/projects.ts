@@ -1,5 +1,5 @@
-import type { CycleRole, Project, Task } from '../../shared/types'
-import { isCycleRole } from '../../shared/types'
+import type { CycleRole, CycleStatusFilter, CycleTaskItem, CycleTaskStatus, Project, Task } from '../../shared/types'
+import { isCycleRole, isCycleStatusFilter } from '../../shared/types'
 import { formatTaskId } from '../../shared/taskId'
 import {
   getData,
@@ -301,6 +301,73 @@ export function setTaskCycleRole(projectId: string, taskId: string, cycleRole: C
   }
   setData('projects', projects)
   return projects
+}
+
+function taskCycleStatus(task: Task): CycleTaskStatus {
+  if (task.completed) return 'done'
+  if (task.inProgress) return 'in-progress'
+  if (task.isToDoNext) return 'up-next'
+  return 'active'
+}
+
+function compareDue(a: string | null, b: string | null): number {
+  if (!a && !b) return 0
+  if (!a) return 1
+  if (!b) return -1
+  return a < b ? -1 : a > b ? 1 : 0
+}
+
+const LAYER_ORDER: Record<CycleRole, number> = { must: 0, should: 1, could: 2 }
+
+export function getCycleTasks(opts: {
+  layer?: CycleRole | null
+  status?: CycleStatusFilter
+} = {}): CycleTaskItem[] | ServiceError {
+  const { layer = null, status = 'active' } = opts
+  if (layer != null && !isCycleRole(layer)) return { error: 'validation' }
+  if (!isCycleStatusFilter(status)) return { error: 'validation' }
+
+  const projects = getData().projects
+  const items: CycleTaskItem[] = []
+  for (const project of projects) {
+    if (project.archivedAt) continue
+    for (const task of project.tasks) {
+      if (!task.cycleRole) continue
+      if (layer && task.cycleRole !== layer) continue
+      if (status === 'active' && task.completed) continue
+      if (status === 'done' && !task.completed) continue
+      items.push({
+        id: task.id,
+        taskNumber: task.taskNumber ?? null,
+        taskCode: formatTaskId(task.taskNumber, project.code) || '',
+        title: task.title,
+        projectId: project.id,
+        projectCode: project.code ?? null,
+        projectName: project.name,
+        cycleRole: task.cycleRole,
+        status: taskCycleStatus(task),
+        due: task.dueDate ?? null,
+        important: task.important ?? false,
+        beyondLimit: task.beyondLimit ?? false,
+        completed: task.completed
+      })
+    }
+  }
+
+  items.sort((a, b) => {
+    const layerCmp = LAYER_ORDER[a.cycleRole] - LAYER_ORDER[b.cycleRole]
+    if (layerCmp !== 0) return layerCmp
+    const dueCmp = compareDue(a.due, b.due)
+    if (dueCmp !== 0) return dueCmp
+    const codeA = a.projectCode ?? ''
+    const codeB = b.projectCode ?? ''
+    const codeCmp = codeA.localeCompare(codeB, undefined, { numeric: true })
+    if (codeCmp !== 0) return codeCmp
+    const numA = a.taskNumber ?? 0
+    const numB = b.taskNumber ?? 0
+    return numA - numB
+  })
+  return items
 }
 
 export function resetCycleRoles(layer?: CycleRole | null): { cleared: number; projects: Project[] } | ServiceError {

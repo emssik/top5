@@ -42,6 +42,18 @@ Odrzucone alternatywy:
 | `top5 done <task-code>` | Oznacz task jako completed (np. `PRJ-3`) |
 | `top5 undone <task-code>` | Cofnij completed |
 
+### 12 Week Year cycle (MoSCoW)
+
+| Komenda | Opis |
+|---------|------|
+| `top5 cycle-role <task-code> <role>` | Ustaw `cycleRole` (must/should/could/none) na tasku projektowym |
+| `top5 12w` | Lista taskow cyklu (cycleRole != null) pogrupowana po MUST/SHOULD/COULD |
+| `top5 cycle list` | Alias dla `top5 12w` |
+| `top5 12w --layer must\|should\|could` | Filtr do jednej warstwy |
+| `top5 12w --status active\|done\|all` | Filtr po statusie (default: `active`) |
+| `top5 cycle reset` | Wyczysc `cycleRole` na wszystkich taskach (end-of-cycle) |
+| `top5 cycle reset --layer <role>` | Wyczysc tylko jedna warstwe |
+
 ### Quick tasks
 
 | Komenda | Opis |
