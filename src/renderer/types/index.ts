@@ -1,5 +1,6 @@
 export type {
   Task,
+  CycleRole,
   RepeatSchedule,
   RepeatingTask,
   QuickTask,
@@ -74,6 +75,7 @@ declare global {
       setBeyondLimit: (input: { quickTaskIds?: string[]; pinnedTasks?: { projectId: string; taskId: string }[]; beyondLimit: boolean }) => Promise<void>
       toggleTaskInProgress: (projectId: string, taskId: string) => Promise<import('../../shared/types').Project[]>
       toggleTaskImportant: (projectId: string, taskId: string) => Promise<import('../../shared/types').Project[]>
+      setTaskCycleRole: (projectId: string, taskId: string, cycleRole: import('../../shared/types').CycleRole | null) => Promise<import('../../shared/types').Project[]>
       moveTaskToProject: (fromProjectId: string, toProjectId: string, taskId: string) => Promise<import('../../shared/types').Project[]>
       toggleTaskToDoNext: (projectId: string, taskId: string) => Promise<import('../../shared/types').Project[]>
       updateTaskDueDate: (projectId: string, taskId: string, dueDate: string | null) => Promise<import('../../shared/types').Project[]>

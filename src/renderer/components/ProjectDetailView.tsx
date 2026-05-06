@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { nanoid } from 'nanoid'
 import { useProjects } from '../hooks/useProjects'
-import type { Project, Task, ProjectLink } from '../types'
+import type { Project, Task, ProjectLink, CycleRole } from '../types'
+import { CYCLE_ROLE_LABELS } from '../../shared/types'
 import { calcProjectTime, calcTaskTime, formatCheckInTime } from '../utils/checkInTime'
 import { projectColorValue, normalizeProjectLinks, normalizeLinks, openProjectLink } from '../utils/projects'
 import TaskIdBadge from './TaskIdBadge'
@@ -27,7 +28,7 @@ interface Props {
 }
 
 export default function ProjectDetailView({ project, onEdit, onDelete }: Props) {
-  const { saveProject, deleteProject, setFocus, toggleTaskToDoNext, focusCheckIns, config, suspendProject, unsuspendProject } = useProjects()
+  const { saveProject, deleteProject, setFocus, toggleTaskToDoNext, setTaskCycleRole, focusCheckIns, config, suspendProject, unsuspendProject } = useProjects()
 
   const [newTaskTitle, setNewTaskTitle] = useState('')
   const [showAddInput, setShowAddInput] = useState(false)
@@ -37,6 +38,7 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingTitle, setEditingTitle] = useState('')
   const [dueDatePickerId, setDueDatePickerId] = useState<string | null>(null)
+  const [cycleRolePickerId, setCycleRolePickerId] = useState<string | null>(null)
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null)
   const [linksEditId, setLinksEditId] = useState<string | null>(null)
   const [myccCommentId, setMyccCommentId] = useState<string | null>(null)
@@ -203,6 +205,26 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
   }, [dueDatePickerId])
 
   useEffect(() => {
+    if (!cycleRolePickerId) return
+    const handleClick = (e: MouseEvent) => {
+      if ((e.target as HTMLElement).closest('.cycle-role-popover')) return
+      setCycleRolePickerId(null)
+    }
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setCycleRolePickerId(null)
+    }
+    const raf = requestAnimationFrame(() => {
+      window.addEventListener('click', handleClick)
+      window.addEventListener('keydown', handleKey)
+    })
+    return () => {
+      cancelAnimationFrame(raf)
+      window.removeEventListener('click', handleClick)
+      window.removeEventListener('keydown', handleKey)
+    }
+  }, [cycleRolePickerId])
+
+  useEffect(() => {
     if (!menuOpenId) return
     const handleClick = (e: MouseEvent) => {
       if ((e.target as HTMLElement).closest('.task-overflow-menu')) return
@@ -347,6 +369,13 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
           ) : (
             <div className={`task-title ${done || isRecentDone ? 'completed' : ''}`} onDoubleClick={() => !done && !isRecentDone && startEditing(task)}>
               <TaskIdBadge taskNumber={task.taskNumber} projectCode={project.code} kind="project" />
+              {task.cycleRole && !done && !isRecentDone && (
+                <span
+                  className={`cycle-role-badge cr-${task.cycleRole}`}
+                  title={`Cycle: ${task.cycleRole}`}
+                  onClick={(e) => { e.stopPropagation(); setMenuOpenId(null); setCycleRolePickerId(task.id) }}
+                >{CYCLE_ROLE_LABELS[task.cycleRole]}</span>
+              )}
               <Linkify text={task.title} />
               <TaskLinksIndicator links={task.links ?? []} projectName={project.name} />
             </div>
@@ -411,6 +440,7 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
                 <button className="task-overflow-item" onClick={() => { setFocus(project.id, task.id); setMenuOpenId(null) }}><span className="toi-icon">▶</span>Focus</button>
                 <button className="task-overflow-item" onClick={() => { setMenuOpenId(null); setDueDatePickerId(task.id) }}><span className="toi-icon">📅</span>{task.dueDate ? 'Change due date' : 'Set due date'}</button>
                 <button className="task-overflow-item" onClick={() => { setMenuOpenId(null); setLinksEditId(task.id) }}><span className="toi-icon">🔗</span>Links{task.links && task.links.length > 0 ? ` (${task.links.length})` : ''}</button>
+                <button className="task-overflow-item" onClick={() => { setMenuOpenId(null); setCycleRolePickerId(task.id) }}><span className="toi-icon">12W</span>Cycle role{task.cycleRole ? `: ${task.cycleRole}` : ''}</button>
                 <button className="task-overflow-item" onClick={() => handlePasteImageToTask(task.id)}><span className="toi-icon">📎</span>Paste image</button>
                 {config.obsidianStoragePath && (
                   <button className="task-overflow-item" onClick={() => { window.api.openTaskNote(task.id, task.title, project.name, formatTaskId(task.taskNumber, project.code), task.noteRef); setMenuOpenId(null) }}><span className="toi-icon">📝</span>Open note</button>
@@ -439,6 +469,23 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
                 onClose={() => setLinksEditId(null)}
                 projectName={project.name}
               />
+            )}
+            {cycleRolePickerId === task.id && (
+              <div className="cycle-role-popover" onClick={(e) => e.stopPropagation()}>
+                {(['must', 'should', 'could'] as CycleRole[]).map((r) => (
+                  <button
+                    key={r}
+                    className={`cycle-role-btn cr-${r} ${task.cycleRole === r ? 'active' : ''}`}
+                    onClick={() => { setTaskCycleRole(project.id, task.id, r); setCycleRolePickerId(null) }}
+                    title={r}
+                  >{CYCLE_ROLE_LABELS[r]}</button>
+                ))}
+                <button
+                  className={`cycle-role-btn cr-none ${!task.cycleRole ? 'active' : ''}`}
+                  onClick={() => { setTaskCycleRole(project.id, task.id, null); setCycleRolePickerId(null) }}
+                  title="Clear"
+                >—</button>
+              </div>
             )}
             {myccCommentId === task.id && (
               <MyccCommentPopover projectId={project.id} taskId={task.id} onClose={() => setMyccCommentId(null)} />

@@ -122,6 +122,15 @@ export function registerProjectRoutes(fastify: FastifyInstance): void {
     return { ok: true, data: result }
   })
 
+  fastify.put<{ Params: { pid: string; tid: string } }>('/api/v1/projects/:pid/tasks/:tid/cycle-role', async (request, reply) => {
+    const { cycleRole } = (request.body ?? {}) as { cycleRole?: unknown }
+    const value = cycleRole === undefined ? null : cycleRole
+    const result = projectService.setTaskCycleRole(request.params.pid, request.params.tid, value as Parameters<typeof projectService.setTaskCycleRole>[2])
+    if (isServiceError(result)) return reply.status(errorToHttpStatus(result.error)).send({ ok: false, error: result.error })
+    notifyAllWindows()
+    return { ok: true, data: result }
+  })
+
   fastify.post<{ Params: { pid: string; tid: string } }>('/api/v1/projects/:pid/tasks/:tid/toggle-important', async (request, reply) => {
     const result = projectService.toggleTaskImportant(request.params.pid, request.params.tid)
     if (isServiceError(result)) return reply.status(404).send({ ok: false, error: result.error })

@@ -1,4 +1,4 @@
-import type { Project, Task } from '../../shared/types'
+import type { CycleRole, Project, Task } from '../../shared/types'
 import { formatTaskId } from '../../shared/taskId'
 import {
   getData,
@@ -278,6 +278,27 @@ export function toggleTaskInProgress(projectId: string, taskId: string): Project
     task.inProgress = !task.inProgress
     setData('projects', projects)
   }
+  return projects
+}
+
+export function setTaskCycleRole(projectId: string, taskId: string, cycleRole: CycleRole | null): Project[] | ServiceError {
+  if (cycleRole !== null && cycleRole !== 'must' && cycleRole !== 'should' && cycleRole !== 'could') {
+    return { error: 'validation' }
+  }
+  const data = getData()
+  const projects = [...data.projects]
+  const project = projects.find((p) => p.id === projectId)
+  if (!project) return { error: 'not_found' }
+  const task = project.tasks.find((t) => t.id === taskId)
+  if (!task) return { error: 'not_found' }
+  const next = cycleRole ?? undefined
+  if (task.cycleRole === next) return projects
+  if (next === undefined) {
+    delete task.cycleRole
+  } else {
+    task.cycleRole = next
+  }
+  setData('projects', projects)
   return projects
 }
 

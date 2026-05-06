@@ -161,6 +161,16 @@ Toggles `important` flag on a task. The flag is purely visual — surfaces a sta
 
 **Errors:** `404` if project or task not found.
 
+#### `PUT /projects/:pid/tasks/:tid/cycle-role`
+
+Sets or clears the 12 Week Year cycle role on a project task. Used by the `biz` skill to flag tasks that represent the current cycle's MoSCoW projects (4 must / 4 should / 3 could). Lives per task (not per project) because a single project area can host both 12WY and non-12WY tasks.
+
+**Body:** `{ "cycleRole": "must" | "should" | "could" | null }` — `null` clears the role.
+
+**Response:** `{ ok, data: Project[] }`
+
+**Errors:** `400` if `cycleRole` is not one of the allowed values. `404` if project or task not found.
+
 #### `PUT /projects/pinned-tasks/reorder`
 
 Reorders pinned ("To Do Next") tasks.
@@ -348,6 +358,7 @@ Returns all non-archived habits as today-summary entries (schedule, today status
   toDoNextOrder?: number
   inProgress?: boolean
   important?: boolean
+  cycleRole?: 'must' | 'should' | 'could'
 }
 ```
 

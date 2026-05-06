@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { Project, QuickTask, AppConfig, FocusCheckIn, RepeatingTask, LockedTaskRef, WinsLockState, Habit } from '../types'
+import type { Project, QuickTask, AppConfig, FocusCheckIn, RepeatingTask, LockedTaskRef, WinsLockState, Habit, CycleRole } from '../types'
 import { assignMissingProjectColors, normalizeProject } from '../utils/projects'
 import { dateKey } from '../../shared/schedule'
 
@@ -35,6 +35,7 @@ interface ProjectsState {
   toggleQuickTaskImportant: (id: string) => Promise<void>
   toggleTaskInProgress: (projectId: string, taskId: string) => Promise<void>
   toggleTaskImportant: (projectId: string, taskId: string) => Promise<void>
+  setTaskCycleRole: (projectId: string, taskId: string, cycleRole: CycleRole | null) => Promise<void>
   moveTaskToProject: (fromProjectId: string, toProjectId: string, taskId: string) => Promise<void>
   toggleTaskToDoNext: (projectId: string, taskId: string) => Promise<void>
   saveRepeatingTask: (task: RepeatingTask) => Promise<void>
@@ -213,6 +214,11 @@ export const useProjects = create<ProjectsState>((set, get) => ({
 
   toggleTaskImportant: async (projectId: string, taskId: string) => {
     const updated = await window.api.toggleTaskImportant(projectId, taskId)
+    set({ projects: assignMissingProjectColors((updated ?? []).map(normalizeProject)) })
+  },
+
+  setTaskCycleRole: async (projectId: string, taskId: string, cycleRole: CycleRole | null) => {
+    const updated = await window.api.setTaskCycleRole(projectId, taskId, cycleRole)
     set({ projects: assignMissingProjectColors((updated ?? []).map(normalizeProject)) })
   },
 

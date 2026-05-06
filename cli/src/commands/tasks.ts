@@ -4,6 +4,8 @@ import { resolveProject, resolveProjectTask, resolveQuickTask, parseTaskCode } f
 import { printResult, formatTable, die, warn } from '../lib/output.js'
 import { parseDate, formatDueDate } from '../lib/date.js'
 
+type CycleRole = 'must' | 'should' | 'could'
+
 interface Task {
   id: string
   title: string
@@ -14,7 +16,17 @@ interface Task {
   beyondLimit?: boolean
   important?: boolean
   dueDate?: string | null
+  cycleRole?: CycleRole
   noteRef?: string
+}
+
+const CYCLE_ROLES: ReadonlyArray<CycleRole> = ['must', 'should', 'could']
+
+function parseCycleRole(input: string): CycleRole | null {
+  const normalized = input.toLowerCase()
+  if (normalized === 'none' || normalized === 'null' || normalized === 'clear') return null
+  if (CYCLE_ROLES.includes(normalized as CycleRole)) return normalized as CycleRole
+  throw new Error(`Invalid cycle role "${input}". Use one of: must, should, could, none`)
 }
 
 interface Project {
@@ -101,6 +113,7 @@ export function register(program: Command): void {
             lines.push(`Project:  ${project.name}`)
             lines.push(`Status:   ${taskStatus(task) || 'backlog'}`)
             lines.push(`Due:      ${task.dueDate ? formatDueDate(task.dueDate) : '(none)'}`)
+            lines.push(`Cycle:    ${task.cycleRole ?? '(none)'}`)
             return lines.join('\n')
           },
         })
@@ -118,6 +131,7 @@ export function register(program: Command): void {
     .option('-n, --note', 'Create a note for the task')
     .option('-d, --due <date>', 'Due date (YYYY-MM-DD, today, tomorrow, +Nd, mon-sun)')
     .option('-p, --pin', 'Pin task to today (mark as up-next)')
+    .option('-r, --cycle-role <role>', '12WY cycle role: must, should, could (or none to omit)')
     .action(async (projectRef: string, title: string, opts, cmd) => {
       const globalOpts = cmd.optsWithGlobals()
       const client = createClient(globalOpts)
@@ -130,6 +144,13 @@ export function register(program: Command): void {
           dueDate = parsed
         }
 
+        let cycleRole: CycleRole | undefined
+        if (opts.cycleRole) {
+          const parsed = parseCycleRole(opts.cycleRole)
+          if (parsed === null) die('Cannot set cycle-role to none on a new task. Just omit --cycle-role.')
+          cycleRole = parsed
+        }
+
         const project = await resolveProject(client, projectRef) as Project
 
         const newTask = {
@@ -138,6 +159,7 @@ export function register(program: Command): void {
           completed: false,
           createdAt: new Date().toISOString(),
           ...(dueDate ? { dueDate } : {}),
+          ...(cycleRole ? { cycleRole } : {}),
         }
 
         // Update project with new task appended
@@ -189,6 +211,7 @@ export function register(program: Command): void {
           formatFn: () => {
             let msg = `Created: ${code ? code + ' ' : ''}${title}`
             if (dueDate) msg += ` (due: ${formatDueDate(dueDate)})`
+            if (cycleRole) msg += ` [${cycleRole}]`
             if (pinned) msg += ` [pinned]`
             if (notePath) msg += `\nNote: ${notePath}`
             return msg
@@ -239,6 +262,40 @@ export function register(program: Command): void {
             const prefix = code !== '-' ? code + ' ' : ''
             if (dueDate === null) return `${prefix}${task.title} — due date cleared`
             return `${prefix}${task.title} — due: ${formatDueDate(dueDate)}`
+          },
+        })
+      } catch (err: unknown) {
+        die((err as Error).message)
+      }
+    })
+
+  // top5 cycle-role <task-code> <role>
+  program
+    .command('cycle-role')
+    .description('Set or clear the 12WY cycle role on a project task')
+    .argument('<task-code>', 'Task code (e.g. PRJ-3) or task ID')
+    .argument('<role>', 'Cycle role: must, should, could, or none')
+    .action(async (taskRef: string, roleInput: string, _opts, cmd) => {
+      const globalOpts = cmd.optsWithGlobals()
+      const client = createClient(globalOpts)
+
+      try {
+        const cycleRole = parseCycleRole(roleInput)
+        const { project, task } = await resolveProjectTask(client, taskRef) as {
+          project: Project
+          task: Task
+        }
+
+        await client.put(`/api/v1/projects/${project.id}/tasks/${task.id}/cycle-role`, { cycleRole })
+
+        const nextTask = { ...task, cycleRole: cycleRole ?? undefined }
+        printResult(nextTask, {
+          json: globalOpts.json,
+          formatFn: () => {
+            const code = taskCode(task, project.code)
+            const prefix = code !== '-' ? code + ' ' : ''
+            if (cycleRole === null) return `${prefix}${task.title} — cycle role cleared`
+            return `${prefix}${task.title} — cycle role: ${cycleRole}`
           },
         })
       } catch (err: unknown) {

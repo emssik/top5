@@ -1221,6 +1221,68 @@ body {
   transform: scale(1.15);
 }
 
+/* 12WY cycle role badge + popover */
+.cycle-role-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  margin-right: 4px;
+  color: #fff;
+  cursor: pointer;
+  flex-shrink: 0;
+  letter-spacing: 0;
+  user-select: none;
+  transition: transform 0.12s, filter 0.12s;
+}
+.cycle-role-badge:hover {
+  filter: brightness(1.1);
+  transform: scale(1.1);
+}
+.cycle-role-badge.cr-must { background: var(--pc-red); }
+.cycle-role-badge.cr-should { background: var(--pc-orange); }
+.cycle-role-badge.cr-could { background: var(--pc-blue); }
+
+.cycle-role-popover {
+  position: absolute;
+  right: 8px;
+  top: calc(100% + 4px);
+  z-index: 100;
+  background: var(--bg-card);
+  border: 1px solid var(--c-border);
+  border-radius: 8px;
+  padding: 6px;
+  display: flex;
+  gap: 4px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+}
+
+.cycle-role-btn {
+  width: 28px;
+  height: 24px;
+  border: 1px solid var(--c-border-subtle);
+  border-radius: 5px;
+  background: transparent;
+  color: var(--c-text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.1s, color 0.1s, border-color 0.1s;
+}
+.cycle-role-btn:hover { background: var(--c-hover, var(--bg-surface)); }
+.cycle-role-btn.cr-must.active { background: var(--pc-red); color: #fff; border-color: var(--pc-red); }
+.cycle-role-btn.cr-should.active { background: var(--pc-orange); color: #fff; border-color: var(--pc-orange); }
+.cycle-role-btn.cr-could.active { background: var(--pc-blue); color: #fff; border-color: var(--pc-blue); }
+.cycle-role-btn.cr-none.active { background: var(--c-text-muted); color: var(--bg-card); border-color: var(--c-text-muted); }
+
 .task-card:hover .task-overflow-trigger { opacity: 0.4; }
 .task-overflow-trigger:hover { opacity: 0.8 !important; }
 

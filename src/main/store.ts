@@ -1324,6 +1324,14 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
     return result
   })
 
+  ipcMain.handle('set-task-cycle-role', (_event, projectId: string, taskId: string, cycleRole: 'must' | 'should' | 'could' | null) => {
+    if (typeof projectId !== 'string' || typeof taskId !== 'string') return getData().projects
+    const result = projectService.setTaskCycleRole(projectId, taskId, cycleRole)
+    if (isServiceError(result)) return getData().projects
+    notifyAllWindows()
+    return result
+  })
+
   ipcMain.handle('move-task-to-project', (_event, fromProjectId: string, toProjectId: string, taskId: string) => {
     if (typeof fromProjectId !== 'string' || typeof toProjectId !== 'string' || typeof taskId !== 'string') return getData().projects
     const result = projectService.moveTaskToProject(fromProjectId, toProjectId, taskId)

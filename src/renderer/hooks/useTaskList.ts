@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useProjects } from './useProjects'
-import type { RepeatingTask, Task, Project, ProjectLink } from '../types'
+import type { RepeatingTask, Task, Project, ProjectLink, CycleRole } from '../types'
 import { normalizeLinks } from '../utils/projects'
 import { getRepeatingTaskProposals, getDueDateProposals, dateKey } from '../../shared/schedule'
 import type { DueDateProposal } from '../../shared/schedule'
@@ -23,6 +23,7 @@ export interface MergedTask {
   repeatingTaskId?: string | null
   inProgress?: boolean
   important?: boolean
+  cycleRole?: CycleRole
   noteRef?: string
   dueDate?: string | null
   beyondLimit?: boolean
@@ -137,6 +138,7 @@ export function useTaskList(opts?: { excludeFocus?: boolean }): TaskListData {
           taskNumber: t.taskNumber,
           inProgress: t.inProgress,
           important: t.important,
+          cycleRole: t.cycleRole,
           noteRef: t.noteRef,
           dueDate: t.dueDate,
           beyondLimit: t.beyondLimit,
@@ -210,6 +212,7 @@ export function useTaskList(opts?: { excludeFocus?: boolean }): TaskListData {
       projectId: project.id, projectName: project.name,
       projectCode: project.code, taskId: task.id,
       taskNumber: task.taskNumber, inProgress: task.inProgress, important: task.important,
+      cycleRole: task.cycleRole,
       noteRef: task.noteRef,
       links: (() => { const l = normalizeLinks(task.links); return l.length > 0 ? l : undefined })()
     }

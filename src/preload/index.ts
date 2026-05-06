@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer, webFrame } from 'electron'
 import type { IpcRendererEvent } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
-import type { AppConfig, FocusCheckIn, OperationLogEntry, Project, QuickTask, RepeatingTask, ApiConfig, EnergyTrackerConfig, LockedTaskRef, WinsLockState, WinEntry, StreakStats, Habit, HabitTodayEntry } from '../shared/types'
+import type { AppConfig, CycleRole, FocusCheckIn, OperationLogEntry, Project, QuickTask, RepeatingTask, ApiConfig, EnergyTrackerConfig, LockedTaskRef, WinsLockState, WinEntry, StreakStats, Habit, HabitTodayEntry } from '../shared/types'
 
 interface ShortcutActionPayload {
   action: string
@@ -46,6 +46,7 @@ export const api = {
   setBeyondLimit: (input: { quickTaskIds?: string[]; pinnedTasks?: { projectId: string; taskId: string }[]; beyondLimit: boolean }) => ipcRenderer.invoke('set-beyond-limit', input),
   toggleTaskInProgress: (projectId: string, taskId: string) => ipcRenderer.invoke('toggle-task-in-progress', projectId, taskId),
   toggleTaskImportant: (projectId: string, taskId: string) => ipcRenderer.invoke('toggle-task-important', projectId, taskId),
+  setTaskCycleRole: (projectId: string, taskId: string, cycleRole: CycleRole | null) => ipcRenderer.invoke('set-task-cycle-role', projectId, taskId, cycleRole),
   moveTaskToProject: (fromProjectId: string, toProjectId: string, taskId: string) => ipcRenderer.invoke('move-task-to-project', fromProjectId, toProjectId, taskId),
   toggleTaskToDoNext: (projectId: string, taskId: string) => ipcRenderer.invoke('toggle-task-to-do-next', projectId, taskId),
   updateTaskDueDate: (projectId: string, taskId: string, dueDate: string | null) => ipcRenderer.invoke('update-task-due-date', projectId, taskId, dueDate),

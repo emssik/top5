@@ -353,6 +353,93 @@ describe('Projects API', () => {
     })
   })
 
+  describe('PUT /projects/:pid/tasks/:tid/cycle-role', () => {
+    it('sets cycle role on a task', async () => {
+      const server = await getTestServer()
+      const project = makeProject({
+        tasks: [{ id: 'task-1', title: 'Task 1', completed: false, createdAt: new Date().toISOString() }]
+      })
+      await server.inject({ method: 'POST', url: '/api/v1/projects', headers: { ...auth, 'content-type': 'application/json' }, payload: project })
+
+      const res = await server.inject({
+        method: 'PUT',
+        url: `/api/v1/projects/${project.id}/tasks/task-1/cycle-role`,
+        headers: { ...auth, 'content-type': 'application/json' },
+        payload: { cycleRole: 'must' }
+      })
+      expect(res.statusCode).toBe(200)
+      const task = res.json().data.find((p: any) => p.id === project.id).tasks[0]
+      expect(task.cycleRole).toBe('must')
+    })
+
+    it('clears cycle role with null', async () => {
+      const server = await getTestServer()
+      const project = makeProject({
+        tasks: [{ id: 'task-1', title: 'Task 1', completed: false, cycleRole: 'should', createdAt: new Date().toISOString() }]
+      })
+      await server.inject({ method: 'POST', url: '/api/v1/projects', headers: { ...auth, 'content-type': 'application/json' }, payload: project })
+
+      const res = await server.inject({
+        method: 'PUT',
+        url: `/api/v1/projects/${project.id}/tasks/task-1/cycle-role`,
+        headers: { ...auth, 'content-type': 'application/json' },
+        payload: { cycleRole: null }
+      })
+      expect(res.statusCode).toBe(200)
+      const task = res.json().data.find((p: any) => p.id === project.id).tasks[0]
+      expect(task.cycleRole).toBeUndefined()
+    })
+
+    it('rejects invalid role with 400', async () => {
+      const server = await getTestServer()
+      const project = makeProject({
+        tasks: [{ id: 'task-1', title: 'Task 1', completed: false, createdAt: new Date().toISOString() }]
+      })
+      await server.inject({ method: 'POST', url: '/api/v1/projects', headers: { ...auth, 'content-type': 'application/json' }, payload: project })
+
+      const res = await server.inject({
+        method: 'PUT',
+        url: `/api/v1/projects/${project.id}/tasks/task-1/cycle-role`,
+        headers: { ...auth, 'content-type': 'application/json' },
+        payload: { cycleRole: 'bogus' }
+      })
+      expect(res.statusCode).toBe(400)
+    })
+
+    it('returns 404 for unknown task', async () => {
+      const server = await getTestServer()
+      const project = makeProject({ tasks: [] })
+      await server.inject({ method: 'POST', url: '/api/v1/projects', headers: { ...auth, 'content-type': 'application/json' }, payload: project })
+
+      const res = await server.inject({
+        method: 'PUT',
+        url: `/api/v1/projects/${project.id}/tasks/nonexistent/cycle-role`,
+        headers: { ...auth, 'content-type': 'application/json' },
+        payload: { cycleRole: 'must' }
+      })
+      expect(res.statusCode).toBe(404)
+    })
+
+    it('persists cycle role across full project update', async () => {
+      const server = await getTestServer()
+      const project = makeProject({
+        tasks: [{ id: 'task-1', title: 'Task 1', completed: false, createdAt: new Date().toISOString() }]
+      })
+      await server.inject({ method: 'POST', url: '/api/v1/projects', headers: { ...auth, 'content-type': 'application/json' }, payload: project })
+
+      await server.inject({
+        method: 'PUT',
+        url: `/api/v1/projects/${project.id}/tasks/task-1/cycle-role`,
+        headers: { ...auth, 'content-type': 'application/json' },
+        payload: { cycleRole: 'could' }
+      })
+
+      const res = await server.inject({ method: 'GET', url: `/api/v1/projects/${project.id}`, headers: auth })
+      expect(res.statusCode).toBe(200)
+      expect(res.json().data.tasks[0].cycleRole).toBe('could')
+    })
+  })
+
   describe('POST /projects/:pid/tasks/:tid/move', () => {
     it('moves task to another project', async () => {
       const server = await getTestServer()

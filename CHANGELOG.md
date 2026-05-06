@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.93.0] - 2026-05-06
+
+### Added
+
+- 12WY: pole `cycleRole` (must/should/could) na taskach projektowych — wsparcie dla skilla `biz`. UI: badge `M`/`S`/`C` przy tytule, popover wyboru w menu zadania (`⋯`) i w right-click context menu (Today + widok projektu). API: `PUT /projects/:pid/tasks/:tid/cycle-role`. CLI: `top5 cycle-role <task-code> <must|should|could|none>` oraz flaga `-r/--cycle-role` w `top5 add`. JSON output zwraca pole automatycznie.
+
 ## [1.92.1] - 2026-05-06
 
 ### Fixed

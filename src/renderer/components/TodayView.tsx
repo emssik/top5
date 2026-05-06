@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react'
 import { nanoid } from 'nanoid'
 import { useProjects } from '../hooks/useProjects'
 import { TodayHabitsSection } from './habits/TodayHabitsSection'
@@ -6,7 +6,8 @@ import { useTaskList } from '../hooks/useTaskList'
 import type { MergedTask } from '../hooks/useTaskList'
 import { calcQuickTaskTime, calcTaskTime, formatCheckInTime } from '../utils/checkInTime'
 import { STANDALONE_PROJECT_ID } from '../utils/constants'
-import type { Task, QuickTask, LockedTaskRef, WinEntry, ProjectLink } from '../types'
+import type { Task, QuickTask, LockedTaskRef, WinEntry, ProjectLink, CycleRole } from '../types'
+import { CYCLE_ROLE_LABELS } from '../../shared/types'
 import { projectColorValue, normalizeProjectLinks, normalizeLinks, openProjectLink } from '../utils/projects'
 import TaskLinksIndicator from './TaskLinksIndicator'
 import TaskLinksPopover from './TaskLinksPopover'
@@ -57,6 +58,37 @@ function formatCountdown(deadline: string): string {
   return `${mins}m`
 }
 
+function CycleRoleBadge({ role, onClick }: { role: CycleRole; onClick?: (e: ReactMouseEvent) => void }) {
+  return (
+    <span
+      className={`cycle-role-badge cr-${role}`}
+      title={`Cycle: ${role}`}
+      onClick={onClick}
+    >{CYCLE_ROLE_LABELS[role]}</span>
+  )
+}
+
+function CycleRolePopover({ current, onSelect }: { current: CycleRole | null | undefined; onSelect: (role: CycleRole | null) => void }) {
+  const roles: CycleRole[] = ['must', 'should', 'could']
+  return (
+    <div className="cycle-role-popover" onClick={(e) => e.stopPropagation()}>
+      {roles.map((role) => (
+        <button
+          key={role}
+          className={`cycle-role-btn cr-${role} ${current === role ? 'active' : ''}`}
+          onClick={() => onSelect(role)}
+          title={role}
+        >{CYCLE_ROLE_LABELS[role]}</button>
+      ))}
+      <button
+        className={`cycle-role-btn cr-none ${!current ? 'active' : ''}`}
+        onClick={() => onSelect(null)}
+        title="Clear"
+      >—</button>
+    </div>
+  )
+}
+
 function taskToRef(task: MergedTask): LockedTaskRef {
   if (task.kind === 'quick') {
     return { kind: 'quick', quickTaskId: task.id }
@@ -82,6 +114,7 @@ export default function TodayView({ onSelectView }: { onSelectView?: (view: stri
     toggleQuickTaskImportant,
     toggleTaskInProgress,
     toggleTaskImportant,
+    setTaskCycleRole,
     toggleTaskToDoNext,
     setFocus,
     acceptRepeatingProposal,
@@ -133,6 +166,7 @@ export default function TodayView({ onSelectView }: { onSelectView?: (view: stri
   const [dueDateDismissId, setDueDateDismissId] = useState<string | null>(null)
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null)
   const [dueDatePickerId, setDueDatePickerId] = useState<string | null>(null)
+  const [cycleRolePickerId, setCycleRolePickerId] = useState<string | null>(null)
   const [linksEditId, setLinksEditId] = useState<string | null>(null)
   const [myccCommentId, setMyccCommentId] = useState<string | null>(null)
   const hoveredTaskRef = useRef<{ task: MergedTask; section: string } | null>(null)
@@ -314,6 +348,26 @@ export default function TodayView({ onSelectView }: { onSelectView?: (view: stri
       window.removeEventListener('keydown', handleKey)
     }
   }, [dueDatePickerId])
+
+  useEffect(() => {
+    if (!cycleRolePickerId) return
+    const handleClick = (e: MouseEvent) => {
+      if ((e.target as HTMLElement).closest('.cycle-role-popover')) return
+      setCycleRolePickerId(null)
+    }
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setCycleRolePickerId(null)
+    }
+    const raf = requestAnimationFrame(() => {
+      window.addEventListener('click', handleClick)
+      window.addEventListener('keydown', handleKey)
+    })
+    return () => {
+      cancelAnimationFrame(raf)
+      window.removeEventListener('click', handleClick)
+      window.removeEventListener('keydown', handleKey)
+    }
+  }, [cycleRolePickerId])
 
   // Task keyboard shortcuts: work on hovered task OR context menu task
   useEffect(() => {
@@ -518,6 +572,11 @@ export default function TodayView({ onSelectView }: { onSelectView?: (view: stri
     }
     if (!task.projectId || !task.taskId) return
     await toggleTaskImportant(task.projectId, task.taskId)
+  }
+
+  const updateCycleRole = async (task: MergedTask, role: CycleRole | null) => {
+    if (task.kind !== 'pinned' || !task.projectId || !task.taskId) return
+    await setTaskCycleRole(task.projectId, task.taskId, role)
   }
 
   const updateTaskLinks = async (task: MergedTask, links: ProjectLink[]) => {
@@ -965,6 +1024,12 @@ export default function TodayView({ onSelectView }: { onSelectView?: (view: stri
                   onClick={(e) => { e.stopPropagation(); toggleImportant(task) }}
                 >★</button>
               )}
+              {task.cycleRole && task.kind === 'pinned' && (
+                <CycleRoleBadge
+                  role={task.cycleRole}
+                  onClick={(e) => { e.stopPropagation(); setMenuOpenId(null); setCycleRolePickerId(task.id) }}
+                />
+              )}
               <Linkify text={task.title} />
               <TaskLinksIndicator links={task.links ?? []} projectName={task.projectName} />
             </div>
@@ -1004,6 +1069,9 @@ export default function TodayView({ onSelectView }: { onSelectView?: (view: stri
             {task.kind === 'pinned' && task.projectId && task.taskId && (
               <button className="task-overflow-item" onClick={() => { setMenuOpenId(null); setLinksEditId(task.id) }}><span className="toi-icon">🔗</span>Links{task.links && task.links.length > 0 ? ` (${task.links.length})` : ''}</button>
             )}
+            {task.kind === 'pinned' && task.projectId && task.taskId && (
+              <button className="task-overflow-item" onClick={() => { setMenuOpenId(null); setCycleRolePickerId(task.id) }}><span className="toi-icon">12W</span>Cycle role{task.cycleRole ? `: ${task.cycleRole}` : ''}</button>
+            )}
             {config.obsidianStoragePath && (
               <button className="task-overflow-item" onClick={() => { window.api.openTaskNote(task.id, task.title, task.projectName, task.kind === 'quick' ? formatQuickTaskId(task.taskNumber) : formatTaskId(task.taskNumber, task.projectCode), task.noteRef); setMenuOpenId(null) }}><span className="toi-icon">📝</span>Open note</button>
             )}
@@ -1036,6 +1104,12 @@ export default function TodayView({ onSelectView }: { onSelectView?: (view: stri
             onSave={(links) => { updateTaskLinks(task, links); setLinksEditId(null) }}
             onClose={() => setLinksEditId(null)}
             projectName={task.projectName}
+          />
+        )}
+        {cycleRolePickerId === task.id && task.kind === 'pinned' && (
+          <CycleRolePopover
+            current={task.cycleRole}
+            onSelect={(role) => { updateCycleRole(task, role); setCycleRolePickerId(null) }}
           />
         )}
         {myccCommentId === task.id && task.projectId && task.taskId && (
@@ -1115,6 +1189,21 @@ export default function TodayView({ onSelectView }: { onSelectView?: (view: stri
           items.push({ label: 'Stop Focus', kbd: 'S', action: () => stopFocus() })
         }
         items.push({ label: task.important ? 'Unmark Important' : 'Mark Important', kbd: 'I', action: () => toggleImportant(task) })
+        if (task.kind === 'pinned' && task.projectId && task.taskId) {
+          const roles: { role: CycleRole; label: string }[] = [
+            { role: 'must', label: 'Cycle: Must' },
+            { role: 'should', label: 'Cycle: Should' },
+            { role: 'could', label: 'Cycle: Could' }
+          ]
+          for (const r of roles) {
+            if (task.cycleRole !== r.role) {
+              items.push({ label: r.label, kbd: '', action: () => updateCycleRole(task, r.role) })
+            }
+          }
+          if (task.cycleRole) {
+            items.push({ label: 'Cycle: Clear', kbd: '', action: () => updateCycleRole(task, null) })
+          }
+        }
         if (config.obsidianStoragePath) {
           items.push({ label: 'Open Note', kbd: 'N', action: () => window.api.openTaskNote(task.id, task.title, task.projectName, task.kind === 'quick' ? formatQuickTaskId(task.taskNumber) : formatTaskId(task.taskNumber, task.projectCode), task.noteRef) })
         }
@@ -1363,6 +1452,9 @@ export default function TodayView({ onSelectView }: { onSelectView?: (view: stri
                       title="Important — click to unmark"
                       onClick={(e) => { e.stopPropagation(); toggleImportant(focusTask) }}
                     >★</button>
+                  )}
+                  {focusTask.cycleRole && focusTask.kind === 'pinned' && (
+                    <CycleRoleBadge role={focusTask.cycleRole} />
                   )}
                   <Linkify text={focusTask.title} />
                 </div>

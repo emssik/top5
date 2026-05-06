@@ -1,3 +1,7 @@
+export type CycleRole = 'must' | 'should' | 'could'
+
+export const CYCLE_ROLE_LABELS: Record<CycleRole, string> = { must: 'M', should: 'S', could: 'C' }
+
 export interface Task {
   id: string
   title: string
@@ -13,6 +17,7 @@ export interface Task {
   dueDate?: string | null
   beyondLimit?: boolean
   important?: boolean
+  cycleRole?: CycleRole
   links?: ProjectLink[]
   images?: string[]
 }
