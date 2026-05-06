@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.92.1] - 2026-05-06
+
+### Fixed
+
+- Nudge popup („Masz zadania do zrobienia") obcinał listę zadań po rozwinięciu i nie dawał scrolla — teraz zawartość scrolluje się w środku okna o stałej wysokości.
+
 ## [1.92.0] - 2026-05-05
 
 ### Changed

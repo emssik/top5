@@ -2923,7 +2923,7 @@ textarea.input { font-family: inherit; }
 
 .pop {
   width: 100%;
-  height: 100%;
+  height: 100vh;
   background: var(--pop-bg);
   border-radius: 16px;
   border: 1px solid var(--pop-border);
