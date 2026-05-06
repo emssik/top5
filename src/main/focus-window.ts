@@ -200,7 +200,7 @@ export function stopFocusForCompletedTask(taskId: string): void {
 
 let _getMainWindow: (() => BrowserWindow | null) | null = null
 
-export function enterFocusMode(): { error: string } | undefined {
+export function enterFocusMode(options?: { resumeStartedAt?: number }): { error: string } | undefined {
   if (focusWindow && !focusWindow.isDestroyed()) return { error: 'already_in_focus' }
 
   const mainWin = _getMainWindow?.() ?? null
@@ -250,9 +250,17 @@ export function enterFocusMode(): { error: string } | undefined {
     focusWindow = null
   })
 
-  focusStartedAt = Date.now()
+  const isResume = typeof options?.resumeStartedAt === 'number'
+  focusStartedAt = isResume ? options!.resumeStartedAt! : Date.now()
   focusTaskInfo = resolveFocusTask()
-  appendOperation({ type: 'focus_started', ...focusTaskInfo })
+
+  // Persist startedAt so a restart can resume the same session
+  const cfg = getAppData().config
+  if (cfg.focusStartedAt !== focusStartedAt) {
+    setAppDataKey('config', { ...cfg, focusStartedAt })
+  }
+
+  appendOperation({ type: isResume ? 'focus_resumed' : 'focus_started', ...focusTaskInfo })
 
   startCheckInTimer()
   return undefined
@@ -275,7 +283,7 @@ export function exitFocusMode(): { error: string } | undefined {
 
   // Clear focus state in store before showing main window
   const { config } = getAppData()
-  setAppDataKey('config', { ...config, focusProjectId: null, focusTaskId: null })
+  setAppDataKey('config', { ...config, focusProjectId: null, focusTaskId: null, focusStartedAt: null })
 
   clearCheckInTimer()
   closeCheckInPopup()

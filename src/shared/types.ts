@@ -142,6 +142,7 @@ export interface AppConfig {
   actionShortcuts: Record<string, string>
   focusTaskId: string | null
   focusProjectId: string | null
+  focusStartedAt: number | null
   compactMode: boolean
   cleanView: boolean
   theme: 'light' | 'dark'
@@ -211,7 +212,7 @@ export type OperationType =
   | 'project_created' | 'project_updated' | 'project_archived' | 'project_unarchived'
   | 'project_suspended' | 'project_unsuspended' | 'project_deleted'
   | 'task_moved' | 'task_sent_to_mycc'
-  | 'focus_started' | 'focus_ended'
+  | 'focus_started' | 'focus_resumed' | 'focus_ended'
   | 'wins_day_won' | 'wins_day_lost'
   | 'wins_week_won' | 'wins_week_lost'
   | 'wins_month_won' | 'wins_month_lost'

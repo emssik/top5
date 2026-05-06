@@ -81,6 +81,7 @@ const defaultData: AppData = {
     },
     focusTaskId: null,
     focusProjectId: null,
+    focusStartedAt: null,
     compactMode: false,
     cleanView: false,
     theme: 'dark',
@@ -420,6 +421,7 @@ function normalizeAppConfig(value: unknown): AppConfig {
     actionShortcuts: normalizeActionShortcuts(value.actionShortcuts),
     focusTaskId: typeof value.focusTaskId === 'string' || value.focusTaskId === null ? value.focusTaskId : null,
     focusProjectId: typeof value.focusProjectId === 'string' || value.focusProjectId === null ? value.focusProjectId : null,
+    focusStartedAt: typeof value.focusStartedAt === 'number' && Number.isFinite(value.focusStartedAt) ? value.focusStartedAt : null,
     compactMode: typeof value.compactMode === 'boolean' ? value.compactMode : defaultData.config.compactMode,
     cleanView: typeof value.cleanView === 'boolean' ? value.cleanView : defaultData.config.cleanView,
     theme: value.theme === 'light' || value.theme === 'dark' ? value.theme : defaultData.config.theme,
@@ -459,6 +461,7 @@ function isValidAppConfig(value: unknown): value is AppConfig {
   if (typeof activeProjectsLimit !== 'number' || activeProjectsLimit < 1 || activeProjectsLimit > 20) return false
   if (!(typeof focusTaskId === 'string' || focusTaskId === null)) return false
   if (!(typeof focusProjectId === 'string' || focusProjectId === null)) return false
+  if (value.focusStartedAt !== undefined && value.focusStartedAt !== null && (typeof value.focusStartedAt !== 'number' || !Number.isFinite(value.focusStartedAt))) return false
   if (typeof compactMode !== 'boolean' || typeof cleanView !== 'boolean') return false
   if (typeof cleanViewFont !== 'string' || cleanViewFont.trim().length === 0 || cleanViewFont.length > 64) return false
   if (value.obsidianStoragePath !== undefined && typeof value.obsidianStoragePath !== 'string') return false

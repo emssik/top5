@@ -1,10 +1,10 @@
 import { app, BrowserWindow, shell, ipcMain, globalShortcut, screen, Menu, protocol, net } from 'electron'
 import { join, resolve } from 'path'
 import { is, optimizer, electronApp } from '@electron-toolkit/utils'
-import { registerStoreHandlers, getAppData, setAppDataKey, IS_DEV, getConfigDir } from './store'
+import { registerStoreHandlers, getAppData, setAppDataKey, IS_DEV, getConfigDir, loadCheckIns } from './store'
 import { getImagesDirPath } from './service/task-images'
 import { registerLauncherHandlers } from './launchers'
-import { registerFocusHandlers } from './focus-window'
+import { registerFocusHandlers, enterFocusMode } from './focus-window'
 import { registerGlobalShortcut, registerLocalShortcuts } from './shortcuts'
 import { registerQuickAddHandlers } from './quick-add-window'
 import { showWindowVisible } from './window-utils'
@@ -20,6 +20,9 @@ import { CLEAN_VIEW_ROW_HEIGHT, CLEAN_VIEW_SEPARATOR_HEIGHT, CLEAN_VIEW_HEADER_H
 let mainWindow: BrowserWindow | null = null
 let savedBounds: Electron.Rectangle | null = null
 let pendingDeepLinkUrl: string | null = null
+let pendingFocusResumeStartedAt: number | null = null
+
+const FOCUS_RESUME_CUTOFF_MS = 2 * 60 * 60 * 1000
 
 function showMainWindow(): void {
   if (!mainWindow || mainWindow.isDestroyed()) return
@@ -137,7 +140,13 @@ function createWindow(): void {
     if (process.platform === 'darwin') {
       mainWindow!.setWindowButtonVisibility(false)
     }
-    showWindowVisible(mainWindow!)
+    if (pendingFocusResumeStartedAt !== null) {
+      const resumeAt = pendingFocusResumeStartedAt
+      pendingFocusResumeStartedAt = null
+      enterFocusMode({ resumeStartedAt: resumeAt })
+    } else {
+      showWindowVisible(mainWindow!)
+    }
     if (pendingDeepLinkUrl) {
       handleDeepLink(pendingDeepLinkUrl)
       pendingDeepLinkUrl = null
@@ -229,10 +238,25 @@ app.whenReady().then(() => {
 
   registerStoreHandlers(ipcMain)
 
-  // Clear stale focus state from previous session (no focus window exists at startup)
+  // Decide whether to resume an interrupted focus session.
+  // Last activity = max(focusStartedAt, latest matching check-in). Within 2h → resume; else clear.
   const startupData = getAppData()
-  if (startupData.config.focusProjectId || startupData.config.focusTaskId) {
-    setAppDataKey('config', { ...startupData.config, focusProjectId: null, focusTaskId: null })
+  const { focusProjectId, focusTaskId, focusStartedAt } = startupData.config
+  if (focusProjectId && focusTaskId && typeof focusStartedAt === 'number') {
+    const lastCheckInMs = loadCheckIns()
+      .filter((c) => c.projectId === focusProjectId && c.taskId === focusTaskId)
+      .reduce((max, c) => {
+        const t = new Date(c.timestamp).getTime()
+        return Number.isFinite(t) && t > max ? t : max
+      }, 0)
+    const lastActivity = Math.max(focusStartedAt, lastCheckInMs)
+    if (Date.now() - lastActivity < FOCUS_RESUME_CUTOFF_MS) {
+      pendingFocusResumeStartedAt = focusStartedAt
+    } else {
+      setAppDataKey('config', { ...startupData.config, focusProjectId: null, focusTaskId: null, focusStartedAt: null })
+    }
+  } else if (focusProjectId || focusTaskId || focusStartedAt) {
+    setAppDataKey('config', { ...startupData.config, focusProjectId: null, focusTaskId: null, focusStartedAt: null })
   }
 
   registerLauncherHandlers(ipcMain)

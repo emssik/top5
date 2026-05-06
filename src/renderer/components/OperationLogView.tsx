@@ -29,6 +29,7 @@ const typeColors: Record<OperationType, string> = {
   task_moved: '#8b5cf6',
   task_sent_to_mycc: '#06b6d4',
   focus_started: '#a855f7',
+  focus_resumed: '#a855f7',
   focus_ended: '#a855f7',
   wins_day_won: '#4ade80',
   wins_day_lost: '#f87171',
@@ -67,6 +68,7 @@ function describeOperation(entry: OperationLogEntry): string {
     case 'project_unsuspended': return `Resumed Project ${entry.projectName ?? ''}`
     case 'project_deleted': return `Deleted Project ${entry.projectName ?? ''}`
     case 'focus_started': return `Focus started: ${task || entry.projectName || 'task'}${project}`
+    case 'focus_resumed': return `Focus resumed: ${task || entry.projectName || 'task'}${project}`
     case 'focus_ended': return `Focus ended: ${task || entry.projectName || 'task'}${details}`
     case 'wins_day_won': return `🏆 Day won!${details}`
     case 'wins_day_lost': return `Day lost${details}`

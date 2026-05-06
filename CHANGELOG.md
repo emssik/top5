@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.97.0] - 2026-05-06
+
+### Added
+
+- Focus: po restarcie aplikacji przerwana sesja focusa jest automatycznie wznawiana zamiast czyszczona. `focusStartedAt` jest persistowane w `data.yaml`, więc elapsed time leci dalej od oryginalnego startu. Cutoff bezpieczeństwa: 2h od ostatniej aktywności (start lub check-in dla tej samej pary project/task) — po dłuższej przerwie stan jest czyszczony jak dotąd. Check-in timer (15 min) resetuje się od momentu restartu. W activity logu wznowienie loguje się jako osobny event `focus_resumed`.
+
 ## [1.96.0] - 2026-05-06
 
 ### Added
