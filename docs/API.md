@@ -171,6 +171,16 @@ Sets or clears the 12 Week Year cycle role on a project task. Used by the `biz` 
 
 **Errors:** `400` if `cycleRole` is not one of the allowed values. `404` if project or task not found.
 
+#### `POST /cycle/reset`
+
+Clears `cycleRole` on every task across all projects. Used at end-of-cycle (`/biz 12w end`) so the next cycle can re-classify projects from scratch. Logs a `cycle_closed` operation when at least one task is cleared.
+
+**Body:** `{ "layer"?: "must" | "should" | "could" | null }` — omit or pass `null` to clear all layers; pass a layer name to clear only that one.
+
+**Response:** `{ ok, data: { cleared: number } }` — number of tasks whose `cycleRole` was removed.
+
+**Errors:** `400` if `layer` is not one of the allowed values.
+
 #### `PUT /projects/pinned-tasks/reorder`
 
 Reorders pinned ("To Do Next") tasks.

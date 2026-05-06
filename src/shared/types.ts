@@ -1,5 +1,11 @@
 export type CycleRole = 'must' | 'should' | 'could'
 
+export const CYCLE_ROLES: readonly CycleRole[] = ['must', 'should', 'could']
+
+export function isCycleRole(value: unknown): value is CycleRole {
+  return CYCLE_ROLES.includes(value as CycleRole)
+}
+
 export const CYCLE_ROLE_LABELS: Record<CycleRole, string> = { must: 'M', should: 'S', could: 'C' }
 
 export interface Task {
@@ -184,6 +190,7 @@ export type OperationType =
   | 'wins_week_won' | 'wins_week_lost'
   | 'wins_month_won' | 'wins_month_lost'
   | 'habit_ticked' | 'habit_freeze' | 'habit_skip'
+  | 'cycle_closed'
 
 export interface OperationLogEntry {
   id: string

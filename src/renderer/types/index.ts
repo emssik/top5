@@ -76,6 +76,7 @@ declare global {
       toggleTaskInProgress: (projectId: string, taskId: string) => Promise<import('../../shared/types').Project[]>
       toggleTaskImportant: (projectId: string, taskId: string) => Promise<import('../../shared/types').Project[]>
       setTaskCycleRole: (projectId: string, taskId: string, cycleRole: import('../../shared/types').CycleRole | null) => Promise<import('../../shared/types').Project[]>
+      resetCycleRoles: (layer?: import('../../shared/types').CycleRole | null) => Promise<{ cleared: number; projects: import('../../shared/types').Project[] }>
       moveTaskToProject: (fromProjectId: string, toProjectId: string, taskId: string) => Promise<import('../../shared/types').Project[]>
       toggleTaskToDoNext: (projectId: string, taskId: string) => Promise<import('../../shared/types').Project[]>
       updateTaskDueDate: (projectId: string, taskId: string, dueDate: string | null) => Promise<import('../../shared/types').Project[]>

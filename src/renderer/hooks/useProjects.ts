@@ -36,6 +36,7 @@ interface ProjectsState {
   toggleTaskInProgress: (projectId: string, taskId: string) => Promise<void>
   toggleTaskImportant: (projectId: string, taskId: string) => Promise<void>
   setTaskCycleRole: (projectId: string, taskId: string, cycleRole: CycleRole | null) => Promise<void>
+  resetCycleRoles: (layer?: CycleRole | null) => Promise<number>
   moveTaskToProject: (fromProjectId: string, toProjectId: string, taskId: string) => Promise<void>
   toggleTaskToDoNext: (projectId: string, taskId: string) => Promise<void>
   saveRepeatingTask: (task: RepeatingTask) => Promise<void>
@@ -220,6 +221,12 @@ export const useProjects = create<ProjectsState>((set, get) => ({
   setTaskCycleRole: async (projectId: string, taskId: string, cycleRole: CycleRole | null) => {
     const updated = await window.api.setTaskCycleRole(projectId, taskId, cycleRole)
     set({ projects: assignMissingProjectColors((updated ?? []).map(normalizeProject)) })
+  },
+
+  resetCycleRoles: async (layer?: CycleRole | null) => {
+    const result = await window.api.resetCycleRoles(layer ?? null)
+    set({ projects: assignMissingProjectColors((result.projects ?? []).map(normalizeProject)) })
+    return result.cleared
   },
 
   moveTaskToProject: async (fromProjectId: string, toProjectId: string, taskId: string) => {

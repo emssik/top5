@@ -1,4 +1,5 @@
 import type { CycleRole, Project, Task } from '../../shared/types'
+import { isCycleRole } from '../../shared/types'
 import { formatTaskId } from '../../shared/taskId'
 import {
   getData,
@@ -282,7 +283,7 @@ export function toggleTaskInProgress(projectId: string, taskId: string): Project
 }
 
 export function setTaskCycleRole(projectId: string, taskId: string, cycleRole: CycleRole | null): Project[] | ServiceError {
-  if (cycleRole !== null && cycleRole !== 'must' && cycleRole !== 'should' && cycleRole !== 'could') {
+  if (cycleRole !== null && !isCycleRole(cycleRole)) {
     return { error: 'validation' }
   }
   const data = getData()
@@ -300,6 +301,31 @@ export function setTaskCycleRole(projectId: string, taskId: string, cycleRole: C
   }
   setData('projects', projects)
   return projects
+}
+
+export function resetCycleRoles(layer?: CycleRole | null): { cleared: number; projects: Project[] } | ServiceError {
+  if (layer != null && !isCycleRole(layer)) {
+    return { error: 'validation' }
+  }
+  const data = getData()
+  const projects = [...data.projects]
+  let cleared = 0
+  for (const project of projects) {
+    for (const task of project.tasks) {
+      if (task.cycleRole === undefined) continue
+      if (layer != null && task.cycleRole !== layer) continue
+      delete task.cycleRole
+      cleared++
+    }
+  }
+  if (cleared > 0) {
+    setData('projects', projects)
+    appendOperation({
+      type: 'cycle_closed',
+      details: `cleared=${cleared}${layer ? `, layer=${layer}` : ''}`
+    })
+  }
+  return { cleared, projects }
 }
 
 export function toggleTaskImportant(projectId: string, taskId: string): Project[] | ServiceError {

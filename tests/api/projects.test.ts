@@ -440,6 +440,100 @@ describe('Projects API', () => {
     })
   })
 
+  describe('POST /cycle/reset', () => {
+    it('clears cycleRole on all tasks across projects', async () => {
+      const server = await getTestServer()
+      const p1 = makeProject({
+        name: 'P1',
+        tasks: [
+          { id: 't1', title: 'T1', completed: false, cycleRole: 'must', createdAt: new Date().toISOString() },
+          { id: 't2', title: 'T2', completed: true, cycleRole: 'should', createdAt: new Date().toISOString() }
+        ]
+      })
+      const p2 = makeProject({
+        name: 'P2',
+        tasks: [
+          { id: 't3', title: 'T3', completed: false, cycleRole: 'could', createdAt: new Date().toISOString() },
+          { id: 't4', title: 'T4', completed: false, createdAt: new Date().toISOString() }
+        ]
+      })
+      await server.inject({ method: 'POST', url: '/api/v1/projects', headers: { ...auth, 'content-type': 'application/json' }, payload: p1 })
+      await server.inject({ method: 'POST', url: '/api/v1/projects', headers: { ...auth, 'content-type': 'application/json' }, payload: p2 })
+
+      const res = await server.inject({
+        method: 'POST',
+        url: '/api/v1/cycle/reset',
+        headers: { ...auth, 'content-type': 'application/json' },
+        payload: {}
+      })
+      expect(res.statusCode).toBe(200)
+      expect(res.json().data.cleared).toBe(3)
+
+      const verify = await server.inject({ method: 'GET', url: '/api/v1/projects', headers: auth })
+      const projects = verify.json().data
+      for (const p of projects) {
+        for (const t of p.tasks) {
+          expect(t.cycleRole).toBeUndefined()
+        }
+      }
+    })
+
+    it('clears only the specified layer', async () => {
+      const server = await getTestServer()
+      const project = makeProject({
+        tasks: [
+          { id: 't1', title: 'T1', completed: false, cycleRole: 'must', createdAt: new Date().toISOString() },
+          { id: 't2', title: 'T2', completed: false, cycleRole: 'should', createdAt: new Date().toISOString() },
+          { id: 't3', title: 'T3', completed: false, cycleRole: 'could', createdAt: new Date().toISOString() }
+        ]
+      })
+      await server.inject({ method: 'POST', url: '/api/v1/projects', headers: { ...auth, 'content-type': 'application/json' }, payload: project })
+
+      const res = await server.inject({
+        method: 'POST',
+        url: '/api/v1/cycle/reset',
+        headers: { ...auth, 'content-type': 'application/json' },
+        payload: { layer: 'should' }
+      })
+      expect(res.statusCode).toBe(200)
+      expect(res.json().data.cleared).toBe(1)
+
+      const verify = await server.inject({ method: 'GET', url: `/api/v1/projects/${project.id}`, headers: auth })
+      const tasks = verify.json().data.tasks
+      expect(tasks.find((t: any) => t.id === 't1').cycleRole).toBe('must')
+      expect(tasks.find((t: any) => t.id === 't2').cycleRole).toBeUndefined()
+      expect(tasks.find((t: any) => t.id === 't3').cycleRole).toBe('could')
+    })
+
+    it('returns cleared=0 when no tasks have cycleRole', async () => {
+      const server = await getTestServer()
+      const project = makeProject({
+        tasks: [{ id: 't1', title: 'T1', completed: false, createdAt: new Date().toISOString() }]
+      })
+      await server.inject({ method: 'POST', url: '/api/v1/projects', headers: { ...auth, 'content-type': 'application/json' }, payload: project })
+
+      const res = await server.inject({
+        method: 'POST',
+        url: '/api/v1/cycle/reset',
+        headers: { ...auth, 'content-type': 'application/json' },
+        payload: {}
+      })
+      expect(res.statusCode).toBe(200)
+      expect(res.json().data.cleared).toBe(0)
+    })
+
+    it('rejects invalid layer with 400', async () => {
+      const server = await getTestServer()
+      const res = await server.inject({
+        method: 'POST',
+        url: '/api/v1/cycle/reset',
+        headers: { ...auth, 'content-type': 'application/json' },
+        payload: { layer: 'bogus' }
+      })
+      expect(res.statusCode).toBe(400)
+    })
+  })
+
   describe('POST /projects/:pid/tasks/:tid/move', () => {
     it('moves task to another project', async () => {
       const server = await getTestServer()

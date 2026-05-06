@@ -17,7 +17,9 @@ description: >
   "repeating", "repeating tasks", "recurring", "cykliczne", "powtarzalne",
   "usuń task", "skasuj task", "usuń zadanie",
   "habits", "nawyki", "list habits", "pokaż habity", "co ma za nawyki", "streak", "chain",
-  "don't break the chain".
+  "don't break the chain",
+  "cycle role", "cycle-role", "12w", "12wy", "12 week year", "moscow", "must should could",
+  "cycle reset", "close cycle", "end of cycle", "zamknij cykl", "reset cyklu", "must", "should", "could".
 ---
 
 # top5-cli
@@ -87,6 +89,7 @@ top5 add PRJ "Task title" --due tomorrow
 top5 add PRJ "Task title" --due 2026-04-15
 top5 add PRJ "Task title" --pin     # pin to today (mark as up-next)
 top5 add PRJ "Task title" --note    # also create Obsidian note
+top5 add PRJ "Task title" -r must   # 12WY cycle role: must | should | could
 top5 add PRJ "Task title" --json
 ```
 
@@ -259,6 +262,31 @@ exist, what's on today, and how the streaks are doing.
 
 **Habit IDs in the `#` column** use the `HB-xxx` prefix (first 3 chars of the UUID) —
 purely decorative for the table; CLI does not accept these as references today.
+
+### 12 Week Year cycle (MoSCoW)
+
+Tasks can carry a 12WY `cycleRole`: `must`, `should`, `could`, or none. Used by the `biz` skill to flag the current cycle's MoSCoW projects (4 must / 4 should / 3 could). Lives per task, not per project.
+
+```bash
+top5 cycle-role PRJ-3 must     # set role
+top5 cycle-role PRJ-3 should
+top5 cycle-role PRJ-3 could
+top5 cycle-role PRJ-3 none     # clear (also: null / clear)
+top5 add PRJ "Title" -r must   # set role at creation
+```
+
+**End-of-cycle reset** — clears `cycleRole` on every task across all projects so the next cycle can re-classify from scratch. Wywoływane raz na ~12 tygodni z `/biz 12w end`. Logs a `cycle_closed` operation entry.
+
+```bash
+top5 cycle reset                       # interactive: prompts "yes" to confirm
+top5 cycle reset --yes                 # skip prompt (for automation)
+top5 cycle reset -y --layer must       # only clear must tasks (e.g. when promoting could→must)
+top5 cycle reset -y --layer should
+top5 cycle reset -y --layer could
+top5 cycle reset --yes --json          # { cleared: N }
+```
+
+`--yes` is required when stdin is not a TTY (piped / non-interactive). Output: `Cleared cycleRole on N task(s).`
 
 ### Health check
 

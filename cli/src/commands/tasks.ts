@@ -1,4 +1,5 @@
 import type { Command } from 'commander'
+import { createInterface } from 'node:readline/promises'
 import { createClient } from '../lib/client.js'
 import { resolveProject, resolveProjectTask, resolveQuickTask, parseTaskCode } from '../lib/resolve.js'
 import { printResult, formatTable, die, warn } from '../lib/output.js'
@@ -297,6 +298,56 @@ export function register(program: Command): void {
             if (cycleRole === null) return `${prefix}${task.title} — cycle role cleared`
             return `${prefix}${task.title} — cycle role: ${cycleRole}`
           },
+        })
+      } catch (err: unknown) {
+        die((err as Error).message)
+      }
+    })
+
+  // top5 cycle reset
+  const cycleCmd = program
+    .command('cycle')
+    .description('12WY cycle operations')
+
+  cycleCmd
+    .command('reset')
+    .description('Clear cycleRole on all tasks (end-of-cycle reset)')
+    .option('-y, --yes', 'Skip confirmation prompt')
+    .option('-l, --layer <role>', 'Reset only one layer: must, should, or could')
+    .action(async (opts, cmd) => {
+      const globalOpts = cmd.optsWithGlobals()
+      const client = createClient(globalOpts)
+
+      let layer: CycleRole | null = null
+      if (opts.layer) {
+        const parsed = parseCycleRole(opts.layer)
+        if (parsed === null) die('Invalid --layer. Use must, should, or could.')
+        layer = parsed
+      }
+
+      if (!opts.yes) {
+        if (!process.stdin.isTTY) {
+          die('Refusing to reset without --yes (no interactive terminal).')
+        }
+        const scope = layer ? `layer "${layer}"` : 'ALL layers'
+        const rl = createInterface({ input: process.stdin, output: process.stderr })
+        let answer = ''
+        try {
+          answer = await rl.question(`Reset cycleRole on ${scope}? Type "yes" to confirm: `)
+        } finally {
+          rl.close()
+        }
+        if (answer.trim().toLowerCase() !== 'yes') die('Aborted.')
+      }
+
+      try {
+        const result = await client.post<{ cleared: number }>(
+          '/api/v1/cycle/reset',
+          layer ? { layer } : {}
+        )
+        printResult(result, {
+          json: globalOpts.json,
+          formatFn: () => `Cleared cycleRole on ${result.cleared} task${result.cleared === 1 ? '' : 's'}${layer ? ` (layer: ${layer})` : ''}.`,
         })
       } catch (err: unknown) {
         die((err as Error).message)

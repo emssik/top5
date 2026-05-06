@@ -1332,6 +1332,14 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
     return result
   })
 
+  ipcMain.handle('reset-cycle-roles', (_event, layer?: 'must' | 'should' | 'could' | null) => {
+    const value = layer === undefined ? null : layer
+    const result = projectService.resetCycleRoles(value)
+    if (isServiceError(result)) return { cleared: 0, projects: getData().projects }
+    if (result.cleared > 0) notifyAllWindows()
+    return result
+  })
+
   ipcMain.handle('move-task-to-project', (_event, fromProjectId: string, toProjectId: string, taskId: string) => {
     if (typeof fromProjectId !== 'string' || typeof toProjectId !== 'string' || typeof taskId !== 'string') return getData().projects
     const result = projectService.moveTaskToProject(fromProjectId, toProjectId, taskId)

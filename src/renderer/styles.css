@@ -1283,6 +1283,22 @@ body {
 .cycle-role-btn.cr-could.active { background: var(--pc-blue); color: #fff; border-color: var(--pc-blue); }
 .cycle-role-btn.cr-none.active { background: var(--c-text-muted); color: var(--bg-card); border-color: var(--c-text-muted); }
 
+.cycle-close-btn {
+  margin-left: 12px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 6px;
+  background: rgba(239, 68, 68, 0.1);
+  color: #f87171;
+  cursor: pointer;
+}
+
+.cycle-close-btn:hover { background: rgba(239, 68, 68, 0.2); }
+
 .task-card:hover .task-overflow-trigger { opacity: 0.4; }
 .task-overflow-trigger:hover { opacity: 0.8 !important; }
 

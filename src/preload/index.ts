@@ -47,6 +47,7 @@ export const api = {
   toggleTaskInProgress: (projectId: string, taskId: string) => ipcRenderer.invoke('toggle-task-in-progress', projectId, taskId),
   toggleTaskImportant: (projectId: string, taskId: string) => ipcRenderer.invoke('toggle-task-important', projectId, taskId),
   setTaskCycleRole: (projectId: string, taskId: string, cycleRole: CycleRole | null) => ipcRenderer.invoke('set-task-cycle-role', projectId, taskId, cycleRole),
+  resetCycleRoles: (layer?: CycleRole | null) => ipcRenderer.invoke('reset-cycle-roles', layer ?? null),
   moveTaskToProject: (fromProjectId: string, toProjectId: string, taskId: string) => ipcRenderer.invoke('move-task-to-project', fromProjectId, toProjectId, taskId),
   toggleTaskToDoNext: (projectId: string, taskId: string) => ipcRenderer.invoke('toggle-task-to-do-next', projectId, taskId),
   updateTaskDueDate: (projectId: string, taskId: string, dueDate: string | null) => ipcRenderer.invoke('update-task-due-date', projectId, taskId, dueDate),

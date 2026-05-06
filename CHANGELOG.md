@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.95.0] - 2026-05-06
+
+### Added
+
+- 12WY: end-of-cycle reset zerujący `cycleRole` na wszystkich taskach (włącznie z completed) — do wywoływania raz na ~12 tygodni z `/biz 12w end`. CLI: `top5 cycle reset` z confirmation prompt, flagi `--yes` (skip prompt) i `--layer must|should|could` (zerowanie pojedynczej warstwy). API: `POST /api/v1/cycle/reset` zwraca `{ cleared: N }`. UI: przycisk „Close cycle" w nagłówku zakładki 12w (widoczny tylko gdy są taski z cycleRole). Operacja loguje event `cycle_closed` w `operations.jsonl`.
+
 ## [1.94.0] - 2026-05-06
 
 ### Added

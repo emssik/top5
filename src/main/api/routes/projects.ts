@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify'
 import type { Task } from '../../../shared/types'
+import { isCycleRole } from '../../../shared/types'
 import { getData, notifyAllWindows } from '../../store'
 import { stopFocusForCompletedTask } from '../../focus-window'
 import * as projectService from '../../service/projects'
@@ -129,6 +130,17 @@ export function registerProjectRoutes(fastify: FastifyInstance): void {
     if (isServiceError(result)) return reply.status(errorToHttpStatus(result.error)).send({ ok: false, error: result.error })
     notifyAllWindows()
     return { ok: true, data: result }
+  })
+
+  fastify.post('/api/v1/cycle/reset', async (request, reply) => {
+    const { layer } = (request.body ?? {}) as { layer?: unknown }
+    if (layer != null && !isCycleRole(layer)) {
+      return reply.status(400).send({ ok: false, error: 'validation' })
+    }
+    const result = projectService.resetCycleRoles(layer ?? null)
+    if (isServiceError(result)) return reply.status(errorToHttpStatus(result.error)).send({ ok: false, error: result.error })
+    if (result.cleared > 0) notifyAllWindows()
+    return { ok: true, data: { cleared: result.cleared } }
   })
 
   fastify.post<{ Params: { pid: string; tid: string } }>('/api/v1/projects/:pid/tasks/:tid/toggle-important', async (request, reply) => {

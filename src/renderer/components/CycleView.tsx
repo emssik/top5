@@ -64,6 +64,7 @@ export default function CycleView() {
     toggleTaskImportant,
     toggleTaskToDoNext,
     setTaskCycleRole,
+    resetCycleRoles,
     focusCheckIns,
     config
   } = useProjects()
@@ -354,6 +355,14 @@ export default function CycleView() {
 
   const totalActive = ROLES.reduce((sum, r) => sum + totals[r].active, 0)
   const totalDone = ROLES.reduce((sum, r) => sum + totals[r].done, 0)
+  const totalAny = totalActive + totalDone
+
+  async function handleCloseCycle() {
+    const msg = `Close cycle? This clears the M/S/C role on all ${totalAny} task${totalAny === 1 ? '' : 's'} (including completed). The tasks themselves stay. Cannot be undone.`
+    if (!window.confirm(msg)) return
+    const cleared = await resetCycleRoles(null)
+    window.alert(`Cycle closed. Cleared cycleRole on ${cleared} task${cleared === 1 ? '' : 's'}.`)
+  }
 
   return (
     <div>
@@ -363,6 +372,16 @@ export default function CycleView() {
         <span style={{ opacity: 0.5, marginLeft: 'auto', textTransform: 'none', letterSpacing: 0 }}>
           {totalActive} active{totalDone > 0 ? `, ${totalDone} done` : ''}
         </span>
+        {totalAny > 0 && (
+          <button
+            type="button"
+            className="cycle-close-btn"
+            onClick={handleCloseCycle}
+            title="Clear cycleRole on all tasks (end-of-cycle reset)"
+          >
+            Close cycle
+          </button>
+        )}
       </div>
 
       {totalActive === 0 && totalDone === 0 ? (

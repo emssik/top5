@@ -38,7 +38,8 @@ const typeColors: Record<OperationType, string> = {
   wins_month_lost: '#f87171',
   habit_ticked: '#3b82f6',
   habit_freeze: '#a855f7',
-  habit_skip: '#f59e0b'
+  habit_skip: '#f59e0b',
+  cycle_closed: '#f59e0b'
 }
 
 function describeOperation(entry: OperationLogEntry): string {
@@ -76,6 +77,7 @@ function describeOperation(entry: OperationLogEntry): string {
     case 'habit_ticked': return `🔥 ${entry.taskTitle ?? ''}: done${details}`
     case 'habit_freeze': return `🛡 ${entry.taskTitle ?? ''}: freeze${details}`
     case 'habit_skip': return `⏸ ${entry.taskTitle ?? ''}: skip${details}`
+    case 'cycle_closed': return `12W cycle closed${details}`
     default: return entry.type
   }
 }
