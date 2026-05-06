@@ -14,6 +14,7 @@ import TodayView from './TodayView'
 import ProjectDetailView from './ProjectDetailView'
 import RepeatView from './RepeatView'
 import InlineStatsView from './InlineStatsView'
+import CycleView from './CycleView'
 import { HabitsView } from './habits/HabitsView'
 
 export default function Dashboard() {
@@ -267,6 +268,7 @@ export default function Dashboard() {
           )}
 
           {activeView === 'today' && <TodayView onSelectView={setActiveView} />}
+          {activeView === 'cycle' && <CycleView />}
           {activeView === 'repeat' && <RepeatView />}
           {activeView === 'habits' && <HabitsView />}
           {activeView === 'stats' && <InlineStatsView />}

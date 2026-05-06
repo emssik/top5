@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.94.0] - 2026-05-06
+
+### Added
+
+- 12WY: nowa zakładka „12w" w sidebarze grupuje taski projektowe po `cycleRole` (Must / Should / Could). Liczniki active/done w nagłówku globalnym i per warstwa, sortowanie po due (najbliższe pierwsze) → kod taska, pełny zestaw akcji jak w Today (focus, in-progress, important, pin, due, links, beyond, edit cycle role, send to MyCC, remove from cycle).
+
 ## [1.93.0] - 2026-05-06
 
 ### Added
