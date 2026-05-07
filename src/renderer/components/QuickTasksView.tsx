@@ -13,12 +13,7 @@ import { dateKey } from '../../shared/schedule'
 import { Linkify } from './Linkify'
 import TaskLinksIndicator from './TaskLinksIndicator'
 import { isRecentlyCompleted } from '../utils/recentlyCompleted'
-
-function continuationTitle(title: string): string {
-  const match = title.match(/^\(✂(\d+)\) (.*)$/)
-  if (match) return `(✂${Number(match[1]) + 1}) ${match[2]}`
-  return `(✂1) ${title}`
-}
+import { nextSplitTitle, cleanSplitTitle, buildSplitTaskCopy, buildSplitQuickTaskCopy } from '../utils/splitTask'
 
 interface Props {
   showAll?: boolean
@@ -251,7 +246,7 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
 
   const handleSplit = async (task: MergedTask) => {
     if (task.repeatingTaskId) return
-    const newTitle = continuationTitle(task.title)
+    const newTitle = nextSplitTitle(task.title)
     const noteRef = task.noteRef || (() => {
       const badge = task.kind === 'quick'
         ? formatQuickTaskId(task.taskNumber)
@@ -263,28 +258,17 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
       const project = useProjects.getState().projects.find((p) => p.id === task.projectId)
       if (!project) return
       const origTask = project.tasks.find((t) => t.id === task.taskId)
-      const newTask: Task = {
-        id: nanoid(),
-        title: newTitle,
-        completed: false,
-        createdAt: new Date().toISOString(),
-        isToDoNext: true,
-        toDoNextOrder: origTask?.toDoNextOrder ?? task.order,
-        beyondLimit: true,
-        noteRef
-      }
+      if (!origTask) return
+      const newTask: Task = buildSplitTaskCopy(origTask, {
+        newTitle,
+        noteRef,
+        toDoNextOrderFallback: task.order
+      })
       await saveProject({ ...project, tasks: [...project.tasks, newTask] })
     } else if (task.kind === 'quick') {
-      const qt: QuickTask = {
-        id: nanoid(),
-        title: newTitle,
-        completed: false,
-        createdAt: new Date().toISOString(),
-        completedAt: null,
-        order: task.order,
-        beyondLimit: true,
-        noteRef
-      }
+      const origQt = useProjects.getState().quickTasks.find((q) => q.id === task.id)
+      if (!origQt) return
+      const qt: QuickTask = buildSplitQuickTaskCopy(origQt, { newTitle, noteRef })
       await saveQuickTask(qt)
     }
     await handleComplete(task)
@@ -417,7 +401,7 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
                 {task.important && !isCompleted && (
                   <span style={{ color: 'var(--pc-amber)', marginRight: 4 }} title="Important">★</span>
                 )}
-                <Linkify text={cleanView ? task.title.replace(/^\(✂\d+\)\s*/, '') : task.title} />
+                <Linkify text={cleanView ? cleanSplitTitle(task.title) : task.title} />
                 <TaskLinksIndicator links={task.links ?? []} projectName={task.projectName} />
                 {isOverdue && task.dueDate && (
                   <span

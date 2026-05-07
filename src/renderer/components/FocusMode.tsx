@@ -5,8 +5,9 @@ import { normalizeProjectLinks, normalizeLinks, openProjectLink, projectColorVal
 import { checkInMinutes } from '../utils/checkInTime'
 import { STANDALONE_PROJECT_ID } from '../utils/constants'
 import type { Task, ProjectLink, QuickTask } from '../types'
-import { formatTaskId, formatQuickTaskId } from '../../shared/taskId'
+import { formatTaskId, formatQuickTaskId, computeNotePath } from '../../shared/taskId'
 import { Linkify } from './Linkify'
+import { nextSplitTitle, cleanSplitTitle, buildSplitTaskCopy, buildSplitQuickTaskCopy } from '../utils/splitTask'
 
 function formatSessionTime(totalSeconds: number): string {
   const min = Math.floor(totalSeconds / 60)
@@ -48,7 +49,7 @@ const FOCUS_HEIGHT_PICKER = 480
 export default function FocusMode() {
   const { projects, quickTasks, focusCheckIns, config, setFocus, repeatingTasks } = useProjects()
   const { activeTasks, repeatingActive } = useTaskList()
-  const [confirmAction, setConfirmAction] = useState<{ minutes: number; type: 'exit' | 'complete' } | null>(null)
+  const [confirmAction, setConfirmAction] = useState<{ minutes: number; type: 'exit' | 'complete' | 'split' } | null>(null)
   const [isDev, setIsDev] = useState(false)
   const [showTaskPicker, setShowTaskPicker] = useState(false)
   const [completedTaskKey, setCompletedTaskKey] = useState<string | null>(null)
@@ -92,6 +93,8 @@ export default function FocusMode() {
     const parent = repeatingTasks.find((rt) => rt.id === quickTask.repeatingTaskId)
     return parent?.link?.trim() || null
   }, [isStandalone, task, repeatingTasks])
+
+  const canSplit = !!task && !(isStandalone && (task as QuickTask).repeatingTaskId)
 
   const openRepeatingTaskLink = () => {
     if (!repeatingTaskLink) return
@@ -144,9 +147,12 @@ export default function FocusMode() {
     items.push({ id: 'manual-time', label: '+   Dodaj czas' })
     items.push({ id: 'sep3', label: '', type: 'separator' })
     items.push({ id: 'complete', label: '✓   Complete task' })
+    if (canSplit) {
+      items.push({ id: 'split', label: '✂   Split & continue' })
+    }
     items.push({ id: 'exit', label: '✕   Exit focus' })
     window.api.showFocusContextMenu(items, e.clientX, e.clientY)
-  }, [taskLinks, projectLinks, obsidianEnabled, project])
+  }, [taskLinks, projectLinks, obsidianEnabled, project, canSplit])
 
   // Handle context menu actions from popup window
   useEffect(() => {
@@ -167,6 +173,8 @@ export default function FocusMode() {
         openManualTime()
       } else if (actionId === 'complete') {
         handleComplete()
+      } else if (actionId === 'split') {
+        handleSplit()
       } else if (actionId === 'exit') {
         handleExit()
       }
@@ -218,6 +226,37 @@ export default function FocusMode() {
     setCompletedTaskKey(`${config.focusProjectId}:${config.focusTaskId}`)
   }
 
+  const splitCurrentTask = async () => {
+    if (!task || !canSplit || !config.focusProjectId || !config.focusTaskId) return
+
+    const newTitle = nextSplitTitle(task.title)
+    const taskNumber = task.taskNumber
+    const badge = isStandalone
+      ? formatQuickTaskId(taskNumber)
+      : formatTaskId(taskNumber, project?.code)
+    const noteRef = task.noteRef || computeNotePath(badge, task.title, project?.name)
+
+    if (isStandalone) {
+      const origQt = useProjects.getState().quickTasks.find((q) => q.id === config.focusTaskId)
+      if (!origQt) return
+      const qt: QuickTask = buildSplitQuickTaskCopy(origQt, { newTitle, noteRef })
+      await useProjects.getState().saveQuickTask(qt)
+    } else {
+      const freshProject = useProjects.getState().projects.find((p) => p.id === config.focusProjectId)
+      if (!freshProject) return
+      const origTask = freshProject.tasks.find((t) => t.id === config.focusTaskId)
+      if (!origTask) return
+      const newTask: Task = buildSplitTaskCopy(origTask, {
+        newTitle,
+        noteRef,
+        toDoNextOrderFallback: freshProject.tasks.length
+      })
+      await useProjects.getState().saveProject({ ...freshProject, tasks: [...freshProject.tasks, newTask] })
+    }
+
+    await completeCurrentTask()
+  }
+
   const saveTimeIfNeeded = async (minutes: number) => {
     if (minutes >= 1 && config.focusProjectId && config.focusTaskId) {
       await window.api.saveFocusCheckIn({
@@ -252,29 +291,34 @@ export default function FocusMode() {
     }
   }
 
-  const handleConfirmSave = async () => {
-    if (!confirmAction) return
-    await saveTimeIfNeeded(confirmAction.minutes)
-
-    if (confirmAction.type === 'exit') {
-      setFocus(null, null)
+  const handleSplit = async () => {
+    if (!canSplit) return
+    const unsavedMs = await window.api.getFocusUnsavedMs()
+    const unsavedMin = Math.floor(unsavedMs / 60000)
+    if (unsavedMin >= 1) {
+      setConfirmAction({ minutes: unsavedMin, type: 'split' })
     } else {
-      await completeCurrentTask()
-      setConfirmAction(null)
+      await splitCurrentTask()
       setShowTaskPicker(true)
     }
   }
 
-  const handleConfirmDiscard = async () => {
+  const finishConfirm = async (save: boolean) => {
     if (!confirmAction) return
+    if (save) await saveTimeIfNeeded(confirmAction.minutes)
 
     if (confirmAction.type === 'exit') {
       setFocus(null, null)
+      return
+    }
+
+    if (confirmAction.type === 'split') {
+      await splitCurrentTask()
     } else {
       await completeCurrentTask()
-      setConfirmAction(null)
-      setShowTaskPicker(true)
     }
+    setConfirmAction(null)
+    setShowTaskPicker(true)
   }
 
   const handlePickTask = async (pickerTask: PickerTask) => {
@@ -358,13 +402,13 @@ export default function FocusMode() {
         </span>
         <div className="flex gap-2 flex-shrink-0" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
           <button
-            onClick={handleConfirmSave}
+            onClick={() => finishConfirm(true)}
             className="px-3 py-1 rounded-md text-[12px] font-medium bg-blue-600/80 hover:bg-blue-500/80 text-white transition-colors"
           >
             Tak
           </button>
           <button
-            onClick={handleConfirmDiscard}
+            onClick={() => finishConfirm(false)}
             className="px-3 py-1 rounded-md text-[12px] font-medium bg-surface/80 hover:bg-hover text-t-secondary transition-colors"
           >
             Nie
@@ -415,7 +459,7 @@ export default function FocusMode() {
           className="text-[14px] font-semibold truncate text-t-primary flex-1 min-w-0 cursor-default"
           onDoubleClick={() => { if (task?.title) navigator.clipboard.writeText(task.title) }}
         >
-          {task?.title ? <Linkify text={task.title.replace(/^\(✂\d+\)\s*/, '')} /> : 'No task'}
+          {task?.title ? <Linkify text={cleanSplitTitle(task.title)} /> : 'No task'}
         </span>
         {repeatingTaskLink && (
           <button
@@ -449,6 +493,15 @@ export default function FocusMode() {
           >
             ✓
           </button>
+          {canSplit && (
+            <button
+              onClick={handleSplit}
+              className="w-[28px] h-[28px] rounded-[7px] bg-transparent text-t-muted text-[12px] hover:bg-blue-500/15 hover:text-blue-400 transition-all flex items-center justify-center cursor-pointer border-none"
+              title="Split & continue"
+            >
+              ✂
+            </button>
+          )}
           <button
             onClick={handleExit}
             className="w-[28px] h-[28px] rounded-[7px] bg-transparent text-t-muted text-[12px] hover:bg-red-500/15 hover:text-red-400 transition-all flex items-center justify-center cursor-pointer border-none"

@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.98.0] - 2026-05-07
+
+### Added
+
+- Focus: nowa akcja `Split & continue` w oknie focus (przycisk ✂ obok ✓ i ✕, pozycja w context menu) — oznacza bieżący task jako zrobiony i tworzy kopię z prefixem `(✂N)` jako kontynuację. Po splicie pokazuje się task picker, więc można od razu wybrać kopię jako nowe focus zadanie. Dla repeating quick tasków akcja jest ukryta (mają własny mechanizm cykliczny).
+
+### Fixed
+
+- Split: kopia tworzona przez `Split & continue` w TodayView/QuickTasksView zachowuje teraz `links`, `important`, `dueDate`, `cycleRole`, `images` (oraz `projectId` dla quick taska). Wcześniej każdy split czyścił te pola — kontynuacja taska traciła linki, gwiazdkę i rolę 12WY. Logika splitu wyciągnięta do wspólnego `src/renderer/utils/splitTask.ts` (DRY: 3 call sites — TodayView, QuickTasksView, FocusMode).
+
 ## [1.97.1] - 2026-05-07
 
 ### Fixed
