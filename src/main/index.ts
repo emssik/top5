@@ -146,10 +146,10 @@ function createWindow(): void {
       enterFocusMode({ resumeStartedAt: resumeAt })
     } else {
       showWindowVisible(mainWindow!)
-    }
-    if (pendingDeepLinkUrl) {
-      handleDeepLink(pendingDeepLinkUrl)
-      pendingDeepLinkUrl = null
+      if (pendingDeepLinkUrl) {
+        handleDeepLink(pendingDeepLinkUrl)
+        pendingDeepLinkUrl = null
+      }
     }
   })
 

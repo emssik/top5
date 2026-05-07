@@ -1,6 +1,5 @@
 import type { FastifyInstance } from 'fastify'
 import type { CycleRole, CycleStatusFilter, Task } from '../../../shared/types'
-import { isCycleRole, isCycleStatusFilter } from '../../../shared/types'
 import { getData, notifyAllWindows } from '../../store'
 import { stopFocusForCompletedTask } from '../../focus-window'
 import * as projectService from '../../service/projects'
@@ -134,23 +133,8 @@ export function registerProjectRoutes(fastify: FastifyInstance): void {
 
   fastify.get('/api/v1/cycle/tasks', async (request, reply) => {
     const { layer: layerInput, status: statusInput } = (request.query ?? {}) as { layer?: unknown; status?: unknown }
-
-    let layer: CycleRole | null = null
-    if (layerInput != null && layerInput !== '') {
-      if (!isCycleRole(layerInput)) {
-        return reply.status(400).send({ ok: false, error: 'validation' })
-      }
-      layer = layerInput
-    }
-
-    let status: CycleStatusFilter = 'active'
-    if (statusInput != null && statusInput !== '') {
-      if (!isCycleStatusFilter(statusInput)) {
-        return reply.status(400).send({ ok: false, error: 'validation' })
-      }
-      status = statusInput
-    }
-
+    const layer = (layerInput == null || layerInput === '' ? null : layerInput) as CycleRole | null
+    const status = (statusInput == null || statusInput === '' ? 'active' : statusInput) as CycleStatusFilter
     const result = projectService.getCycleTasks({ layer, status })
     if (isServiceError(result)) return reply.status(errorToHttpStatus(result.error)).send({ ok: false, error: result.error })
     return { ok: true, data: result }
@@ -158,10 +142,7 @@ export function registerProjectRoutes(fastify: FastifyInstance): void {
 
   fastify.post('/api/v1/cycle/reset', async (request, reply) => {
     const { layer } = (request.body ?? {}) as { layer?: unknown }
-    if (layer != null && !isCycleRole(layer)) {
-      return reply.status(400).send({ ok: false, error: 'validation' })
-    }
-    const result = projectService.resetCycleRoles(layer ?? null)
+    const result = projectService.resetCycleRoles((layer ?? null) as CycleRole | null)
     if (isServiceError(result)) return reply.status(errorToHttpStatus(result.error)).send({ ok: false, error: result.error })
     if (result.cleared > 0) notifyAllWindows()
     return { ok: true, data: { cleared: result.cleared } }

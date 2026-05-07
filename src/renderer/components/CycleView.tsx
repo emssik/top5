@@ -7,6 +7,7 @@ import { projectColorValue, normalizeLinks } from '../utils/projects'
 import TaskIdBadge from './TaskIdBadge'
 import { formatTaskId } from '../../shared/taskId'
 import { dateKey } from '../../shared/schedule'
+import { compareDue } from '../../shared/sort'
 import { Linkify } from './Linkify'
 import TaskLinksPopover from './TaskLinksPopover'
 import TaskLinksIndicator from './TaskLinksIndicator'
@@ -23,19 +24,11 @@ interface SectionTotals {
 }
 
 const ROLES: CycleRole[] = ['must', 'should', 'could']
-const ROLE_LABEL: Record<CycleRole, string> = { must: 'Must', should: 'Should', could: 'Could' }
 
 function addDays(days: number): string {
   const d = new Date()
   d.setDate(d.getDate() + days)
   return dateKey(d)
-}
-
-function compareDue(a: string | null | undefined, b: string | null | undefined): number {
-  if (!a && !b) return 0
-  if (!a) return 1
-  if (!b) return -1
-  return a < b ? -1 : a > b ? 1 : 0
 }
 
 function compareCode(a: CycleTask, b: CycleTask): number {
@@ -398,7 +391,7 @@ export default function CycleView() {
             <div key={role} className="mt-section">
               <div className="section-label" style={{ marginBottom: 8 }}>
                 <span className={`cycle-role-badge cr-${role}`} style={{ cursor: 'default' }}>{CYCLE_ROLE_LABELS[role]}</span>
-                <span>{ROLE_LABEL[role]}</span>
+                <span>{role.charAt(0).toUpperCase() + role.slice(1)}</span>
                 <span style={{ opacity: 0.55, fontWeight: 500, textTransform: 'none', letterSpacing: 0, marginLeft: 4 }}>
                   {summary.active} active{summary.done > 0 ? `, ${summary.done} done` : ''}
                 </span>

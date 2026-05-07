@@ -1,6 +1,7 @@
 import type { CycleRole, CycleStatusFilter, CycleTaskItem, CycleTaskStatus, Project, Task } from '../../shared/types'
 import { isCycleRole, isCycleStatusFilter } from '../../shared/types'
 import { formatTaskId } from '../../shared/taskId'
+import { compareDue } from '../../shared/sort'
 import {
   getData,
   setData,
@@ -310,13 +311,6 @@ function taskCycleStatus(task: Task): CycleTaskStatus {
   return 'active'
 }
 
-function compareDue(a: string | null, b: string | null): number {
-  if (!a && !b) return 0
-  if (!a) return 1
-  if (!b) return -1
-  return a < b ? -1 : a > b ? 1 : 0
-}
-
 const LAYER_ORDER: Record<CycleRole, number> = { must: 0, should: 1, could: 2 }
 
 export function getCycleTasks(opts: {
@@ -378,6 +372,7 @@ export function resetCycleRoles(layer?: CycleRole | null): { cleared: number; pr
   const projects = [...data.projects]
   let cleared = 0
   for (const project of projects) {
+    if (project.archivedAt) continue
     for (const task of project.tasks) {
       if (task.cycleRole === undefined) continue
       if (layer != null && task.cycleRole !== layer) continue

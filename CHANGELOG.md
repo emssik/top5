@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.97.1] - 2026-05-07
+
+### Fixed
+
+- 12WY: `cycle reset` pomija projekty zarchiwizowane (symetria z `getCycleTasks`). Dialog UI liczył N tasków bez archiwum, ale serwis czyścił N+X — alert pokazywał inną liczbę niż rzeczywiście wyzerowano.
+- Deep link (`top5://project/<id>`) podczas wznawiania focusa nie wyciąga okna głównego — link jest obsługiwany tylko w normalnym otwarciu, nie kolizji z focus-resume.
+
+### Changed
+
+- Refactor po review: `compareDue` przeniesione do `src/shared/sort.ts` (DRY), inline `ROLE_LABEL` w CycleView, usunięta podwójna walidacja `layer`/`status` w routerach `/api/v1/cycle/*` (serwis już to obsługuje).
+
 ## [1.97.0] - 2026-05-06
 
 ### Added
