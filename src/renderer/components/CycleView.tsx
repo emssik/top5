@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import { useProjects } from '../hooks/useProjects'
 import type { Task, Project, ProjectLink, CycleRole } from '../types'
 import { CYCLE_ROLE_LABELS } from '../../shared/types'
@@ -8,6 +8,9 @@ import TaskIdBadge from './TaskIdBadge'
 import { formatTaskId } from '../../shared/taskId'
 import { dateKey } from '../../shared/schedule'
 import { compareDue } from '../../shared/sort'
+import { collectAnchorCodes } from '../../shared/task-list'
+import { ensureCycleStart, setStoredCycleStart } from '../utils/cycleStart'
+import CycleClockBanner from './CycleClockBanner'
 import { Linkify } from './Linkify'
 import TaskLinksPopover from './TaskLinksPopover'
 import TaskLinksIndicator from './TaskLinksIndicator'
@@ -68,7 +71,7 @@ export default function CycleView() {
   const [linksEditId, setLinksEditId] = useState<string | null>(null)
   const [myccCommentId, setMyccCommentId] = useState<string | null>(null)
 
-  const { grouped, totals } = useMemo(() => {
+  const { grouped, totals, subsByAnchor } = useMemo(() => {
     const buckets: Record<CycleRole, CycleTask[]> = { must: [], should: [], could: [] }
     const counts: Record<CycleRole, SectionTotals> = {
       must: { active: 0, done: 0 },
@@ -87,8 +90,35 @@ export default function CycleView() {
     for (const role of ROLES) {
       buckets[role] = sortCycleTasks(buckets[role])
     }
-    return { grouped: buckets, totals: counts }
+
+    // Sub-tasks: parentCode → anchor in same project, hidden when completed.
+    const subsByAnchor = new Map<string, CycleTask[]>()
+    for (const project of projects) {
+      if (project.archivedAt) continue
+      const anchorCodes = collectAnchorCodes(project)
+      if (anchorCodes.size === 0) continue
+      for (const task of project.tasks) {
+        if (task.cycleRole || task.completed) continue
+        if (!task.parentCode || !anchorCodes.has(task.parentCode)) continue
+        const arr = subsByAnchor.get(task.parentCode) ?? []
+        arr.push({ task, project })
+        subsByAnchor.set(task.parentCode, arr)
+      }
+    }
+    for (const arr of subsByAnchor.values()) arr.sort((a, b) => {
+      const dueCmp = compareDue(a.task.dueDate, b.task.dueDate)
+      if (dueCmp !== 0) return dueCmp
+      return compareCode(a, b)
+    })
+
+    return { grouped: buckets, totals: counts, subsByAnchor }
   }, [projects])
+
+  const hasCycleTasks = useMemo(
+    () => projects.some((p) => !p.archivedAt && p.tasks.some((t) => !!t.cycleRole)),
+    [projects]
+  )
+  const cycleStart = useMemo(() => ensureCycleStart(hasCycleTasks), [hasCycleTasks])
 
   // Close popovers/menus on outside click + Escape
   useEffect(() => {
@@ -211,7 +241,7 @@ export default function CycleView() {
 
   const today = dateKey(new Date())
 
-  const renderTask = ({ task, project }: CycleTask) => {
+  const renderTask = ({ task, project }: CycleTask, isSubTask = false) => {
     const isPinned = !!task.isToDoNext
     const isDone = task.completed
     const taskMinutes = calcTaskTime(focusCheckIns, task.id)
@@ -220,7 +250,7 @@ export default function CycleView() {
     return (
       <div
         key={task.id}
-        className={`task-card ${isDone ? 'done-card' : ''} ${task.inProgress ? 'in-progress' : ''}`}
+        className={`task-card ${isDone ? 'done-card' : ''} ${task.inProgress ? 'in-progress' : ''} ${isSubTask ? 'sub-task' : ''}`}
       >
         <button className={`task-checkbox ${isDone ? 'checked' : ''}`} onClick={() => completeTask(project, task)} />
         <div className="task-content">
@@ -354,6 +384,7 @@ export default function CycleView() {
     const msg = `Close cycle? This clears the M/S/C role on all ${totalAny} task${totalAny === 1 ? '' : 's'} (including completed). The tasks themselves stay. Cannot be undone.`
     if (!window.confirm(msg)) return
     const cleared = await resetCycleRoles(null)
+    setStoredCycleStart(null)
     window.alert(`Cycle closed. Cleared cycleRole on ${cleared} task${cleared === 1 ? '' : 's'}.`)
   }
 
@@ -376,6 +407,8 @@ export default function CycleView() {
           </button>
         )}
       </div>
+
+      {cycleStart && <CycleClockBanner cycleStart={cycleStart} />}
 
       {totalActive === 0 && totalDone === 0 ? (
         <div style={{ marginTop: 32, color: 'var(--c-text-muted)', fontSize: 13, textAlign: 'center' }}>
@@ -401,7 +434,16 @@ export default function CycleView() {
                   No active tasks in this layer right now.
                 </div>
               ) : (
-                items.map(renderTask)
+                items.map((entry) => {
+                  const code = formatTaskId(entry.task.taskNumber, entry.project.code)
+                  const subs = code ? subsByAnchor.get(code) ?? [] : []
+                  return (
+                    <Fragment key={entry.task.id}>
+                      {renderTask(entry)}
+                      {subs.map((sub) => renderTask(sub, true))}
+                    </Fragment>
+                  )
+                })
               )}
             </div>
           )

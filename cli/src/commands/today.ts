@@ -2,6 +2,8 @@ import type { Command } from 'commander'
 import { createClient } from '../lib/client.js'
 import { printResult, formatTable, die } from '../lib/output.js'
 
+type CycleRole = 'must' | 'should' | 'could'
+
 interface TodayTask {
   kind: 'quick' | 'pinned'
   id: string
@@ -13,7 +15,11 @@ interface TodayTask {
   repeatingTaskId?: string | null
   inProgress?: boolean
   dueDate?: string | null
+  important?: boolean
+  cycleRole?: CycleRole
 }
+
+const CYCLE_ROLE_LABEL: Record<CycleRole, string> = { must: 'M', should: 'S', could: 'C' }
 
 function taskCode(t: TodayTask): string {
   if (t.kind === 'pinned' && t.projectCode && t.taskNumber != null) {
@@ -26,10 +32,13 @@ function taskCode(t: TodayTask): string {
 }
 
 function taskStatus(t: TodayTask): string {
-  if (t.inProgress) return 'in-progress'
-  if (t.dueDate) return 'due'
-  if (t.repeatingTaskId) return 'repeating'
-  return ''
+  const parts: string[] = []
+  if (t.inProgress) parts.push('in-progress')
+  if (t.dueDate) parts.push('due')
+  if (t.repeatingTaskId) parts.push('repeating')
+  if (t.important) parts.push('important')
+  if (t.cycleRole) parts.push(CYCLE_ROLE_LABEL[t.cycleRole])
+  return parts.join(' ')
 }
 
 export function register(program: Command): void {

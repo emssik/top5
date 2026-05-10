@@ -6,6 +6,7 @@ import { getRepeatingTaskProposals, getDueDateProposals, dateKey } from '../../s
 import type { DueDateProposal } from '../../shared/schedule'
 import { STANDALONE_PROJECT_ID } from '../utils/constants'
 import { isRecentlyCompleted } from '../utils/recentlyCompleted'
+import { collectAnchorCodes } from '../../shared/task-list'
 import { useMinuteTick } from './useMinuteTick'
 
 export interface MergedTask {
@@ -24,6 +25,8 @@ export interface MergedTask {
   inProgress?: boolean
   important?: boolean
   cycleRole?: CycleRole
+  parentCode?: string | null
+  isCycleSubTask?: boolean
   noteRef?: string
   dueDate?: string | null
   beyondLimit?: boolean
@@ -119,8 +122,9 @@ export function useTaskList(opts?: { excludeFocus?: boolean }): TaskListData {
       beyondLimit: t.beyondLimit
     }))
 
-  const pinnedTasks: MergedTask[] = activeProjects.flatMap((p) =>
-    p.tasks
+  const pinnedTasks: MergedTask[] = activeProjects.flatMap((p) => {
+    const anchorCodes = collectAnchorCodes(p)
+    return p.tasks
       .filter((t) => t.isToDoNext && (!t.completed || isRecentlyCompleted(t.completedAt)))
       .map((t) => {
         const links = normalizeLinks(t.links)
@@ -139,13 +143,15 @@ export function useTaskList(opts?: { excludeFocus?: boolean }): TaskListData {
           inProgress: t.inProgress,
           important: t.important,
           cycleRole: t.cycleRole,
+          parentCode: t.parentCode ?? null,
+          isCycleSubTask: !!t.parentCode && anchorCodes.has(t.parentCode),
           noteRef: t.noteRef,
           dueDate: t.dueDate,
           beyondLimit: t.beyondLimit,
           links: links.length > 0 ? links : undefined
         }
       })
-  )
+  })
 
   const allActiveTasks = [...standaloneTasks, ...pinnedTasks].sort((a, b) => a.order - b.order)
 
@@ -206,6 +212,7 @@ export function useTaskList(opts?: { excludeFocus?: boolean }): TaskListData {
     const task = project?.tasks.find((t) => t.id === focusTaskId)
     if (!project || !task || task.completed) return null
 
+    const anchorCodes = collectAnchorCodes(project)
     return {
       kind: 'pinned', id: `pinned-${project.id}-${task.id}`,
       title: task.title, order: task.toDoNextOrder ?? 999,
@@ -213,6 +220,8 @@ export function useTaskList(opts?: { excludeFocus?: boolean }): TaskListData {
       projectCode: project.code, taskId: task.id,
       taskNumber: task.taskNumber, inProgress: task.inProgress, important: task.important,
       cycleRole: task.cycleRole,
+      parentCode: task.parentCode ?? null,
+      isCycleSubTask: !!task.parentCode && anchorCodes.has(task.parentCode),
       noteRef: task.noteRef,
       links: (() => { const l = normalizeLinks(task.links); return l.length > 0 ? l : undefined })()
     }

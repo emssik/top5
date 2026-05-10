@@ -19,7 +19,8 @@ description: >
   "habits", "nawyki", "list habits", "pokaż habity", "co ma za nawyki", "streak", "chain",
   "don't break the chain",
   "cycle role", "cycle-role", "12w", "12wy", "12 week year", "moscow", "must should could",
-  "cycle reset", "close cycle", "end of cycle", "zamknij cykl", "reset cyklu", "must", "should", "could".
+  "cycle reset", "close cycle", "end of cycle", "zamknij cykl", "reset cyklu", "must", "should", "could",
+  "sub-task", "subtask", "parent", "parent code", "kotwica", "podzadanie", "pod kotwicą", "anchor".
 ---
 
 # top5-cli
@@ -72,6 +73,8 @@ top5 tasks PRJ --json
 
 Task statuses: `[done]`, `in-progress`, `up-next`, or empty (backlog).
 
+JSON output enriches each task with `taskCode` (e.g. `"PRJ-3"`) when the project has a code and the task has a `taskNumber` — saves consumers from composing it themselves. Field is omitted for tasks without a number or projects without a code.
+
 ### Show task details
 
 ```bash
@@ -90,8 +93,12 @@ top5 add PRJ "Task title" --due 2026-04-15
 top5 add PRJ "Task title" --pin     # pin to today (mark as up-next)
 top5 add PRJ "Task title" --note    # also create Obsidian note
 top5 add PRJ "Task title" -r must   # 12WY cycle role: must | should | could
+top5 add PRJ "Task title" --parent PRJ-42   # attach as sub-task under 12WY anchor PRJ-42
+top5 add PRJ "Task title" --parent 42       # short form — same project assumed
 top5 add PRJ "Task title" --json
 ```
+
+`--parent <code>` attaches the new task as a 12WY sub-task of an anchor in the **same project**. The anchor must be active (not completed) and have a `cycleRole`. Accepts the full code (`PRJ-42`) or just the number (`42`). Errors: `No active task PRJ-42 found in project PRJ.` / `Task PRJ-42 has no cycleRole — only 12WY anchors can be parents.`
 
 `--due` accepts: `YYYY-MM-DD`, `today`, `tomorrow`, `+Nd` (e.g. `+3d`), day name (`monday`–`sunday`, or `mon`–`sun`).
 
@@ -134,6 +141,8 @@ top5 important PRJ-3 --json
 Sets the `important` flag on a task. When `true`, a star (★) appears next to the task title in the Today view, Focus window, and Clean view. Purely visual — does **not** affect Today ordering, the limit, pin state, or scheduling. Toggles — running again clears the flag.
 
 Use this when the user asks to "mark important", "flag important", "oznacz jako ważne", "podświetl", "wyróżnij".
+
+> **12WY sub-tasks hide the star.** If a task has a valid `parentCode` (i.e. it's a 12WY sub-task), the renderer shows a `12WY` badge instead of the `★`. The `important` flag is still stored and toggleable, just not visible while the parent link is active. See "Sub-tasks (12WY hierarchy)" below.
 
 ### Move task to / from "beyond the limit"
 
@@ -267,6 +276,8 @@ purely decorative for the table; CLI does not accept these as references today.
 
 Tasks can carry a 12WY `cycleRole`: `must`, `should`, `could`, or none. Used by the `biz` skill to flag the current cycle's MoSCoW projects (4 must / 4 should / 3 could). Lives per task, not per project.
 
+Anchors (tasks with `cycleRole`) can have **sub-tasks** attached via `parentCode` — see "Sub-tasks (12WY hierarchy)" below. Sub-tasks themselves do NOT carry `cycleRole`.
+
 ```bash
 top5 cycle-role PRJ-3 must     # set role
 top5 cycle-role PRJ-3 should
@@ -285,7 +296,12 @@ top5 12w --layer must                   # filter to one layer
 top5 12w --layer should --json          # context for biz mode-12w-week scoring
 top5 12w --status all                   # include completed (default: active only)
 top5 12w --status done                  # only completed (e.g. end-eval)
+top5 12w --tree                         # anchors with their sub-tasks (parentCode children) indented
+top5 12w --layer must --tree --json     # JSON: each anchor gets `children: CycleSubTaskItem[]`
+top5 12w --with-children                # alias for --tree
 ```
+
+**`--tree`** attaches sub-tasks to each anchor based on `parentCode` (same project). Children obey the same `--status` filter as the parent query — i.e. `--status active --tree` hides done sub-tasks. JSON shape: each `CycleTaskItem` may carry `children?: CycleSubTaskItem[]` (no `cycleRole`, no `projectId/Code` — children inherit those from the anchor).
 
 **Sort:** within layer by `due` ascending (null `due` last) → project code → task number. Symmetric with the UI 12w tab.
 
@@ -314,6 +330,52 @@ top5 cycle reset --yes --json          # { cleared: N }
 ```
 
 `--yes` is required when stdin is not a TTY (piped / non-interactive). Output: `Cleared cycleRole on N task(s).`
+
+### Sub-tasks (12WY hierarchy)
+
+Within a 12WY cycle, each MoSCoW project gets exactly **one anchor task** (kotwica) that carries the `cycleRole`. Operational sub-tasks ("M1 — initial analysis", "M1 — landing page") attach to the anchor through the `parentCode` field — they do **not** carry their own `cycleRole`; priority is inherited via the parent.
+
+**Rules:**
+- Anchor and sub-tasks must live in the **same project** (no cross-project parenting).
+- `parentCode` stores the anchor's task code, e.g. `"TOP-42"`.
+- A sub-task itself MUST NOT have `cycleRole`. Only anchors carry it.
+- A sub-task with a valid `parentCode` displays a `12WY` badge in Today / Focus / Project Detail instead of the `★` important star. The `important` flag is preserved but visually replaced.
+
+**Create a sub-task:**
+
+```bash
+top5 add SELL "M1 - landing page" --parent SELL-12   # full code
+top5 add SELL "M1 - landing page" --parent 12        # short form, same project
+```
+
+Validation errors:
+- `No active task SELL-12 found in project SELL.` — anchor doesn't exist or is completed.
+- `Task SELL-12 has no cycleRole — only 12WY anchors can be parents.` — target lacks a cycleRole.
+
+**Inspect parent on a task:**
+
+```bash
+top5 show SELL-15
+# SELL-15 M1 - landing page
+# Project:  Sprzedaż
+# Status:   backlog
+# Due:      (none)
+# Cycle:    (none)
+# Parent:   SELL-12
+```
+
+JSON mode (`--json`) includes `parentCode` on the task object.
+
+**See an anchor with all its sub-tasks at once:**
+
+```bash
+top5 12w --layer must --tree            # tree view per layer
+top5 12w --tree --json                  # children attached as `children` arrays
+```
+
+**Move / change / detach a sub-task:** no dedicated CLI command yet. Edit through the Project Detail view in the Electron UI (overflow menu → "Sub-task of...") or via `PUT /projects/:id` with the updated `tasks[]` payload.
+
+**When to suggest using this:** the user is working with 12WY (`/biz`, MoSCoW, anchors) and wants to break down an anchor into smaller actionable pieces. Anchor stays in `top5 12w` for tracking; sub-tasks live as regular tasks in the project but render with the `12WY` badge so the user knows they belong to the cycle.
 
 ### Health check
 
@@ -360,6 +422,14 @@ top5 tasks PRJ
 top5 add PRJ "New task" --due friday
 top5 add PRJ "New task" --pin       # add and pin to today
 top5 done PRJ-5
+```
+
+**Break down a 12WY anchor into sub-tasks:**
+```bash
+top5 12w --layer must                # find the anchor's code
+top5 add SELL "M1 - landing page" --parent SELL-12
+top5 add SELL "M1 - copy" --parent SELL-12 --pin
+# Sub-tasks render with a "12WY" badge in Today / Focus instead of the ★ star.
 ```
 
 **Pin a task to today:**

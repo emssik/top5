@@ -18,6 +18,7 @@ interface Task {
   important?: boolean
   dueDate?: string | null
   cycleRole?: CycleRole
+  parentCode?: string | null
   noteRef?: string
 }
 
@@ -70,11 +71,16 @@ export function register(program: Command): void {
           tasks = tasks.filter((t) => !t.completed)
         }
 
-        printResult(tasks, {
+        const enriched = tasks.map((t) => {
+          const code = (t.taskNumber != null && project.code) ? `${project.code}-${t.taskNumber}` : null
+          return code ? { ...t, taskCode: code } : { ...t }
+        })
+
+        printResult(enriched, {
           json: globalOpts.json,
           formatFn: () => {
             const header = `${project.code ?? project.id} - ${project.name}`
-            const table = formatTable(tasks, [
+            const table = formatTable(enriched, [
               { header: '#', value: (t) => taskCode(t, project.code), align: 'right' },
               { header: 'TITLE', value: (t) => t.title },
               { header: 'DUE', value: (t) => formatDueDate(t.dueDate) },
@@ -115,6 +121,7 @@ export function register(program: Command): void {
             lines.push(`Status:   ${taskStatus(task) || 'backlog'}`)
             lines.push(`Due:      ${task.dueDate ? formatDueDate(task.dueDate) : '(none)'}`)
             lines.push(`Cycle:    ${task.cycleRole ?? '(none)'}`)
+            if (task.parentCode) lines.push(`Parent:   ${task.parentCode}`)
             return lines.join('\n')
           },
         })
@@ -133,6 +140,7 @@ export function register(program: Command): void {
     .option('-d, --due <date>', 'Due date (YYYY-MM-DD, today, tomorrow, +Nd, mon-sun)')
     .option('-p, --pin', 'Pin task to today (mark as up-next)')
     .option('-r, --cycle-role <role>', '12WY cycle role: must, should, could (or none to omit)')
+    .option('--parent <code>', '12WY anchor task code in same project (e.g. TOP-42) to attach this as a sub-task')
     .action(async (projectRef: string, title: string, opts, cmd) => {
       const globalOpts = cmd.optsWithGlobals()
       const client = createClient(globalOpts)
@@ -154,6 +162,19 @@ export function register(program: Command): void {
 
         const project = await resolveProject(client, projectRef) as Project
 
+        let parentCode: string | undefined
+        if (opts.parent) {
+          const raw = String(opts.parent).trim()
+          if (!project.code) die(`Project ${project.name} has no code — cannot resolve --parent.`)
+          const expected = raw.includes('-') ? raw : `${project.code}-${raw}`
+          const anchor = project.tasks.find((t) => !t.completed
+            && t.taskNumber != null
+            && `${project.code}-${t.taskNumber}` === expected)
+          if (!anchor) die(`No active task ${expected} found in project ${project.code}.`)
+          if (!anchor.cycleRole) die(`Task ${expected} has no cycleRole — only 12WY anchors can be parents.`)
+          parentCode = expected
+        }
+
         const newTask = {
           id: crypto.randomUUID(),
           title,
@@ -161,6 +182,7 @@ export function register(program: Command): void {
           createdAt: new Date().toISOString(),
           ...(dueDate ? { dueDate } : {}),
           ...(cycleRole ? { cycleRole } : {}),
+          ...(parentCode ? { parentCode } : {}),
         }
 
         // Update project with new task appended
@@ -213,6 +235,7 @@ export function register(program: Command): void {
             let msg = `Created: ${code ? code + ' ' : ''}${title}`
             if (dueDate) msg += ` (due: ${formatDueDate(dueDate)})`
             if (cycleRole) msg += ` [${cycleRole}]`
+            if (parentCode) msg += ` [parent: ${parentCode}]`
             if (pinned) msg += ` [pinned]`
             if (notePath) msg += `\nNote: ${notePath}`
             return msg
@@ -307,6 +330,17 @@ export function register(program: Command): void {
   type CycleStatusFilter = 'active' | 'done' | 'all'
   const CYCLE_STATUS_FILTERS: ReadonlyArray<CycleStatusFilter> = ['active', 'done', 'all']
 
+  interface CycleSubTaskItem {
+    id: string
+    taskNumber: number | null
+    taskCode: string
+    title: string
+    status: 'done' | 'in-progress' | 'up-next' | 'active'
+    due: string | null
+    important: boolean
+    completed: boolean
+  }
+
   interface CycleTaskItem {
     id: string
     taskNumber: number | null
@@ -321,35 +355,60 @@ export function register(program: Command): void {
     important: boolean
     beyondLimit: boolean
     completed: boolean
+    children?: CycleSubTaskItem[]
   }
 
-  type CycleListOpts = { layer?: string; status?: string }
+  type CycleListOpts = { layer?: string; status?: string; tree?: boolean; withChildren?: boolean }
 
   const ROLE_HEADERS: Record<CycleRole, string> = { must: 'MUST', should: 'SHOULD', could: 'COULD' }
 
-  function formatCycleList(items: CycleTaskItem[], filterLayer: CycleRole | null): string {
+  function formatCycleList(items: CycleTaskItem[], filterLayer: CycleRole | null, tree: boolean): string {
     const layers: ReadonlyArray<CycleRole> = filterLayer ? [filterLayer] : CYCLE_ROLES
     const buckets: Record<CycleRole, CycleTaskItem[]> = { must: [], should: [], could: [] }
-    const counts: Record<CycleRole, { active: number; done: number }> = {
-      must: { active: 0, done: 0 },
-      should: { active: 0, done: 0 },
-      could: { active: 0, done: 0 }
+    const counts: Record<CycleRole, { active: number; done: number; childActive: number; childDone: number }> = {
+      must: { active: 0, done: 0, childActive: 0, childDone: 0 },
+      should: { active: 0, done: 0, childActive: 0, childDone: 0 },
+      could: { active: 0, done: 0, childActive: 0, childDone: 0 }
     }
     for (const item of items) {
       buckets[item.cycleRole].push(item)
       counts[item.cycleRole][item.completed ? 'done' : 'active']++
+      for (const child of item.children ?? []) {
+        counts[item.cycleRole][child.completed ? 'childDone' : 'childActive']++
+      }
     }
     return layers.map((layer) => {
-      const { active, done } = counts[layer]
-      const header = `${ROLE_HEADERS[layer]} (${active} active, ${done} done)`
-      const table = formatTable(buckets[layer], [
-        { header: '#', value: (t) => t.taskCode || '-', align: 'right' },
-        { header: 'TITLE', value: (t) => t.title },
-        { header: 'PROJECT', value: (t) => t.projectCode ?? t.projectName },
-        { header: 'STATUS', value: (t) => t.status },
-        { header: 'DUE', value: (t) => formatDueDate(t.due) }
-      ])
-      return `${header}\n${table}`
+      const { active, done, childActive, childDone } = counts[layer]
+      const childSuffix = tree && (childActive + childDone > 0)
+        ? `, ${childActive} sub active, ${childDone} sub done`
+        : ''
+      const header = `${ROLE_HEADERS[layer]} (${active} active, ${done} done${childSuffix})`
+      if (!tree) {
+        const table = formatTable(buckets[layer], [
+          { header: '#', value: (t) => t.taskCode || '-', align: 'right' },
+          { header: 'TITLE', value: (t) => t.title },
+          { header: 'PROJECT', value: (t) => t.projectCode ?? t.projectName },
+          { header: 'STATUS', value: (t) => t.status },
+          { header: 'DUE', value: (t) => formatDueDate(t.due) }
+        ])
+        return `${header}\n${table}`
+      }
+      // Tree: anchor on its own line, children indented underneath.
+      const lines: string[] = [header]
+      for (const anchor of buckets[layer]) {
+        const anchorCode = anchor.taskCode || '-'
+        const anchorDue = anchor.due ? `  ${formatDueDate(anchor.due)}` : ''
+        const anchorStatus = anchor.status !== 'active' ? `  [${anchor.status}]` : ''
+        const anchorProject = anchor.projectCode ?? anchor.projectName
+        lines.push(`  ${anchorCode}  ${anchor.title}  (${anchorProject})${anchorStatus}${anchorDue}`)
+        for (const child of anchor.children ?? []) {
+          const childCode = child.taskCode || '-'
+          const childDue = child.due ? `  ${formatDueDate(child.due)}` : ''
+          const childStatus = child.completed ? '  [done]' : (child.status !== 'active' ? `  [${child.status}]` : '')
+          lines.push(`      └ ${childCode}  ${child.title}${childStatus}${childDue}`)
+        }
+      }
+      return lines.join('\n')
     }).join('\n\n')
   }
 
@@ -369,16 +428,19 @@ export function register(program: Command): void {
       die('Invalid --status. Use active, done, or all.')
     }
 
+    const tree = !!(opts.tree || opts.withChildren)
+
     const params = new URLSearchParams()
     if (layer) params.set('layer', layer)
     params.set('status', status)
+    if (tree) params.set('tree', '1')
     const path = `/api/v1/cycle/tasks?${params.toString()}`
 
     try {
       const items = await client.get<CycleTaskItem[]>(path)
       printResult(items, {
         json: globalOpts.json,
-        formatFn: () => formatCycleList(items, layer)
+        formatFn: () => formatCycleList(items, layer, tree)
       })
     } catch (err: unknown) {
       die((err as Error).message)
@@ -390,6 +452,8 @@ export function register(program: Command): void {
     .description('List 12WY cycle tasks (tasks with cycleRole set), grouped by MoSCoW layer')
     .option('-l, --layer <role>', 'Filter to one layer: must, should, or could')
     .option('-s, --status <status>', 'Filter by status: active (default), done, or all')
+    .option('-t, --tree', 'Render anchors with their sub-tasks (parentCode children)')
+    .option('--with-children', 'Alias for --tree')
     .action(runCycleList)
 
   // top5 cycle reset
@@ -402,6 +466,8 @@ export function register(program: Command): void {
     .description('List 12WY cycle tasks (alias for `top5 12w`)')
     .option('-l, --layer <role>', 'Filter to one layer: must, should, or could')
     .option('-s, --status <status>', 'Filter by status: active (default), done, or all')
+    .option('-t, --tree', 'Render anchors with their sub-tasks (parentCode children)')
+    .option('--with-children', 'Alias for --tree')
     .action(runCycleList)
 
   cycleCmd

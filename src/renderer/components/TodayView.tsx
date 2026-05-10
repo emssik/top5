@@ -7,7 +7,7 @@ import type { MergedTask } from '../hooks/useTaskList'
 import { calcQuickTaskTime, calcTaskTime, formatCheckInTime } from '../utils/checkInTime'
 import { STANDALONE_PROJECT_ID } from '../utils/constants'
 import type { Task, QuickTask, LockedTaskRef, WinEntry, ProjectLink, CycleRole } from '../types'
-import { CYCLE_ROLE_LABELS } from '../../shared/types'
+import { CYCLE_ROLE_LABELS, CYCLE_BADGE_LABEL } from '../../shared/types'
 import { projectColorValue, normalizeProjectLinks, normalizeLinks, openProjectLink } from '../utils/projects'
 import TaskLinksIndicator from './TaskLinksIndicator'
 import TaskLinksPopover from './TaskLinksPopover'
@@ -992,7 +992,9 @@ export default function TodayView({ onSelectView }: { onSelectView?: (view: stri
             <div className="task-title" onDoubleClick={() => startEditing(task)}>
               {task.repeatingTaskId && <span style={{ opacity: 0.6, marginRight: 4 }}>↻</span>}
               <TaskIdBadge taskNumber={task.taskNumber} projectCode={task.projectCode} kind={task.kind} />
-              {task.important && (
+              {task.isCycleSubTask ? (
+                <span className="task-cycle-badge" title={`Sub-task of ${task.parentCode}`}>{CYCLE_BADGE_LABEL}</span>
+              ) : task.important && (
                 <button
                   type="button"
                   className="task-important-star"
@@ -1421,7 +1423,9 @@ export default function TodayView({ onSelectView }: { onSelectView?: (view: stri
               ) : (
                 <div className="task-title" onDoubleClick={() => startEditing(focusTask)}>
                   <TaskIdBadge taskNumber={focusTask.taskNumber} projectCode={focusTask.projectCode} kind={focusTask.kind} />
-                  {focusTask.important && (
+                  {focusTask.isCycleSubTask ? (
+                    <span className="task-cycle-badge" title={`Sub-task of ${focusTask.parentCode}`}>{CYCLE_BADGE_LABEL}</span>
+                  ) : focusTask.important && (
                     <button
                       type="button"
                       className="task-important-star"

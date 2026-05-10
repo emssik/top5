@@ -1221,6 +1221,101 @@ body {
   transform: scale(1.15);
 }
 
+/* 12WY badge — replaces important star on tasks that are sub-tasks under a cycle anchor */
+.task-cycle-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 16px;
+  padding: 0 5px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  margin-right: 4px;
+  background: var(--pc-purple, #7c3aed);
+  color: #fff;
+  flex-shrink: 0;
+  user-select: none;
+  cursor: default;
+  transition: filter 0.12s, transform 0.12s;
+}
+.task-cycle-badge[data-clickable="true"] { cursor: pointer; }
+.task-cycle-badge:hover { filter: brightness(1.1); transform: scale(1.05); }
+
+/* Sub-task under a 12WY anchor — indented & guide line */
+.task-card.sub-task {
+  margin-left: 22px;
+  border-left: 2px solid var(--c-border-subtle, var(--c-border));
+  padding-left: 12px;
+  position: relative;
+}
+.task-card.sub-task::before {
+  content: '└';
+  position: absolute;
+  left: -14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--c-text-muted);
+  font-size: 12px;
+  opacity: 0.6;
+}
+
+.parent-picker-popover {
+  position: absolute;
+  right: 8px;
+  top: calc(100% + 4px);
+  z-index: 100;
+  background: var(--bg-card);
+  border: 1px solid var(--c-border);
+  border-radius: 8px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 240px;
+  max-width: 360px;
+  max-height: 320px;
+  overflow-y: auto;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+}
+.parent-picker-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--c-text-muted);
+  padding: 4px 6px 2px;
+}
+.parent-picker-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--c-text-primary);
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+  width: 100%;
+}
+.parent-picker-item:hover { background: var(--c-hover, var(--bg-surface)); }
+.parent-picker-item.active { border-color: var(--c-border); background: var(--bg-surface); }
+.parent-picker-item .ppi-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  color: var(--c-text-secondary);
+  flex-shrink: 0;
+}
+.parent-picker-item .ppi-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* 12WY cycle role badge + popover */
 .cycle-role-badge {
   display: inline-flex;
@@ -1282,6 +1377,67 @@ body {
 .cycle-role-btn.cr-should.active { background: var(--pc-orange); color: #fff; border-color: var(--pc-orange); }
 .cycle-role-btn.cr-could.active { background: var(--pc-blue); color: #fff; border-color: var(--pc-blue); }
 .cycle-role-btn.cr-none.active { background: var(--c-text-muted); color: var(--bg-card); border-color: var(--c-text-muted); }
+
+.cycle-clock-banner {
+  margin: 8px 0 20px;
+  padding: 16px 20px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.08), rgba(59, 130, 246, 0.06));
+  border: 1px solid var(--c-border-subtle, var(--c-border));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.cycle-clock-week {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--c-text-muted);
+}
+.cycle-clock-time {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+}
+.cycle-clock-time .ccu {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 56px;
+}
+.cycle-clock-time .ccv {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 38px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.5px;
+  color: var(--c-text-primary);
+}
+.cycle-clock-time .ccl {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--c-text-muted);
+  margin-top: 6px;
+}
+.cycle-clock-time .ccs {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 32px;
+  font-weight: 400;
+  line-height: 1;
+  color: var(--c-text-muted);
+  opacity: 0.5;
+  padding-top: 2px;
+}
+.cycle-clock-end {
+  font-size: 11px;
+  color: var(--c-text-muted);
+  font-variant-numeric: tabular-nums;
+}
 
 .cycle-close-btn {
   margin-left: 12px;

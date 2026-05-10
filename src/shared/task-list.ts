@@ -3,8 +3,23 @@
  * Single source of truth — used by main process (nudge, clean-view sizing).
  * Renderer's useTaskList layers React-specific extras (focus, winsLock, proposals) on top.
  */
-import type { QuickTask, Task, Project, WinsLockState } from './types'
+import type { QuickTask, Task, Project, WinsLockState, CycleRole } from './types'
 import { dateKey } from './schedule'
+import { formatTaskId } from './taskId'
+
+/**
+ * Collect codes (e.g. "TOP-12") of tasks within a project that have a cycleRole assigned.
+ * Used to validate parentCode references and identify 12WY anchors.
+ */
+export function collectAnchorCodes(project: Project): Set<string> {
+  const codes = new Set<string>()
+  for (const task of project.tasks) {
+    if (!task.cycleRole) continue
+    const code = formatTaskId(task.taskNumber, project.code)
+    if (code) codes.add(code)
+  }
+  return codes
+}
 
 export interface VisibleTask {
   kind: 'quick' | 'pinned'
@@ -20,6 +35,11 @@ export interface VisibleTask {
   inProgress?: boolean
   dueDate?: string | null
   beyondLimit?: boolean
+  important?: boolean
+  cycleRole?: CycleRole
+  parentCode?: string | null
+  /** True iff this task has a parentCode pointing to an anchor (task with cycleRole) in the same project. */
+  isCycleSubTask?: boolean
 }
 
 interface GetVisibleTasksInput {
@@ -70,12 +90,14 @@ export function getVisibleTasks(input: GetVisibleTasksInput): VisibleTasksResult
         repeatingTaskId: t.repeatingTaskId,
         inProgress: t.inProgress,
         dueDate: t.dueDate,
-        beyondLimit: t.beyondLimit
+        beyondLimit: t.beyondLimit,
+        important: t.important
       }
     })
 
-  const pinned: VisibleTask[] = activeProjects.flatMap((p) =>
-    p.tasks
+  const pinned: VisibleTask[] = activeProjects.flatMap((p) => {
+    const anchorCodes = collectAnchorCodes(p)
+    return p.tasks
       .filter((t: Task) => t.isToDoNext && !t.completed)
       .map((t: Task) => ({
         kind: 'pinned' as const,
@@ -89,9 +111,13 @@ export function getVisibleTasks(input: GetVisibleTasksInput): VisibleTasksResult
         taskNumber: t.taskNumber,
         inProgress: t.inProgress,
         dueDate: t.dueDate,
-        beyondLimit: t.beyondLimit
+        beyondLimit: t.beyondLimit,
+        important: t.important,
+        cycleRole: t.cycleRole,
+        parentCode: t.parentCode ?? null,
+        isCycleSubTask: !!t.parentCode && anchorCodes.has(t.parentCode)
       }))
-  )
+  })
 
   const allActive = [...standalone, ...pinned].sort((a, b) => a.order - b.order)
 

@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.99.0] - 2026-05-10
+
+### Added
+
+- 12WY: pole `parentCode` na taskach projektowych — hierarchia kotwica (task z `cycleRole`) → sub-task. Sub-taski nie mają własnego `cycleRole`, dziedziczą priorytet przez parenta. UI: badge `12WY` (fioletowy) zastępuje gwiazdkę `★` przy sub-tasku w widoku Today, Focus i karcie projektu (Daniel: important rezerwowane dla outcomes, sub-taski cyklu rozpoznawalne po badge'u). W widoku 12W i karcie projektu sub-taski renderowane wcięte pod swoją kotwicą z guide line `└`. Picker parenta w karcie projektu (overflow menu „Sub-task of..." + dropdown obok pola dodawania).
+- 12WY: zegar odliczający dni:godziny:minuty:sekundy do końca cyklu w nagłówku zakładki 12W. Cykl trwa 12 tygodni (84 dni); start cyklu persistowany w localStorage, lazy-init na nadchodzący poniedziałek przy pierwszym wejściu na widok 12W z aktywnymi taskami w cyklu. `Close cycle` czyści start. Sidebar: label `12w (Nd)` z dniami pozostałymi do końca.
+- CLI: `top5 add --parent <code>` (alias short form: numer w tym samym projekcie) tworzy task jako sub-task pod podaną kotwicą. Walidacja: kotwica musi być aktywna i mieć `cycleRole`.
+- CLI: `top5 12w --tree` (alias `--with-children`) renderuje kotwice z ich sub-taskami pod spodem. JSON: `CycleTaskItem.children?: CycleSubTaskItem[]` gdy `tree=1`.
+- API: `GET /api/v1/cycle/tasks?tree=1` — children obejmują filter `status` (active/done/all) tak jak rodzice.
+
+### Changed
+
+- CLI: `top5 tasks <PRJ> --json` wzbogaca każdy task o pole `taskCode` (`PRJ-N`) gdy projekt ma kod i task ma numer — konsumenci nie muszą już składać ręcznie.
+
 ## [1.98.0] - 2026-05-07
 
 ### Added

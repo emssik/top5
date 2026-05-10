@@ -8,6 +8,9 @@ export function isCycleRole(value: unknown): value is CycleRole {
 
 export const CYCLE_ROLE_LABELS: Record<CycleRole, string> = { must: 'M', should: 'S', could: 'C' }
 
+/** Badge shown on 12WY sub-tasks in place of the important star. */
+export const CYCLE_BADGE_LABEL = '12WY'
+
 export type CycleTaskStatus = 'done' | 'in-progress' | 'up-next' | 'active'
 
 export type CycleStatusFilter = 'active' | 'done' | 'all'
@@ -32,6 +35,19 @@ export interface CycleTaskItem {
   important: boolean
   beyondLimit: boolean
   completed: boolean
+  /** Sub-tasks attached via parentCode. Populated only when getCycleTasks is called with tree=true. */
+  children?: CycleSubTaskItem[]
+}
+
+export interface CycleSubTaskItem {
+  id: string
+  taskNumber: number | null
+  taskCode: string
+  title: string
+  status: CycleTaskStatus
+  due: string | null
+  important: boolean
+  completed: boolean
 }
 
 export interface Task {
@@ -50,6 +66,8 @@ export interface Task {
   beyondLimit?: boolean
   important?: boolean
   cycleRole?: CycleRole
+  /** Code of the anchor task (with cycleRole) this task is a sub-task of. Same project only. */
+  parentCode?: string | null
   links?: ProjectLink[]
   images?: string[]
 }

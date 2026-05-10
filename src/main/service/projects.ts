@@ -1,4 +1,4 @@
-import type { CycleRole, CycleStatusFilter, CycleTaskItem, CycleTaskStatus, Project, Task } from '../../shared/types'
+import type { CycleRole, CycleStatusFilter, CycleSubTaskItem, CycleTaskItem, CycleTaskStatus, Project, Task } from '../../shared/types'
 import { isCycleRole, isCycleStatusFilter } from '../../shared/types'
 import { formatTaskId } from '../../shared/taskId'
 import { compareDue } from '../../shared/sort'
@@ -316,24 +316,63 @@ const LAYER_ORDER: Record<CycleRole, number> = { must: 0, should: 1, could: 2 }
 export function getCycleTasks(opts: {
   layer?: CycleRole | null
   status?: CycleStatusFilter
+  tree?: boolean
 } = {}): CycleTaskItem[] | ServiceError {
-  const { layer = null, status = 'active' } = opts
+  const { layer = null, status = 'active', tree = false } = opts
   if (layer != null && !isCycleRole(layer)) return { error: 'validation' }
   if (!isCycleStatusFilter(status)) return { error: 'validation' }
 
+  const passesStatus = (task: Task): boolean => {
+    if (status === 'active') return !task.completed
+    if (status === 'done') return task.completed
+    return true
+  }
+
   const projects = getData().projects
   const items: CycleTaskItem[] = []
+  // For tree mode: collect children by parentCode (filtered by same status rule).
+  const childrenByCode: Map<string, CycleSubTaskItem[]> = new Map()
+  if (tree) {
+    for (const project of projects) {
+      if (project.archivedAt) continue
+      for (const task of project.tasks) {
+        if (!task.parentCode || task.cycleRole) continue
+        if (!passesStatus(task)) continue
+        const child: CycleSubTaskItem = {
+          id: task.id,
+          taskNumber: task.taskNumber ?? null,
+          taskCode: formatTaskId(task.taskNumber, project.code) || '',
+          title: task.title,
+          status: taskCycleStatus(task),
+          due: task.dueDate ?? null,
+          important: task.important ?? false,
+          completed: task.completed
+        }
+        const bucket = childrenByCode.get(task.parentCode) ?? []
+        bucket.push(child)
+        childrenByCode.set(task.parentCode, bucket)
+      }
+    }
+    for (const bucket of childrenByCode.values()) {
+      bucket.sort((a, b) => {
+        const dueCmp = compareDue(a.due, b.due)
+        if (dueCmp !== 0) return dueCmp
+        return (a.taskNumber ?? 0) - (b.taskNumber ?? 0)
+      })
+    }
+  }
+
   for (const project of projects) {
     if (project.archivedAt) continue
     for (const task of project.tasks) {
       if (!task.cycleRole) continue
       if (layer && task.cycleRole !== layer) continue
-      if (status === 'active' && task.completed) continue
-      if (status === 'done' && !task.completed) continue
-      items.push({
+      if (!passesStatus(task)) continue
+      const taskCode = formatTaskId(task.taskNumber, project.code) || ''
+      const item: CycleTaskItem = {
         id: task.id,
         taskNumber: task.taskNumber ?? null,
-        taskCode: formatTaskId(task.taskNumber, project.code) || '',
+        taskCode,
         title: task.title,
         projectId: project.id,
         projectCode: project.code ?? null,
@@ -344,7 +383,12 @@ export function getCycleTasks(opts: {
         important: task.important ?? false,
         beyondLimit: task.beyondLimit ?? false,
         completed: task.completed
-      })
+      }
+      if (tree) {
+        const children = childrenByCode.get(taskCode)
+        if (children && children.length > 0) item.children = children
+      }
+      items.push(item)
     }
   }
 

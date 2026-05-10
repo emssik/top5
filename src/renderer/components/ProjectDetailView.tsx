@@ -1,12 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { nanoid } from 'nanoid'
 import { useProjects } from '../hooks/useProjects'
 import type { Project, Task, ProjectLink, CycleRole } from '../types'
-import { CYCLE_ROLE_LABELS } from '../../shared/types'
+import { CYCLE_ROLE_LABELS, CYCLE_BADGE_LABEL } from '../../shared/types'
 import { calcProjectTime, calcTaskTime, formatCheckInTime } from '../utils/checkInTime'
 import { projectColorValue, normalizeProjectLinks, normalizeLinks, openProjectLink } from '../utils/projects'
 import TaskIdBadge from './TaskIdBadge'
 import { formatTaskId } from '../../shared/taskId'
+import { collectAnchorCodes } from '../../shared/task-list'
 import { dateKey } from '../../shared/schedule'
 import { Linkify } from './Linkify'
 import { isRecentlyCompleted } from '../utils/recentlyCompleted'
@@ -39,6 +40,8 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
   const [editingTitle, setEditingTitle] = useState('')
   const [dueDatePickerId, setDueDatePickerId] = useState<string | null>(null)
   const [cycleRolePickerId, setCycleRolePickerId] = useState<string | null>(null)
+  const [parentPickerId, setParentPickerId] = useState<string | null>(null)
+  const [newTaskParent, setNewTaskParent] = useState<string>('')
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null)
   const [linksEditId, setLinksEditId] = useState<string | null>(null)
   const [myccCommentId, setMyccCommentId] = useState<string | null>(null)
@@ -50,14 +53,60 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
   // Re-render every minute so recently-completed tasks expire after 1h
   const tick = useMinuteTick()
 
-  const activeTasks = useMemo(() => {
+  const activeTaskGroups = useMemo(() => {
     const active = project.tasks.filter((task) =>
       (!task.completed && !task.someday) || (task.completed && isRecentlyCompleted(task.completedAt))
     )
-    const pinned = active.filter((task) => task.isToDoNext).sort((a, b) => (a.toDoNextOrder ?? 999) - (b.toDoNextOrder ?? 999))
-    const unpinned = active.filter((task) => !task.isToDoNext)
-    return [...pinned, ...unpinned]
-  }, [project.tasks, tick])
+
+    const layerOrder: Record<CycleRole, number> = { must: 0, should: 1, could: 2 }
+    const anchors = active.filter((t) => !!t.cycleRole)
+    anchors.sort((a, b) => {
+      const ar = a.cycleRole ? layerOrder[a.cycleRole] : 99
+      const br = b.cycleRole ? layerOrder[b.cycleRole] : 99
+      if (ar !== br) return ar - br
+      return (a.toDoNextOrder ?? 999) - (b.toDoNextOrder ?? 999)
+    })
+
+    const anchorCodeSet = collectAnchorCodes(project)
+
+    const subsByAnchor = new Map<string, Task[]>()
+    const subIds = new Set<string>()
+    for (const t of active) {
+      if (t.cycleRole) continue
+      if (!t.parentCode || !anchorCodeSet.has(t.parentCode)) continue
+      const arr = subsByAnchor.get(t.parentCode) ?? []
+      arr.push(t)
+      subsByAnchor.set(t.parentCode, arr)
+      subIds.add(t.id)
+    }
+    for (const arr of subsByAnchor.values()) {
+      arr.sort((a, b) => {
+        const ap = a.isToDoNext ? 0 : 1
+        const bp = b.isToDoNext ? 0 : 1
+        if (ap !== bp) return ap - bp
+        return (a.toDoNextOrder ?? 999) - (b.toDoNextOrder ?? 999)
+      })
+    }
+
+    const anchorIds = new Set(anchors.map((a) => a.id))
+    const rest = active.filter((t) => !anchorIds.has(t.id) && !subIds.has(t.id))
+    const pinned = rest.filter((t) => t.isToDoNext).sort((a, b) => (a.toDoNextOrder ?? 999) - (b.toDoNextOrder ?? 999))
+    const unpinned = rest.filter((t) => !t.isToDoNext)
+
+    return { anchors, subsByAnchor, rest: [...pinned, ...unpinned] }
+  }, [project.tasks, project.code, tick])
+
+  const activeTasks = useMemo(() => {
+    const flat: Task[] = []
+    for (const a of activeTaskGroups.anchors) {
+      flat.push(a)
+      const code = formatTaskId(a.taskNumber, project.code)
+      const children = code ? activeTaskGroups.subsByAnchor.get(code) ?? [] : []
+      for (const c of children) flat.push(c)
+    }
+    flat.push(...activeTaskGroups.rest)
+    return flat
+  }, [activeTaskGroups, project.code])
   const somedayTasks = useMemo(() => project.tasks.filter((task) => !task.completed && task.someday), [project.tasks])
   const doneTasks = useMemo(() =>
     project.tasks
@@ -68,6 +117,13 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
   const pinnedCount = useMemo(() => activeTasks.filter((task) => task.isToDoNext).length, [activeTasks])
   const projectMinutes = useMemo(() => calcProjectTime(focusCheckIns, project.id), [focusCheckIns, project.id])
   const quickLinks = useMemo(() => normalizeProjectLinks(project), [project])
+
+  // 12WY anchors in this project (active tasks with cycleRole) + lookup helpers
+  const anchorTasks = useMemo(
+    () => project.tasks.filter((t) => !t.completed && !!t.cycleRole),
+    [project.tasks]
+  )
+  const anchorCodes = useMemo(() => collectAnchorCodes(project), [project])
 
   const updateTasks = async (nextTasks: Task[]) => {
     const fresh = useProjects.getState().projects.find((p) => p.id === project.id)
@@ -90,15 +146,18 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
     const title = newTaskTitle.trim()
     if (!title) return
 
+    const parentCode = newTaskParent && anchorCodes.has(newTaskParent) ? newTaskParent : null
     const task: Task = {
       id: nanoid(),
       title,
       completed: false,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      ...(parentCode ? { parentCode } : {})
     }
 
     await updateTasks([...project.tasks, task])
     setNewTaskTitle('')
+    setNewTaskParent('')
     setShowAddInput(false)
   }
 
@@ -111,6 +170,13 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
 
   const removeTask = async (taskId: string) => {
     const nextTasks = project.tasks.filter((task) => task.id !== taskId)
+    await updateTasks(nextTasks)
+  }
+
+  const setTaskParent = async (taskId: string, parentCode: string | null) => {
+    const nextTasks = project.tasks.map((task) =>
+      task.id === taskId ? { ...task, parentCode: parentCode ?? null } : task
+    )
     await updateTasks(nextTasks)
   }
 
@@ -225,6 +291,26 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
   }, [cycleRolePickerId])
 
   useEffect(() => {
+    if (!parentPickerId) return
+    const handleClick = (e: MouseEvent) => {
+      if ((e.target as HTMLElement).closest('.parent-picker-popover')) return
+      setParentPickerId(null)
+    }
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setParentPickerId(null)
+    }
+    const raf = requestAnimationFrame(() => {
+      window.addEventListener('click', handleClick)
+      window.addEventListener('keydown', handleKey)
+    })
+    return () => {
+      cancelAnimationFrame(raf)
+      window.removeEventListener('click', handleClick)
+      window.removeEventListener('keydown', handleKey)
+    }
+  }, [parentPickerId])
+
+  useEffect(() => {
     if (!menuOpenId) return
     const handleClick = (e: MouseEvent) => {
       if ((e.target as HTMLElement).closest('.task-overflow-menu')) return
@@ -306,7 +392,7 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
     await window.api.removeTaskImage(project.id, taskId, filename)
   }
 
-  const renderTask = (task: Task, done = false) => {
+  const renderTask = (task: Task, done = false, isSubTask = false) => {
     const isRecentDone = task.completed && isRecentlyCompleted(task.completedAt)
     const isPinned = !done && !!task.isToDoNext
     const taskMinutes = calcTaskTime(focusCheckIns, task.id)
@@ -316,7 +402,7 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
     return (
       <div
         key={task.id}
-        className={`task-card ${done || isRecentDone ? 'done-card' : ''} ${done || isRecentDone ? '' : 'draggable-task'} ${isDragOver ? 'drag-over' : ''} ${isSelected ? 'task-selected' : ''}`}
+        className={`task-card ${done || isRecentDone ? 'done-card' : ''} ${done || isRecentDone ? '' : 'draggable-task'} ${isDragOver ? 'drag-over' : ''} ${isSelected ? 'task-selected' : ''} ${isSubTask ? 'sub-task' : ''}`}
         draggable={!done && !isRecentDone}
         onClick={(event) => {
           if (done || isRecentDone) return
@@ -375,6 +461,14 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
                   title={`Cycle: ${task.cycleRole}`}
                   onClick={(e) => { e.stopPropagation(); setMenuOpenId(null); setCycleRolePickerId(task.id) }}
                 >{CYCLE_ROLE_LABELS[task.cycleRole]}</span>
+              )}
+              {!task.cycleRole && task.parentCode && anchorCodes.has(task.parentCode) && !done && !isRecentDone && (
+                <span
+                  className="task-cycle-badge"
+                  data-clickable="true"
+                  title={`Sub-task of ${task.parentCode} — click to change`}
+                  onClick={(e) => { e.stopPropagation(); setMenuOpenId(null); setParentPickerId(task.id) }}
+                >{CYCLE_BADGE_LABEL}</span>
               )}
               <Linkify text={task.title} />
               <TaskLinksIndicator links={task.links ?? []} projectName={project.name} />
@@ -441,6 +535,9 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
                 <button className="task-overflow-item" onClick={() => { setMenuOpenId(null); setDueDatePickerId(task.id) }}><span className="toi-icon">📅</span>{task.dueDate ? 'Change due date' : 'Set due date'}</button>
                 <button className="task-overflow-item" onClick={() => { setMenuOpenId(null); setLinksEditId(task.id) }}><span className="toi-icon">🔗</span>Links{task.links && task.links.length > 0 ? ` (${task.links.length})` : ''}</button>
                 <button className="task-overflow-item" onClick={() => { setMenuOpenId(null); setCycleRolePickerId(task.id) }}><span className="toi-icon">12W</span>Cycle role{task.cycleRole ? `: ${task.cycleRole}` : ''}</button>
+                {!task.cycleRole && anchorTasks.length > 0 && (
+                  <button className="task-overflow-item" onClick={() => { setMenuOpenId(null); setParentPickerId(task.id) }}><span className="toi-icon">└</span>Sub-task of{task.parentCode ? `: ${task.parentCode}` : '...'}</button>
+                )}
                 <button className="task-overflow-item" onClick={() => handlePasteImageToTask(task.id)}><span className="toi-icon">📎</span>Paste image</button>
                 {config.obsidianStoragePath && (
                   <button className="task-overflow-item" onClick={() => { window.api.openTaskNote(task.id, task.title, project.name, formatTaskId(task.taskNumber, project.code), task.noteRef); setMenuOpenId(null) }}><span className="toi-icon">📝</span>Open note</button>
@@ -485,6 +582,30 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
                   onClick={() => { setTaskCycleRole(project.id, task.id, null); setCycleRolePickerId(null) }}
                   title="Clear"
                 >—</button>
+              </div>
+            )}
+            {parentPickerId === task.id && (
+              <div className="parent-picker-popover" onClick={(e) => e.stopPropagation()}>
+                <div className="parent-picker-title">Sub-task of</div>
+                <button
+                  className={`parent-picker-item ${!task.parentCode ? 'active' : ''}`}
+                  onClick={() => { setTaskParent(task.id, null); setParentPickerId(null) }}
+                >— None</button>
+                {anchorTasks.map((anchor) => {
+                  const code = formatTaskId(anchor.taskNumber, project.code)
+                  return (
+                    <button
+                      key={anchor.id}
+                      className={`parent-picker-item ${task.parentCode === code ? 'active' : ''}`}
+                      onClick={() => { setTaskParent(task.id, code); setParentPickerId(null) }}
+                      title={anchor.title}
+                    >
+                      <span className={`cycle-role-badge cr-${anchor.cycleRole}`}>{CYCLE_ROLE_LABELS[anchor.cycleRole as CycleRole]}</span>
+                      <span className="ppi-code">{code}</span>
+                      <span className="ppi-title">{anchor.title}</span>
+                    </button>
+                  )
+                })}
               </div>
             )}
             {myccCommentId === task.id && (
@@ -548,7 +669,17 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
       )}
 
       <div>
-        {activeTasks.map((task) => renderTask(task))}
+        {activeTaskGroups.anchors.map((anchor) => {
+          const code = formatTaskId(anchor.taskNumber, project.code)
+          const children = code ? activeTaskGroups.subsByAnchor.get(code) ?? [] : []
+          return (
+            <Fragment key={anchor.id}>
+              {renderTask(anchor)}
+              {children.map((child) => renderTask(child, false, true))}
+            </Fragment>
+          )
+        })}
+        {activeTaskGroups.rest.map((task) => renderTask(task))}
       </div>
 
       <div className="today-add-task-wrap">
@@ -565,9 +696,25 @@ export default function ProjectDetailView({ project, onEdit, onDelete }: Props) 
                 if (event.key === 'Escape') {
                   setShowAddInput(false)
                   setNewTaskTitle('')
+                  setNewTaskParent('')
                 }
               }}
             />
+            {anchorTasks.length > 0 && (
+              <select
+                className="form-input"
+                style={{ maxWidth: 180 }}
+                value={newTaskParent}
+                onChange={(e) => setNewTaskParent(e.target.value)}
+                title="Optionally attach as 12WY sub-task"
+              >
+                <option value="">— No parent</option>
+                {anchorTasks.map((anchor) => {
+                  const code = formatTaskId(anchor.taskNumber, project.code)
+                  return <option key={anchor.id} value={code}>{code} — {anchor.title.slice(0, 30)}</option>
+                })}
+              </select>
+            )}
             <button className="task-action-btn btn-focus" onClick={addTask}>Add</button>
           </div>
         ) : (

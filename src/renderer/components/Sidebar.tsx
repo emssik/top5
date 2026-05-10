@@ -4,6 +4,8 @@ import { projectColorValue } from '../utils/projects'
 import { checkInMinutes, formatCheckInTime } from '../utils/checkInTime'
 import { useProjects } from '../hooks/useProjects'
 import { dateKey } from '../../shared/schedule'
+import { computeCycleRange } from '../../shared/cycle'
+import { ensureCycleStart, getStoredCycleStart } from '../utils/cycleStart'
 
 type DragSource = 'active' | 'suspended' | 'archived'
 
@@ -109,6 +111,20 @@ export default function Sidebar({
       .reduce((sum, c) => sum + checkInMinutes(c), 0)
     return mins > 0 ? formatCheckInTime(mins) : ''
   }, [focusCheckIns])
+
+  const cycleLabel = useMemo(() => {
+    let start = getStoredCycleStart()
+    if (!start) {
+      const hasCycleTasks = [...activeProjects, ...suspendedProjects]
+        .some((p) => p.tasks.some((t) => !!t.cycleRole))
+      start = ensureCycleStart(hasCycleTasks)
+    }
+    if (!start) return '12w'
+    const range = computeCycleRange(start)
+    if (!range || range.daysRemaining < 0) return '12w'
+    if (range.daysRemaining === 0) return '12w (today)'
+    return `12w (${range.daysRemaining}d)`
+  }, [activeProjects, suspendedProjects])
 
   const [draggedId, setDraggedId] = useState<string | null>(null)
   const [dragSource, setDragSource] = useState<DragSource | null>(null)
@@ -251,7 +267,7 @@ export default function Sidebar({
 
       <div className="sidebar-section">
         <SidebarItem active={activeView === 'today'} icon="▶" label={todayTime ? `Today (${todayTime})` : 'Today'} onClick={() => onSelectView('today')} />
-        <SidebarItem active={activeView === 'cycle'} icon="◷" label="12w" onClick={() => onSelectView('cycle')} />
+        <SidebarItem active={activeView === 'cycle'} icon="◷" label={cycleLabel} onClick={() => onSelectView('cycle')} />
         <SidebarItem icon="👁" label="Clean view" onClick={onToggleCleanView} />
         <SidebarItem icon="📝" label="Quick notes" onClick={onToggleNotes} />
       </div>

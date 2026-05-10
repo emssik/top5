@@ -132,10 +132,11 @@ export function registerProjectRoutes(fastify: FastifyInstance): void {
   })
 
   fastify.get('/api/v1/cycle/tasks', async (request, reply) => {
-    const { layer: layerInput, status: statusInput } = (request.query ?? {}) as { layer?: unknown; status?: unknown }
+    const { layer: layerInput, status: statusInput, tree: treeInput } = (request.query ?? {}) as { layer?: unknown; status?: unknown; tree?: unknown }
     const layer = (layerInput == null || layerInput === '' ? null : layerInput) as CycleRole | null
     const status = (statusInput == null || statusInput === '' ? 'active' : statusInput) as CycleStatusFilter
-    const result = projectService.getCycleTasks({ layer, status })
+    const tree = treeInput === '1' || treeInput === 'true'
+    const result = projectService.getCycleTasks({ layer, status, tree })
     if (isServiceError(result)) return reply.status(errorToHttpStatus(result.error)).send({ ok: false, error: result.error })
     return { ok: true, data: result }
   })

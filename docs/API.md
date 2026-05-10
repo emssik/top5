@@ -179,8 +179,9 @@ Returns all tasks with `cycleRole` set across non-archived projects, flattened i
 
 - `layer` — `must` | `should` | `could`. Filter to one MoSCoW layer.
 - `status` — `active` (default) | `done` | `all`. `active` skips completed tasks; `done` returns only completed; `all` returns both.
+- `tree` — `1` / `true` to attach `children: CycleSubTaskItem[]` on each anchor (sub-tasks linked through `parentCode` in the same project). Children obey the same `status` filter as the anchor query.
 
-**Sort order:** `must` → `should` → `could`. Within each layer: by `due` ascending (null `due` last) → `projectCode` (numeric-aware) → `taskNumber`.
+**Sort order:** `must` → `should` → `could`. Within each layer: by `due` ascending (null `due` last) → `projectCode` (numeric-aware) → `taskNumber`. Children within an anchor are sorted by `due` then `taskNumber`.
 
 **Response:** `{ ok, data: CycleTaskItem[] }`
 
@@ -198,6 +199,18 @@ interface CycleTaskItem {
   due: string | null          // YYYY-MM-DD
   important: boolean
   beyondLimit: boolean
+  completed: boolean
+  children?: CycleSubTaskItem[]   // present only when tree=1
+}
+
+interface CycleSubTaskItem {
+  id: string
+  taskNumber: number | null
+  taskCode: string
+  title: string
+  status: 'active' | 'in-progress' | 'up-next' | 'done'
+  due: string | null
+  important: boolean
   completed: boolean
 }
 ```
@@ -402,8 +415,13 @@ Returns all non-archived habits as today-summary entries (schedule, today status
   inProgress?: boolean
   important?: boolean
   cycleRole?: 'must' | 'should' | 'could'
+  parentCode?: string | null   // 12WY anchor task code in same project (e.g. "TOP-42")
 }
 ```
+
+**`parentCode`** — points to a 12WY anchor task (a task with `cycleRole`) in the **same project**. Used to express the kotwica → sub-task hierarchy. Sub-tasks themselves do not carry `cycleRole` — they inherit priority through the parent. Persisted as-is by `PUT /projects/:id` (no dedicated endpoint); validation that the referenced anchor exists and has a `cycleRole` is the caller's responsibility. Cross-project parenting is not supported.
+
+When a task has a valid `parentCode`, the renderer replaces the `important` star with a `12WY` badge (Today, Focus, Project Detail). The `important` flag is still stored, but it's hidden visually for sub-tasks.
 
 ### QuickTask
 

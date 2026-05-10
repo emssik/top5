@@ -6,6 +6,8 @@ import { checkInMinutes } from '../utils/checkInTime'
 import { STANDALONE_PROJECT_ID } from '../utils/constants'
 import type { Task, ProjectLink, QuickTask } from '../types'
 import { formatTaskId, formatQuickTaskId, computeNotePath } from '../../shared/taskId'
+import { collectAnchorCodes } from '../../shared/task-list'
+import { CYCLE_BADGE_LABEL } from '../../shared/types'
 import { Linkify } from './Linkify'
 import { nextSplitTitle, cleanSplitTitle, buildSplitTaskCopy, buildSplitQuickTaskCopy } from '../utils/splitTask'
 
@@ -448,13 +450,27 @@ export default function FocusMode() {
             {projLabel}
           </button>
         )}
-        {task?.important && (
-          <span
-            className="text-[13px] flex-shrink-0"
-            style={{ color: 'var(--pc-amber)', lineHeight: 1 }}
-            title="Important"
-          >★</span>
-        )}
+        {(() => {
+          if (!task || isStandalone || !project) return task?.important && (
+            <span
+              className="text-[13px] flex-shrink-0"
+              style={{ color: 'var(--pc-amber)', lineHeight: 1 }}
+              title="Important"
+            >★</span>
+          )
+          const parentCode = (task as Task).parentCode
+          const hasAnchor = !!parentCode && collectAnchorCodes(project).has(parentCode)
+          if (hasAnchor) {
+            return <span className="task-cycle-badge" title={`Sub-task of ${parentCode}`}>{CYCLE_BADGE_LABEL}</span>
+          }
+          return task.important && (
+            <span
+              className="text-[13px] flex-shrink-0"
+              style={{ color: 'var(--pc-amber)', lineHeight: 1 }}
+              title="Important"
+            >★</span>
+          )
+        })()}
         <span
           className="text-[14px] font-semibold truncate text-t-primary flex-1 min-w-0 cursor-default"
           onDoubleClick={() => { if (task?.title) navigator.clipboard.writeText(task.title) }}
