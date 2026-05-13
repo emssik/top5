@@ -50,7 +50,7 @@ const FOCUS_HEIGHT_PICKER = 480
 
 export default function FocusMode() {
   const { projects, quickTasks, focusCheckIns, config, setFocus, repeatingTasks } = useProjects()
-  const { activeTasks, repeatingActive } = useTaskList()
+  const { scheduledTasks, inProgressTasks, upNextTasks, overflowTasks } = useTaskList()
   const [confirmAction, setConfirmAction] = useState<{ minutes: number; type: 'exit' | 'complete' | 'split' } | null>(null)
   const [isDev, setIsDev] = useState(false)
   const [showTaskPicker, setShowTaskPicker] = useState(false)
@@ -195,10 +195,11 @@ export default function FocusMode() {
   // Main timer shows wall time from focus window start.
   const totalSeconds = elapsedSeconds
 
-  // Build picker from visible tasks, excluding just-completed task
+  // Build picker from visible tasks, excluding just-completed task.
+  // Matches TodayView's visual order: scheduled → in-progress → up-next → overflow.
   const pickerTasks: PickerTask[] = []
   if (showTaskPicker) {
-    for (const mt of [...activeTasks, ...repeatingActive]) {
+    for (const mt of [...scheduledTasks, ...inProgressTasks, ...upNextTasks, ...overflowTasks]) {
       const projectId = mt.kind === 'pinned' ? mt.projectId! : STANDALONE_PROJECT_ID
       const taskId = mt.kind === 'pinned' ? mt.taskId! : mt.id
       const key = `${projectId}:${taskId}`

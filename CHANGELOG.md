@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.99.1] - 2026-05-13
+
+### Fixed
+
+- Focus: po oznaczeniu taska jako zrobionego picker kolejnego zadania pokazuje wszystkie taski widoczne w Today, nie tylko te w ramach limitu. Wcześniej brakowało scheduled (z `dueDate` na dziś/zaległe) oraz overflow (poza limitem) — co dawało krótszą listę niż widok Today. Kolejność w pickerze odpowiada teraz widokowi Today: scheduled → in-progress → up-next → overflow.
+
 ## [1.99.0] - 2026-05-10
 
 ### Added
