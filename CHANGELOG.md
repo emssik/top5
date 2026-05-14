@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.99.2] - 2026-05-14
+
+### Fixed
+
+- Focus: picker kolejnego zadania nie pokazuje już tasków „Beyond limit". W v1.99.1 dorzucone zostały scheduled + overflow; overflow wracają teraz do widoku Today, ale wybór następnego taska w Focus Window obejmuje tylko to, co jest w ramach limitu (scheduled → in-progress → up-next). Daniel zepchnął je tam świadomie i nie chce na nie wracać przez popup wyboru.
+
 ## [1.99.1] - 2026-05-13
 
 ### Fixed

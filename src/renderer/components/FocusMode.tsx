@@ -50,7 +50,7 @@ const FOCUS_HEIGHT_PICKER = 480
 
 export default function FocusMode() {
   const { projects, quickTasks, focusCheckIns, config, setFocus, repeatingTasks } = useProjects()
-  const { scheduledTasks, inProgressTasks, upNextTasks, overflowTasks } = useTaskList()
+  const { scheduledTasks, inProgressTasks, upNextTasks } = useTaskList()
   const [confirmAction, setConfirmAction] = useState<{ minutes: number; type: 'exit' | 'complete' | 'split' } | null>(null)
   const [isDev, setIsDev] = useState(false)
   const [showTaskPicker, setShowTaskPicker] = useState(false)
@@ -196,10 +196,11 @@ export default function FocusMode() {
   const totalSeconds = elapsedSeconds
 
   // Build picker from visible tasks, excluding just-completed task.
-  // Matches TodayView's visual order: scheduled → in-progress → up-next → overflow.
+  // Matches TodayView's visual order within the limit: scheduled → in-progress → up-next.
+  // Overflow (beyond limit) is intentionally excluded — Daniel zepchnął je tam świadomie.
   const pickerTasks: PickerTask[] = []
   if (showTaskPicker) {
-    for (const mt of [...scheduledTasks, ...inProgressTasks, ...upNextTasks, ...overflowTasks]) {
+    for (const mt of [...scheduledTasks, ...inProgressTasks, ...upNextTasks]) {
       const projectId = mt.kind === 'pinned' ? mt.projectId! : STANDALONE_PROJECT_ID
       const taskId = mt.kind === 'pinned' ? mt.taskId! : mt.id
       const key = `${projectId}:${taskId}`
