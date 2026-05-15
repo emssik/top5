@@ -375,6 +375,8 @@ top5 12w --tree --json                  # children attached as `children` arrays
 
 **Move / change / detach a sub-task:** no dedicated CLI command yet. Edit through the Project Detail view in the Electron UI (overflow menu → "Sub-task of...") or via `PUT /projects/:id` with the updated `tasks[]` payload.
 
+**Under the hood:** `top5 add ... --parent ...` calls the dedicated `POST /api/v1/projects/:pid/tasks/:tid/sub-tasks` endpoint (the regular `top5 add` without `--parent` uses `PUT /projects/:id`). The server validates the anchor (same project, has `cycleRole`, not completed) and rejects sub-tasks that themselves carry `cycleRole`. Same validation applies when a sub-task is introduced via `PUT /projects/:id` — newly added or changed `parentCode` values are checked; pre-existing untouched ones are not re-validated, so legacy data is preserved. Errors come back as `400 parent_invalid`. See `docs/API.md` for the full request/response shape.
+
 **When to suggest using this:** the user is working with 12WY (`/biz`, MoSCoW, anchors) and wants to break down an anchor into smaller actionable pieces. Anchor stays in `top5 12w` for tracking; sub-tasks live as regular tasks in the project but render with the `12WY` badge so the user knows they belong to the cycle.
 
 ### Health check

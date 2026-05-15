@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.100.0] - 2026-05-15
+
+### Added
+
+- API: dedykowany endpoint `POST /api/v1/projects/:pid/tasks/:tid/sub-tasks` do tworzenia 12WY sub-tasków. Serwer waliduje kotwicę (ten sam projekt, ma `cycleRole`, nie jest ukończona), auto-składa `parentCode` z kodu kotwicy i auto-przypisuje `taskNumber`. Zwraca `201` z taskiem. Błędy: `404` (projekt/kotwica), `400 validation` (pusty tytuł), `400 parent_invalid` (kotwica bez cycleRole / ukończona / projekt bez `code`).
+- API: walidacja `parentCode` po stronie serwera w `PUT /api/v1/projects/:id` — nowe lub zmienione `parentCode` muszą wskazywać na aktywną kotwicę z `cycleRole` w tym samym projekcie; dziecko nie może samo mieć `cycleRole`; brak self-reference. Istniejące, nietknięte `parentCode` nie są re-walidowane (legacy stale links zachowane).
+
+### Changed
+
+- CLI: `top5 add --parent` używa nowego dedykowanego endpointa `POST /projects/:pid/tasks/:tid/sub-tasks` zamiast pełnego `PUT /projects/:id`. Walidacja `--parent` + `--cycle-role` (wzajemnie wykluczające się — sub-task dziedziczy priorytet z kotwicy).
+
 ## [1.99.3] - 2026-05-15
 
 ### Security

@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto'
 import type { CycleRole, CycleStatusFilter, CycleSubTaskItem, CycleTaskItem, CycleTaskStatus, Project, Task } from '../../shared/types'
 import { isCycleRole, isCycleStatusFilter } from '../../shared/types'
 import { formatTaskId } from '../../shared/taskId'
@@ -13,10 +14,45 @@ import {
   getActiveProjectsLimit
 } from '../store'
 
-type ServiceError = { error: 'not_found' | 'validation' | 'active_limit' | 'code_duplicate' }
+type ServiceError = { error: 'not_found' | 'validation' | 'active_limit' | 'code_duplicate' | 'parent_invalid' }
 
 function isCodeUnique(code: string, excludeProjectId: string | null, projects: Project[]): boolean {
   return !projects.some((p) => p.code === code && p.id !== excludeProjectId)
+}
+
+/**
+ * Validates parentCode references inside a project. Only checks tasks where parentCode
+ * was newly introduced or changed, to avoid breaking existing data with stale links.
+ */
+function validateParentCodes(
+  project: Project,
+  oldTaskById: Map<string, Task> | null
+): null | { error: 'parent_invalid' } {
+  const code = project.code
+  const byTaskCode = new Map<string, Task>()
+  if (code) {
+    for (const t of project.tasks) {
+      const tc = formatTaskId(t.taskNumber, code)
+      if (tc) byTaskCode.set(tc, t)
+    }
+  }
+  for (const t of project.tasks) {
+    const old = oldTaskById?.get(t.id)
+    const parentChanged = !old || old.parentCode !== t.parentCode
+    const cycleRoleChanged = !old || old.cycleRole !== t.cycleRole
+    if (!parentChanged && !cycleRoleChanged) continue
+    const parentCode = t.parentCode
+    if (parentCode == null) continue
+    if (typeof parentCode !== 'string' || parentCode.length === 0) return { error: 'parent_invalid' }
+    if (!code) return { error: 'parent_invalid' }
+    if (t.cycleRole) return { error: 'parent_invalid' }
+    const selfCode = formatTaskId(t.taskNumber, code)
+    if (selfCode && selfCode === parentCode) return { error: 'parent_invalid' }
+    const parent = byTaskCode.get(parentCode)
+    if (!parent) return { error: 'parent_invalid' }
+    if (!parent.cycleRole) return { error: 'parent_invalid' }
+  }
+  return null
 }
 
 export function getProjects(): Project[] {
@@ -63,6 +99,9 @@ export function createProject(input: unknown): Project[] | ServiceError {
     }
   }
 
+  const parentErr = validateParentCodes(normalizedProject, null)
+  if (parentErr) return parentErr
+
   const nextProjects = assignMissingProjectColors(projects.map(normalizeProject))
   setData('projects', nextProjects)
   appendOperation({ type: 'project_created', projectId: input.id, projectName: input.name })
@@ -97,6 +136,10 @@ export function updateProject(id: string, input: unknown): Project[] | ServiceEr
     normalizedProject.code = oldProject.code
   }
 
+  const oldTaskById = new Map(oldProject.tasks.map((t) => [t.id, t]))
+  const parentErr = validateParentCodes(normalizedProject, oldTaskById)
+  if (parentErr) return parentErr
+
   projects[index] = normalizedProject
 
   const nextProjects = assignMissingProjectColors(projects.map(normalizeProject))
@@ -104,12 +147,11 @@ export function updateProject(id: string, input: unknown): Project[] | ServiceEr
 
   // Detect task-level changes for operation log
   const savedProject = nextProjects.find((p) => p.id === id) ?? normalizedProject
-  const oldTaskMap = new Map(oldProject.tasks.map((t) => [t.id, t]))
   const newTaskMap = new Map((input.tasks as Task[]).map((t) => [t.id, t]))
   const code = savedProject.code
 
   for (const t of savedProject.tasks) {
-    const old = oldTaskMap.get(t.id)
+    const old = oldTaskById.get(t.id)
     const tc = formatTaskId(t.taskNumber, code) || undefined
     if (!old) {
       appendOperation({ type: 'task_created', projectId: id, projectName: input.name, taskTitle: t.title, taskCode: tc })
@@ -129,7 +171,7 @@ export function updateProject(id: string, input: unknown): Project[] | ServiceEr
 
   const hasTaskChanges = (input.tasks as Task[]).length !== oldProject.tasks.length ||
     (input.tasks as Task[]).some((t) => {
-      const old = oldTaskMap.get(t.id)
+      const old = oldTaskById.get(t.id)
       return !old || t.completed !== old.completed
     })
   if (!hasTaskChanges && (input.name !== oldProject.name || input.description !== oldProject.description)) {
@@ -497,6 +539,59 @@ export function updateTaskDueDate(projectId: string, taskId: string, dueDate: st
   task.dueDate = dueDate
   setData('projects', projects)
   return projects
+}
+
+type CreateSubTaskInput = {
+  title?: unknown
+  dueDate?: unknown
+  important?: unknown
+}
+
+export function createSubTask(
+  projectId: string,
+  parentTaskId: string,
+  input: unknown
+): (Task & { projectId: string; projectCode?: string }) | ServiceError {
+  if (!input || typeof input !== 'object') return { error: 'validation' }
+  const body = input as CreateSubTaskInput
+  const title = typeof body.title === 'string' ? body.title.trim() : ''
+  if (title.length === 0) return { error: 'validation' }
+  const dueDate = body.dueDate === undefined || body.dueDate === null
+    ? null
+    : typeof body.dueDate === 'string' && body.dueDate.length > 0 ? body.dueDate : null
+  const important = body.important === true
+
+  const data = getData()
+  const projects = [...data.projects]
+  const project = projects.find((p) => p.id === projectId)
+  if (!project) return { error: 'not_found' }
+  const parent = project.tasks.find((t) => t.id === parentTaskId)
+  if (!parent) return { error: 'not_found' }
+
+  if (!project.code) return { error: 'parent_invalid' }
+  if (!parent.cycleRole) return { error: 'parent_invalid' }
+  if (parent.completed) return { error: 'parent_invalid' }
+  const parentCode = formatTaskId(parent.taskNumber, project.code)
+  if (!parentCode) return { error: 'parent_invalid' }
+
+  const nextNum = project.nextTaskNumber ?? 1
+  const newTask: Task = {
+    id: randomUUID().slice(0, 21),
+    title,
+    completed: false,
+    createdAt: new Date().toISOString(),
+    taskNumber: nextNum,
+    parentCode,
+    ...(dueDate ? { dueDate } : {}),
+    ...(important ? { important: true } : {})
+  }
+  project.tasks.push(newTask)
+  project.nextTaskNumber = nextNum + 1
+
+  setData('projects', projects)
+  const tc = formatTaskId(newTask.taskNumber, project.code) || undefined
+  appendOperation({ type: 'task_created', projectId, projectName: project.name, taskTitle: title, taskCode: tc, details: `parent: ${parentCode}` })
+  return { ...newTask, projectId: project.id, projectCode: project.code || undefined }
 }
 
 export function toggleTaskToDoNext(projectId: string, taskId: string): Project[] | ServiceError {

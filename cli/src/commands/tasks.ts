@@ -162,8 +162,9 @@ export function register(program: Command): void {
 
         const project = await resolveProject(client, projectRef) as Project
 
-        let parentCode: string | undefined
+        let savedTask: Task
         if (opts.parent) {
+          if (cycleRole) die('--parent and --cycle-role are mutually exclusive: 12WY sub-tasks inherit priority from the anchor.')
           const raw = String(opts.parent).trim()
           if (!project.code) die(`Project ${project.name} has no code — cannot resolve --parent.`)
           const expected = raw.includes('-') ? raw : `${project.code}-${raw}`
@@ -172,37 +173,41 @@ export function register(program: Command): void {
             && `${project.code}-${t.taskNumber}` === expected)
           if (!anchor) die(`No active task ${expected} found in project ${project.code}.`)
           if (!anchor.cycleRole) die(`Task ${expected} has no cycleRole — only 12WY anchors can be parents.`)
-          parentCode = expected
+
+          savedTask = await client.post<Task>(
+            `/api/v1/projects/${project.id}/tasks/${anchor.id}/sub-tasks`,
+            {
+              title,
+              ...(dueDate ? { dueDate } : {}),
+            }
+          )
+        } else {
+          const newTask = {
+            id: crypto.randomUUID(),
+            title,
+            completed: false,
+            createdAt: new Date().toISOString(),
+            ...(dueDate ? { dueDate } : {}),
+            ...(cycleRole ? { cycleRole } : {}),
+          }
+
+          const updatedProject = {
+            ...project,
+            tasks: [...project.tasks, newTask],
+          }
+
+          const result = await client.put<Project[]>(`/api/v1/projects/${project.id}`, updatedProject)
+          const found = result.find((p) => p.id === project.id)?.tasks.find((t) => t.id === newTask.id)
+          if (!found) die(`Task ${newTask.id} disappeared from PUT response — server bug?`)
+          savedTask = found
         }
 
-        const newTask = {
-          id: crypto.randomUUID(),
-          title,
-          completed: false,
-          createdAt: new Date().toISOString(),
-          ...(dueDate ? { dueDate } : {}),
-          ...(cycleRole ? { cycleRole } : {}),
-          ...(parentCode ? { parentCode } : {}),
-        }
-
-        // Update project with new task appended
-        const updatedProject = {
-          ...project,
-          tasks: [...project.tasks, newTask],
-        }
-
-        const result = await client.put<Project[]>(`/api/v1/projects/${project.id}`, updatedProject)
-
-        // Find the created task in result to show task number
-        const savedProject = result.find((p) => p.id === project.id)
-        const savedTask = savedProject?.tasks.find((t) => t.id === newTask.id)
-
-        const code = savedTask?.taskNumber != null && project.code
+        const code = savedTask.taskNumber != null && project.code
           ? `${project.code}-${savedTask.taskNumber}`
           : ''
 
         let pinned = false
-        if (opts.pin && savedTask) {
+        if (opts.pin) {
           try {
             await client.post(`/api/v1/projects/${project.id}/tasks/${savedTask.id}/toggle-to-do-next`)
             pinned = true
@@ -212,7 +217,7 @@ export function register(program: Command): void {
         }
 
         let notePath: string | undefined
-        if (opts.note && savedTask) {
+        if (opts.note) {
           try {
             const noteResult = await client.post<{ noteRef: string; filePath: string }>(
               `/api/v1/projects/${project.id}/tasks/${savedTask.id}/note`
@@ -224,7 +229,7 @@ export function register(program: Command): void {
         }
 
         const resultData = {
-          ...(savedTask ?? newTask),
+          ...savedTask,
           ...(notePath ? { notePath } : {}),
           ...(pinned ? { pinned } : {}),
         }
@@ -235,7 +240,7 @@ export function register(program: Command): void {
             let msg = `Created: ${code ? code + ' ' : ''}${title}`
             if (dueDate) msg += ` (due: ${formatDueDate(dueDate)})`
             if (cycleRole) msg += ` [${cycleRole}]`
-            if (parentCode) msg += ` [parent: ${parentCode}]`
+            if (savedTask.parentCode) msg += ` [parent: ${savedTask.parentCode}]`
             if (pinned) msg += ` [pinned]`
             if (notePath) msg += `\nNote: ${notePath}`
             return msg

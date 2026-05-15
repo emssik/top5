@@ -805,4 +805,283 @@ describe('Projects API', () => {
       expect(res.statusCode).toBe(404)
     })
   })
+
+  describe('parentCode validation on PUT /projects/:id', () => {
+    it('accepts a new sub-task with a valid parentCode pointing to a cycleRole anchor', async () => {
+      const server = await getTestServer()
+      const project = makeProject({
+        code: 'PRJ',
+        nextTaskNumber: 2,
+        tasks: [{ id: 'anchor', title: 'Anchor', completed: false, taskNumber: 1, cycleRole: 'must', createdAt: new Date().toISOString() }]
+      })
+      await server.inject({ method: 'POST', url: '/api/v1/projects', headers: { ...auth, 'content-type': 'application/json' }, payload: project })
+
+      const updated = {
+        ...project,
+        tasks: [
+          ...project.tasks,
+          { id: 'child', title: 'Sub', completed: false, parentCode: 'PRJ-1', createdAt: new Date().toISOString() }
+        ]
+      }
+      const res = await server.inject({
+        method: 'PUT',
+        url: `/api/v1/projects/${project.id}`,
+        headers: { ...auth, 'content-type': 'application/json' },
+        payload: updated
+      })
+      expect(res.statusCode).toBe(200)
+      const tasks = res.json().data.find((p: any) => p.id === project.id).tasks
+      expect(tasks.find((t: any) => t.id === 'child').parentCode).toBe('PRJ-1')
+    })
+
+    it('rejects a sub-task whose parentCode does not exist', async () => {
+      const server = await getTestServer()
+      const project = makeProject({
+        code: 'PRJ',
+        nextTaskNumber: 2,
+        tasks: [{ id: 'anchor', title: 'Anchor', completed: false, taskNumber: 1, cycleRole: 'must', createdAt: new Date().toISOString() }]
+      })
+      await server.inject({ method: 'POST', url: '/api/v1/projects', headers: { ...auth, 'content-type': 'application/json' }, payload: project })
+
+      const updated = {
+        ...project,
+        tasks: [
+          ...project.tasks,
+          { id: 'child', title: 'Sub', completed: false, parentCode: 'PRJ-99', createdAt: new Date().toISOString() }
+        ]
+      }
+      const res = await server.inject({
+        method: 'PUT',
+        url: `/api/v1/projects/${project.id}`,
+        headers: { ...auth, 'content-type': 'application/json' },
+        payload: updated
+      })
+      expect(res.statusCode).toBe(400)
+      expect(res.json().error).toBe('parent_invalid')
+    })
+
+    it('rejects a sub-task whose parent has no cycleRole', async () => {
+      const server = await getTestServer()
+      const project = makeProject({
+        code: 'PRJ',
+        nextTaskNumber: 2,
+        tasks: [{ id: 'anchor', title: 'Anchor', completed: false, taskNumber: 1, createdAt: new Date().toISOString() }]
+      })
+      await server.inject({ method: 'POST', url: '/api/v1/projects', headers: { ...auth, 'content-type': 'application/json' }, payload: project })
+
+      const updated = {
+        ...project,
+        tasks: [
+          ...project.tasks,
+          { id: 'child', title: 'Sub', completed: false, parentCode: 'PRJ-1', createdAt: new Date().toISOString() }
+        ]
+      }
+      const res = await server.inject({
+        method: 'PUT',
+        url: `/api/v1/projects/${project.id}`,
+        headers: { ...auth, 'content-type': 'application/json' },
+        payload: updated
+      })
+      expect(res.statusCode).toBe(400)
+      expect(res.json().error).toBe('parent_invalid')
+    })
+
+    it('rejects a task with both parentCode and cycleRole', async () => {
+      const server = await getTestServer()
+      const project = makeProject({
+        code: 'PRJ',
+        nextTaskNumber: 2,
+        tasks: [{ id: 'anchor', title: 'Anchor', completed: false, taskNumber: 1, cycleRole: 'must', createdAt: new Date().toISOString() }]
+      })
+      await server.inject({ method: 'POST', url: '/api/v1/projects', headers: { ...auth, 'content-type': 'application/json' }, payload: project })
+
+      const updated = {
+        ...project,
+        tasks: [
+          ...project.tasks,
+          { id: 'child', title: 'Sub', completed: false, parentCode: 'PRJ-1', cycleRole: 'should', createdAt: new Date().toISOString() }
+        ]
+      }
+      const res = await server.inject({
+        method: 'PUT',
+        url: `/api/v1/projects/${project.id}`,
+        headers: { ...auth, 'content-type': 'application/json' },
+        payload: updated
+      })
+      expect(res.statusCode).toBe(400)
+      expect(res.json().error).toBe('parent_invalid')
+    })
+
+    it('does not re-validate existing untouched parentCode (preserves legacy data)', async () => {
+      const server = await getTestServer()
+      const project = makeProject({
+        code: 'PRJ',
+        nextTaskNumber: 3,
+        tasks: [
+          { id: 'anchor', title: 'Anchor', completed: false, taskNumber: 1, cycleRole: 'must', createdAt: new Date().toISOString() },
+          { id: 'child', title: 'Sub', completed: false, taskNumber: 2, parentCode: 'PRJ-1', createdAt: new Date().toISOString() }
+        ]
+      })
+      await server.inject({ method: 'POST', url: '/api/v1/projects', headers: { ...auth, 'content-type': 'application/json' }, payload: project })
+
+      const updated = {
+        ...project,
+        tasks: [
+          { id: 'anchor', title: 'Anchor', completed: false, taskNumber: 1, createdAt: new Date().toISOString() },
+          { id: 'child', title: 'Sub', completed: false, taskNumber: 2, parentCode: 'PRJ-1', createdAt: new Date().toISOString() }
+        ]
+      }
+      const res = await server.inject({
+        method: 'PUT',
+        url: `/api/v1/projects/${project.id}`,
+        headers: { ...auth, 'content-type': 'application/json' },
+        payload: updated
+      })
+      expect(res.statusCode).toBe(200)
+    })
+  })
+
+  describe('POST /projects/:pid/tasks/:tid/sub-tasks', () => {
+    function makeProjectWithAnchor() {
+      return makeProject({
+        code: 'PRJ',
+        tasks: [{ id: 'anchor', title: 'Anchor', completed: false, taskNumber: 1, cycleRole: 'must', createdAt: new Date().toISOString() }]
+      })
+    }
+
+    it('creates a sub-task under a valid anchor and returns 201', async () => {
+      const server = await getTestServer()
+      const project = makeProjectWithAnchor()
+      await server.inject({ method: 'POST', url: '/api/v1/projects', headers: { ...auth, 'content-type': 'application/json' }, payload: project })
+
+      const res = await server.inject({
+        method: 'POST',
+        url: `/api/v1/projects/${project.id}/tasks/anchor/sub-tasks`,
+        headers: { ...auth, 'content-type': 'application/json' },
+        payload: { title: 'M1 — landing page' }
+      })
+      expect(res.statusCode).toBe(201)
+      const data = res.json().data
+      expect(data.title).toBe('M1 — landing page')
+      expect(data.parentCode).toBe('PRJ-1')
+      expect(data.completed).toBe(false)
+      expect(data.projectId).toBe(project.id)
+      expect(data.projectCode).toBe('PRJ')
+      expect(typeof data.taskNumber).toBe('number')
+
+      // Verify it is persisted
+      const verify = await server.inject({ method: 'GET', url: `/api/v1/projects/${project.id}`, headers: auth })
+      const tasks = verify.json().data.tasks
+      expect(tasks.find((t: any) => t.parentCode === 'PRJ-1').title).toBe('M1 — landing page')
+    })
+
+    it('passes through optional dueDate and important', async () => {
+      const server = await getTestServer()
+      const project = makeProjectWithAnchor()
+      await server.inject({ method: 'POST', url: '/api/v1/projects', headers: { ...auth, 'content-type': 'application/json' }, payload: project })
+
+      const res = await server.inject({
+        method: 'POST',
+        url: `/api/v1/projects/${project.id}/tasks/anchor/sub-tasks`,
+        headers: { ...auth, 'content-type': 'application/json' },
+        payload: { title: 'Sub', dueDate: '2026-06-01', important: true }
+      })
+      expect(res.statusCode).toBe(201)
+      expect(res.json().data.dueDate).toBe('2026-06-01')
+      expect(res.json().data.important).toBe(true)
+    })
+
+    it('returns 404 when the project does not exist', async () => {
+      const server = await getTestServer()
+      const res = await server.inject({
+        method: 'POST',
+        url: '/api/v1/projects/missing/tasks/anchor/sub-tasks',
+        headers: { ...auth, 'content-type': 'application/json' },
+        payload: { title: 'Sub' }
+      })
+      expect(res.statusCode).toBe(404)
+    })
+
+    it('returns 404 when the parent task does not exist', async () => {
+      const server = await getTestServer()
+      const project = makeProjectWithAnchor()
+      await server.inject({ method: 'POST', url: '/api/v1/projects', headers: { ...auth, 'content-type': 'application/json' }, payload: project })
+
+      const res = await server.inject({
+        method: 'POST',
+        url: `/api/v1/projects/${project.id}/tasks/nonexistent/sub-tasks`,
+        headers: { ...auth, 'content-type': 'application/json' },
+        payload: { title: 'Sub' }
+      })
+      expect(res.statusCode).toBe(404)
+    })
+
+    it('rejects when parent has no cycleRole with 400 parent_invalid', async () => {
+      const server = await getTestServer()
+      const project = makeProject({
+        code: 'PRJ',
+        tasks: [{ id: 'plain', title: 'Plain', completed: false, taskNumber: 1, createdAt: new Date().toISOString() }]
+      })
+      await server.inject({ method: 'POST', url: '/api/v1/projects', headers: { ...auth, 'content-type': 'application/json' }, payload: project })
+
+      const res = await server.inject({
+        method: 'POST',
+        url: `/api/v1/projects/${project.id}/tasks/plain/sub-tasks`,
+        headers: { ...auth, 'content-type': 'application/json' },
+        payload: { title: 'Sub' }
+      })
+      expect(res.statusCode).toBe(400)
+      expect(res.json().error).toBe('parent_invalid')
+    })
+
+    it('rejects when parent is completed with 400 parent_invalid', async () => {
+      const server = await getTestServer()
+      const project = makeProject({
+        code: 'PRJ',
+        tasks: [{ id: 'done', title: 'Done anchor', completed: true, taskNumber: 1, cycleRole: 'must', createdAt: new Date().toISOString() }]
+      })
+      await server.inject({ method: 'POST', url: '/api/v1/projects', headers: { ...auth, 'content-type': 'application/json' }, payload: project })
+
+      const res = await server.inject({
+        method: 'POST',
+        url: `/api/v1/projects/${project.id}/tasks/done/sub-tasks`,
+        headers: { ...auth, 'content-type': 'application/json' },
+        payload: { title: 'Sub' }
+      })
+      expect(res.statusCode).toBe(400)
+      expect(res.json().error).toBe('parent_invalid')
+    })
+
+    it('rejects when project has no code with 400 parent_invalid', async () => {
+      const server = await getTestServer()
+      const project = makeProject({
+        tasks: [{ id: 'anchor', title: 'Anchor', completed: false, taskNumber: 1, cycleRole: 'must', createdAt: new Date().toISOString() }]
+      })
+      await server.inject({ method: 'POST', url: '/api/v1/projects', headers: { ...auth, 'content-type': 'application/json' }, payload: project })
+
+      const res = await server.inject({
+        method: 'POST',
+        url: `/api/v1/projects/${project.id}/tasks/anchor/sub-tasks`,
+        headers: { ...auth, 'content-type': 'application/json' },
+        payload: { title: 'Sub' }
+      })
+      expect(res.statusCode).toBe(400)
+      expect(res.json().error).toBe('parent_invalid')
+    })
+
+    it('rejects empty title with 400 validation', async () => {
+      const server = await getTestServer()
+      const project = makeProjectWithAnchor()
+      await server.inject({ method: 'POST', url: '/api/v1/projects', headers: { ...auth, 'content-type': 'application/json' }, payload: project })
+
+      const res = await server.inject({
+        method: 'POST',
+        url: `/api/v1/projects/${project.id}/tasks/anchor/sub-tasks`,
+        headers: { ...auth, 'content-type': 'application/json' },
+        payload: { title: '   ' }
+      })
+      expect(res.statusCode).toBe(400)
+      expect(res.json().error).toBe('validation')
+    })
+  })
 })

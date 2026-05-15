@@ -180,6 +180,13 @@ export function registerProjectRoutes(fastify: FastifyInstance): void {
     return { ok: true, data: result }
   })
 
+  fastify.post<{ Params: { pid: string; tid: string } }>('/api/v1/projects/:pid/tasks/:tid/sub-tasks', async (request, reply) => {
+    const result = projectService.createSubTask(request.params.pid, request.params.tid, request.body)
+    if (isServiceError(result)) return reply.status(errorToHttpStatus(result.error)).send({ ok: false, error: result.error })
+    notifyAllWindows()
+    return reply.status(201).send({ ok: true, data: result })
+  })
+
   fastify.post<{ Params: { pid: string; tid: string }; Body: { comment?: string } }>('/api/v1/projects/:pid/tasks/:tid/send-to-mycc', async (request, reply) => {
     const body = (request.body ?? {}) as { comment?: string }
     const comment = typeof body.comment === 'string' ? body.comment : undefined

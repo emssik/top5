@@ -13,5 +13,6 @@ export function errorToHttpStatus(error: string): number {
   if (error === 'not_found') return 404
   if (error === 'active_limit') return 409
   if (error === 'code_duplicate') return 409
+  if (error === 'parent_invalid') return 400
   return 400
 }

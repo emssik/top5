@@ -133,6 +133,33 @@ Returns a single task from a project, enriched with `projectId` and `projectCode
 
 **Errors:** `404` if project or task not found.
 
+#### `POST /projects/:pid/tasks/:tid/sub-tasks`
+
+Creates a new 12WY sub-task under an existing anchor task (`:tid`). The anchor must live in the same project, have a `cycleRole`, and not be completed.
+
+**Body:**
+
+```json
+{
+  "title": "M1 — landing page",
+  "dueDate": "2026-06-15",
+  "important": true
+}
+```
+
+- `title` (required) — non-empty string, trimmed.
+- `dueDate` (optional) — `YYYY-MM-DD` or omit.
+- `important` (optional) — boolean.
+
+The created task has `parentCode` auto-set to the anchor's task code (e.g. `"PRJ-42"`). `taskNumber` is auto-assigned from the project's counter. `cycleRole` is **not** carried — sub-tasks inherit priority via the parent.
+
+**Response:** `201` — `{ ok, data: Task & { projectId, projectCode? } }`
+
+**Errors:**
+- `404` — project or parent task not found.
+- `400 validation` — empty/missing `title`.
+- `400 parent_invalid` — parent has no `cycleRole`, parent is completed, or project has no `code` (required to compose `parentCode`).
+
 #### `POST /projects/:pid/tasks/:tid/send-to-mycc`
 
 Sends a task to the MyCC inbox.
@@ -419,7 +446,12 @@ Returns all non-archived habits as today-summary entries (schedule, today status
 }
 ```
 
-**`parentCode`** — points to a 12WY anchor task (a task with `cycleRole`) in the **same project**. Used to express the kotwica → sub-task hierarchy. Sub-tasks themselves do not carry `cycleRole` — they inherit priority through the parent. Persisted as-is by `PUT /projects/:id` (no dedicated endpoint); validation that the referenced anchor exists and has a `cycleRole` is the caller's responsibility. Cross-project parenting is not supported.
+**`parentCode`** — points to a 12WY anchor task (a task with `cycleRole`) in the **same project**. Used to express the kotwica → sub-task hierarchy. Sub-tasks themselves do not carry `cycleRole` — they inherit priority through the parent. Cross-project parenting is not supported.
+
+Two ways to create a sub-task:
+
+1. **`POST /projects/:pid/tasks/:tid/sub-tasks`** — dedicated endpoint. The server validates the anchor and composes `parentCode` from its task code.
+2. **`PUT /projects/:id`** with a task carrying `parentCode` in the `tasks[]` array. The server validates newly-introduced or changed `parentCode` values: the referenced anchor must exist in the same project, must have a `cycleRole`, and the child must not itself carry a `cycleRole`. Existing untouched `parentCode` values are not re-validated (legacy stale links are preserved). Violations return `400 parent_invalid`.
 
 When a task has a valid `parentCode`, the renderer replaces the `important` star with a `12WY` badge (Today, Focus, Project Detail). The `important` flag is still stored, but it's hidden visually for sub-tasks.
 
@@ -533,4 +565,13 @@ curl -X POST http://127.0.0.1:15055/api/v1/quick-tasks/TASK_ID/complete \
 ```bash
 curl -X POST http://127.0.0.1:15055/api/v1/repeating-tasks/TASK_ID/accept \
   -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+### Add a 12WY sub-task under an anchor
+
+```bash
+curl -X POST http://127.0.0.1:15055/api/v1/projects/PROJECT_ID/tasks/ANCHOR_TASK_ID/sub-tasks \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "title": "M1 — landing page", "dueDate": "2026-06-15" }'
 ```
