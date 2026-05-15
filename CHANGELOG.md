@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.99.3] - 2026-05-15
+
+### Security
+
+- Aktualizacja zależności transitive `fast-uri` i `ip-address` — naprawia znane podatności (path traversal, host confusion, XSS w `Address6`). Ryzyko praktyczne pozostawało niskie (API tylko na `127.0.0.1` + Bearer token), ale fix jest darmowy.
+
+### Changed
+
+- Aktualizacja zależności (patch/minor): `tailwindcss` 4.3, `vitest` 4.1.6, `vite` 7.3.3, `electron` 41.6.1, `electron-builder` 26.8.1, `nanoid` 5.1.11, `zustand` 5.0.13, `fastify` 5.8.5, `eslint` 10.3.0, `@typescript-eslint/*` 8.59.3.
+- README: aktualizacja stack na Electron 41 (z błędnego 40).
+- CLAUDE.md: dodanie ADR-0002..0007 do indeksu decyzji architektonicznych (habits).
+
 ## [1.99.2] - 2026-05-14
 
 ### Fixed

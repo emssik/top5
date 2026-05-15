@@ -42,7 +42,7 @@ Desktop app for attention management. Configurable project limit (default 5), mi
 
 ## Stack
 
-- Electron 40 + electron-vite 5
+- Electron 41 + electron-vite 5
 - React 18 + TypeScript
 - Tailwind CSS v4
 - Zustand v5 (state management)
