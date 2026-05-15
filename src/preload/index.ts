@@ -43,6 +43,7 @@ export const api = {
   toggleQuickTaskImportant: (id: string) => ipcRenderer.invoke('toggle-quick-task-important', id),
   reorderProjects: (orderedIds: string[]) => ipcRenderer.invoke('reorder-projects', orderedIds),
   reorderPinnedTasks: (updates: { projectId: string; taskId: string; order: number }[]) => ipcRenderer.invoke('reorder-pinned-tasks', updates),
+  reorderCycleTasks: (updates: { projectId: string; taskId: string; cycleOrder: number }[]) => ipcRenderer.invoke('reorder-cycle-tasks', updates),
   setBeyondLimit: (input: { quickTaskIds?: string[]; pinnedTasks?: { projectId: string; taskId: string }[]; beyondLimit: boolean }) => ipcRenderer.invoke('set-beyond-limit', input),
   toggleTaskInProgress: (projectId: string, taskId: string) => ipcRenderer.invoke('toggle-task-in-progress', projectId, taskId),
   toggleTaskImportant: (projectId: string, taskId: string) => ipcRenderer.invoke('toggle-task-important', projectId, taskId),

@@ -30,6 +30,7 @@ export interface CycleTaskItem {
   projectCode: string | null
   projectName: string
   cycleRole: CycleRole
+  cycleOrder: number | null
   status: CycleTaskStatus
   due: string | null
   important: boolean
@@ -66,6 +67,8 @@ export interface Task {
   beyondLimit?: boolean
   important?: boolean
   cycleRole?: CycleRole
+  /** Manual order within the 12W cycle layer. Lower values come first; undefined sorts after numbered entries. */
+  cycleOrder?: number
   /** Code of the anchor task (with cycleRole) this task is a sub-task of. Same project only. */
   parentCode?: string | null
   links?: ProjectLink[]

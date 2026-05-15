@@ -339,8 +339,10 @@ export function setTaskCycleRole(projectId: string, taskId: string, cycleRole: C
   if (task.cycleRole === next) return projects
   if (next === undefined) {
     delete task.cycleRole
+    delete task.cycleOrder
   } else {
     task.cycleRole = next
+    delete task.cycleOrder
   }
   setData('projects', projects)
   return projects
@@ -420,6 +422,7 @@ export function getCycleTasks(opts: {
         projectCode: project.code ?? null,
         projectName: project.name,
         cycleRole: task.cycleRole,
+        cycleOrder: typeof task.cycleOrder === 'number' ? task.cycleOrder : null,
         status: taskCycleStatus(task),
         due: task.dueDate ?? null,
         important: task.important ?? false,
@@ -437,6 +440,10 @@ export function getCycleTasks(opts: {
   items.sort((a, b) => {
     const layerCmp = LAYER_ORDER[a.cycleRole] - LAYER_ORDER[b.cycleRole]
     if (layerCmp !== 0) return layerCmp
+    if (a.completed !== b.completed) return a.completed ? 1 : -1
+    const orderA = a.cycleOrder ?? Number.MAX_SAFE_INTEGER
+    const orderB = b.cycleOrder ?? Number.MAX_SAFE_INTEGER
+    if (orderA !== orderB) return orderA - orderB
     const dueCmp = compareDue(a.due, b.due)
     if (dueCmp !== 0) return dueCmp
     const codeA = a.projectCode ?? ''
@@ -448,6 +455,36 @@ export function getCycleTasks(opts: {
     return numA - numB
   })
   return items
+}
+
+export function reorderCycleTasks(updates: unknown): Project[] | ServiceError {
+  if (!Array.isArray(updates)) return { error: 'validation' }
+  const normalized: { projectId: string; taskId: string; cycleOrder: number }[] = []
+  for (const update of updates) {
+    if (
+      typeof update?.projectId !== 'string' ||
+      typeof update?.taskId !== 'string' ||
+      typeof update?.cycleOrder !== 'number' ||
+      !Number.isFinite(update.cycleOrder)
+    ) {
+      return { error: 'validation' }
+    }
+    normalized.push({ projectId: update.projectId, taskId: update.taskId, cycleOrder: update.cycleOrder })
+  }
+  const data = getData()
+  const projects = [...data.projects]
+  let changed = false
+  for (const update of normalized) {
+    const project = projects.find((p) => p.id === update.projectId)
+    if (!project) continue
+    const task = project.tasks.find((t) => t.id === update.taskId)
+    if (!task || !task.cycleRole) continue
+    if (task.cycleOrder === update.cycleOrder) continue
+    task.cycleOrder = update.cycleOrder
+    changed = true
+  }
+  if (changed) setData('projects', projects)
+  return projects
 }
 
 export function resetCycleRoles(layer?: CycleRole | null): { cleared: number; projects: Project[] } | ServiceError {
@@ -463,6 +500,7 @@ export function resetCycleRoles(layer?: CycleRole | null): { cleared: number; pr
       if (task.cycleRole === undefined) continue
       if (layer != null && task.cycleRole !== layer) continue
       delete task.cycleRole
+      delete task.cycleOrder
       cleared++
     }
   }

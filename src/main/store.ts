@@ -1207,6 +1207,13 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
     return result
   })
 
+  ipcMain.handle('reorder-cycle-tasks', (_event, updates: unknown) => {
+    const result = projectService.reorderCycleTasks(updates)
+    if (isServiceError(result)) return getData().projects
+    notifyAllWindows()
+    return result
+  })
+
   ipcMain.handle('set-beyond-limit', (_event, input: { quickTaskIds?: string[]; pinnedTasks?: { projectId: string; taskId: string }[]; beyondLimit: boolean }) => {
     if (typeof input?.beyondLimit !== 'boolean') return
     if (input.quickTaskIds?.length) {

@@ -208,7 +208,7 @@ Returns all tasks with `cycleRole` set across non-archived projects, flattened i
 - `status` — `active` (default) | `done` | `all`. `active` skips completed tasks; `done` returns only completed; `all` returns both.
 - `tree` — `1` / `true` to attach `children: CycleSubTaskItem[]` on each anchor (sub-tasks linked through `parentCode` in the same project). Children obey the same `status` filter as the anchor query.
 
-**Sort order:** `must` → `should` → `could`. Within each layer: by `due` ascending (null `due` last) → `projectCode` (numeric-aware) → `taskNumber`. Children within an anchor are sorted by `due` then `taskNumber`.
+**Sort order:** `must` → `should` → `could`. Within each layer: active before completed → `cycleOrder` ascending (null `cycleOrder` last — i.e. manually-reordered tasks first, then unreordered) → `due` ascending (null `due` last) → `projectCode` (numeric-aware) → `taskNumber`. Children within an anchor are sorted by `due` then `taskNumber`.
 
 **Response:** `{ ok, data: CycleTaskItem[] }`
 
@@ -222,6 +222,7 @@ interface CycleTaskItem {
   projectCode: string | null
   projectName: string
   cycleRole: 'must' | 'should' | 'could'
+  cycleOrder: number | null   // manual order within layer (lower = earlier); null = unordered (sorts after numbered)
   status: 'active' | 'in-progress' | 'up-next' | 'done'
   due: string | null          // YYYY-MM-DD
   important: boolean
@@ -243,6 +244,30 @@ interface CycleSubTaskItem {
 ```
 
 **Errors:** `400` if `layer` or `status` is not one of the allowed values.
+
+#### `PUT /cycle/tasks/reorder`
+
+Sets manual ordering of 12WY anchor tasks within a layer. Mirrors drag-and-drop in the UI 12w tab. Send one entry per task whose order you want to set — typically the entire layer with `cycleOrder: 0..n` after the move.
+
+**Body:** `Array<{ projectId: string, taskId: string, cycleOrder: number }>`
+
+```json
+[
+  { "projectId": "proj-A", "taskId": "task-1", "cycleOrder": 0 },
+  { "projectId": "proj-B", "taskId": "task-7", "cycleOrder": 1 },
+  { "projectId": "proj-A", "taskId": "task-3", "cycleOrder": 2 }
+]
+```
+
+Each `cycleOrder` must be a finite number. Tasks without `cycleRole` are silently skipped (the field only applies to anchors). The order is stored as `Task.cycleOrder` and reflected by both `GET /cycle/tasks` and the UI 12w tab.
+
+**Response:** `{ ok, data: Project[] }`
+
+**Errors:** `400` if the body is not an array or any entry is missing required fields / has a non-finite `cycleOrder`.
+
+**Lifecycle notes:**
+- `PUT /projects/:pid/tasks/:tid/cycle-role` clears `cycleOrder` whenever the role is changed or cleared (order is layer-scoped).
+- `POST /cycle/reset` clears `cycleOrder` on every task whose `cycleRole` is removed.
 
 #### `POST /cycle/reset`
 
@@ -442,6 +467,7 @@ Returns all non-archived habits as today-summary entries (schedule, today status
   inProgress?: boolean
   important?: boolean
   cycleRole?: 'must' | 'should' | 'could'
+  cycleOrder?: number          // manual layer order; cleared when cycleRole changes
   parentCode?: string | null   // 12WY anchor task code in same project (e.g. "TOP-42")
 }
 ```

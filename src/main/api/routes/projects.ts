@@ -141,6 +141,13 @@ export function registerProjectRoutes(fastify: FastifyInstance): void {
     return { ok: true, data: result }
   })
 
+  fastify.put('/api/v1/cycle/tasks/reorder', async (request, reply) => {
+    const result = projectService.reorderCycleTasks(request.body)
+    if (isServiceError(result)) return reply.status(errorToHttpStatus(result.error)).send({ ok: false, error: result.error })
+    notifyAllWindows()
+    return { ok: true, data: result }
+  })
+
   fastify.post('/api/v1/cycle/reset', async (request, reply) => {
     const { layer } = (request.body ?? {}) as { layer?: unknown }
     const result = projectService.resetCycleRoles((layer ?? null) as CycleRole | null)

@@ -21,6 +21,16 @@ This repository is a small, solo-maintained app.
 - Keep code readable and easy to change quickly.
 - Favor pragmatic tradeoffs over completeness for completeness' sake.
 
+## Zmiany w HTTP API
+
+Każda zmiana w HTTP API (nowy endpoint, zmiana payloadu, response, sortowania, nowe pole) **wymaga równoległej aktualizacji**:
+
+- `docs/API.md` — opis endpointu, payload, response, sort order, kody błędów
+- `cli/` — komendy CLI używające API (lub nowa komenda, jeśli endpoint na to zasługuje)
+- skill `top5-cli` — dokumentacja i wzorce użycia
+
+Bez kompletu zmiana jest niedokończona. Zaktualizuj wszystkie trzy razem z kodem, nie w osobnym PR-ze.
+
 ## Electron sandbox
 
 W tym projekcie **nie zmieniaj** `webPreferences.sandbox` na `true` (main/focus/quick-add/check-in/operation-log), bo historycznie kończy się to białym oknem.

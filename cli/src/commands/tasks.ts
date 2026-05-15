@@ -355,6 +355,7 @@ export function register(program: Command): void {
     projectCode: string | null
     projectName: string
     cycleRole: CycleRole
+    cycleOrder: number | null
     status: 'done' | 'in-progress' | 'up-next' | 'active'
     due: string | null
     important: boolean
@@ -514,6 +515,60 @@ export function register(program: Command): void {
         printResult(result, {
           json: globalOpts.json,
           formatFn: () => `Cleared cycleRole on ${result.cleared} task${result.cleared === 1 ? '' : 's'}${layer ? ` (layer: ${layer})` : ''}.`,
+        })
+      } catch (err: unknown) {
+        die((err as Error).message)
+      }
+    })
+
+  cycleCmd
+    .command('reorder')
+    .description('Reorder active 12WY tasks within a layer (must / should / could)')
+    .argument('<layer>', 'Layer to reorder: must, should, or could')
+    .argument('<task-codes...>', 'Task codes in desired order (e.g. PRJ-3 ABC-1 SELL-7). Must cover all active tasks in the layer.')
+    .action(async (layerInput: string, taskCodes: string[], _opts, cmd) => {
+      const globalOpts = cmd.optsWithGlobals()
+      const client = createClient(globalOpts)
+
+      const layer = parseCycleRole(layerInput)
+      if (layer === null) die('Invalid layer. Use must, should, or could.')
+
+      try {
+        const items = await client.get<CycleTaskItem[]>(`/api/v1/cycle/tasks?layer=${layer}&status=active`)
+
+        const byCode = new Map<string, CycleTaskItem>()
+        for (const item of items) {
+          if (item.taskCode) byCode.set(item.taskCode.toUpperCase(), item)
+        }
+
+        const seen = new Set<string>()
+        const resolved: CycleTaskItem[] = []
+        for (const raw of taskCodes) {
+          const code = raw.toUpperCase()
+          if (seen.has(code)) die(`Duplicate task code: ${raw}`)
+          const item = byCode.get(code)
+          if (!item) die(`Task ${raw} is not an active ${layer} anchor.`)
+          seen.add(code)
+          resolved.push(item)
+        }
+
+        const missing = items.filter((item) => !seen.has(item.taskCode.toUpperCase()))
+        if (missing.length > 0) {
+          const codes = missing.map((m) => m.taskCode).join(', ')
+          die(`Reorder must list every active ${layer} task. Missing: ${codes}`)
+        }
+
+        const updates = resolved.map((item, index) => ({
+          projectId: item.projectId,
+          taskId: item.id,
+          cycleOrder: index
+        }))
+
+        await client.put('/api/v1/cycle/tasks/reorder', updates)
+
+        printResult(updates, {
+          json: globalOpts.json,
+          formatFn: () => `Reordered ${updates.length} task${updates.length === 1 ? '' : 's'} in layer "${layer}".`
         })
       } catch (err: unknown) {
         die((err as Error).message)

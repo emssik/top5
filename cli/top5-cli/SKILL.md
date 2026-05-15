@@ -20,6 +20,7 @@ description: >
   "don't break the chain",
   "cycle role", "cycle-role", "12w", "12wy", "12 week year", "moscow", "must should could",
   "cycle reset", "close cycle", "end of cycle", "zamknij cykl", "reset cyklu", "must", "should", "could",
+  "cycle reorder", "reorder cycle", "12w reorder", "przesuń w cyklu", "kolejność cyklu", "uporządkuj 12w",
   "sub-task", "subtask", "parent", "parent code", "kotwica", "podzadanie", "pod kotwicą", "anchor".
 ---
 
@@ -303,7 +304,7 @@ top5 12w --with-children                # alias for --tree
 
 **`--tree`** attaches sub-tasks to each anchor based on `parentCode` (same project). Children obey the same `--status` filter as the parent query — i.e. `--status active --tree` hides done sub-tasks. JSON shape: each `CycleTaskItem` may carry `children?: CycleSubTaskItem[]` (no `cycleRole`, no `projectId/Code` — children inherit those from the anchor).
 
-**Sort:** within layer by `due` ascending (null `due` last) → project code → task number. Symmetric with the UI 12w tab.
+**Sort:** within layer: active before completed → `cycleOrder` ascending (null `cycleOrder` last — manually-reordered tasks first, then unreordered) → `due` ascending (null `due` last) → project code → task number. Symmetric with the UI 12w tab (drag-and-drop sets `cycleOrder`).
 
 **JSON shape (per task):**
 
@@ -312,11 +313,28 @@ top5 12w --with-children                # alias for --tree
   id, taskNumber, taskCode,                // e.g. "PRJ-3"
   title, projectId, projectCode, projectName,
   cycleRole: 'must' | 'should' | 'could',
+  cycleOrder: number | null,               // manual layer order; null = unordered
   status: 'active' | 'in-progress' | 'up-next' | 'done',
   due: string | null,                      // YYYY-MM-DD
   important, beyondLimit, completed
 }
 ```
+
+**Reorder a layer** — set manual order of active anchors within one MoSCoW layer. Mirrors drag-and-drop in the UI 12w tab. Pass every active task in the layer in the desired order; partial lists are rejected.
+
+```bash
+top5 cycle reorder must PRJ-3 ABC-1 SELL-7    # must layer reordered to [PRJ-3, ABC-1, SELL-7]
+top5 cycle reorder should ABC-5 PRJ-9         # all active "should" anchors in this order
+top5 cycle reorder could SELL-2 --json        # JSON: [{projectId, taskId, cycleOrder}, ...]
+```
+
+Errors:
+- `Invalid layer.` — layer must be `must`, `should`, or `could`.
+- `Task PRJ-3 is not an active <layer> anchor.` — task code doesn't carry the matching `cycleRole` or is completed.
+- `Reorder must list every active <layer> task. Missing: ABC-1, SELL-7` — partial reorder rejected; pass full layer.
+- `Duplicate task code: PRJ-3` — same code listed twice.
+
+`cycleOrder` is cleared automatically when the task's `cycleRole` changes (via `top5 cycle-role`) or during `top5 cycle reset`. To reset ordering of a layer without changing roles, run `cycle reorder` again with whatever sequence you want.
 
 **End-of-cycle reset** — clears `cycleRole` on every task across all projects so the next cycle can re-classify from scratch. Wywoływane raz na ~12 tygodni z `/biz 12w end`. Logs a `cycle_closed` operation entry.
 

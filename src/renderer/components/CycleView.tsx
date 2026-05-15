@@ -1,7 +1,8 @@
-import { Fragment, useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
+import type { DragEvent } from 'react'
 import { useProjects } from '../hooks/useProjects'
 import type { Task, Project, ProjectLink, CycleRole } from '../types'
-import { CYCLE_ROLE_LABELS } from '../../shared/types'
+import { CYCLE_ROLE_LABELS, CYCLE_ROLES } from '../../shared/types'
 import { calcTaskTime, formatCheckInTime } from '../utils/checkInTime'
 import { projectColorValue, normalizeLinks } from '../utils/projects'
 import TaskIdBadge from './TaskIdBadge'
@@ -26,8 +27,6 @@ interface SectionTotals {
   done: number
 }
 
-const ROLES: CycleRole[] = ['must', 'should', 'could']
-
 function addDays(days: number): string {
   const d = new Date()
   d.setDate(d.getDate() + days)
@@ -45,6 +44,9 @@ function sortCycleTasks(tasks: CycleTask[]): CycleTask[] {
     const aDone = a.task.completed
     const bDone = b.task.completed
     if (aDone !== bDone) return aDone ? 1 : -1
+    const orderA = typeof a.task.cycleOrder === 'number' ? a.task.cycleOrder : Number.MAX_SAFE_INTEGER
+    const orderB = typeof b.task.cycleOrder === 'number' ? b.task.cycleOrder : Number.MAX_SAFE_INTEGER
+    if (orderA !== orderB) return orderA - orderB
     const dueCmp = compareDue(a.task.dueDate, b.task.dueDate)
     if (dueCmp !== 0) return dueCmp
     return compareCode(a, b)
@@ -70,6 +72,8 @@ export default function CycleView() {
   const [cycleRolePickerId, setCycleRolePickerId] = useState<string | null>(null)
   const [linksEditId, setLinksEditId] = useState<string | null>(null)
   const [myccCommentId, setMyccCommentId] = useState<string | null>(null)
+  const draggedId = useRef<string | null>(null)
+  const [dragOverId, setDragOverId] = useState<string | null>(null)
 
   const { grouped, totals, subsByAnchor } = useMemo(() => {
     const buckets: Record<CycleRole, CycleTask[]> = { must: [], should: [], could: [] }
@@ -87,7 +91,7 @@ export default function CycleView() {
         else counts[task.cycleRole].active += 1
       }
     }
-    for (const role of ROLES) {
+    for (const role of CYCLE_ROLES) {
       buckets[role] = sortCycleTasks(buckets[role])
     }
 
@@ -241,16 +245,69 @@ export default function CycleView() {
 
   const today = dateKey(new Date())
 
-  const renderTask = ({ task, project }: CycleTask, isSubTask = false) => {
+  const clearDragState = () => {
+    draggedId.current = null
+    setDragOverId(null)
+  }
+
+  const handleDragStart = (event: DragEvent, task: Task) => {
+    draggedId.current = task.id
+    event.dataTransfer.effectAllowed = 'move'
+  }
+
+  const handleDragOver = (event: DragEvent, id: string) => {
+    if (!draggedId.current || draggedId.current === id) return
+    event.preventDefault()
+    event.dataTransfer.dropEffect = 'move'
+    setDragOverId((prev) => (prev === id ? prev : id))
+  }
+
+  const handleDragLeave = (id: string) => {
+    setDragOverId((prev) => (prev === id ? null : prev))
+  }
+
+  const handleDrop = async (event: DragEvent, role: CycleRole, targetId: string) => {
+    event.preventDefault()
+    const sourceId = draggedId.current
+    clearDragState()
+    if (!sourceId || sourceId === targetId) return
+
+    const layer = grouped[role]
+    const activeAnchors = layer.filter((entry) => !entry.task.completed)
+    const fromIdx = activeAnchors.findIndex((e) => e.task.id === sourceId)
+    const toIdx = activeAnchors.findIndex((e) => e.task.id === targetId)
+    if (fromIdx === -1 || toIdx === -1) return
+
+    const reordered = [...activeAnchors]
+    const [moved] = reordered.splice(fromIdx, 1)
+    reordered.splice(toIdx, 0, moved)
+
+    const updates = reordered.map((entry, index) => ({
+      projectId: entry.project.id,
+      taskId: entry.task.id,
+      cycleOrder: index
+    }))
+    await window.api.reorderCycleTasks(updates)
+  }
+
+  const renderTask = ({ task, project }: CycleTask, isSubTask = false, role: CycleRole | null = null) => {
     const isPinned = !!task.isToDoNext
     const isDone = task.completed
     const taskMinutes = calcTaskTime(focusCheckIns, task.id)
     const overdue = !isDone && task.dueDate && task.dueDate < today
+    const isDraggable = !isSubTask && !isDone && role != null
+    const isDragOver = dragOverId === task.id
 
     return (
       <div
         key={task.id}
-        className={`task-card ${isDone ? 'done-card' : ''} ${task.inProgress ? 'in-progress' : ''} ${isSubTask ? 'sub-task' : ''}`}
+        className={`task-card ${isDone ? 'done-card' : ''} ${task.inProgress ? 'in-progress' : ''} ${isSubTask ? 'sub-task' : ''} ${isDraggable ? 'draggable-task' : ''} ${isDragOver ? 'drag-over' : ''}`}
+        draggable={isDraggable}
+        onDragStart={isDraggable ? (e) => handleDragStart(e, task) : undefined}
+        onDragOver={isDraggable ? (e) => handleDragOver(e, task.id) : undefined}
+        onDragLeave={isDraggable ? () => handleDragLeave(task.id) : undefined}
+        onDrop={isDraggable && role ? (e) => handleDrop(e, role, task.id) : undefined}
+        onDragEnd={isDraggable ? clearDragState : undefined}
       >
         <button className={`task-checkbox ${isDone ? 'checked' : ''}`} onClick={() => completeTask(project, task)} />
         <div className="task-content">
@@ -353,7 +410,7 @@ export default function CycleView() {
 
         {cycleRolePickerId === task.id && (
           <div className="cycle-role-popover" onClick={(e) => e.stopPropagation()}>
-            {ROLES.map((r) => (
+            {CYCLE_ROLES.map((r) => (
               <button
                 key={r}
                 className={`cycle-role-btn cr-${r} ${task.cycleRole === r ? 'active' : ''}`}
@@ -376,8 +433,8 @@ export default function CycleView() {
     )
   }
 
-  const totalActive = ROLES.reduce((sum, r) => sum + totals[r].active, 0)
-  const totalDone = ROLES.reduce((sum, r) => sum + totals[r].done, 0)
+  const totalActive = CYCLE_ROLES.reduce((sum, r) => sum + totals[r].active, 0)
+  const totalDone = CYCLE_ROLES.reduce((sum, r) => sum + totals[r].done, 0)
   const totalAny = totalActive + totalDone
 
   async function handleCloseCycle() {
@@ -416,7 +473,7 @@ export default function CycleView() {
           <span style={{ fontSize: 12, opacity: 0.7 }}>Set Must / Should / Could on a task from Today, project view, or the CLI.</span>
         </div>
       ) : (
-        ROLES.map((role) => {
+        CYCLE_ROLES.map((role) => {
           const items = grouped[role]
           const summary = totals[role]
           if (summary.active === 0 && summary.done === 0) return null
@@ -439,7 +496,7 @@ export default function CycleView() {
                   const subs = code ? subsByAnchor.get(code) ?? [] : []
                   return (
                     <Fragment key={entry.task.id}>
-                      {renderTask(entry)}
+                      {renderTask(entry, false, role)}
                       {subs.map((sub) => renderTask(sub, true))}
                     </Fragment>
                   )

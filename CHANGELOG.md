@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.101.0] - 2026-05-15
+
+### Added
+
+- UI 12W: przesuwanie kolejności zadań w obrębie warstwy (must/should/could) myszką (drag-and-drop). Przeciągalne tylko aktywne kotwice — ukończone i sub-taski wyłączone z D&D.
+- API: nowy endpoint `PUT /api/v1/cycle/tasks/reorder` — body `[{projectId, taskId, cycleOrder}]`. Sub-skip dla zadań bez `cycleRole`. Błąd `400 validation` dla niepoprawnego payloadu.
+- API: pole `cycleOrder: number | null` zwracane w `GET /api/v1/cycle/tasks` (na każdym `CycleTaskItem`).
+- CLI: nowa komenda `top5 cycle reorder <layer> <task-codes...>` — wymaga pełnej listy aktywnych kotwic warstwy w docelowej kolejności. Walidacja: nieprawidłowa warstwa, brakujące/nadmiarowe taski, duplikaty kodów.
+
+### Changed
+
+- Sortowanie 12W (UI + API): w obrębie warstwy najpierw active before completed → `cycleOrder` rosnąco (null na końcu, czyli manualnie posortowane przed niesortowanymi) → dotychczasowe due → projectCode → taskNumber. Symetryczne UI ↔ API.
+- `cycleOrder` jest czyszczone automatycznie, gdy task zmienia/traci `cycleRole` lub jest objęty `POST /cycle/reset` — order należy do warstwy, nie do taska.
+- CLAUDE.md projektu: nowa sekcja "Zmiany w HTTP API" — każda modyfikacja API wymaga równoległej aktualizacji `docs/API.md`, `cli/` i skilla `top5-cli`.
+
 ## [1.100.0] - 2026-05-15
 
 ### Added
