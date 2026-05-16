@@ -552,7 +552,7 @@ export function register(program: Command): void {
           resolved.push(item)
         }
 
-        const missing = items.filter((item) => !seen.has(item.taskCode.toUpperCase()))
+        const missing = items.filter((item) => item.taskCode && !seen.has(item.taskCode.toUpperCase()))
         if (missing.length > 0) {
           const codes = missing.map((m) => m.taskCode).join(', ')
           die(`Reorder must list every active ${layer} task. Missing: ${codes}`)

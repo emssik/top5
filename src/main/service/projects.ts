@@ -24,6 +24,26 @@ function isCodeUnique(code: string, excludeProjectId: string | null, projects: P
  * Validates parentCode references inside a project. Only checks tasks where parentCode
  * was newly introduced or changed, to avoid breaking existing data with stale links.
  */
+function cleanupOrphanedParentCodes(project: Project): void {
+  const code = project.code
+  if (!code) {
+    for (const t of project.tasks) {
+      if (t.parentCode) delete t.parentCode
+    }
+    return
+  }
+  const anchorCodes = new Set<string>()
+  for (const t of project.tasks) {
+    if (!t.cycleRole) continue
+    const tc = formatTaskId(t.taskNumber, code)
+    if (tc) anchorCodes.add(tc)
+  }
+  for (const t of project.tasks) {
+    if (!t.parentCode) continue
+    if (!anchorCodes.has(t.parentCode)) delete t.parentCode
+  }
+}
+
 function validateParentCodes(
   project: Project,
   oldTaskById: Map<string, Task> | null
@@ -143,6 +163,8 @@ export function updateProject(id: string, input: unknown): Project[] | ServiceEr
   projects[index] = normalizedProject
 
   const nextProjects = assignMissingProjectColors(projects.map(normalizeProject))
+  const updatedProject = nextProjects.find((p) => p.id === id)
+  if (updatedProject) cleanupOrphanedParentCodes(updatedProject)
   setData('projects', nextProjects)
 
   // Detect task-level changes for operation log
@@ -340,6 +362,7 @@ export function setTaskCycleRole(projectId: string, taskId: string, cycleRole: C
   if (next === undefined) {
     delete task.cycleRole
     delete task.cycleOrder
+    cleanupOrphanedParentCodes(project)
   } else {
     task.cycleRole = next
     delete task.cycleOrder
@@ -496,13 +519,16 @@ export function resetCycleRoles(layer?: CycleRole | null): { cleared: number; pr
   let cleared = 0
   for (const project of projects) {
     if (project.archivedAt) continue
+    let projectCleared = 0
     for (const task of project.tasks) {
       if (task.cycleRole === undefined) continue
       if (layer != null && task.cycleRole !== layer) continue
       delete task.cycleRole
       delete task.cycleOrder
       cleared++
+      projectCleared++
     }
+    if (projectCleared > 0) cleanupOrphanedParentCodes(project)
   }
   if (cleared > 0) {
     setData('projects', projects)

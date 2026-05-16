@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.101.1] - 2026-05-16
+
+### Fixed
+
+- CLI `top5 cycle reorder`: filtr `missing` pomija itemy bez `taskCode` — wcześniej każda warstwa z takim itemem dawała pusty wpis w komunikacie błędu i blokowała operację.
+- UI 12W: drag-and-drop między warstwami nie podświetla już celu w innej warstwie — `handleDragOver` odrzuca drag o innym `cycleRole`, więc użytkownik dostaje jednoznaczny sygnał, że drop jest niedozwolony.
+- Spójność danych: gdy kotwica traci `cycleRole` (PUT projektu, `setTaskCycleRole`, `resetCycleRoles`), sub-taski z `parentCode` wskazującym na nią są czyszczone automatycznie — eliminuje wiszące referencje i zniknięcie sub-tasków z CycleView.
+
 ## [1.101.0] - 2026-05-15
 
 ### Added

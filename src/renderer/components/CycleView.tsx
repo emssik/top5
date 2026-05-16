@@ -73,6 +73,7 @@ export default function CycleView() {
   const [linksEditId, setLinksEditId] = useState<string | null>(null)
   const [myccCommentId, setMyccCommentId] = useState<string | null>(null)
   const draggedId = useRef<string | null>(null)
+  const draggedRole = useRef<CycleRole | null>(null)
   const [dragOverId, setDragOverId] = useState<string | null>(null)
 
   const { grouped, totals, subsByAnchor } = useMemo(() => {
@@ -247,16 +248,19 @@ export default function CycleView() {
 
   const clearDragState = () => {
     draggedId.current = null
+    draggedRole.current = null
     setDragOverId(null)
   }
 
-  const handleDragStart = (event: DragEvent, task: Task) => {
+  const handleDragStart = (event: DragEvent, task: Task, role: CycleRole) => {
     draggedId.current = task.id
+    draggedRole.current = role
     event.dataTransfer.effectAllowed = 'move'
   }
 
-  const handleDragOver = (event: DragEvent, id: string) => {
+  const handleDragOver = (event: DragEvent, id: string, role: CycleRole) => {
     if (!draggedId.current || draggedId.current === id) return
+    if (draggedRole.current !== role) return
     event.preventDefault()
     event.dataTransfer.dropEffect = 'move'
     setDragOverId((prev) => (prev === id ? prev : id))
@@ -303,8 +307,8 @@ export default function CycleView() {
         key={task.id}
         className={`task-card ${isDone ? 'done-card' : ''} ${task.inProgress ? 'in-progress' : ''} ${isSubTask ? 'sub-task' : ''} ${isDraggable ? 'draggable-task' : ''} ${isDragOver ? 'drag-over' : ''}`}
         draggable={isDraggable}
-        onDragStart={isDraggable ? (e) => handleDragStart(e, task) : undefined}
-        onDragOver={isDraggable ? (e) => handleDragOver(e, task.id) : undefined}
+        onDragStart={isDraggable && role ? (e) => handleDragStart(e, task, role) : undefined}
+        onDragOver={isDraggable && role ? (e) => handleDragOver(e, task.id, role) : undefined}
         onDragLeave={isDraggable ? () => handleDragLeave(task.id) : undefined}
         onDrop={isDraggable && role ? (e) => handleDrop(e, role, task.id) : undefined}
         onDragEnd={isDraggable ? clearDragState : undefined}
