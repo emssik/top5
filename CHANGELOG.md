@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.102.0] - 2026-05-17
+
+### Added
+
+- Activity Log: dropdown wyboru konkretnego projektu obok filtrów kategorii — opcje pogrupowane w Active / Suspended / Archived, format `[KOD] Nazwa`. Łatwiej przejrzeć aktywność jednego projektu.
+
+### Changed
+
+- Activity Log: kategoria „Projects" pokazuje teraz wszystkie operacje z `projectId` (taski, focus, zmiany projektu), a nie tylko meta-zmiany. Pusta lista przy filtrze „Projects" w typowym dniu była mało użyteczna.
+
 ## [1.101.1] - 2026-05-16
 
 ### Fixed

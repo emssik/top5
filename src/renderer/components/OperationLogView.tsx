@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { OperationLogEntry, OperationType } from '../types'
+import type { OperationLogEntry, OperationType, Project } from '../types'
 import { dateKey } from '../../shared/schedule'
+
+type ProjectOption = Pick<Project, 'id' | 'name' | 'code' | 'archivedAt' | 'suspendedAt'>
 
 type LogRange = 'today' | '7d' | '30d'
 
@@ -114,17 +116,37 @@ function getInitialFilter(): string {
 
 export default function OperationLogView() {
   const [operations, setOperations] = useState<OperationLogEntry[]>([])
+  const [projects, setProjects] = useState<ProjectOption[]>([])
   const [range, setRange] = useState<LogRange>(getInitialFilter() ? '30d' : 'today')
   const [filter, setFilter] = useState(getInitialFilter)
   const [categoryFilter, setCategoryFilter] = useState<'all' | 'task' | 'project' | 'focus' | 'wins'>('all')
+  const [projectFilter, setProjectFilter] = useState<string>('')
   const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
-    window.api.getOperations().then((ops) => {
+    Promise.all([window.api.getOperations(), window.api.getAppData()]).then(([ops, data]) => {
       setOperations(ops ?? [])
+      setProjects(
+        (data.projects ?? []).map((p) => ({
+          id: p.id,
+          name: p.name,
+          code: p.code,
+          archivedAt: p.archivedAt,
+          suspendedAt: p.suspendedAt
+        }))
+      )
       setLoaded(true)
     })
   }, [])
+
+  const projectGroups = useMemo(() => {
+    const fmt = (p: ProjectOption) => (p.code ? `[${p.code}] ${p.name}` : p.name)
+    const byName = (a: ProjectOption, b: ProjectOption) => a.name.localeCompare(b.name)
+    const active = projects.filter((p) => !p.archivedAt && !p.suspendedAt).sort(byName)
+    const suspended = projects.filter((p) => p.suspendedAt && !p.archivedAt).sort(byName)
+    const archived = projects.filter((p) => p.archivedAt).sort(byName)
+    return { active, suspended, archived, fmt }
+  }, [projects])
 
   const filtered = useMemo(() => {
     const now = new Date()
@@ -140,8 +162,9 @@ export default function OperationLogView() {
     return operations
       .filter((op) => {
         if (new Date(op.timestamp).getTime() < since.getTime()) return false
+        if (projectFilter && op.projectId !== projectFilter) return false
         if (categoryFilter === 'task' && !op.type.includes('task')) return false
-        if (categoryFilter === 'project' && !op.type.startsWith('project_')) return false
+        if (categoryFilter === 'project' && !op.projectId && !op.type.startsWith('project_')) return false
         if (categoryFilter === 'focus' && !op.type.startsWith('focus_')) return false
         if (categoryFilter === 'wins' && !op.type.startsWith('wins_')) return false
         if (q) {
@@ -151,7 +174,7 @@ export default function OperationLogView() {
         return true
       })
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-  }, [operations, range, filter, categoryFilter])
+  }, [operations, range, filter, categoryFilter, projectFilter])
 
   const grouped = useMemo(() => {
     const groups: { day: string; entries: OperationLogEntry[] }[] = []
@@ -190,7 +213,7 @@ export default function OperationLogView() {
             ))}
           </select>
         </div>
-        <div className="flex items-center gap-1.5 mb-2">
+        <div className="flex items-center gap-1.5 mb-2 flex-wrap">
           {(['all', 'task', 'project', 'focus', 'wins'] as const).map((cat) => (
             <button
               key={cat}
@@ -204,6 +227,38 @@ export default function OperationLogView() {
               {cat === 'all' ? 'All' : cat === 'task' ? 'Tasks' : cat === 'project' ? 'Projects' : cat === 'focus' ? 'Focus' : '5 Wins'}
             </button>
           ))}
+          <select
+            value={projectFilter}
+            onChange={(e) => setProjectFilter(e.target.value)}
+            className={`ml-1 px-2 py-1 rounded-md text-[11px] cursor-pointer focus:outline-none ${
+              projectFilter
+                ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                : 'bg-surface border border-border text-t-secondary'
+            }`}
+          >
+            <option value="">All projects</option>
+            {projectGroups.active.length > 0 && (
+              <optgroup label="Active">
+                {projectGroups.active.map((p) => (
+                  <option key={p.id} value={p.id}>{projectGroups.fmt(p)}</option>
+                ))}
+              </optgroup>
+            )}
+            {projectGroups.suspended.length > 0 && (
+              <optgroup label="Suspended">
+                {projectGroups.suspended.map((p) => (
+                  <option key={p.id} value={p.id}>{projectGroups.fmt(p)}</option>
+                ))}
+              </optgroup>
+            )}
+            {projectGroups.archived.length > 0 && (
+              <optgroup label="Archived">
+                {projectGroups.archived.map((p) => (
+                  <option key={p.id} value={p.id}>{projectGroups.fmt(p)}</option>
+                ))}
+              </optgroup>
+            )}
+          </select>
         </div>
         <input
           type="text"
