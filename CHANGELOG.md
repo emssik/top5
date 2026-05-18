@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.102.1] - 2026-05-18
+
+### Fixed
+
+- Activity Log: gdy `getOperations()` lub `getAppData()` rzuci wyjątek, widok nie utknie w „Loading...". Dodany `.catch()` ustawia `loaded=true` i pozwala UI wyrenderować pusty stan zamiast wisieć w nieskończoność.
+
 ## [1.102.0] - 2026-05-17
 
 ### Added

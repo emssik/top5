@@ -124,19 +124,23 @@ export default function OperationLogView() {
   const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
-    Promise.all([window.api.getOperations(), window.api.getAppData()]).then(([ops, data]) => {
-      setOperations(ops ?? [])
-      setProjects(
-        (data.projects ?? []).map((p) => ({
-          id: p.id,
-          name: p.name,
-          code: p.code,
-          archivedAt: p.archivedAt,
-          suspendedAt: p.suspendedAt
-        }))
-      )
-      setLoaded(true)
-    })
+    Promise.all([window.api.getOperations(), window.api.getAppData()])
+      .then(([ops, data]) => {
+        setOperations(ops ?? [])
+        setProjects(
+          (data.projects ?? []).map((p) => ({
+            id: p.id,
+            name: p.name,
+            code: p.code,
+            archivedAt: p.archivedAt,
+            suspendedAt: p.suspendedAt
+          }))
+        )
+        setLoaded(true)
+      })
+      .catch(() => {
+        setLoaded(true)
+      })
   }, [])
 
   const projectGroups = useMemo(() => {
