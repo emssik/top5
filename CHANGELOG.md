@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.103.0] - 2026-05-25
+
+### Added
+
+- Today: ukrycie zadania do określonej godziny. W menu „⋯" pozycja „⏰ Ukryj do godziny" (dla zadań projektowych i quick) z wyborem konkretnej godziny — szybkie godziny popołudniowe lub dowolna z pickera. Ukryte zadanie znika ze wszystkich grup i ląduje w zwijanej sekcji „Ukryte" na dole; wraca do listy automatycznie, gdy nadejdzie godzina, albo ręcznie przyciskiem „Odkryj". Zadania w fokusie i zablokowane przez Wins pozostają widoczne.
+
 ## [1.102.1] - 2026-05-18
 
 ### Fixed

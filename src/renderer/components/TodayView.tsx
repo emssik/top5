@@ -38,6 +38,28 @@ function addDays(days: number): string {
   return dateKey(d)
 }
 
+/** Build an ISO datetime for today at the given HH:MM (local time). */
+function todayAtTime(hhmm: string): string {
+  const [h, m] = hhmm.split(':').map(Number)
+  const d = new Date()
+  d.setHours(h, m || 0, 0, 0)
+  return d.toISOString()
+}
+
+/** HH:MM (local) from an ISO datetime — used to label hidden tasks. */
+function formatHideTime(iso: string): string {
+  const d = new Date(iso)
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+
+/** Fixed afternoon/evening hour presets that are still in the future today. */
+function futureHourPresets(): string[] {
+  const now = Date.now()
+  return [12, 14, 16, 18, 20]
+    .map((h) => `${String(h).padStart(2, '0')}:00`)
+    .filter((hhmm) => new Date(todayAtTime(hhmm)).getTime() > now)
+}
+
 function formatCountdown(deadline: string): string {
   const diff = new Date(deadline).getTime() - Date.now()
   if (diff <= 0) return 'expired'
@@ -126,6 +148,7 @@ export default function TodayView({ onSelectView }: { onSelectView?: (view: stri
     dueDateProposals,
     dueDateTomorrowProposals,
     overflowTasks,
+    hiddenTasks,
     allActiveTasks,
     configLimit,
     isLocked,
@@ -137,6 +160,7 @@ export default function TodayView({ onSelectView }: { onSelectView?: (view: stri
   const [newTitle, setNewTitle] = useState('')
   const [showDone, setShowDone] = useState(false)
   const [showOverflow, setShowOverflow] = useState(false)
+  const [showHidden, setShowHidden] = useState(false)
   const [selectedOverflowIds, setSelectedOverflowIds] = useState<Set<string>>(new Set())
   const [focusTick, setFocusTick] = useState(0)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -155,6 +179,7 @@ export default function TodayView({ onSelectView }: { onSelectView?: (view: stri
   const [dueDateDismissId, setDueDateDismissId] = useState<string | null>(null)
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null)
   const [dueDatePickerId, setDueDatePickerId] = useState<string | null>(null)
+  const [hideUntilPickerId, setHideUntilPickerId] = useState<string | null>(null)
   const [cycleRolePickerId, setCycleRolePickerId] = useState<string | null>(null)
   const [linksEditId, setLinksEditId] = useState<string | null>(null)
   const [myccCommentId, setMyccCommentId] = useState<string | null>(null)
@@ -337,6 +362,27 @@ export default function TodayView({ onSelectView }: { onSelectView?: (view: stri
       window.removeEventListener('keydown', handleKey)
     }
   }, [dueDatePickerId])
+
+  // Close task menu hide-until picker on click outside or Escape
+  useEffect(() => {
+    if (!hideUntilPickerId) return
+    const handleClick = (e: MouseEvent) => {
+      if ((e.target as HTMLElement).closest('.due-date-dismiss-popover')) return
+      setHideUntilPickerId(null)
+    }
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setHideUntilPickerId(null)
+    }
+    const raf = requestAnimationFrame(() => {
+      window.addEventListener('click', handleClick)
+      window.addEventListener('keydown', handleKey)
+    })
+    return () => {
+      cancelAnimationFrame(raf)
+      window.removeEventListener('click', handleClick)
+      window.removeEventListener('keydown', handleKey)
+    }
+  }, [hideUntilPickerId])
 
   useEffect(() => {
     if (!cycleRolePickerId) return
@@ -553,6 +599,20 @@ export default function TodayView({ onSelectView }: { onSelectView?: (view: stri
   const updateCycleRole = async (task: MergedTask, role: CycleRole | null) => {
     if (task.kind !== 'pinned' || !task.projectId || !task.taskId) return
     await setTaskCycleRole(task.projectId, task.taskId, role)
+  }
+
+  // Hide a task from Today until a given ISO datetime (or clear with null). Works for both kinds.
+  const setHideUntil = async (task: MergedTask, hideUntil: string | null) => {
+    if (task.kind === 'quick') {
+      const qt = useProjects.getState().quickTasks.find((t) => t.id === task.id)
+      if (qt) await saveQuickTask({ ...qt, hideUntil })
+      return
+    }
+    if (!task.projectId || !task.taskId) return
+    const project = useProjects.getState().projects.find((p) => p.id === task.projectId)
+    if (!project) return
+    const tasks = project.tasks.map((t) => (t.id === task.taskId ? { ...t, hideUntil } : t))
+    await saveProject({ ...project, tasks })
   }
 
   const updateTaskLinks = async (task: MergedTask, links: ProjectLink[]) => {
@@ -1041,8 +1101,9 @@ export default function TodayView({ onSelectView }: { onSelectView?: (view: stri
             <button className="task-overflow-item" onClick={() => { focusOnTask(task); setMenuOpenId(null) }}><span className="toi-icon">▶</span>Focus</button>
             <button className="task-overflow-item" onClick={() => { toggleInProgress(task); setMenuOpenId(null) }}><span className="toi-icon">{task.inProgress ? '⏹' : '⏩'}</span>{task.inProgress ? 'Stop In Progress' : 'In Progress'}</button>
             <button className="task-overflow-item" onClick={() => { toggleImportant(task); setMenuOpenId(null) }}><span className="toi-icon">{task.important ? '☆' : '★'}</span>{task.important ? 'Unmark Important' : 'Mark Important'}</button>
+            <button className="task-overflow-item" onClick={() => { setMenuOpenId(null); setDueDatePickerId(null); setHideUntilPickerId(task.id) }}><span className="toi-icon">⏰</span>Ukryj do godziny</button>
             {task.kind === 'pinned' && task.projectId && task.taskId && (
-              <button className="task-overflow-item" onClick={() => { setMenuOpenId(null); setDueDatePickerId(task.id) }}><span className="toi-icon">📅</span>{task.dueDate ? 'Change due date' : 'Set due date'}</button>
+              <button className="task-overflow-item" onClick={() => { setMenuOpenId(null); setHideUntilPickerId(null); setDueDatePickerId(task.id) }}><span className="toi-icon">📅</span>{task.dueDate ? 'Change due date' : 'Set due date'}</button>
             )}
             {task.kind === 'pinned' && task.projectId && task.taskId && (
               <button className="task-overflow-item" onClick={() => { setMenuOpenId(null); setLinksEditId(task.id) }}><span className="toi-icon">🔗</span>Links{task.links && task.links.length > 0 ? ` (${task.links.length})` : ''}</button>
@@ -1074,6 +1135,17 @@ export default function TodayView({ onSelectView }: { onSelectView?: (view: stri
             </div>
             <input type="date" defaultValue={task.dueDate ?? ''} autoFocus onChange={(e) => { window.api.updateTaskDueDate(task.projectId!, task.taskId!, e.target.value || null); setDueDatePickerId(null) }} />
             {task.dueDate && <button onClick={() => { window.api.updateTaskDueDate(task.projectId!, task.taskId!, null); setDueDatePickerId(null) }}>Remove</button>}
+          </div>
+        )}
+        {hideUntilPickerId === task.id && (
+          <div className="due-date-dismiss-popover hide-until-popover">
+            <div className="due-date-quick-btns">
+              {futureHourPresets().map((hhmm) => (
+                <button key={hhmm} onClick={() => { setHideUntil(task, todayAtTime(hhmm)); setHideUntilPickerId(null) }}>{hhmm}</button>
+              ))}
+            </div>
+            <input type="time" autoFocus onChange={(e) => { if (e.target.value) { setHideUntil(task, todayAtTime(e.target.value)); setHideUntilPickerId(null) } }} />
+            {task.hideUntil && <button onClick={() => { setHideUntil(task, null); setHideUntilPickerId(null) }}>Odkryj teraz</button>}
           </div>
         )}
         {linksEditId === task.id && (
@@ -1111,6 +1183,23 @@ export default function TodayView({ onSelectView }: { onSelectView?: (view: stri
         {!isTaskLocked(task) && (
           <button className="task-action-btn btn-remove" onClick={() => removeTask(task)} title="Remove">✕</button>
         )}
+      </div>
+    </div>
+  )
+
+  const renderHiddenTask = (task: MergedTask) => (
+    <div key={task.id} className="task-card hidden-card">
+      <button className="task-checkbox" onClick={() => completeTask(task)} title="Complete" />
+      <div className="task-content">
+        <div className="task-title">
+          <TaskIdBadge taskNumber={task.taskNumber} projectCode={task.projectCode} kind={task.kind} />
+          <Linkify text={task.title} />
+        </div>
+        {renderMeta(task)}
+      </div>
+      <div className="task-actions">
+        {task.hideUntil && <span className="hidden-until-badge" title="Wróci o tej godzinie">⏰ {formatHideTime(task.hideUntil)}</span>}
+        <button className="task-action-btn btn-focus" onClick={() => setHideUntil(task, null)} title="Pokaż teraz">Odkryj</button>
       </div>
     </div>
   )
@@ -1630,6 +1719,19 @@ export default function TodayView({ onSelectView }: { onSelectView?: (view: stri
           </div>
           <div className={`done-list ${showOverflow ? 'open' : ''}`}>
             {overflowTasks.map((task) => renderTask(task, 'overflow'))}
+          </div>
+        </div>
+      )}
+
+      {hiddenTasks.length > 0 && (
+        <div className="hidden-section mt-sm">
+          <div className={`done-toggle ${showHidden ? 'open' : ''}`} onClick={() => setShowHidden((value) => !value)}>
+            <span style={{ opacity: 0.5 }}>⏰</span>
+            <span>Ukryte ({hiddenTasks.length}) · najbliższe {formatHideTime(hiddenTasks[0].hideUntil!)}</span>
+            <span className="chevron">▸</span>
+          </div>
+          <div className={`done-list ${showHidden ? 'open' : ''}`}>
+            {hiddenTasks.map(renderHiddenTask)}
           </div>
         </div>
       )}

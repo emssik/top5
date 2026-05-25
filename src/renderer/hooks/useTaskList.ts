@@ -29,6 +29,7 @@ export interface MergedTask {
   isCycleSubTask?: boolean
   noteRef?: string
   dueDate?: string | null
+  hideUntil?: string | null
   beyondLimit?: boolean
   links?: ProjectLink[]
 }
@@ -46,6 +47,7 @@ export interface TaskListData {
   dueDateProposals: DueDateProposal<Task, Project>[]
   dueDateTomorrowProposals: DueDateProposal<Task, Project>[]
   overflowTasks: MergedTask[]
+  hiddenTasks: MergedTask[]
   allActiveTasks: MergedTask[]
   configLimit: number
   activeSlots: number
@@ -119,6 +121,7 @@ export function useTaskList(opts?: { excludeFocus?: boolean }): TaskListData {
       important: t.important,
       noteRef: t.noteRef,
       dueDate: t.dueDate,
+      hideUntil: t.hideUntil,
       beyondLimit: t.beyondLimit
     }))
 
@@ -147,6 +150,7 @@ export function useTaskList(opts?: { excludeFocus?: boolean }): TaskListData {
           isCycleSubTask: !!t.parentCode && anchorCodes.has(t.parentCode),
           noteRef: t.noteRef,
           dueDate: t.dueDate,
+          hideUntil: t.hideUntil,
           beyondLimit: t.beyondLimit,
           links: links.length > 0 ? links : undefined
         }
@@ -270,8 +274,30 @@ export function useTaskList(opts?: { excludeFocus?: boolean }): TaskListData {
   // --- Split: within-limit vs overflow ---
 
   const nonFocused = allActiveTasks.filter((t) => !matchesFocus(t))
-  const repeatingActive = nonFocused.filter((t) => isRepeating(t))
-  const regularActive = nonFocused.filter((t) => !isRepeating(t))
+
+  // Hidden-until: pull tasks scheduled to reappear at a later time out of every group.
+  // Completed tasks ignore it; locked tasks (Wins) and the current focus task stay
+  // visible — clean view doesn't render a "hidden" section, so the focus task must
+  // never vanish there (matchesFocus is a no-op when excludeFocus is false).
+  const { focusProjectId, focusTaskId } = config
+  const isCurrentFocus = (t: MergedTask): boolean => {
+    if (!focusProjectId || !focusTaskId) return false
+    if (t.kind === 'quick') return focusProjectId === STANDALONE_PROJECT_ID && focusTaskId === t.id
+    return focusProjectId === t.projectId && focusTaskId === t.taskId
+  }
+  const nowMs = Date.now()
+  const isHiddenNow = (t: MergedTask): boolean => {
+    if (!t.hideUntil || t.completed) return false
+    if (isTaskLocked(t) || isCurrentFocus(t)) return false
+    return new Date(t.hideUntil).getTime() > nowMs
+  }
+  const hiddenTasks = nonFocused
+    .filter(isHiddenNow)
+    .sort((a, b) => (a.hideUntil ?? '').localeCompare(b.hideUntil ?? ''))
+  const visible = nonFocused.filter((t) => !isHiddenNow(t))
+
+  const repeatingActive = visible.filter((t) => isRepeating(t))
+  const regularActive = visible.filter((t) => !isRepeating(t))
 
   // Scheduled tasks: due today or overdue — always visible, don't count against limit
   const isScheduledForToday = (t: MergedTask): boolean => {
@@ -331,6 +357,7 @@ export function useTaskList(opts?: { excludeFocus?: boolean }): TaskListData {
     dueDateProposals,
     dueDateTomorrowProposals,
     overflowTasks: overflow,
+    hiddenTasks,
     allActiveTasks,
     configLimit,
     activeSlots,

@@ -64,6 +64,8 @@ export interface Task {
   someday?: boolean
   noteRef?: string
   dueDate?: string | null
+  /** ISO datetime — task is hidden from the Today view until this moment passes (set as today at HH:MM). Auto-expires when in the past. */
+  hideUntil?: string | null
   beyondLimit?: boolean
   important?: boolean
   cycleRole?: CycleRole
@@ -113,6 +115,8 @@ export interface QuickTask {
   taskNumber?: number
   noteRef?: string
   dueDate?: string | null
+  /** ISO datetime — task is hidden from the Today view until this moment passes (set as today at HH:MM). Auto-expires when in the past. */
+  hideUntil?: string | null
   projectId?: string | null
   beyondLimit?: boolean
   important?: boolean

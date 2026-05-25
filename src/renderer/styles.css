@@ -803,7 +803,8 @@ body {
   background: var(--c-hover);
 }
 
-.due-date-dismiss-popover input[type="date"] {
+.due-date-dismiss-popover input[type="date"],
+.due-date-dismiss-popover input[type="time"] {
   padding: 4px 6px;
   border: 1px solid var(--c-border-subtle);
   border-radius: 4px;
@@ -811,6 +812,17 @@ body {
   color: var(--c-text-primary);
   font-size: 12px;
   font-family: inherit;
+}
+
+.hidden-card {
+  opacity: 0.7;
+}
+
+.hidden-until-badge {
+  font-size: 11px;
+  color: var(--c-text-muted);
+  white-space: nowrap;
+  margin-right: 4px;
 }
 
 .due-date-reschedule-label {
