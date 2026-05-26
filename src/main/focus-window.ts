@@ -214,7 +214,7 @@ export function enterFocusMode(options?: { resumeStartedAt?: number }): { error:
   const { x: workX, y: workY, width: workWidth } = display.workArea
 
   const focusWidth = 520
-  const focusHeight = 58
+  const focusHeight = 64
 
   // Create frameless focus window
   focusWindow = new BrowserWindow({

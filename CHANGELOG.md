@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.104.0] - 2026-05-26
+
+### Changed
+- Focus window redesigned to two lines: larger bold task title with project code, cycle badge, and total logged time on a thin meta line below.
+- Hold Cmd over the focus window to turn the complete (✓) button into split (✂) — split the task instead of completing it.
+
 ## [1.103.0] - 2026-05-25
 
 ### Added

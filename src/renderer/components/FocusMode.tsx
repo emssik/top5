@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { useProjects } from '../hooks/useProjects'
 import { useTaskList } from '../hooks/useTaskList'
 import { normalizeProjectLinks, normalizeLinks, openProjectLink, projectColorValue } from '../utils/projects'
-import { checkInMinutes } from '../utils/checkInTime'
+import { calcTaskTime } from '../utils/checkInTime'
 import { STANDALONE_PROJECT_ID } from '../utils/constants'
 import type { Task, ProjectLink, QuickTask } from '../types'
 import { formatTaskId, formatQuickTaskId, computeNotePath } from '../../shared/taskId'
@@ -35,6 +35,14 @@ function projectLabel(project: { code?: string; name: string } | null, isStandal
   return project.code || project.name.slice(0, 4)
 }
 
+// Total logged time on the task, e.g. "33 min total" / "1h 20min total".
+function formatTotalLabel(minutes: number): string {
+  if (minutes < 60) return `${minutes} min total`
+  const h = Math.floor(minutes / 60)
+  const m = minutes % 60
+  return m > 0 ? `${h}h ${m}min total` : `${h}h total`
+}
+
 interface PickerTask {
   projectId: string
   taskId: string
@@ -45,7 +53,7 @@ interface PickerTask {
 }
 
 const FOCUS_WIDTH = 520
-const FOCUS_HEIGHT_NORMAL = 58
+const FOCUS_HEIGHT_NORMAL = 64
 const FOCUS_HEIGHT_PICKER = 480
 
 export default function FocusMode() {
@@ -58,6 +66,8 @@ export default function FocusMode() {
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
   const [showManualTime, setShowManualTime] = useState(false)
   const [manualMinutes, setManualMinutes] = useState('')
+  // True while the mouse is over the focus window AND Cmd is held — turns ✓ into ✂ (split).
+  const [cmdHover, setCmdHover] = useState(false)
   const sessionStartRef = useRef(Date.now())
   const manualInputRef = useRef<HTMLInputElement>(null)
 
@@ -97,6 +107,13 @@ export default function FocusMode() {
   }, [isStandalone, task, repeatingTasks])
 
   const canSplit = !!task && !(isStandalone && (task as QuickTask).repeatingTaskId)
+  const showScissors = cmdHover && canSplit
+
+  // Total logged time on this task across all sessions (updates on reload-data).
+  const totalMinutes = useMemo(
+    () => (task ? calcTaskTime(focusCheckIns, task.id) : 0),
+    [focusCheckIns, task]
+  )
 
   const openRepeatingTaskLink = () => {
     if (!repeatingTaskLink) return
@@ -105,6 +122,13 @@ export default function FocusMode() {
   // Project label for the bar (code or short name)
   const projLabel = projectLabel(project ?? null, isStandalone)
   const projColor = project ? projectColorValue(project.color) : undefined
+
+  // Cycle badge (12WY) shown when the task is a sub-task of a cycle anchor.
+  const showCycleBadge =
+    !isStandalone && !!project && !!task &&
+    !!(task as Task).parentCode &&
+    collectAnchorCodes(project).has((task as Task).parentCode!)
+  const isImportant = !!task?.important
 
   // Context menu data
   const taskLinks: ProjectLink[] = useMemo(() => {
@@ -182,15 +206,6 @@ export default function FocusMode() {
       }
     })
   })
-
-  // Confirmed time = check-ins recorded during this focus session.
-  const confirmedSeconds = useMemo(() => {
-    const sessionStart = sessionStartRef.current
-    const confirmedMinutes = focusCheckIns
-      .filter((c) => new Date(c.timestamp).getTime() >= sessionStart)
-      .reduce((sum, c) => sum + checkInMinutes(c), 0)
-    return confirmedMinutes * 60
-  }, [focusCheckIns])
 
   // Main timer shows wall time from focus window start.
   const totalSeconds = elapsedSeconds
@@ -356,7 +371,7 @@ export default function FocusMode() {
   if (showManualTime) {
     return (
       <div
-        className="h-[44px] flex items-center px-4 gap-3 rounded-xl bg-clean-view/95 border border-border/50"
+        className="h-[50px] flex items-center px-4 gap-3 rounded-xl bg-clean-view/95 border border-border/50"
         style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
       >
         <span className="text-[13px] text-t-primary flex-shrink-0">
@@ -398,7 +413,7 @@ export default function FocusMode() {
   if (confirmAction !== null) {
     return (
       <div
-        className="h-[44px] flex items-center px-4 gap-3 rounded-xl bg-clean-view/95 border border-border/50"
+        className="h-[50px] flex items-center px-4 gap-3 rounded-xl bg-clean-view/95 border border-border/50"
         style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
       >
         <span className="text-[13px] text-t-primary flex-shrink-0">
@@ -423,66 +438,77 @@ export default function FocusMode() {
   }
 
   return (
-    <div className="relative w-screen h-screen">
+    <div
+      className="relative w-screen h-screen"
+      onMouseMove={(e) => setCmdHover(e.metaKey)}
+      onMouseLeave={() => setCmdHover(false)}
+    >
       {/* Main bar */}
       <div
-        className="h-[44px] flex items-center pl-4 pr-1.5 gap-2 rounded-xl bg-clean-view/95 border border-border/50"
+        className="h-[50px] flex items-center pl-4 pr-1.5 gap-2.5 rounded-xl bg-clean-view/95 border border-border/50"
         style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
         onContextMenu={handleContextMenu}
       >
         <div
-          className="w-[7px] h-[7px] rounded-full animate-pulse flex-shrink-0"
+          className="w-[7px] h-[7px] rounded-full animate-pulse flex-shrink-0 self-center"
           style={{ background: projColor || '#3b82f6' }}
         />
         {isDev && (
-          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-orange-500/20 text-orange-400 border border-orange-500/30 flex-shrink-0">
+          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-orange-500/20 text-orange-400 border border-orange-500/30 flex-shrink-0 self-center">
             DEV
           </span>
         )}
-        {projLabel && (
-          <button
-            className="text-[12px] text-t-muted flex-shrink-0 opacity-50 hover:opacity-100 hover:text-t-primary transition-opacity cursor-pointer bg-transparent border-none p-0"
-            style={{ fontFamily: 'monospace', WebkitAppRegion: 'no-drag', transform: 'translateY(1px)' } as React.CSSProperties}
-            onClick={async () => {
-              if (!project) return
-              await window.api.showProjectInMain(project.id)
-            }}
-            title={project ? `Open ${project.name}` : undefined}
-          >
-            {projLabel}
-          </button>
-        )}
-        {(() => {
-          if (!task || isStandalone || !project) return task?.important && (
+
+        {/* Title + meta, stacked */}
+        <div className="flex-1 min-w-0 flex flex-col justify-center gap-[1px]">
+          <div className="flex items-center gap-1.5 min-w-0">
+            {isImportant && (
+              <span
+                className="text-[13px] flex-shrink-0"
+                style={{ color: 'var(--pc-amber)', lineHeight: 1 }}
+                title="Important"
+              >★</span>
+            )}
             <span
-              className="text-[13px] flex-shrink-0"
-              style={{ color: 'var(--pc-amber)', lineHeight: 1 }}
-              title="Important"
-            >★</span>
-          )
-          const parentCode = (task as Task).parentCode
-          const hasAnchor = !!parentCode && collectAnchorCodes(project).has(parentCode)
-          if (hasAnchor) {
-            return <span className="task-cycle-badge" title={`Sub-task of ${parentCode}`}>{CYCLE_BADGE_LABEL}</span>
-          }
-          return task.important && (
-            <span
-              className="text-[13px] flex-shrink-0"
-              style={{ color: 'var(--pc-amber)', lineHeight: 1 }}
-              title="Important"
-            >★</span>
-          )
-        })()}
-        <span
-          className="text-[14px] font-semibold truncate text-t-primary flex-1 min-w-0 cursor-default"
-          onDoubleClick={() => { if (task?.title) navigator.clipboard.writeText(task.title) }}
-        >
-          {task?.title ? <Linkify text={cleanSplitTitle(task.title)} /> : 'No task'}
-        </span>
+              className="text-[15px] font-semibold leading-tight truncate text-t-primary min-w-0 cursor-default"
+              onDoubleClick={() => { if (task?.title) navigator.clipboard.writeText(task.title) }}
+            >
+              {task?.title ? <Linkify text={cleanSplitTitle(task.title)} /> : 'No task'}
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5 min-w-0 text-[11px] leading-tight text-t-muted">
+            {projLabel && (
+              <button
+                className="flex-shrink-0 hover:text-t-primary transition-colors cursor-pointer bg-transparent border-none p-0"
+                style={{ fontFamily: 'monospace', WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+                onClick={async () => {
+                  if (!project) return
+                  await window.api.showProjectInMain(project.id)
+                }}
+                title={project ? `Open ${project.name}` : undefined}
+              >
+                {projLabel}
+              </button>
+            )}
+            {showCycleBadge && (
+              <>
+                <span className="opacity-50 flex-shrink-0">·</span>
+                <span className="task-cycle-badge flex-shrink-0" title="Sub-task of cycle anchor">{CYCLE_BADGE_LABEL}</span>
+              </>
+            )}
+            {totalMinutes > 0 && (
+              <>
+                <span className="opacity-50 flex-shrink-0">·</span>
+                <span className="truncate" style={{ fontFamily: 'monospace' }}>{formatTotalLabel(totalMinutes)}</span>
+              </>
+            )}
+          </div>
+        </div>
+
         {repeatingTaskLink && (
           <button
             onClick={openRepeatingTaskLink}
-            className="w-[24px] h-[24px] rounded-[6px] bg-transparent text-t-muted text-[11px] hover:bg-hover hover:text-t-secondary transition-all flex items-center justify-center cursor-pointer border-none flex-shrink-0"
+            className="w-[24px] h-[24px] rounded-[6px] bg-transparent text-t-muted text-[11px] hover:bg-hover hover:text-t-secondary transition-all flex items-center justify-center cursor-pointer border-none flex-shrink-0 self-center"
             style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
             title="Open link"
           >
@@ -491,35 +517,29 @@ export default function FocusMode() {
         )}
         <button
           onClick={openManualTime}
-          className="flex items-center gap-1 flex-shrink-0 whitespace-nowrap bg-blue-500/12 hover:bg-blue-500/20 rounded-[10px] px-2.5 py-[3px] border-none cursor-pointer transition-colors"
+          className="flex items-center flex-shrink-0 self-center whitespace-nowrap bg-blue-500/12 hover:bg-blue-500/20 rounded-[10px] px-2.5 py-[4px] border-none cursor-pointer transition-colors"
           style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
           title="Dodaj czas"
         >
-          <span className="text-[12px] font-semibold text-blue-400 tabular-nums">
+          <span className="text-[13px] font-semibold text-blue-400 tabular-nums">
             {formatSessionTime(totalSeconds)}
           </span>
-          <span className="text-[11px] text-t-muted tabular-nums font-normal opacity-70">
-            ({formatSessionTime(confirmedSeconds)})
-          </span>
         </button>
-        {/* Action buttons — always visible */}
-        <div className="flex gap-0.5 flex-shrink-0" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+        {/* Action buttons — ✓ becomes ✂ (split) while Cmd is held over the window */}
+        <div
+          className="flex gap-0.5 flex-shrink-0 self-center"
+          style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+          onMouseMove={(e) => setCmdHover(e.metaKey)}
+        >
           <button
-            onClick={handleComplete}
-            className="w-[28px] h-[28px] rounded-[7px] bg-transparent text-t-muted text-[12px] hover:bg-green-500/15 hover:text-green-400 transition-all flex items-center justify-center cursor-pointer border-none"
-            title="Complete task"
+            onClick={showScissors ? handleSplit : handleComplete}
+            className={`w-[28px] h-[28px] rounded-[7px] bg-transparent text-t-muted text-[12px] transition-all flex items-center justify-center cursor-pointer border-none ${
+              showScissors ? 'hover:bg-blue-500/15 hover:text-blue-400' : 'hover:bg-green-500/15 hover:text-green-400'
+            }`}
+            title={showScissors ? 'Split & continue' : 'Complete task'}
           >
-            ✓
+            {showScissors ? '✂' : '✓'}
           </button>
-          {canSplit && (
-            <button
-              onClick={handleSplit}
-              className="w-[28px] h-[28px] rounded-[7px] bg-transparent text-t-muted text-[12px] hover:bg-blue-500/15 hover:text-blue-400 transition-all flex items-center justify-center cursor-pointer border-none"
-              title="Split & continue"
-            >
-              ✂
-            </button>
-          )}
           <button
             onClick={handleExit}
             className="w-[28px] h-[28px] rounded-[7px] bg-transparent text-t-muted text-[12px] hover:bg-red-500/15 hover:text-red-400 transition-all flex items-center justify-center cursor-pointer border-none"
@@ -532,7 +552,7 @@ export default function FocusMode() {
 
       {/* Task picker popup */}
       {showTaskPicker && (
-        <div className="absolute top-[48px] left-0 right-0 mx-2 rounded-lg bg-clean-view/95 border border-border/50 shadow-lg overflow-hidden">
+        <div className="absolute top-[54px] left-0 right-0 mx-2 rounded-lg bg-clean-view/95 border border-border/50 shadow-lg overflow-hidden">
           <div className="px-3 py-2 border-b border-border/30">
             <span className="text-[11px] text-t-muted">Następne zadanie:</span>
           </div>
