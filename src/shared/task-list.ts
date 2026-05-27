@@ -36,6 +36,7 @@ export interface VisibleTask {
   dueDate?: string | null
   beyondLimit?: boolean
   important?: boolean
+  money?: boolean
   cycleRole?: CycleRole
   parentCode?: string | null
   /** True iff this task has a parentCode pointing to an anchor (task with cycleRole) in the same project. */
@@ -91,7 +92,8 @@ export function getVisibleTasks(input: GetVisibleTasksInput): VisibleTasksResult
         inProgress: t.inProgress,
         dueDate: t.dueDate,
         beyondLimit: t.beyondLimit,
-        important: t.important
+        important: t.important,
+        money: t.money
       }
     })
 
@@ -113,6 +115,7 @@ export function getVisibleTasks(input: GetVisibleTasksInput): VisibleTasksResult
         dueDate: t.dueDate,
         beyondLimit: t.beyondLimit,
         important: t.important,
+        money: t.money,
         cycleRole: t.cycleRole,
         parentCode: t.parentCode ?? null,
         isCycleSubTask: !!t.parentCode && anchorCodes.has(t.parentCode)

@@ -34,6 +34,7 @@ export interface CycleTaskItem {
   status: CycleTaskStatus
   due: string | null
   important: boolean
+  money: boolean
   beyondLimit: boolean
   completed: boolean
   /** Sub-tasks attached via parentCode. Populated only when getCycleTasks is called with tree=true. */
@@ -48,6 +49,7 @@ export interface CycleSubTaskItem {
   status: CycleTaskStatus
   due: string | null
   important: boolean
+  money: boolean
   completed: boolean
 }
 
@@ -68,6 +70,8 @@ export interface Task {
   hideUntil?: string | null
   beyondLimit?: boolean
   important?: boolean
+  /** Marks a task that directly creates an opportunity to earn money — shown as a golden $. */
+  money?: boolean
   cycleRole?: CycleRole
   /** Manual order within the 12W cycle layer. Lower values come first; undefined sorts after numbered entries. */
   cycleOrder?: number
@@ -120,6 +124,8 @@ export interface QuickTask {
   projectId?: string | null
   beyondLimit?: boolean
   important?: boolean
+  /** Marks a task that directly creates an opportunity to earn money — shown as a golden $. */
+  money?: boolean
 }
 
 export type ProjectColor =

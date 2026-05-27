@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.105.0] - 2026-05-27
+
+### Added
+
+- Znacznik „money" na zadaniach — złoty `$` oznaczający zadania, które bezpośrednio dają szansę zarobku. Widoczny w Today, oknie Focus, widoku 12W i Clean view; wyróżnione zadania dostają dodatkowo złote tło karty. Przełączasz skrótem `m`, z menu „⋯"/kontekstowego, komendą CLI `top5 money <kod>` albo przez API (`toggle-money`). Niezależny od gwiazdki „important" (oba można ustawić naraz), a w Clean view zadania money trafiają na górę listy.
+
 ## [1.104.0] - 2026-05-26
 
 ### Changed

@@ -97,9 +97,9 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
   const overdueTasks = scheduledTasks.filter((t) => !t.completed && t.dueDate && t.dueDate < todayKey)
   const dueTodayTasks = scheduledTasks.filter((t) => !overdueTasks.includes(t))
 
-  // Clean view: hide completed (incl. recently-completed) and pull important tasks to the very top
+  // Clean view: hide completed (incl. recently-completed) and pull important/money tasks to the very top
   const importantCleanTasks = cleanView
-    ? [...overdueTasks, ...dueTodayTasks, ...activeTasks, ...repeatingActive].filter((t) => t.important && !t.completed)
+    ? [...overdueTasks, ...dueTodayTasks, ...activeTasks, ...repeatingActive].filter((t) => (t.important || t.money) && !t.completed)
     : []
   const importantCleanIds = new Set(importantCleanTasks.map((t) => t.id))
   const hideForClean = (t: MergedTask) => !t.completed && !importantCleanIds.has(t.id)
@@ -350,7 +350,7 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
       return (
         <div
           key={task.id}
-          className={`group flex items-baseline gap-2.5 py-[2px] transition-colors ${!isCompleted ? 'cursor-grab active:cursor-grabbing' : ''}`}
+          className={`group flex items-baseline gap-2.5 py-[2px] transition-colors ${task.money && !isCompleted ? 'clean-money-row' : ''} ${!isCompleted ? 'cursor-grab active:cursor-grabbing' : ''}`}
           style={isDragOver ? { opacity: 0.6 } : undefined}
           draggable={!isCompleted}
           onDragStart={!isCompleted ? () => handleDragStart(task.id) : undefined}
@@ -400,6 +400,9 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
               >
                 {task.important && !isCompleted && (
                   <span style={{ color: 'var(--pc-amber)', marginRight: 4 }} title="Important">★</span>
+                )}
+                {task.money && !isCompleted && (
+                  <span style={{ color: 'var(--pc-gold)', fontWeight: 700, marginRight: 4 }} title="Money">$</span>
                 )}
                 <Linkify text={cleanView ? cleanSplitTitle(task.title) : task.title} />
                 <TaskLinksIndicator links={task.links ?? []} projectName={task.projectName} />

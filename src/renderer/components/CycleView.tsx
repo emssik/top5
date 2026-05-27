@@ -60,6 +60,7 @@ export default function CycleView() {
     setFocus,
     toggleTaskInProgress,
     toggleTaskImportant,
+    toggleTaskMoney,
     toggleTaskToDoNext,
     setTaskCycleRole,
     resetCycleRoles,
@@ -305,7 +306,7 @@ export default function CycleView() {
     return (
       <div
         key={task.id}
-        className={`task-card ${isDone ? 'done-card' : ''} ${task.inProgress ? 'in-progress' : ''} ${isSubTask ? 'sub-task' : ''} ${isDraggable ? 'draggable-task' : ''} ${isDragOver ? 'drag-over' : ''}`}
+        className={`task-card ${isDone ? 'done-card' : ''} ${task.inProgress ? 'in-progress' : ''} ${task.money && !isDone ? 'money-card' : ''} ${isSubTask ? 'sub-task' : ''} ${isDraggable ? 'draggable-task' : ''} ${isDragOver ? 'drag-over' : ''}`}
         draggable={isDraggable}
         onDragStart={isDraggable && role ? (e) => handleDragStart(e, task, role) : undefined}
         onDragOver={isDraggable && role ? (e) => handleDragOver(e, task.id, role) : undefined}
@@ -324,6 +325,14 @@ export default function CycleView() {
                 title="Important — click to unmark"
                 onClick={(e) => { e.stopPropagation(); toggleTaskImportant(project.id, task.id) }}
               >★</button>
+            )}
+            {task.money && !isDone && (
+              <button
+                type="button"
+                className="task-money-badge"
+                title="Money — directly earns money — click to unmark"
+                onClick={(e) => { e.stopPropagation(); toggleTaskMoney(project.id, task.id) }}
+              >$</button>
             )}
             {task.cycleRole && !isDone && (
               <span
@@ -372,6 +381,7 @@ export default function CycleView() {
             <button className="task-overflow-item" onClick={() => { setFocus(project.id, task.id); setMenuOpenId(null) }}><span className="toi-icon">▶</span>Focus</button>
             <button className="task-overflow-item" onClick={() => { toggleTaskInProgress(project.id, task.id); setMenuOpenId(null) }}><span className="toi-icon">{task.inProgress ? '⏹' : '⏩'}</span>{task.inProgress ? 'Stop In Progress' : 'In Progress'}</button>
             <button className="task-overflow-item" onClick={() => { toggleTaskImportant(project.id, task.id); setMenuOpenId(null) }}><span className="toi-icon">{task.important ? '☆' : '★'}</span>{task.important ? 'Unmark Important' : 'Mark Important'}</button>
+            <button className="task-overflow-item" onClick={() => { toggleTaskMoney(project.id, task.id); setMenuOpenId(null) }}><span className="toi-icon">$</span>{task.money ? 'Unmark Money' : 'Mark Money'}</button>
             <button className="task-overflow-item" onClick={() => { toggleTaskToDoNext(project.id, task.id); setMenuOpenId(null) }}><span className="toi-icon">📌</span>{isPinned ? 'Unpin from Today' : 'Pin to Today'}</button>
             <button className="task-overflow-item" onClick={() => { setMenuOpenId(null); setDueDatePickerId(task.id) }}><span className="toi-icon">📅</span>{task.dueDate ? 'Change due date' : 'Set due date'}</button>
             <button className="task-overflow-item" onClick={() => { setMenuOpenId(null); setLinksEditId(task.id) }}><span className="toi-icon">🔗</span>Links{task.links && task.links.length > 0 ? ` (${task.links.length})` : ''}</button>

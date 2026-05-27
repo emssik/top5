@@ -16,6 +16,7 @@ interface TodayTask {
   inProgress?: boolean
   dueDate?: string | null
   important?: boolean
+  money?: boolean
   cycleRole?: CycleRole
 }
 
@@ -37,6 +38,7 @@ function taskStatus(t: TodayTask): string {
   if (t.dueDate) parts.push('due')
   if (t.repeatingTaskId) parts.push('repeating')
   if (t.important) parts.push('important')
+  if (t.money) parts.push('money')
   if (t.cycleRole) parts.push(CYCLE_ROLE_LABEL[t.cycleRole])
   return parts.join(' ')
 }

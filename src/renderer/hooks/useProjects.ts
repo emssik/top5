@@ -33,8 +33,10 @@ interface ProjectsState {
   reorderQuickTasks: (orderedIds: string[]) => Promise<void>
   toggleQuickTaskInProgress: (id: string) => Promise<void>
   toggleQuickTaskImportant: (id: string) => Promise<void>
+  toggleQuickTaskMoney: (id: string) => Promise<void>
   toggleTaskInProgress: (projectId: string, taskId: string) => Promise<void>
   toggleTaskImportant: (projectId: string, taskId: string) => Promise<void>
+  toggleTaskMoney: (projectId: string, taskId: string) => Promise<void>
   setTaskCycleRole: (projectId: string, taskId: string, cycleRole: CycleRole | null) => Promise<void>
   resetCycleRoles: (layer?: CycleRole | null) => Promise<number>
   moveTaskToProject: (fromProjectId: string, toProjectId: string, taskId: string) => Promise<void>
@@ -209,6 +211,11 @@ export const useProjects = create<ProjectsState>((set, get) => ({
     set({ quickTasks: updated })
   },
 
+  toggleQuickTaskMoney: async (id: string) => {
+    const updated = await window.api.toggleQuickTaskMoney(id)
+    set({ quickTasks: updated })
+  },
+
   toggleTaskInProgress: async (projectId: string, taskId: string) => {
     const updated = await window.api.toggleTaskInProgress(projectId, taskId)
     set({ projects: assignMissingProjectColors((updated ?? []).map(normalizeProject)) })
@@ -216,6 +223,11 @@ export const useProjects = create<ProjectsState>((set, get) => ({
 
   toggleTaskImportant: async (projectId: string, taskId: string) => {
     const updated = await window.api.toggleTaskImportant(projectId, taskId)
+    set({ projects: assignMissingProjectColors((updated ?? []).map(normalizeProject)) })
+  },
+
+  toggleTaskMoney: async (projectId: string, taskId: string) => {
+    const updated = await window.api.toggleTaskMoney(projectId, taskId)
     set({ projects: assignMissingProjectColors((updated ?? []).map(normalizeProject)) })
   },
 

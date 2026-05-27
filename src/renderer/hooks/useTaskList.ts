@@ -24,6 +24,7 @@ export interface MergedTask {
   repeatingTaskId?: string | null
   inProgress?: boolean
   important?: boolean
+  money?: boolean
   cycleRole?: CycleRole
   parentCode?: string | null
   isCycleSubTask?: boolean
@@ -119,6 +120,7 @@ export function useTaskList(opts?: { excludeFocus?: boolean }): TaskListData {
       repeatingTaskId: t.repeatingTaskId,
       inProgress: t.inProgress,
       important: t.important,
+      money: t.money,
       noteRef: t.noteRef,
       dueDate: t.dueDate,
       hideUntil: t.hideUntil,
@@ -145,6 +147,7 @@ export function useTaskList(opts?: { excludeFocus?: boolean }): TaskListData {
           taskNumber: t.taskNumber,
           inProgress: t.inProgress,
           important: t.important,
+          money: t.money,
           cycleRole: t.cycleRole,
           parentCode: t.parentCode ?? null,
           isCycleSubTask: !!t.parentCode && anchorCodes.has(t.parentCode),
@@ -207,7 +210,7 @@ export function useTaskList(opts?: { excludeFocus?: boolean }): TaskListData {
       if (!qt) return null
       return {
         kind: 'quick', id: qt.id, title: qt.title, order: qt.order,
-        taskNumber: qt.taskNumber, inProgress: qt.inProgress, important: qt.important,
+        taskNumber: qt.taskNumber, inProgress: qt.inProgress, important: qt.important, money: qt.money,
         repeatingTaskId: qt.repeatingTaskId, noteRef: qt.noteRef
       }
     }
@@ -222,7 +225,7 @@ export function useTaskList(opts?: { excludeFocus?: boolean }): TaskListData {
       title: task.title, order: task.toDoNextOrder ?? 999,
       projectId: project.id, projectName: project.name,
       projectCode: project.code, taskId: task.id,
-      taskNumber: task.taskNumber, inProgress: task.inProgress, important: task.important,
+      taskNumber: task.taskNumber, inProgress: task.inProgress, important: task.important, money: task.money,
       cycleRole: task.cycleRole,
       parentCode: task.parentCode ?? null,
       isCycleSubTask: !!task.parentCode && anchorCodes.has(task.parentCode),

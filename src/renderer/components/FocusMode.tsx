@@ -129,6 +129,7 @@ export default function FocusMode() {
     !!(task as Task).parentCode &&
     collectAnchorCodes(project).has((task as Task).parentCode!)
   const isImportant = !!task?.important
+  const isMoney = !!task?.money
 
   // Context menu data
   const taskLinks: ProjectLink[] = useMemo(() => {
@@ -468,6 +469,13 @@ export default function FocusMode() {
                 style={{ color: 'var(--pc-amber)', lineHeight: 1 }}
                 title="Important"
               >★</span>
+            )}
+            {isMoney && (
+              <span
+                className="text-[13px] flex-shrink-0"
+                style={{ color: 'var(--pc-gold)', fontWeight: 700, lineHeight: 1 }}
+                title="Money"
+              >$</span>
             )}
             <span
               className="text-[15px] font-semibold leading-tight truncate text-t-primary min-w-0 cursor-default"

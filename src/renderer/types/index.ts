@@ -70,12 +70,14 @@ declare global {
       reorderQuickTasks: (orderedIds: string[]) => Promise<import('../../shared/types').QuickTask[]>
       toggleQuickTaskInProgress: (id: string) => Promise<import('../../shared/types').QuickTask[]>
       toggleQuickTaskImportant: (id: string) => Promise<import('../../shared/types').QuickTask[]>
+      toggleQuickTaskMoney: (id: string) => Promise<import('../../shared/types').QuickTask[]>
       reorderProjects: (orderedIds: string[]) => Promise<import('../../shared/types').Project[]>
       reorderPinnedTasks: (updates: { projectId: string; taskId: string; order: number }[]) => Promise<void>
       reorderCycleTasks: (updates: { projectId: string; taskId: string; cycleOrder: number }[]) => Promise<import('../../shared/types').Project[]>
       setBeyondLimit: (input: { quickTaskIds?: string[]; pinnedTasks?: { projectId: string; taskId: string }[]; beyondLimit: boolean }) => Promise<void>
       toggleTaskInProgress: (projectId: string, taskId: string) => Promise<import('../../shared/types').Project[]>
       toggleTaskImportant: (projectId: string, taskId: string) => Promise<import('../../shared/types').Project[]>
+      toggleTaskMoney: (projectId: string, taskId: string) => Promise<import('../../shared/types').Project[]>
       setTaskCycleRole: (projectId: string, taskId: string, cycleRole: import('../../shared/types').CycleRole | null) => Promise<import('../../shared/types').Project[]>
       resetCycleRoles: (layer?: import('../../shared/types').CycleRole | null) => Promise<{ cleared: number; projects: import('../../shared/types').Project[] }>
       moveTaskToProject: (fromProjectId: string, toProjectId: string, taskId: string) => Promise<import('../../shared/types').Project[]>

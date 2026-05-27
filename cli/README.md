@@ -303,6 +303,27 @@ Akceptuje:
 
 ---
 
+### `top5 money <task-code>`
+
+Toggluje znacznik Money ($) na tasku — oznacza zadanie, które bezpośrednio daje szansę zarobienia pieniędzy. Wyświetla złoty `$` przy tytule w widoku Today, w Focus window oraz w Clean view. Niezależny od flagi Important (oba mogą być ustawione naraz). Flaga czysto wizualna — nie zmienia kolejności, pin-a, ani logiki limitu.
+
+```bash
+top5 money PRJ-3
+# $ Money: PRJ-3 Frontend
+
+top5 money PRJ-3        # ponowne wywołanie zdejmuje znacznik
+# Unmarked: PRJ-3 Frontend
+
+top5 money QT-5         # działa też dla quick tasks
+```
+
+Akceptuje:
+- kod tasku projektowego: `PRJ-3`, `APP-12`
+- kod quick taska: `QT-5`
+- UUID tasku
+
+---
+
 ### `top5 rm <task-code>`
 
 Kasuje task z projektu.

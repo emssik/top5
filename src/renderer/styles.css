@@ -67,6 +67,7 @@ html, body {
   --pc-purple: #a855f7;
   --pc-pink: #ec4899;
   --pc-teal: #14b8a6;
+  --pc-gold: #facc15;
 }
 
 /* Light theme — Catppuccin Latte */
@@ -107,6 +108,7 @@ html, body {
   --pc-purple: #8839ef;         /* Mauve */
   --pc-pink: #ea76cb;           /* Pink */
   --pc-teal: #179299;           /* Teal */
+  --pc-gold: #b8860b;           /* Gold (money) */
 }
 
 @font-face {
@@ -396,6 +398,27 @@ body {
 
 .task-card.in-progress {
   border-left: 3px solid var(--pc-amber);
+}
+
+/* Money-card — golden tinted background for tasks that directly earn money */
+.task-card.money-card {
+  background: color-mix(in srgb, var(--pc-gold) 12%, var(--bg-card));
+  border-color: color-mix(in srgb, var(--pc-gold) 40%, var(--c-border-subtle));
+}
+.task-card.money-card:hover {
+  border-color: color-mix(in srgb, var(--pc-gold) 60%, var(--c-border));
+}
+.focus-card.money-card {
+  background: color-mix(in srgb, var(--pc-gold) 12%, var(--bg-card));
+}
+/* Clean-view row highlight for money tasks */
+.clean-money-row {
+  background: color-mix(in srgb, var(--pc-gold) 14%, transparent);
+  border-radius: 6px;
+  padding-left: 6px;
+  padding-right: 6px;
+  margin-left: -6px;
+  margin-right: -6px;
 }
 
 .done-card {
@@ -1229,6 +1252,25 @@ body {
   transition: filter 0.12s, transform 0.12s;
 }
 .task-important-star:hover {
+  filter: brightness(1.15);
+  transform: scale(1.15);
+}
+
+/* Money badge — marks a task that directly creates an opportunity to earn money */
+.task-money-badge {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0 2px;
+  margin-right: 2px;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--pc-gold);
+  flex-shrink: 0;
+  transition: filter 0.12s, transform 0.12s;
+}
+.task-money-badge:hover {
   filter: brightness(1.15);
   transform: scale(1.15);
 }

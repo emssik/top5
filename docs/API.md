@@ -143,13 +143,15 @@ Creates a new 12WY sub-task under an existing anchor task (`:tid`). The anchor m
 {
   "title": "M1 — landing page",
   "dueDate": "2026-06-15",
-  "important": true
+  "important": true,
+  "money": true
 }
 ```
 
 - `title` (required) — non-empty string, trimmed.
 - `dueDate` (optional) — `YYYY-MM-DD` or omit.
 - `important` (optional) — boolean.
+- `money` (optional) — boolean. Marks a task that directly creates an opportunity to earn money.
 
 The created task has `parentCode` auto-set to the anchor's task code (e.g. `"PRJ-42"`). `taskNumber` is auto-assigned from the project's counter. `cycleRole` is **not** carried — sub-tasks inherit priority via the parent.
 
@@ -185,6 +187,14 @@ Toggles `isToDoNext` (pinned) flag on a task.
 #### `POST /projects/:pid/tasks/:tid/toggle-important`
 
 Toggles `important` flag on a task. The flag is purely visual — surfaces a star next to the task title in Today, Focus window, and Clean view. Does not affect ordering, pin state, or limit calculations.
+
+**Errors:** `404` if project or task not found.
+
+#### `POST /projects/:pid/tasks/:tid/toggle-money`
+
+Toggles `money` flag on a task — marks a task that directly creates an opportunity to earn money. The flag is purely visual — surfaces a golden `$` next to the task title in Today, Focus window, and Clean view. Independent of `important` (both can be set). Does not affect ordering, pin state, or limit calculations.
+
+**Response:** `{ ok, data: Project[] }`
 
 **Errors:** `404` if project or task not found.
 
@@ -226,6 +236,7 @@ interface CycleTaskItem {
   status: 'active' | 'in-progress' | 'up-next' | 'done'
   due: string | null          // YYYY-MM-DD
   important: boolean
+  money: boolean
   beyondLimit: boolean
   completed: boolean
   children?: CycleSubTaskItem[]   // present only when tree=1
@@ -239,6 +250,7 @@ interface CycleSubTaskItem {
   status: 'active' | 'in-progress' | 'up-next' | 'done'
   due: string | null
   important: boolean
+  money: boolean
   completed: boolean
 }
 ```
@@ -330,6 +342,12 @@ Toggles `inProgress` flag. No-op if task is completed.
 #### `POST /quick-tasks/:id/toggle-important`
 
 Toggles `important` flag on a quick task. Visual marker only — see project task variant above.
+
+**Errors:** `404` if not found.
+
+#### `POST /quick-tasks/:id/toggle-money`
+
+Toggles `money` flag on a quick task. Visual marker only (golden `$`) — see project task variant above.
 
 **Errors:** `404` if not found.
 
@@ -466,6 +484,7 @@ Returns all non-archived habits as today-summary entries (schedule, today status
   toDoNextOrder?: number
   inProgress?: boolean
   important?: boolean
+  money?: boolean              // golden $ — task that directly earns money
   cycleRole?: 'must' | 'should' | 'could'
   cycleOrder?: number          // manual layer order; cleared when cycleRole changes
   parentCode?: string | null   // 12WY anchor task code in same project (e.g. "TOP-42")
@@ -494,6 +513,7 @@ When a task has a valid `parentCode`, the renderer replaces the `important` star
   repeatingTaskId?: string | null
   inProgress?: boolean
   important?: boolean
+  money?: boolean              // golden $ — task that directly earns money
 }
 ```
 

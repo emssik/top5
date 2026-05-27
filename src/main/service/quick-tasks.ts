@@ -150,3 +150,13 @@ export function toggleQuickTaskImportant(id: string): QuickTask[] | ServiceError
   setData('quickTasks', quickTasks)
   return quickTasks
 }
+
+export function toggleQuickTaskMoney(id: string): QuickTask[] | ServiceError {
+  const data = getData()
+  const quickTasks = [...data.quickTasks]
+  const task = quickTasks.find((t) => t.id === id)
+  if (!task) return { error: 'not_found' }
+  task.money = !task.money
+  setData('quickTasks', quickTasks)
+  return quickTasks
+}

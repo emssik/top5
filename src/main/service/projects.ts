@@ -413,6 +413,7 @@ export function getCycleTasks(opts: {
           status: taskCycleStatus(task),
           due: task.dueDate ?? null,
           important: task.important ?? false,
+          money: task.money ?? false,
           completed: task.completed
         }
         const bucket = childrenByCode.get(task.parentCode) ?? []
@@ -449,6 +450,7 @@ export function getCycleTasks(opts: {
         status: taskCycleStatus(task),
         due: task.dueDate ?? null,
         important: task.important ?? false,
+        money: task.money ?? false,
         beyondLimit: task.beyondLimit ?? false,
         completed: task.completed
       }
@@ -552,6 +554,18 @@ export function toggleTaskImportant(projectId: string, taskId: string): Project[
   return projects
 }
 
+export function toggleTaskMoney(projectId: string, taskId: string): Project[] | ServiceError {
+  const data = getData()
+  const projects = [...data.projects]
+  const project = projects.find((p) => p.id === projectId)
+  if (!project) return { error: 'not_found' }
+  const task = project.tasks.find((t) => t.id === taskId)
+  if (!task) return { error: 'not_found' }
+  task.money = !task.money
+  setData('projects', projects)
+  return projects
+}
+
 export function moveTaskToProject(fromProjectId: string, toProjectId: string, taskId: string): Project[] | ServiceError {
   if (fromProjectId === toProjectId) return { error: 'validation' }
   const data = getData()
@@ -609,6 +623,7 @@ type CreateSubTaskInput = {
   title?: unknown
   dueDate?: unknown
   important?: unknown
+  money?: unknown
 }
 
 export function createSubTask(
@@ -624,6 +639,7 @@ export function createSubTask(
     ? null
     : typeof body.dueDate === 'string' && body.dueDate.length > 0 ? body.dueDate : null
   const important = body.important === true
+  const money = body.money === true
 
   const data = getData()
   const projects = [...data.projects]
@@ -647,7 +663,8 @@ export function createSubTask(
     taskNumber: nextNum,
     parentCode,
     ...(dueDate ? { dueDate } : {}),
-    ...(important ? { important: true } : {})
+    ...(important ? { important: true } : {}),
+    ...(money ? { money: true } : {})
   }
   project.tasks.push(newTask)
   project.nextTaskNumber = nextNum + 1

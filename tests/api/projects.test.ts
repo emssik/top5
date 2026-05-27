@@ -290,6 +290,46 @@ describe('Projects API', () => {
     expect(res.statusCode).toBe(404)
   })
 
+  it('toggle-money', async () => {
+    const server = await getTestServer()
+    const project = makeProject({
+      tasks: [{ id: 'task-1', title: 'Task 1', completed: false, createdAt: new Date().toISOString() }]
+    })
+    await server.inject({
+      method: 'POST',
+      url: '/api/v1/projects',
+      headers: { ...auth, 'content-type': 'application/json' },
+      payload: project
+    })
+
+    let res = await server.inject({
+      method: 'POST',
+      url: `/api/v1/projects/${project.id}/tasks/task-1/toggle-money`,
+      headers: auth
+    })
+    expect(res.statusCode).toBe(200)
+    let p = res.json().data.find((p: any) => p.id === project.id)
+    expect(p.tasks[0].money).toBe(true)
+
+    // toggle off
+    res = await server.inject({
+      method: 'POST',
+      url: `/api/v1/projects/${project.id}/tasks/task-1/toggle-money`,
+      headers: auth
+    })
+    expect(res.statusCode).toBe(200)
+    p = res.json().data.find((p: any) => p.id === project.id)
+    expect(p.tasks[0].money).toBe(false)
+
+    // 404 for unknown task
+    res = await server.inject({
+      method: 'POST',
+      url: `/api/v1/projects/${project.id}/tasks/task-missing/toggle-money`,
+      headers: auth
+    })
+    expect(res.statusCode).toBe(404)
+  })
+
   describe('PUT /projects/:pid/tasks/:tid/due-date', () => {
     it('sets due date on a task', async () => {
       const server = await getTestServer()
@@ -975,7 +1015,7 @@ describe('Projects API', () => {
       expect(tasks.find((t: any) => t.parentCode === 'PRJ-1').title).toBe('M1 — landing page')
     })
 
-    it('passes through optional dueDate and important', async () => {
+    it('passes through optional dueDate, important and money', async () => {
       const server = await getTestServer()
       const project = makeProjectWithAnchor()
       await server.inject({ method: 'POST', url: '/api/v1/projects', headers: { ...auth, 'content-type': 'application/json' }, payload: project })
@@ -984,11 +1024,12 @@ describe('Projects API', () => {
         method: 'POST',
         url: `/api/v1/projects/${project.id}/tasks/anchor/sub-tasks`,
         headers: { ...auth, 'content-type': 'application/json' },
-        payload: { title: 'Sub', dueDate: '2026-06-01', important: true }
+        payload: { title: 'Sub', dueDate: '2026-06-01', important: true, money: true }
       })
       expect(res.statusCode).toBe(201)
       expect(res.json().data.dueDate).toBe('2026-06-01')
       expect(res.json().data.important).toBe(true)
+      expect(res.json().data.money).toBe(true)
     })
 
     it('returns 404 when the project does not exist', async () => {

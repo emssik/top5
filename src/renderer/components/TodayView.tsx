@@ -123,8 +123,10 @@ export default function TodayView({ onSelectView }: { onSelectView?: (view: stri
     reorderQuickTasks,
     toggleQuickTaskInProgress,
     toggleQuickTaskImportant,
+    toggleQuickTaskMoney,
     toggleTaskInProgress,
     toggleTaskImportant,
+    toggleTaskMoney,
     setTaskCycleRole,
     toggleTaskToDoNext,
     setFocus,
@@ -444,6 +446,7 @@ export default function TodayView({ onSelectView }: { onSelectView?: (view: stri
       if (key === 'f' && !isFocusCard) { consume(); focusOnTask(task); return }
       if (key === 'p' && !isFocusCard) { consume(); toggleInProgress(task); return }
       if (key === 'i') { consume(); toggleImportant(task); return }
+      if (key === 'm') { consume(); toggleMoney(task); return }
       if (key === 's' && isFocusCard) { consume(); stopFocus(); return }
       if (key === 'n' && config.obsidianStoragePath) {
         consume()
@@ -594,6 +597,15 @@ export default function TodayView({ onSelectView }: { onSelectView?: (view: stri
     }
     if (!task.projectId || !task.taskId) return
     await toggleTaskImportant(task.projectId, task.taskId)
+  }
+
+  const toggleMoney = async (task: MergedTask) => {
+    if (task.kind === 'quick') {
+      await toggleQuickTaskMoney(task.id)
+      return
+    }
+    if (!task.projectId || !task.taskId) return
+    await toggleTaskMoney(task.projectId, task.taskId)
   }
 
   const updateCycleRole = async (task: MergedTask, role: CycleRole | null) => {
@@ -1015,7 +1027,7 @@ export default function TodayView({ onSelectView }: { onSelectView?: (view: stri
     return (
       <div
         key={task.id}
-        className={`task-card draggable-task ${task.inProgress ? 'in-progress' : ''} ${isDragOver ? 'drag-over' : ''} ${locked ? 'wins-locked' : ''} ${isOverflow && selectedOverflowIds.has(task.id) ? 'selected' : ''}`}
+        className={`task-card draggable-task ${task.inProgress ? 'in-progress' : ''} ${task.money ? 'money-card' : ''} ${isDragOver ? 'drag-over' : ''} ${locked ? 'wins-locked' : ''} ${isOverflow && selectedOverflowIds.has(task.id) ? 'selected' : ''}`}
         draggable={!isLocked}
         onDragStart={(event) => handleDragStart(event, task)}
         onDragOver={(event) => handleDragOver(event, task.id)}
@@ -1062,6 +1074,14 @@ export default function TodayView({ onSelectView }: { onSelectView?: (view: stri
                   onClick={(e) => { e.stopPropagation(); toggleImportant(task) }}
                 >★</button>
               )}
+              {task.money && (
+                <button
+                  type="button"
+                  className="task-money-badge"
+                  title="Money — directly earns money — click to unmark"
+                  onClick={(e) => { e.stopPropagation(); toggleMoney(task) }}
+                >$</button>
+              )}
               {task.cycleRole && task.kind === 'pinned' && (
                 <CycleRoleBadge
                   role={task.cycleRole}
@@ -1101,6 +1121,7 @@ export default function TodayView({ onSelectView }: { onSelectView?: (view: stri
             <button className="task-overflow-item" onClick={() => { focusOnTask(task); setMenuOpenId(null) }}><span className="toi-icon">▶</span>Focus</button>
             <button className="task-overflow-item" onClick={() => { toggleInProgress(task); setMenuOpenId(null) }}><span className="toi-icon">{task.inProgress ? '⏹' : '⏩'}</span>{task.inProgress ? 'Stop In Progress' : 'In Progress'}</button>
             <button className="task-overflow-item" onClick={() => { toggleImportant(task); setMenuOpenId(null) }}><span className="toi-icon">{task.important ? '☆' : '★'}</span>{task.important ? 'Unmark Important' : 'Mark Important'}</button>
+            <button className="task-overflow-item" onClick={() => { toggleMoney(task); setMenuOpenId(null) }}><span className="toi-icon">$</span>{task.money ? 'Unmark Money' : 'Mark Money'}</button>
             <button className="task-overflow-item" onClick={() => { setMenuOpenId(null); setDueDatePickerId(null); setHideUntilPickerId(task.id) }}><span className="toi-icon">⏰</span>Ukryj do godziny</button>
             {task.kind === 'pinned' && task.projectId && task.taskId && (
               <button className="task-overflow-item" onClick={() => { setMenuOpenId(null); setHideUntilPickerId(null); setDueDatePickerId(task.id) }}><span className="toi-icon">📅</span>{task.dueDate ? 'Change due date' : 'Set due date'}</button>
@@ -1256,6 +1277,7 @@ export default function TodayView({ onSelectView }: { onSelectView?: (view: stri
           items.push({ label: 'Stop Focus', kbd: 'S', action: () => stopFocus() })
         }
         items.push({ label: task.important ? 'Unmark Important' : 'Mark Important', kbd: 'I', action: () => toggleImportant(task) })
+        items.push({ label: task.money ? 'Unmark Money' : 'Mark Money', kbd: 'M', action: () => toggleMoney(task) })
         if (task.kind === 'pinned' && task.projectId && task.taskId) {
           const roles: { role: CycleRole; label: string }[] = [
             { role: 'must', label: 'Cycle: Must' },
@@ -1489,7 +1511,7 @@ export default function TodayView({ onSelectView }: { onSelectView?: (view: stri
             <span>Focus</span>
           </div>
           <div
-            className="focus-card"
+            className={`focus-card ${focusTask.money ? 'money-card' : ''}`}
             onContextMenu={(e) => { e.stopPropagation(); e.preventDefault(); setContextMenu({ x: e.clientX, y: e.clientY, task: focusTask, section: 'focus' }) }}
             onMouseEnter={() => { hoveredTaskRef.current = { task: focusTask, section: 'focus' } }}
             onMouseLeave={() => { hoveredTaskRef.current = null }}
@@ -1521,6 +1543,14 @@ export default function TodayView({ onSelectView }: { onSelectView?: (view: stri
                       title="Important — click to unmark"
                       onClick={(e) => { e.stopPropagation(); toggleImportant(focusTask) }}
                     >★</button>
+                  )}
+                  {focusTask.money && (
+                    <button
+                      type="button"
+                      className="task-money-badge"
+                      title="Money — directly earns money — click to unmark"
+                      onClick={(e) => { e.stopPropagation(); toggleMoney(focusTask) }}
+                    >$</button>
                   )}
                   {focusTask.cycleRole && focusTask.kind === 'pinned' && (
                     <CycleRoleBadge role={focusTask.cycleRole} />

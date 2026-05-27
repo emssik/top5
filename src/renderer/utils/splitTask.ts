@@ -26,6 +26,7 @@ export function buildSplitTaskCopy(
     noteRef: opts.noteRef,
     links: orig.links,
     important: orig.important,
+    money: orig.money,
     dueDate: orig.dueDate,
     cycleRole: orig.cycleRole,
     images: orig.images
@@ -46,6 +47,7 @@ export function buildSplitQuickTaskCopy(
     beyondLimit: true,
     noteRef: opts.noteRef,
     important: orig.important,
+    money: orig.money,
     dueDate: orig.dueDate,
     projectId: orig.projectId
   }

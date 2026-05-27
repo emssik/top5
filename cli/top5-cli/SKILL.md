@@ -14,6 +14,8 @@ description: >
   "beyond", "beyond the limit", "overflow", "push to overflow", "poza limit", "zepchnij",
   "important", "mark important", "unmark important", "flag important", "star",
   "oznacz jako ważne", "wazne", "ważne", "wyróżnij", "podświetl", "gwiazdka",
+  "money", "mark money", "unmark money", "flag money", "zarabia", "na kasę",
+  "oznacz jako money", "kasa", "pieniądze", "zarobek", "money task", "złoty znak",
   "repeating", "repeating tasks", "recurring", "cykliczne", "powtarzalne",
   "usuń task", "skasuj task", "usuń zadanie",
   "habits", "nawyki", "list habits", "pokaż habity", "co ma za nawyki", "streak", "chain",
@@ -144,6 +146,20 @@ Sets the `important` flag on a task. When `true`, a star (★) appears next to t
 Use this when the user asks to "mark important", "flag important", "oznacz jako ważne", "podświetl", "wyróżnij".
 
 > **12WY sub-tasks hide the star.** If a task has a valid `parentCode` (i.e. it's a 12WY sub-task), the renderer shows a `12WY` badge instead of the `★`. The `important` flag is still stored and toggleable, just not visible while the parent link is active. See "Sub-tasks (12WY hierarchy)" below.
+
+### Mark / unmark task as Money
+
+```bash
+top5 money PRJ-3          # toggle the golden $ marker
+top5 money QT-5           # works for quick tasks too
+top5 money PRJ-3 --json
+```
+
+Sets the `money` flag on a task — marks a task that directly creates an opportunity to earn money. When `true`, a golden `$` appears next to the task title in the Today view, Focus window, and Clean view. Independent of Important (both can be set on the same task). Purely visual — does **not** affect Today ordering, the limit, pin state, or scheduling. Toggles — running again clears the flag.
+
+Use this when the user asks to "mark money", "flag money", "oznacz jako money", "to zadanie daje zarobić", "na kasę", "pieniądze".
+
+> Unlike the Important star, the money `$` is shown even on 12WY sub-tasks (it renders alongside the `12WY` badge).
 
 ### Move task to / from "beyond the limit"
 
@@ -316,7 +332,7 @@ top5 12w --with-children                # alias for --tree
   cycleOrder: number | null,               // manual layer order; null = unordered
   status: 'active' | 'in-progress' | 'up-next' | 'done',
   due: string | null,                      // YYYY-MM-DD
-  important, beyondLimit, completed
+  important, money, beyondLimit, completed
 }
 ```
 
@@ -463,6 +479,13 @@ top5 pin PRJ-3             # unpin (toggle)
 top5 important PRJ-3       # mark
 top5 important PRJ-3       # unmark (toggle)
 top5 important QT-5        # works for quick tasks too
+```
+
+**Mark a task as Money (golden $ — directly earns money):**
+```bash
+top5 money PRJ-3          # mark
+top5 money PRJ-3          # unmark (toggle)
+top5 money QT-5           # works for quick tasks too
 ```
 
 **Push a task beyond the Today limit:**

@@ -165,6 +165,40 @@ describe('Quick Tasks API', () => {
     expect(res.statusCode).toBe(404)
   })
 
+  it('toggle-money', async () => {
+    const server = await getTestServer()
+    const task = makeQuickTask()
+    await server.inject({
+      method: 'POST',
+      url: '/api/v1/quick-tasks',
+      headers: { ...auth, 'content-type': 'application/json' },
+      payload: task
+    })
+
+    let res = await server.inject({
+      method: 'POST',
+      url: `/api/v1/quick-tasks/${task.id}/toggle-money`,
+      headers: auth
+    })
+    expect(res.statusCode).toBe(200)
+    expect(res.json().data.find((t: any) => t.id === task.id).money).toBe(true)
+
+    res = await server.inject({
+      method: 'POST',
+      url: `/api/v1/quick-tasks/${task.id}/toggle-money`,
+      headers: auth
+    })
+    expect(res.statusCode).toBe(200)
+    expect(res.json().data.find((t: any) => t.id === task.id).money).toBe(false)
+
+    res = await server.inject({
+      method: 'POST',
+      url: `/api/v1/quick-tasks/missing-id/toggle-money`,
+      headers: auth
+    })
+    expect(res.statusCode).toBe(404)
+  })
+
   it('PUT /quick-tasks/reorder', async () => {
     const server = await getTestServer()
     const t1 = makeQuickTask({ title: 'T1' })
