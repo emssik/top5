@@ -1,22 +1,26 @@
 import type { FastifyInstance } from 'fastify'
-import type { CycleRole, CycleStatusFilter, Task } from '../../../shared/types'
-import { getData, notifyAllWindows } from '../../store'
+import type { CycleRole, CycleStatusFilter, Task, Project } from '../../../shared/types'
+import { getData, notifyAllWindows, taskTimeMinutes } from '../../store'
 import { stopFocusForCompletedTask } from '../../focus-window'
 import * as projectService from '../../service/projects'
 import * as myccService from '../../service/mycc'
 import { isServiceError, errorToHttpStatus } from '../utils'
 
 
+// Enriches each task with loggedMinutes (total focus time logged on the task across all sessions).
+function enrichProject(p: Project) {
+  return { ...p, tasks: p.tasks.map((t) => ({ ...t, loggedMinutes: taskTimeMinutes(t.id) })) }
+}
 
 export function registerProjectRoutes(fastify: FastifyInstance): void {
   fastify.get('/api/v1/projects', async () => {
-    return { ok: true, data: projectService.getProjects() }
+    return { ok: true, data: projectService.getProjects().map(enrichProject) }
   })
 
   fastify.get<{ Params: { id: string } }>('/api/v1/projects/:id', async (request, reply) => {
     const result = projectService.getProject(request.params.id)
     if (isServiceError(result)) return reply.status(404).send({ ok: false, error: result.error })
-    return { ok: true, data: result }
+    return { ok: true, data: enrichProject(result) }
   })
 
   fastify.post('/api/v1/projects', async (request, reply) => {
@@ -180,6 +184,14 @@ export function registerProjectRoutes(fastify: FastifyInstance): void {
   fastify.put<{ Params: { pid: string; tid: string } }>('/api/v1/projects/:pid/tasks/:tid/due-date', async (request, reply) => {
     const { dueDate } = request.body as { dueDate: string | null }
     const result = projectService.updateTaskDueDate(request.params.pid, request.params.tid, dueDate ?? null)
+    if (isServiceError(result)) return reply.status(404).send({ ok: false, error: result.error })
+    notifyAllWindows()
+    return { ok: true, data: result }
+  })
+
+  fastify.put<{ Params: { pid: string; tid: string } }>('/api/v1/projects/:pid/tasks/:tid/hide-until', async (request, reply) => {
+    const { hideUntil } = request.body as { hideUntil: string | null }
+    const result = projectService.updateTaskHideUntil(request.params.pid, request.params.tid, hideUntil ?? null)
     if (isServiceError(result)) return reply.status(404).send({ ok: false, error: result.error })
     notifyAllWindows()
     return { ok: true, data: result }

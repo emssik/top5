@@ -615,6 +615,25 @@ export function taskTimeMinutes(taskId: string): number {
   return taskMinutesById?.get(taskId) ?? 0
 }
 
+// Start of the current logical day (last 06:00 boundary) in ms — day rolls over at 6:00, not midnight.
+function lastRolloverMs(): number {
+  const d = new Date()
+  if (d.getHours() < 6) d.setDate(d.getDate() - 1)
+  d.setHours(6, 0, 0, 0)
+  return d.getTime()
+}
+
+// Minutes logged on a task within the current logical day (since the last 06:00 rollover).
+export function taskTimeMinutesToday(taskId: string): number {
+  ensureCheckInCaches()
+  const since = lastRolloverMs()
+  let sum = 0
+  for (const ci of cachedCheckIns ?? []) {
+    if (ci.taskId === taskId && Date.parse(ci.timestamp) >= since) sum += checkInMinutes(ci)
+  }
+  return sum
+}
+
 // --- Energy check-ins ---
 
 export function appendEnergyCheckIn(checkIn: EnergyCheckIn): void {
@@ -1531,6 +1550,23 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
   ipcMain.handle('append-note-done-entry', (_event, noteRef: string, description: string, focusMinutes: number) => {
     if (typeof noteRef !== 'string' || typeof description !== 'string') return { error: 'invalid' }
     return taskNotesService.appendDoneEntry(noteRef, description, typeof focusMinutes === 'number' ? focusMinutes : 0)
+  })
+
+  // Logs a "finished for today" (task postponed to tomorrow) entry, optionally with minutes worked today.
+  ipcMain.handle('log-task-postponed', (_event, entry: {
+    projectId?: string; projectName?: string; taskTitle?: string; taskCode?: string; minutes?: number
+  }) => {
+    if (!entry || typeof entry.taskTitle !== 'string') return { error: 'invalid' }
+    const minutes = typeof entry.minutes === 'number' && entry.minutes > 0 ? entry.minutes : 0
+    appendOperation({
+      type: 'task_postponed',
+      projectId: entry.projectId,
+      projectName: entry.projectName,
+      taskTitle: entry.taskTitle,
+      taskCode: entry.taskCode,
+      ...(minutes > 0 && { details: `${minutes}min` })
+    })
+    return { ok: true }
   })
 
   // --- Journal ---

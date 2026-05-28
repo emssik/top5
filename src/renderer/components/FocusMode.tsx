@@ -5,11 +5,12 @@ import { normalizeProjectLinks, normalizeLinks, openProjectLink, projectColorVal
 import { calcTaskTime } from '../utils/checkInTime'
 import { STANDALONE_PROJECT_ID } from '../utils/constants'
 import type { Task, ProjectLink, QuickTask } from '../types'
-import { formatTaskId, formatQuickTaskId, computeNotePath } from '../../shared/taskId'
+import { formatTaskId, formatQuickTaskId } from '../../shared/taskId'
 import { collectAnchorCodes } from '../../shared/task-list'
 import { CYCLE_BADGE_LABEL } from '../../shared/types'
 import { Linkify } from './Linkify'
-import { nextSplitTitle, cleanSplitTitle, buildSplitTaskCopy, buildSplitQuickTaskCopy } from '../utils/splitTask'
+import { cleanSplitTitle } from '../utils/splitTask'
+import { nextRolloverIso, minutesWorkedToday } from '../utils/finishForToday'
 
 function formatSessionTime(totalSeconds: number): string {
   const min = Math.floor(totalSeconds / 60)
@@ -59,14 +60,14 @@ const FOCUS_HEIGHT_PICKER = 480
 export default function FocusMode() {
   const { projects, quickTasks, focusCheckIns, config, setFocus, repeatingTasks } = useProjects()
   const { scheduledTasks, inProgressTasks, upNextTasks } = useTaskList()
-  const [confirmAction, setConfirmAction] = useState<{ minutes: number; type: 'exit' | 'complete' | 'split' } | null>(null)
+  const [confirmAction, setConfirmAction] = useState<{ minutes: number; type: 'exit' | 'complete' | 'finishToday' } | null>(null)
   const [isDev, setIsDev] = useState(false)
   const [showTaskPicker, setShowTaskPicker] = useState(false)
   const [completedTaskKey, setCompletedTaskKey] = useState<string | null>(null)
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
   const [showManualTime, setShowManualTime] = useState(false)
   const [manualMinutes, setManualMinutes] = useState('')
-  // True while the mouse is over the focus window AND Cmd is held — turns ✓ into ✂ (split).
+  // True while the mouse is over the focus window AND Cmd is held — turns ✓ into 🌙 (finished for today).
   const [cmdHover, setCmdHover] = useState(false)
   const sessionStartRef = useRef(Date.now())
   const manualInputRef = useRef<HTMLInputElement>(null)
@@ -106,8 +107,8 @@ export default function FocusMode() {
     return parent?.link?.trim() || null
   }, [isStandalone, task, repeatingTasks])
 
-  const canSplit = !!task && !(isStandalone && (task as QuickTask).repeatingTaskId)
-  const showScissors = cmdHover && canSplit
+  const canFinishToday = !!task && !(isStandalone && (task as QuickTask).repeatingTaskId)
+  const showFinishToday = cmdHover && canFinishToday
 
   // Total logged time on this task across all sessions (updates on reload-data).
   const totalMinutes = useMemo(
@@ -174,12 +175,12 @@ export default function FocusMode() {
     items.push({ id: 'manual-time', label: '+   Dodaj czas' })
     items.push({ id: 'sep3', label: '', type: 'separator' })
     items.push({ id: 'complete', label: '✓   Complete task' })
-    if (canSplit) {
-      items.push({ id: 'split', label: '✂   Split & continue' })
+    if (canFinishToday) {
+      items.push({ id: 'finish-today', label: '🌙   Skończone na dzisiaj' })
     }
     items.push({ id: 'exit', label: '✕   Exit focus' })
     window.api.showFocusContextMenu(items, e.clientX, e.clientY)
-  }, [taskLinks, projectLinks, obsidianEnabled, project, canSplit])
+  }, [taskLinks, projectLinks, obsidianEnabled, project, canFinishToday])
 
   // Handle context menu actions from popup window
   useEffect(() => {
@@ -200,8 +201,8 @@ export default function FocusMode() {
         openManualTime()
       } else if (actionId === 'complete') {
         handleComplete()
-      } else if (actionId === 'split') {
-        handleSplit()
+      } else if (actionId === 'finish-today') {
+        handleFinishToday()
       } else if (actionId === 'exit') {
         handleExit()
       }
@@ -246,35 +247,35 @@ export default function FocusMode() {
     setCompletedTaskKey(`${config.focusProjectId}:${config.focusTaskId}`)
   }
 
-  const splitCurrentTask = async () => {
-    if (!task || !canSplit || !config.focusProjectId || !config.focusTaskId) return
+  // "Skończone na dzisiaj" — keep the task active (completed=false, same id/number)
+  // but hide it from Today until tomorrow (06:00), and log the postpone with minutes
+  // worked today. The task stays visible to external tools (top5 tasks) the whole time.
+  const finishCurrentForToday = async () => {
+    if (!task || !canFinishToday || !config.focusProjectId || !config.focusTaskId) return
 
-    const newTitle = nextSplitTitle(task.title)
-    const taskNumber = task.taskNumber
-    const badge = isStandalone
-      ? formatQuickTaskId(taskNumber)
-      : formatTaskId(taskNumber, project?.code)
-    const noteRef = task.noteRef || computeNotePath(badge, task.title, project?.name)
-
+    const hideUntil = nextRolloverIso()
     if (isStandalone) {
       const origQt = useProjects.getState().quickTasks.find((q) => q.id === config.focusTaskId)
       if (!origQt) return
-      const qt: QuickTask = buildSplitQuickTaskCopy(origQt, { newTitle, noteRef })
-      await useProjects.getState().saveQuickTask(qt)
+      await useProjects.getState().saveQuickTask({ ...origQt, hideUntil, inProgress: false })
     } else {
       const freshProject = useProjects.getState().projects.find((p) => p.id === config.focusProjectId)
       if (!freshProject) return
-      const origTask = freshProject.tasks.find((t) => t.id === config.focusTaskId)
-      if (!origTask) return
-      const newTask: Task = buildSplitTaskCopy(origTask, {
-        newTitle,
-        noteRef,
-        toDoNextOrderFallback: freshProject.tasks.length
-      })
-      await useProjects.getState().saveProject({ ...freshProject, tasks: [...freshProject.tasks, newTask] })
+      const tasks = freshProject.tasks.map((t) =>
+        t.id === config.focusTaskId ? { ...t, hideUntil, inProgress: false } : t
+      )
+      await useProjects.getState().saveProject({ ...freshProject, tasks })
     }
 
-    await completeCurrentTask()
+    window.api.logTaskPostponed({
+      projectId: isStandalone ? undefined : config.focusProjectId,
+      projectName: isStandalone ? undefined : project?.name,
+      taskTitle: cleanSplitTitle(task.title),
+      taskCode: taskBadge || undefined,
+      minutes: minutesWorkedToday(focusCheckIns, config.focusTaskId)
+    })
+
+    setCompletedTaskKey(`${config.focusProjectId}:${config.focusTaskId}`)
   }
 
   const saveTimeIfNeeded = async (minutes: number) => {
@@ -311,14 +312,14 @@ export default function FocusMode() {
     }
   }
 
-  const handleSplit = async () => {
-    if (!canSplit) return
+  const handleFinishToday = async () => {
+    if (!canFinishToday) return
     const unsavedMs = await window.api.getFocusUnsavedMs()
     const unsavedMin = Math.floor(unsavedMs / 60000)
     if (unsavedMin >= 1) {
-      setConfirmAction({ minutes: unsavedMin, type: 'split' })
+      setConfirmAction({ minutes: unsavedMin, type: 'finishToday' })
     } else {
-      await splitCurrentTask()
+      await finishCurrentForToday()
       setShowTaskPicker(true)
     }
   }
@@ -332,8 +333,8 @@ export default function FocusMode() {
       return
     }
 
-    if (confirmAction.type === 'split') {
-      await splitCurrentTask()
+    if (confirmAction.type === 'finishToday') {
+      await finishCurrentForToday()
     } else {
       await completeCurrentTask()
     }
@@ -533,20 +534,20 @@ export default function FocusMode() {
             {formatSessionTime(totalSeconds)}
           </span>
         </button>
-        {/* Action buttons — ✓ becomes ✂ (split) while Cmd is held over the window */}
+        {/* Action buttons — ✓ becomes 🌙 (finished for today) while Cmd is held over the window */}
         <div
           className="flex gap-0.5 flex-shrink-0 self-center"
           style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
           onMouseMove={(e) => setCmdHover(e.metaKey)}
         >
           <button
-            onClick={showScissors ? handleSplit : handleComplete}
+            onClick={showFinishToday ? handleFinishToday : handleComplete}
             className={`w-[28px] h-[28px] rounded-[7px] bg-transparent text-t-muted text-[12px] transition-all flex items-center justify-center cursor-pointer border-none ${
-              showScissors ? 'hover:bg-blue-500/15 hover:text-blue-400' : 'hover:bg-green-500/15 hover:text-green-400'
+              showFinishToday ? 'hover:bg-blue-500/15 hover:text-blue-400' : 'hover:bg-green-500/15 hover:text-green-400'
             }`}
-            title={showScissors ? 'Split & continue' : 'Complete task'}
+            title={showFinishToday ? 'Skończone na dzisiaj' : 'Complete task'}
           >
-            {showScissors ? '✂' : '✓'}
+            {showFinishToday ? '🌙' : '✓'}
           </button>
           <button
             onClick={handleExit}

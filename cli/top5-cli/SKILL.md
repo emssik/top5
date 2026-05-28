@@ -74,9 +74,13 @@ top5 tasks PRJ --json
 
 `<project>` accepts: project CODE (case-insensitive) or UUID.
 
-Task statuses: `[done]`, `in-progress`, `up-next`, or empty (backlog).
+Task statuses: `[done]`, `in-progress`, `up-next`, `hidden`, or empty (backlog).
 
 JSON output enriches each task with `taskCode` (e.g. `"PRJ-3"`) when the project has a code and the task has a `taskNumber` — saves consumers from composing it themselves. Field is omitted for tasks without a number or projects without a code.
+
+Each task also carries `loggedMinutes` — total focus time logged on it across all sessions (computed from check-ins, read-only). In the table it shows in the `TIME` column (e.g. `2h 30m`); use it to see how much work is already invested in a task. `0` / absent means no focus time logged yet.
+
+> **`hidden` status / `hideUntil` field — important when judging progress.** A task with `hideUntil` set to a future datetime was postponed via "Skończone na dzisiaj" (🌙): it dropped off the Today list until the next 06:00 rollover, but it is **still active and NOT done** (`completed: false`). It keeps the same id and task number. Such a task still appears in `top5 tasks` (status `hidden`) and in `--json` (with `hideUntil`). Do **not** report a hidden/postponed task as completed — it just isn't scheduled for today. It will return on its own. This replaces the old "split" mechanism, which used to close the task and spawn a copy with a new number (that confused progress trackers).
 
 ### Show task details
 
@@ -85,7 +89,7 @@ top5 show PRJ-3            # show details of a single task
 top5 show PRJ-3 --json     # JSON output (includes projectId, projectCode)
 ```
 
-Returns: task code, title, project name, status, due date. JSON mode adds `projectId` and `projectCode`.
+Returns: task code, title, project name, status, due date. When the task is postponed ("Skończone na dzisiaj"), it also shows a `Hidden:` line with the return time. JSON mode adds `projectId` and `projectCode` (and `hideUntil` when set).
 
 ### Add a task
 
@@ -175,6 +179,24 @@ Matches drag-and-drop semantics: when pushing a task beyond the limit, any curre
 
 Works for both project tasks (`PRJ-N`) and quick tasks (`QT-N`). Accepts UUIDs.
 
+### Postpone a task ("Skończone na dzisiaj")
+
+```bash
+top5 hide PRJ-3            # postpone — hide from Today until the next 06:00 rollover (tomorrow morning)
+top5 hide PRJ-3 16:00     # hide until today 16:00 (next day if 16:00 already passed)
+top5 hide QT-5            # works for quick tasks too
+top5 hide PRJ-3 clear     # unhide now (also: off / none)
+top5 hide PRJ-3 --json
+```
+
+Sets the `hideUntil` field on a task — this is the CLI counterpart of the "🌙 Skończone na dzisiaj" action in the app. The task **stays active and is NOT completed**: it keeps the same id and number, drops off the Today list until the given time, and returns on its own. Use this when work on a task is done **for today** but the task itself isn't finished.
+
+When hiding into the future, the app drops the task's `inProgress` flag and logs a `task_postponed` entry (with minutes worked today). The task still appears in `top5 tasks` with status `hidden` and `completed: false` — do not treat it as done. Clearing (or a past time) brings it back.
+
+This replaces the old "split" mechanism (which closed the task and spawned a copy with a new number — confusing for progress trackers).
+
+Works for both project tasks (`PRJ-N`) and quick tasks (`QT-N`). Accepts UUIDs.
+
 ### Delete a task
 
 ```bash
@@ -227,7 +249,7 @@ top5 today                 # visible tasks from the "today" tab
 top5 today --json
 ```
 
-Shows exactly what the user sees in the Today tab: repeating tasks, scheduled (due ≤ today), and regular tasks within the limit (default 5). **Excludes:** overflow (beyond limit), completed, unapproved proposals.
+Shows exactly what the user sees in the Today tab: repeating tasks, scheduled (due ≤ today), and regular tasks within the limit (default 5). **Excludes:** overflow (beyond limit), completed, tasks hidden until later (`hideUntil` / "Skończone na dzisiaj"), and unapproved proposals. A task missing from `top5 today` is **not** necessarily done — it may be hidden/postponed; check `top5 tasks` to see active tasks regardless of today-visibility.
 
 Output columns: #, TITLE, PROJECT, STATUS.
 

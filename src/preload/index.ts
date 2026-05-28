@@ -91,6 +91,7 @@ export const api = {
   selectDirectory: (): Promise<string | null> => ipcRenderer.invoke('select-directory'),
   openTaskNote: (taskId: string, taskTitle: string, projectName?: string, taskBadge?: string, noteRef?: string) => ipcRenderer.invoke('open-task-note', taskId, taskTitle, projectName, taskBadge, noteRef),
   appendNoteDoneEntry: (noteRef: string, description: string, focusMinutes: number) => ipcRenderer.invoke('append-note-done-entry', noteRef, description, focusMinutes),
+  logTaskPostponed: (entry: { projectId?: string; projectName?: string; taskTitle: string; taskCode?: string; minutes?: number }) => ipcRenderer.invoke('log-task-postponed', entry),
   sendTaskToMyCC: (projectId: string, taskId: string, comment?: string) => ipcRenderer.invoke('send-task-to-mycc', projectId, taskId, comment),
   pasteImageToTask: (projectId: string, taskId: string) => ipcRenderer.invoke('paste-image-to-task', projectId, taskId),
   removeTaskImage: (projectId: string, taskId: string, filename: string) => ipcRenderer.invoke('remove-task-image', projectId, taskId, filename),

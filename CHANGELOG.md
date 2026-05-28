@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.106.0] - 2026-05-28
+
+### Changed
+
+- Mechanizm „split" (✂) zastąpiony przez „Skończone na dzisiaj" (🌙). Zamiast zamykać zadanie i tworzyć kopię z nowym numerem, zadanie zostaje aktywne (`completed: false`, ten sam numer i id) i schodzi z dzisiejszej listy do jutra (rollover 6:00, pole `hideUntil`). Dzięki temu zewnętrzne narzędzia czytające `top5 tasks` nie biorą odłożonego zadania za ukończone — to był główny powód zmiany. Wywołasz skrótem `C` w Today, pozycją „🌙 Skończone na dzisiaj" w menu/kontekście, przyciskiem 🌙 w quick tasks oraz w oknie Focus przez Cmd-hold (✓ → 🌙). Skumulowany czas pracy nie resetuje się już przy każdym odłożeniu, bo `taskId` pozostaje ten sam.
+
+### Added
+
+- Activity Log: nowy wpis `task_postponed` („🌙 Skończone na dzisiaj") z czasem pracy nad zadaniem w danym dniu (jeśli było fokusowane).
+- CLI `top5 hide <kod> [HH:MM|clear]` — odłożenie zadania z linii poleceń (bez argumentu = do najbliższego rolloveru 6:00, `HH:MM` = dziś o tej godzinie, `clear` = odkryj). Działa dla zadań projektowych i quick.
+- API: `PUT /api/v1/projects/:pid/tasks/:tid/hide-until` i `PUT /api/v1/quick-tasks/:id/hide-until` — ustawiają/zdejmują `hideUntil`; przy ukryciu w przyszłość logują `task_postponed` z czasem dnia.
+- API/CLI: każde zadanie projektowe w `GET /api/v1/projects` (i `top5 tasks`) niesie teraz `loggedMinutes` — łączny czas focusu zalogowany na zadaniu (kolumna `TIME` w tabeli, pole w `--json`). Ułatwia narzędziom ocenę, ile pracy już włożono.
+- CLI `top5 tasks`: status `hidden` dla zadań odłożonych (`hideUntil` w przyszłości); pola `hideUntil` i `loggedMinutes` dostępne w `--json`.
+
 ## [1.105.0] - 2026-05-27
 
 ### Added

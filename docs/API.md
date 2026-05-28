@@ -59,13 +59,13 @@ No auth required. Returns API status and app version.
 
 #### `GET /projects`
 
-Returns all projects.
+Returns all projects. Each task is enriched with `loggedMinutes` — total focus time logged on that task across all sessions (computed from check-ins, read-only).
 
 **Response:** `{ ok, data: Project[] }`
 
 #### `GET /projects/:id`
 
-Returns a single project.
+Returns a single project. Tasks are enriched with `loggedMinutes` (see `GET /projects`).
 
 **Errors:** `404` if not found.
 
@@ -193,6 +193,16 @@ Toggles `important` flag on a task. The flag is purely visual — surfaces a sta
 #### `POST /projects/:pid/tasks/:tid/toggle-money`
 
 Toggles `money` flag on a task — marks a task that directly creates an opportunity to earn money. The flag is purely visual — surfaces a golden `$` next to the task title in Today, Focus window, and Clean view. Independent of `important` (both can be set). Does not affect ordering, pin state, or limit calculations.
+
+**Response:** `{ ok, data: Project[] }`
+
+**Errors:** `404` if project or task not found.
+
+#### `PUT /projects/:pid/tasks/:tid/hide-until`
+
+Sets or clears `hideUntil` on a project task — the "Skończone na dzisiaj" / hide-until-later action. The task **stays active** (`completed` is untouched); when hidden into the future it also drops `inProgress` and a `task_postponed` operation is logged with the minutes worked today. Passing `null` (or a past datetime) makes the task visible in Today again.
+
+**Body:** `{ "hideUntil": "2026-05-29T06:00:00.000Z" | null }` — ISO datetime, or `null` to unhide.
 
 **Response:** `{ ok, data: Project[] }`
 
@@ -351,6 +361,16 @@ Toggles `money` flag on a quick task. Visual marker only (golden `$`) — see pr
 
 **Errors:** `404` if not found.
 
+#### `PUT /quick-tasks/:id/hide-until`
+
+Sets or clears `hideUntil` on a quick task ("Skończone na dzisiaj" / hide until later). Same semantics as the project-task variant: the task stays active, drops `inProgress` when hidden into the future, and logs a `task_postponed` operation with minutes worked today. `null` (or a past datetime) unhides.
+
+**Body:** `{ "hideUntil": "2026-05-29T06:00:00.000Z" | null }`
+
+**Response:** `{ ok, data: QuickTask[] }`
+
+**Errors:** `404` if not found.
+
 #### `PUT /quick-tasks/reorder`
 
 Reorders quick tasks.
@@ -363,7 +383,7 @@ Reorders quick tasks.
 
 #### `GET /today`
 
-Returns the tasks visible in the Today tab (repeating proposals, scheduled, and top-5 regular). Excludes overflow, completed, and unapproved proposals. Also returns habits scheduled for today.
+Returns the tasks visible in the Today tab (repeating proposals, scheduled, and top-5 regular). Excludes overflow, completed, tasks hidden until a future time (`hideUntil`), and unapproved proposals. Also returns habits scheduled for today.
 
 **Response:** `{ ok, data: VisibleTask[], habits: HabitTodayEntry[] }`
 
@@ -488,8 +508,14 @@ Returns all non-archived habits as today-summary entries (schedule, today status
   cycleRole?: 'must' | 'should' | 'could'
   cycleOrder?: number          // manual layer order; cleared when cycleRole changes
   parentCode?: string | null   // 12WY anchor task code in same project (e.g. "TOP-42")
+  dueDate?: string | null      // scheduled date (YYYY-MM-DD)
+  beyondLimit?: boolean        // forced into the Today overflow ("beyond the limit") zone
+  hideUntil?: string | null    // ISO datetime — hidden from Today until then, but still active (completed=false). "Skończone na dzisiaj" sets this to the next 06:00 rollover. A task with hideUntil in the future is postponed, NOT done.
+  loggedMinutes?: number       // read-only — total focus time logged on this task (all sessions). Only present in GET /projects responses, not stored.
 }
 ```
+
+**`hideUntil`** — when set to a future datetime, the task is hidden from the Today tab (and `/today`) but remains a normal active task: it still shows in `GET /projects` and `top5 tasks` with `completed: false`. Tools tracking progress must not treat a hidden task as completed. Cleared (or in the past) means the task is visible again.
 
 **`parentCode`** — points to a 12WY anchor task (a task with `cycleRole`) in the **same project**. Used to express the kotwica → sub-task hierarchy. Sub-tasks themselves do not carry `cycleRole` — they inherit priority through the parent. Cross-project parenting is not supported.
 
@@ -514,6 +540,9 @@ When a task has a valid `parentCode`, the renderer replaces the `important` star
   inProgress?: boolean
   important?: boolean
   money?: boolean              // golden $ — task that directly earns money
+  dueDate?: string | null      // scheduled date (YYYY-MM-DD)
+  beyondLimit?: boolean        // forced into the Today overflow ("beyond the limit") zone
+  hideUntil?: string | null    // ISO datetime — hidden from Today until then, still active (see Task.hideUntil)
 }
 ```
 

@@ -5,6 +5,7 @@ import {
   setData,
   appendOperation,
   taskTimeMinutes,
+  taskTimeMinutesToday,
   isValidQuickTask
 } from '../store'
 
@@ -114,6 +115,24 @@ export function updateQuickTaskDueDate(id: string, dueDate: string | null): Quic
   if (!task) return { error: 'not_found' }
   task.dueDate = dueDate
   setData('quickTasks', quickTasks)
+  return quickTasks
+}
+
+// Sets/clears hideUntil on a quick task. When hiding into the future, the task stays active,
+// drops inProgress, and logs a task_postponed entry with minutes worked today — mirrors the UI.
+export function updateQuickTaskHideUntil(id: string, hideUntil: string | null): QuickTask[] | ServiceError {
+  const data = getData()
+  const quickTasks = [...data.quickTasks]
+  const task = quickTasks.find((t) => t.id === id)
+  if (!task) return { error: 'not_found' }
+  task.hideUntil = hideUntil
+  const hidingIntoFuture = !!hideUntil && Date.parse(hideUntil) > Date.now()
+  if (hidingIntoFuture) task.inProgress = false
+  setData('quickTasks', quickTasks)
+  if (hidingIntoFuture) {
+    const mins = taskTimeMinutesToday(id)
+    appendOperation({ type: 'task_postponed', taskTitle: task.title, taskCode: formatQuickTaskId(task.taskNumber) || undefined, ...(mins > 0 && { details: `${mins}min` }) })
+  }
   return quickTasks
 }
 

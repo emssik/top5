@@ -4,16 +4,17 @@ import { useProjects } from '../hooks/useProjects'
 import { useTaskList } from '../hooks/useTaskList'
 import type { MergedTask } from '../hooks/useTaskList'
 import { calcTaskTime, calcQuickTaskTime, formatCheckInTime } from '../utils/checkInTime'
-import type { QuickTask, Task, RepeatingTask, WinEntry } from '../types'
+import type { QuickTask, RepeatingTask, WinEntry } from '../types'
 import { STANDALONE_PROJECT_ID } from '../utils/constants'
 import TaskIdBadge from './TaskIdBadge'
-import { formatTaskId, formatQuickTaskId, computeNotePath } from '../../shared/taskId'
+import { formatTaskId, formatQuickTaskId } from '../../shared/taskId'
 import RepeatUpdateModal from './RepeatUpdateModal'
 import { dateKey } from '../../shared/schedule'
 import { Linkify } from './Linkify'
 import TaskLinksIndicator from './TaskLinksIndicator'
 import { isRecentlyCompleted } from '../utils/recentlyCompleted'
-import { nextSplitTitle, cleanSplitTitle, buildSplitTaskCopy, buildSplitQuickTaskCopy } from '../utils/splitTask'
+import { cleanSplitTitle } from '../utils/splitTask'
+import { nextRolloverIso, minutesWorkedToday } from '../utils/finishForToday'
 
 interface Props {
   showAll?: boolean
@@ -244,34 +245,39 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
     }
   }
 
-  const handleSplit = async (task: MergedTask) => {
+  // "Skończone na dzisiaj" — task stays active (completed=false, same id/number),
+  // hidden from Today until tomorrow (06:00), and the postpone is logged with minutes
+  // worked today. No copy, no completion.
+  const handleFinishToday = async (task: MergedTask) => {
     if (task.repeatingTaskId) return
-    const newTitle = nextSplitTitle(task.title)
-    const noteRef = task.noteRef || (() => {
-      const badge = task.kind === 'quick'
-        ? formatQuickTaskId(task.taskNumber)
-        : formatTaskId(task.taskNumber, task.projectCode)
-      return computeNotePath(badge, task.title, task.projectName)
-    })()
+    const hideUntil = nextRolloverIso()
 
     if (task.kind === 'pinned' && task.projectId && task.taskId) {
       const project = useProjects.getState().projects.find((p) => p.id === task.projectId)
       if (!project) return
-      const origTask = project.tasks.find((t) => t.id === task.taskId)
-      if (!origTask) return
-      const newTask: Task = buildSplitTaskCopy(origTask, {
-        newTitle,
-        noteRef,
-        toDoNextOrderFallback: task.order
-      })
-      await saveProject({ ...project, tasks: [...project.tasks, newTask] })
+      const tasks = project.tasks.map((t) =>
+        t.id === task.taskId ? { ...t, hideUntil, inProgress: false } : t
+      )
+      await saveProject({ ...project, tasks })
     } else if (task.kind === 'quick') {
       const origQt = useProjects.getState().quickTasks.find((q) => q.id === task.id)
       if (!origQt) return
-      const qt: QuickTask = buildSplitQuickTaskCopy(origQt, { newTitle, noteRef })
-      await saveQuickTask(qt)
+      await saveQuickTask({ ...origQt, hideUntil, inProgress: false })
     }
-    await handleComplete(task)
+
+    const minutes = task.kind === 'quick'
+      ? minutesWorkedToday(focusCheckIns, task.id)
+      : task.taskId ? minutesWorkedToday(focusCheckIns, task.taskId) : 0
+    const taskCode = task.kind === 'quick'
+      ? formatQuickTaskId(task.taskNumber)
+      : formatTaskId(task.taskNumber, task.projectCode)
+    window.api.logTaskPostponed({
+      projectId: task.kind === 'pinned' ? task.projectId : undefined,
+      projectName: task.kind === 'pinned' ? task.projectName : undefined,
+      taskTitle: cleanSplitTitle(task.title),
+      taskCode: taskCode || undefined,
+      minutes
+    })
   }
 
   const handleDragStart = (id: string) => {
@@ -457,12 +463,12 @@ export default function QuickTasksView({ showAll, cleanView }: Props) {
               </button>
               {!task.repeatingTaskId && (
                 <button
-                  onClick={() => handleSplit(task)}
+                  onClick={() => handleFinishToday(task)}
                   className="text-[11px] transition-all opacity-0 group-hover:opacity-40 hover:!opacity-70"
-                  title="Split & Continue"
+                  title="Skończone na dzisiaj"
                   style={{ fontFamily: 'system-ui' }}
                 >
-                  ⋯
+                  🌙
                 </button>
               )}
               <button

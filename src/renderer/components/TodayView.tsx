@@ -6,7 +6,7 @@ import { useTaskList } from '../hooks/useTaskList'
 import type { MergedTask } from '../hooks/useTaskList'
 import { calcQuickTaskTime, calcTaskTime, formatCheckInTime } from '../utils/checkInTime'
 import { STANDALONE_PROJECT_ID } from '../utils/constants'
-import type { Task, QuickTask, LockedTaskRef, WinEntry, ProjectLink, CycleRole } from '../types'
+import type { QuickTask, LockedTaskRef, WinEntry, ProjectLink, CycleRole } from '../types'
 import { CYCLE_ROLE_LABELS, CYCLE_BADGE_LABEL } from '../../shared/types'
 import { projectColorValue, normalizeProjectLinks, normalizeLinks, openProjectLink } from '../utils/projects'
 import TaskLinksIndicator from './TaskLinksIndicator'
@@ -14,12 +14,13 @@ import TaskLinksPopover from './TaskLinksPopover'
 import ProjectLinksMenu from './ProjectLinksMenu'
 import TaskIdBadge from './TaskIdBadge'
 import { MyccCommentPopover } from './MyccCommentPopover'
-import { formatTaskId, formatQuickTaskId, computeNotePath } from '../../shared/taskId'
+import { formatTaskId, formatQuickTaskId } from '../../shared/taskId'
 import { dateKey } from '../../shared/schedule'
 import RepeatUpdateModal from './RepeatUpdateModal'
 import { Linkify } from './Linkify'
 import { isRecentlyCompleted } from '../utils/recentlyCompleted'
-import { nextSplitTitle, cleanSplitTitle, buildSplitTaskCopy, buildSplitQuickTaskCopy } from '../utils/splitTask'
+import { cleanSplitTitle } from '../utils/splitTask'
+import { nextRolloverIso, minutesWorkedToday } from '../utils/finishForToday'
 
 function formatFocusTimer(seconds: number): string {
   const mm = Math.floor(seconds / 60)
@@ -453,7 +454,7 @@ export default function TodayView({ onSelectView }: { onSelectView?: (view: stri
         window.api.openTaskNote(task.id, task.title, task.projectName, task.kind === 'quick' ? formatQuickTaskId(task.taskNumber) : formatTaskId(task.taskNumber, task.projectCode), task.noteRef)
         return
       }
-      if (key === 'c' && !task.repeatingTaskId) { consume(); splitTask(task); return }
+      if (key === 'c' && !task.repeatingTaskId) { consume(); finishForToday(task); return }
       if ((key === 'backspace' || key === 'delete') && !isFocusCard && !locked && (section === 'up-next' || task.repeatingTaskId)) {
         consume(); removeTask(task); return
       }
@@ -544,40 +545,25 @@ export default function TodayView({ onSelectView }: { onSelectView?: (view: stri
     await toggleTaskToDoNext(task.projectId, task.taskId)
   }
 
-  const splitTask = async (task: MergedTask) => {
-    const newTitle = nextSplitTitle(task.title)
-
-    const noteRef = task.noteRef || (() => {
-      const badge = task.kind === 'quick'
-        ? formatQuickTaskId(task.taskNumber)
-        : formatTaskId(task.taskNumber, task.projectCode)
-      return computeNotePath(badge, task.title, task.projectName)
-    })()
-
-    if (task.kind === 'pinned' && task.projectId && task.taskId) {
-      const project = useProjects.getState().projects.find((p) => p.id === task.projectId)
-      if (!project) return
-      const origTask = project.tasks.find((t) => t.id === task.taskId)
-      if (!origTask) return
-      const newTask: Task = buildSplitTaskCopy(origTask, {
-        newTitle,
-        noteRef,
-        toDoNextOrderFallback: task.order
-      })
-      await saveProject({ ...project, tasks: [...project.tasks, newTask] })
-    } else if (task.kind === 'quick') {
-      const origQt = useProjects.getState().quickTasks.find((q) => q.id === task.id)
-      if (!origQt) return
-      const qt: QuickTask = buildSplitQuickTaskCopy(origQt, { newTitle, noteRef })
-      await saveQuickTask(qt)
-    }
-
-    await completeTask(task)
+  // "Skończone na dzisiaj" — the task stays active (completed=false, same id/number)
+  // but drops off today's list until tomorrow (06:00). Logs the postpone with minutes
+  // worked today. No copy, no completion — external tools keep seeing the same task.
+  const finishForToday = async (task: MergedTask) => {
+    await setHideUntil(task, nextRolloverIso())
 
     const minutes = task.kind === 'quick'
-      ? calcQuickTaskTime(focusCheckIns, task.id)
-      : task.taskId ? calcTaskTime(focusCheckIns, task.taskId) : 0
-    window.api.appendNoteDoneEntry(noteRef, cleanSplitTitle(task.title), minutes)
+      ? minutesWorkedToday(focusCheckIns, task.id)
+      : task.taskId ? minutesWorkedToday(focusCheckIns, task.taskId) : 0
+    const taskCode = task.kind === 'quick'
+      ? formatQuickTaskId(task.taskNumber)
+      : formatTaskId(task.taskNumber, task.projectCode)
+    window.api.logTaskPostponed({
+      projectId: task.kind === 'pinned' ? task.projectId : undefined,
+      projectName: task.kind === 'pinned' ? task.projectName : undefined,
+      taskTitle: cleanSplitTitle(task.title),
+      taskCode: taskCode || undefined,
+      minutes
+    })
   }
 
   const toggleInProgress = async (task: MergedTask) => {
@@ -614,16 +600,20 @@ export default function TodayView({ onSelectView }: { onSelectView?: (view: stri
   }
 
   // Hide a task from Today until a given ISO datetime (or clear with null). Works for both kinds.
+  // Hiding into the future also drops inProgress — a postponed task isn't being worked on.
   const setHideUntil = async (task: MergedTask, hideUntil: string | null) => {
+    const dropInProgress = !!hideUntil && new Date(hideUntil).getTime() > Date.now()
     if (task.kind === 'quick') {
       const qt = useProjects.getState().quickTasks.find((t) => t.id === task.id)
-      if (qt) await saveQuickTask({ ...qt, hideUntil })
+      if (qt) await saveQuickTask({ ...qt, hideUntil, ...(dropInProgress && { inProgress: false }) })
       return
     }
     if (!task.projectId || !task.taskId) return
     const project = useProjects.getState().projects.find((p) => p.id === task.projectId)
     if (!project) return
-    const tasks = project.tasks.map((t) => (t.id === task.taskId ? { ...t, hideUntil } : t))
+    const tasks = project.tasks.map((t) =>
+      t.id === task.taskId ? { ...t, hideUntil, ...(dropInProgress && { inProgress: false }) } : t
+    )
     await saveProject({ ...project, tasks })
   }
 
@@ -1139,7 +1129,7 @@ export default function TodayView({ onSelectView }: { onSelectView?: (view: stri
               <button className="task-overflow-item" onClick={() => { setMenuOpenId(null); setMyccCommentId(task.id) }}><span className="toi-icon">➤</span>Send to MyCC</button>
             )}
             {!task.repeatingTaskId && (
-              <button className="task-overflow-item" onClick={() => { splitTask(task); setMenuOpenId(null) }}><span className="toi-icon">✂</span>Split & Continue</button>
+              <button className="task-overflow-item" onClick={() => { finishForToday(task); setMenuOpenId(null) }}><span className="toi-icon">🌙</span>Skończone na dzisiaj</button>
             )}
             <div className="task-overflow-sep" />
             {!locked && (
@@ -1297,7 +1287,7 @@ export default function TodayView({ onSelectView }: { onSelectView?: (view: stri
           items.push({ label: 'Open Note', kbd: 'N', action: () => window.api.openTaskNote(task.id, task.title, task.projectName, task.kind === 'quick' ? formatQuickTaskId(task.taskNumber) : formatTaskId(task.taskNumber, task.projectCode), task.noteRef) })
         }
         if (!task.repeatingTaskId) {
-          items.push({ label: 'Split & Continue', kbd: 'C', action: () => splitTask(task) })
+          items.push({ label: 'Skończone na dzisiaj', kbd: 'C', action: () => finishForToday(task) })
         }
         if (task.links && task.links.length > 0) {
           for (const link of task.links) {

@@ -18,6 +18,8 @@ interface Task {
   important?: boolean
   money?: boolean
   dueDate?: string | null
+  hideUntil?: string | null
+  loggedMinutes?: number
   cycleRole?: CycleRole
   parentCode?: string | null
   noteRef?: string
@@ -41,9 +43,40 @@ interface Project {
 
 function taskStatus(t: Task): string {
   if (t.completed) return '[done]'
+  // Postponed via "Skończone na dzisiaj" — still active, just hidden from Today until hideUntil.
+  if (t.hideUntil && new Date(t.hideUntil).getTime() > Date.now()) return 'hidden'
   if (t.inProgress) return 'in-progress'
   if (t.isToDoNext) return 'up-next'
   return ''
+}
+
+// Human-readable logged focus time, e.g. "2h 30m" / "45m" / "" when none.
+function formatMinutes(m?: number): string {
+  if (!m || m <= 0) return ''
+  const h = Math.floor(m / 60)
+  const min = m % 60
+  if (h > 0) return min > 0 ? `${h}h ${min}m` : `${h}h`
+  return `${min}m`
+}
+
+// hideUntil ISO from a CLI arg: omitted = next 06:00 rollover; "HH:MM" = that time today (next day if already passed); "clear"/"off"/"none" = null.
+function computeHideUntil(when?: string): string | null {
+  if (when && ['clear', 'off', 'none'].includes(when.toLowerCase())) return null
+  if (!when) {
+    const d = new Date()
+    if (d.getHours() >= 6) d.setDate(d.getDate() + 1)
+    d.setHours(6, 0, 0, 0)
+    return d.toISOString()
+  }
+  const m = /^(\d{1,2}):(\d{2})$/.exec(when)
+  if (!m) throw new Error(`Invalid time "${when}". Use HH:MM, "clear", or omit for next 06:00.`)
+  const h = Number(m[1])
+  const min = Number(m[2])
+  if (h > 23 || min > 59) throw new Error(`Invalid time "${when}".`)
+  const d = new Date()
+  d.setHours(h, min, 0, 0)
+  if (d.getTime() <= Date.now()) d.setDate(d.getDate() + 1)
+  return d.toISOString()
 }
 
 function taskCode(t: Task, projectCode?: string): string {
@@ -86,6 +119,7 @@ export function register(program: Command): void {
               { header: 'TITLE', value: (t) => t.title },
               { header: 'DUE', value: (t) => formatDueDate(t.dueDate) },
               { header: 'STATUS', value: (t) => taskStatus(t) },
+              { header: 'TIME', value: (t) => formatMinutes(t.loggedMinutes) },
             ])
             return `${header}\n${table}`
           },
@@ -121,6 +155,10 @@ export function register(program: Command): void {
             lines.push(`Project:  ${project.name}`)
             lines.push(`Status:   ${taskStatus(task) || 'backlog'}`)
             lines.push(`Due:      ${task.dueDate ? formatDueDate(task.dueDate) : '(none)'}`)
+            if (task.hideUntil && new Date(task.hideUntil).getTime() > Date.now()) {
+              lines.push(`Hidden:   do ${new Date(task.hideUntil).toLocaleString()} (odłożone, wciąż aktywne)`)
+            }
+            if (task.loggedMinutes) lines.push(`Logged:   ${formatMinutes(task.loggedMinutes)}`)
             lines.push(`Cycle:    ${task.cycleRole ?? '(none)'}`)
             if (task.parentCode) lines.push(`Parent:   ${task.parentCode}`)
             return lines.join('\n')
@@ -292,6 +330,66 @@ export function register(program: Command): void {
             const prefix = code !== '-' ? code + ' ' : ''
             if (dueDate === null) return `${prefix}${task.title} — due date cleared`
             return `${prefix}${task.title} — due: ${formatDueDate(dueDate)}`
+          },
+        })
+      } catch (err: unknown) {
+        die((err as Error).message)
+      }
+    })
+
+  // top5 hide <task-code> [when]
+  program
+    .command('hide')
+    .description('Postpone a task — hide from Today until later (still active, not done)')
+    .argument('<task-code>', 'Task code (e.g. PRJ-3, QT-5) or task ID')
+    .argument('[when]', 'HH:MM (today, or next day if passed) | "clear"/"off" to unhide | omit = next 06:00 rollover ("skończone na dzisiaj")')
+    .action(async (taskRef: string, whenInput: string | undefined, _opts, cmd) => {
+      const globalOpts = cmd.optsWithGlobals()
+      const client = createClient(globalOpts)
+
+      try {
+        const hideUntil = computeHideUntil(whenInput)
+
+        const parsed = parseTaskCode(taskRef)
+        const isQuickRef = parsed?.projectCode === 'QT'
+
+        const resolveQuick = async (): Promise<{ task: Task; code: string }> => {
+          const task = await resolveQuickTask(client, taskRef) as Task
+          return { task, code: task.taskNumber != null ? `QT-${task.taskNumber}` : '-' }
+        }
+
+        let kind: 'quick' | 'pinned'
+        let task: Task
+        let code: string
+        let projectId: string | undefined
+
+        if (isQuickRef) {
+          const q = await resolveQuick()
+          kind = 'quick'; task = q.task; code = q.code
+        } else {
+          try {
+            const { project, task: t } = await resolveProjectTask(client, taskRef) as { project: Project; task: Task }
+            kind = 'pinned'; task = t; projectId = project.id
+            code = taskCode(t, project.code)
+          } catch (projErr) {
+            if (parsed) throw projErr
+            const q = await resolveQuick()
+            kind = 'quick'; task = q.task; code = q.code
+          }
+        }
+
+        if (kind === 'quick') {
+          await client.put(`/api/v1/quick-tasks/${task.id}/hide-until`, { hideUntil })
+        } else {
+          await client.put(`/api/v1/projects/${projectId}/tasks/${task.id}/hide-until`, { hideUntil })
+        }
+
+        printResult({ ...task, hideUntil }, {
+          json: globalOpts.json,
+          formatFn: () => {
+            const prefix = code !== '-' ? code + ' ' : ''
+            if (hideUntil === null) return `Unhidden: ${prefix}${task.title}`
+            return `Postponed until ${new Date(hideUntil).toLocaleString()}: ${prefix}${task.title}`
           },
         })
       } catch (err: unknown) {

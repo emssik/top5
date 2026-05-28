@@ -8,6 +8,7 @@ import {
   setData,
   appendOperation,
   taskTimeMinutes,
+  taskTimeMinutesToday,
   isValidProject,
   normalizeProject,
   assignMissingProjectColors,
@@ -616,6 +617,28 @@ export function updateTaskDueDate(projectId: string, taskId: string, dueDate: st
   if (!task) return { error: 'not_found' }
   task.dueDate = dueDate
   setData('projects', projects)
+  return projects
+}
+
+// Sets/clears hideUntil ("Skończone na dzisiaj" / hide until a time). When hiding into the
+// future, the task stays active (completed=false), drops inProgress, and a task_postponed
+// entry is logged with minutes worked today — mirroring the UI action.
+export function updateTaskHideUntil(projectId: string, taskId: string, hideUntil: string | null): Project[] | ServiceError {
+  const data = getData()
+  const projects = [...data.projects]
+  const project = projects.find((p) => p.id === projectId)
+  if (!project) return { error: 'not_found' }
+  const task = project.tasks.find((t) => t.id === taskId)
+  if (!task) return { error: 'not_found' }
+  task.hideUntil = hideUntil
+  const hidingIntoFuture = !!hideUntil && Date.parse(hideUntil) > Date.now()
+  if (hidingIntoFuture) task.inProgress = false
+  setData('projects', projects)
+  if (hidingIntoFuture) {
+    const tc = project.code && task.taskNumber != null ? `${project.code}-${task.taskNumber}` : undefined
+    const mins = taskTimeMinutesToday(taskId)
+    appendOperation({ type: 'task_postponed', projectId, projectName: project.name, taskTitle: task.title, taskCode: tc, ...(mins > 0 && { details: `${mins}min` }) })
+  }
   return projects
 }
 

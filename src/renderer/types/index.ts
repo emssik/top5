@@ -111,6 +111,7 @@ declare global {
       selectDirectory: () => Promise<string | null>
       openTaskNote: (taskId: string, taskTitle: string, projectName?: string, taskBadge?: string, noteRef?: string) => Promise<{ ok?: boolean; error?: string }>
       appendNoteDoneEntry: (noteRef: string, description: string, focusMinutes: number) => Promise<{ ok?: boolean; error?: string }>
+      logTaskPostponed: (entry: { projectId?: string; projectName?: string; taskTitle: string; taskCode?: string; minutes?: number }) => Promise<{ ok?: boolean; error?: string }>
       sendTaskToMyCC: (projectId: string, taskId: string, comment?: string) => Promise<{ taskCode: string; projectCode: string; projectName: string; title: string; noteRef?: string } | null>
       pasteImageToTask: (projectId: string, taskId: string) => Promise<{ filename: string } | { error: string }>
       removeTaskImage: (projectId: string, taskId: string, filename: string) => Promise<import('../../shared/types').Project[]>

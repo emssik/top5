@@ -64,6 +64,14 @@ export function registerQuickTaskRoutes(fastify: FastifyInstance): void {
     return { ok: true, data: result }
   })
 
+  fastify.put<{ Params: { id: string } }>('/api/v1/quick-tasks/:id/hide-until', async (request, reply) => {
+    const { hideUntil } = request.body as { hideUntil: string | null }
+    const result = quickTaskService.updateQuickTaskHideUntil(request.params.id, hideUntil ?? null)
+    if (isServiceError(result)) return reply.status(404).send({ ok: false, error: result.error })
+    notifyAllWindows()
+    return { ok: true, data: result }
+  })
+
   fastify.post<{ Params: { id: string } }>('/api/v1/quick-tasks/:id/toggle-in-progress', async (request, reply) => {
     const result = quickTaskService.toggleQuickTaskInProgress(request.params.id)
     if (isServiceError(result)) return reply.status(404).send({ ok: false, error: result.error })
