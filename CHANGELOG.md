@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.107.0] - 2026-06-04
+
+### Added
+
+- Today: zegar w górnym pasku — wyśrodkowany dzień tygodnia i godzina po polsku (np. „Czwartek, 13:14"), aktualizowany na żywo.
+
 ## [1.106.0] - 2026-05-28
 
 ### Changed

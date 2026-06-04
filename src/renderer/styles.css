@@ -2244,6 +2244,15 @@ body {
 }
 
 /* 30-day wins strip */
+.today-clock {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--c-text-heading);
+  letter-spacing: -0.3px;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
 .wins-30d-strip {
   display: flex;
   align-items: center;
