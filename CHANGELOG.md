@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.107.1] - 2026-06-05
+
+### Fixed
+
+- Today: długi link w propozycjach (sekcje Repeating / Due / Tomorrow) nie zasłania już przycisków ✓/✕ — URL łamie się wewnątrz karty, a przyciski zawsze pozostają widoczne i klikalne.
+
 ## [1.107.0] - 2026-06-04
 
 ### Added

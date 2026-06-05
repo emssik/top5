@@ -703,11 +703,14 @@ body {
 
 .proposal-card .title {
   flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
   font-size: 14px;
   color: var(--c-text-secondary);
 }
 
 .proposal-btn {
+  flex-shrink: 0;
   padding: 3px 8px;
   border-radius: 5px;
   font-size: 10px;
