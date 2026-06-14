@@ -155,7 +155,7 @@ declare global {
         metas: { key: string; label: string; groups: string[]; sites: string[]; apps: string[] }[]
         defaultMeta: string | null
       } | null>
-      snoozeFocusApp: (appName: string) => Promise<void>
+      snoozeFocusApp: (appName: string) => Promise<{ ok: boolean; cooldownMs: number }>
       energySubmit: (payload: { energy: 1 | 2 | 3; mood: 1 | 2 | 3; hungry: boolean; hadCoffee: boolean; note?: string }) => Promise<{ ok: true } | { error: string }>
       onReloadData: (callback: () => void) => () => void
       onShortcutAction: (callback: (data: ShortcutActionPayload) => void) => () => void

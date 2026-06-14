@@ -71,7 +71,7 @@ const POLL_MS = 1500
 const POPUP_MS = 5000
 const SNOOZE_MS = 3 * 60_000
 const COOLDOWN_STEP_MS = 5 * 60_000 // each snooze pushes the next one further out: count × step
-const HTTP_PORT = 15056
+const HTTP_PORT = Number(process.env['TOP5_FOCUS_BLOCK_PORT']) || 15056
 const BLOCK_PAGE_PREFIX = `http://127.0.0.1:${HTTP_PORT}/blocked`
 
 const SEED_CONFIG = `# top5 — konfiguracja focus blockera
@@ -301,14 +301,23 @@ function cooldownRemaining(key: string): number {
   return Math.max(0, (cooldownUntil[key] ?? 0) - Date.now())
 }
 
+// Clears all snooze/cooldown counters. Called on a full focus stop only — a task
+// switch keeps them so the escalating cooldown can't be reset by switching tasks.
+function resetSnoozeState(): void {
+  for (const key of Object.keys(snoozeUntil)) delete snoozeUntil[key]
+  for (const key of Object.keys(snoozeCount)) delete snoozeCount[key]
+  for (const key of Object.keys(cooldownUntil)) delete cooldownUntil[key]
+}
+
 // ---------------------------------------------------------------------------
 // HTTP server (block page + snooze)
 // ---------------------------------------------------------------------------
 
 function blockPageHtml(domain: string, returnUrl: string, taskTitle: string | null, cooldownMs: number): string {
   const safeDomain = domain.replace(/[<>"']/g, '')
-  const returnJson = JSON.stringify(returnUrl)
-  const domainJson = JSON.stringify(domain)
+  // Escape "<" so a URL containing "</script>" can't break out of the inline <script>.
+  const returnJson = JSON.stringify(returnUrl).replace(/</g, '\\u003c')
+  const domainJson = JSON.stringify(domain).replace(/</g, '\\u003c')
   const cleanTitle = (taskTitle ?? '').replace(/[<>]/g, '').trim()
   const taskBlock = cleanTitle
     ? `<div class="task"><div class="task-label">Teraz zajmij się</div><div class="task-name">${cleanTitle}</div></div>`
@@ -511,6 +520,7 @@ async function tick(): Promise<void> {
   const front = await osa(
     'tell application "System Events" to get name of first process whose frontmost is true'
   )
+  if (!activeTaskId) return // focus may have stopped while we awaited osascript
 
   if (front) {
     if (activeApps.includes(front) && (snoozeUntil['app:' + front] ?? 0) <= now) {
@@ -518,6 +528,7 @@ async function tick(): Promise<void> {
       showBlockPopup(front)
     } else if (front === 'Arc' && activeSites.length > 0 && serverListening) {
       const url = await osa('tell application "Arc" to get URL of active tab of front window')
+      if (!activeTaskId) return // focus may have stopped while we awaited osascript
       const host = url ? hostnameOf(url) : null
       if (host) {
         const domain = matchedDomain(host, activeSites)
@@ -543,9 +554,9 @@ function scheduleNext(): void {
 // Activation (driven by focus session)
 // ---------------------------------------------------------------------------
 
-function applyActiveSelection(sel: Selection): void {
-  const config = loadBlockConfig()
-  const resolved = resolveSelection(sel, config)
+function applyActiveSelection(sel: Selection, config?: BlockConfig): void {
+  const cfg = config ?? loadBlockConfig()
+  const resolved = resolveSelection(sel, cfg)
   activeSites = resolved.sites
   activeApps = resolved.apps
 }
@@ -555,14 +566,12 @@ export function onFocusStart(taskId: string | null, taskTitle?: string | null): 
   const config = loadBlockConfig()
   const tasks = loadTasks()
   const { selection } = selectionForTask(taskId, config, tasks)
-  // Fresh blocking session (initial start OR task switch) — drop any carried-over
-  // snooze/cooldown counters so the new task starts clean.
-  for (const key of Object.keys(snoozeUntil)) delete snoozeUntil[key]
-  for (const key of Object.keys(snoozeCount)) delete snoozeCount[key]
-  for (const key of Object.keys(cooldownUntil)) delete cooldownUntil[key]
   activeTaskId = taskId
   activeTaskTitle = taskTitle ?? null
-  applyActiveSelection(selection)
+  // NOTE: snooze/cooldown state is intentionally NOT reset here. A task switch is the
+  // same focus period, so the escalating cooldown must persist across switches —
+  // otherwise switching tasks would be a free cooldown reset. Cleared only on stop.
+  applyActiveSelection(selection, config)
   startHttpServer()
   // pollTimeout is null mid-tick too, so guard on a dedicated flag — otherwise a
   // task switch mid-poll would spawn a second concurrent loop.
@@ -581,9 +590,7 @@ export function onFocusStop(): void {
   activeSites = []
   activeApps = []
   loopAlive = false
-  for (const key of Object.keys(snoozeUntil)) delete snoozeUntil[key]
-  for (const key of Object.keys(snoozeCount)) delete snoozeCount[key]
-  for (const key of Object.keys(cooldownUntil)) delete cooldownUntil[key]
+  resetSnoozeState()
   if (pollTimeout) {
     clearTimeout(pollTimeout)
     pollTimeout = null
