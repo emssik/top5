@@ -56,6 +56,15 @@ interface PickerTask {
 const FOCUS_WIDTH = 520
 const FOCUS_HEIGHT_NORMAL = 64
 const FOCUS_HEIGHT_PICKER = 480
+const FOCUS_HEIGHT_BLOCKS = 520
+
+interface BlockMeta { key: string; label: string; groups: string[]; sites: string[]; apps: string[] }
+interface BlockStatePayload {
+  groups: { key: string; label: string }[]
+  metas: BlockMeta[]
+  defaultMeta: string | null
+}
+interface BlockSel { groups: string[]; sites: string[]; apps: string[] }
 
 export default function FocusMode() {
   const { projects, quickTasks, focusCheckIns, config, setFocus, repeatingTasks } = useProjects()
@@ -67,6 +76,14 @@ export default function FocusMode() {
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
   const [showManualTime, setShowManualTime] = useState(false)
   const [manualMinutes, setManualMinutes] = useState('')
+  // Focus blocker config panel
+  const [showBlockConfig, setShowBlockConfig] = useState(false)
+  const [blockState, setBlockState] = useState<BlockStatePayload | null>(null)
+  const [blockSel, setBlockSel] = useState<BlockSel>({ groups: [], sites: [], apps: [] })
+  const [selectedMeta, setSelectedMeta] = useState<string | null>(null)
+  const [setAsDefault, setSetAsDefault] = useState(false)
+  const [newSite, setNewSite] = useState('')
+  const [newApp, setNewApp] = useState('')
   // True while the mouse is over the focus window AND Cmd is held — turns ✓ into 🌙 (finished for today).
   const [cmdHover, setCmdHover] = useState(false)
   const sessionStartRef = useRef(Date.now())
@@ -88,10 +105,31 @@ export default function FocusMode() {
   useEffect(() => {
     if (showTaskPicker) {
       window.api.resizeFocusWindow(FOCUS_WIDTH, FOCUS_HEIGHT_PICKER)
+    } else if (showBlockConfig) {
+      window.api.resizeFocusWindow(FOCUS_WIDTH, FOCUS_HEIGHT_BLOCKS)
     } else {
       window.api.resizeFocusWindow(FOCUS_WIDTH, FOCUS_HEIGHT_NORMAL)
     }
-  }, [showTaskPicker])
+  }, [showTaskPicker, showBlockConfig])
+
+  // Load the blocker state for the focused task; on first launch (nothing saved)
+  // open the config panel pre-filled with the default meta.
+  useEffect(() => {
+    const taskId = config.focusTaskId
+    if (!taskId) return
+    let cancelled = false
+    window.api.getFocusBlockState(taskId).then((s) => {
+      if (cancelled || !s) return
+      setBlockState({ groups: s.groups, metas: s.metas, defaultMeta: s.defaultMeta })
+      setBlockSel(s.selection)
+      setSelectedMeta(s.isSaved ? null : s.defaultMeta)
+      setSetAsDefault(false)
+      if (!s.isSaved) setShowBlockConfig(true)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [config.focusTaskId])
 
 
   const isStandalone = config.focusProjectId === STANDALONE_PROJECT_ID
@@ -369,6 +407,41 @@ export default function FocusMode() {
     setShowManualTime(false)
   }
 
+  // --- Focus blocker config ---
+  const pickMeta = (m: BlockMeta) => {
+    setSelectedMeta(m.key)
+    setBlockSel({ groups: [...m.groups], sites: [...m.sites], apps: [...m.apps] })
+  }
+  const toggleBlockGroup = (key: string) => {
+    setSelectedMeta(null)
+    setBlockSel((s) => ({
+      ...s,
+      groups: s.groups.includes(key) ? s.groups.filter((g) => g !== key) : [...s.groups, key]
+    }))
+  }
+  const addBlockSite = () => {
+    const v = newSite.trim().toLowerCase()
+    if (!v) return
+    setSelectedMeta(null)
+    setBlockSel((s) => (s.sites.includes(v) ? s : { ...s, sites: [...s.sites, v] }))
+    setNewSite('')
+  }
+  const addBlockApp = () => {
+    const v = newApp.trim()
+    if (!v) return
+    setSelectedMeta(null)
+    setBlockSel((s) => (s.apps.includes(v) ? s : { ...s, apps: [...s.apps, v] }))
+    setNewApp('')
+  }
+  const saveBlocks = async () => {
+    const taskId = config.focusTaskId
+    if (!taskId) return
+    const def = setAsDefault && selectedMeta ? selectedMeta : undefined
+    const next = await window.api.saveFocusBlockSelection(taskId, blockSel, def)
+    if (next) setBlockState({ groups: next.groups, metas: next.metas, defaultMeta: next.defaultMeta })
+    setShowBlockConfig(false)
+  }
+
   // Manual time entry
   if (showManualTime) {
     return (
@@ -541,6 +614,15 @@ export default function FocusMode() {
           onMouseMove={(e) => setCmdHover(e.metaKey)}
         >
           <button
+            onClick={() => setShowBlockConfig((v) => !v)}
+            className={`w-[28px] h-[28px] rounded-[7px] bg-transparent text-[12px] transition-all flex items-center justify-center cursor-pointer border-none ${
+              showBlockConfig ? 'text-amber-400 bg-amber-500/15' : 'text-t-muted hover:bg-amber-500/15 hover:text-amber-400'
+            }`}
+            title="Blokady focusa"
+          >
+            🔒
+          </button>
+          <button
             onClick={showFinishToday ? handleFinishToday : handleComplete}
             className={`w-[28px] h-[28px] rounded-[7px] bg-transparent text-t-muted text-[12px] transition-all flex items-center justify-center cursor-pointer border-none ${
               showFinishToday ? 'hover:bg-blue-500/15 hover:text-blue-400' : 'hover:bg-green-500/15 hover:text-green-400'
@@ -593,6 +675,173 @@ export default function FocusMode() {
                 </button>
               ))
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Focus blocker config panel */}
+      {showBlockConfig && blockState && (
+        <div
+          className="absolute top-[54px] left-0 right-0 mx-2 rounded-lg bg-clean-view/95 border border-border/50 shadow-lg overflow-hidden"
+          style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+        >
+          <div className="px-3 py-2 border-b border-border/30 flex items-center justify-between">
+            <span className="text-[11px] text-t-muted">Blokady focusa</span>
+            <button
+              onClick={() => setShowBlockConfig(false)}
+              className="text-[12px] text-t-muted hover:text-t-primary bg-transparent border-none cursor-pointer p-0"
+            >
+              ✕
+            </button>
+          </div>
+          <div className="max-h-[420px] overflow-y-auto px-3 py-2.5 flex flex-col gap-3">
+            {/* Metas */}
+            {blockState.metas.length > 0 && (
+              <div>
+                <div className="text-[10px] uppercase tracking-wide text-t-muted mb-1.5">Zestaw</div>
+                <div className="flex flex-wrap gap-1.5">
+                  {blockState.metas.map((m) => (
+                    <button
+                      key={m.key}
+                      onClick={() => pickMeta(m)}
+                      className={`px-2.5 py-1 rounded-md text-[12px] font-medium border transition-colors cursor-pointer ${
+                        selectedMeta === m.key
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : 'bg-surface text-t-secondary border-border hover:bg-hover'
+                      }`}
+                    >
+                      {m.label}
+                      {blockState.defaultMeta === m.key ? ' ★' : ''}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {/* Groups */}
+            <div>
+              <div className="text-[10px] uppercase tracking-wide text-t-muted mb-1.5">Grupy</div>
+              <div className="flex flex-wrap gap-1.5">
+                {blockState.groups.map((g) => {
+                  const on = blockSel.groups.includes(g.key)
+                  return (
+                    <button
+                      key={g.key}
+                      onClick={() => toggleBlockGroup(g.key)}
+                      className={`px-2.5 py-1 rounded-md text-[12px] font-medium border transition-colors cursor-pointer ${
+                        on
+                          ? 'bg-emerald-600 text-white border-emerald-600'
+                          : 'bg-surface text-t-secondary border-border hover:bg-hover'
+                      }`}
+                    >
+                      {on ? '✓ ' : ''}
+                      {g.label}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+            {/* Ad-hoc sites */}
+            <div>
+              <div className="text-[10px] uppercase tracking-wide text-t-muted mb-1.5">Dodatkowe strony</div>
+              {blockSel.sites.length > 0 && (
+                <div className="flex flex-wrap gap-1 mb-1.5">
+                  {blockSel.sites.map((s) => (
+                    <span
+                      key={s}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-surface/80 text-[11px] text-t-secondary border border-border/40"
+                    >
+                      {s}
+                      <button
+                        onClick={() => setBlockSel((cur) => ({ ...cur, sites: cur.sites.filter((x) => x !== s) }))}
+                        className="text-t-muted hover:text-red-400 bg-transparent border-none cursor-pointer p-0 leading-none"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              <div className="flex gap-1.5">
+                <input
+                  value={newSite}
+                  onChange={(e) => setNewSite(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') addBlockSite() }}
+                  placeholder="np. youtube.com"
+                  className="flex-1 px-2 py-1 rounded-md text-[12px] text-t-primary bg-surface/80 border border-border/50 outline-none focus:border-blue-500/50"
+                />
+                <button
+                  onClick={addBlockSite}
+                  className="px-2.5 py-1 rounded-md text-[12px] bg-surface/80 hover:bg-hover text-t-secondary border border-border/50 cursor-pointer"
+                >
+                  Dodaj
+                </button>
+              </div>
+            </div>
+            {/* Ad-hoc apps */}
+            <div>
+              <div className="text-[10px] uppercase tracking-wide text-t-muted mb-1.5">Dodatkowe aplikacje</div>
+              {blockSel.apps.length > 0 && (
+                <div className="flex flex-wrap gap-1 mb-1.5">
+                  {blockSel.apps.map((a) => (
+                    <span
+                      key={a}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-surface/80 text-[11px] text-t-secondary border border-border/40"
+                    >
+                      {a}
+                      <button
+                        onClick={() => setBlockSel((cur) => ({ ...cur, apps: cur.apps.filter((x) => x !== a) }))}
+                        className="text-t-muted hover:text-red-400 bg-transparent border-none cursor-pointer p-0 leading-none"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              <div className="flex gap-1.5">
+                <input
+                  value={newApp}
+                  onChange={(e) => setNewApp(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') addBlockApp() }}
+                  placeholder="np. Slack"
+                  className="flex-1 px-2 py-1 rounded-md text-[12px] text-t-primary bg-surface/80 border border-border/50 outline-none focus:border-blue-500/50"
+                />
+                <button
+                  onClick={addBlockApp}
+                  className="px-2.5 py-1 rounded-md text-[12px] bg-surface/80 hover:bg-hover text-t-secondary border border-border/50 cursor-pointer"
+                >
+                  Dodaj
+                </button>
+              </div>
+            </div>
+            {/* Set as default meta */}
+            <label
+              className={`flex items-center gap-2 text-[11px] cursor-pointer ${
+                selectedMeta ? 'text-t-secondary' : 'text-t-muted opacity-50'
+              }`}
+            >
+              <input
+                type="checkbox"
+                disabled={!selectedMeta}
+                checked={setAsDefault}
+                onChange={(e) => setSetAsDefault(e.target.checked)}
+              />
+              Ustaw „{selectedMeta ? blockState.metas.find((m) => m.key === selectedMeta)?.label : '—'}" jako domyślny zestaw
+            </label>
+          </div>
+          <div className="px-3 py-2 border-t border-border/30 flex gap-2 justify-end">
+            <button
+              onClick={() => setShowBlockConfig(false)}
+              className="px-3 py-1 rounded-md text-[12px] bg-surface/80 hover:bg-hover text-t-secondary border-none cursor-pointer"
+            >
+              Zamknij
+            </button>
+            <button
+              onClick={saveBlocks}
+              className="px-3 py-1 rounded-md text-[12px] font-medium bg-blue-600/80 hover:bg-blue-500/80 text-white border-none cursor-pointer"
+            >
+              Zapisz i blokuj
+            </button>
           </div>
         </div>
       )}

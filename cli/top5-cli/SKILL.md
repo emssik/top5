@@ -268,6 +268,44 @@ Starts/stops the focus window in the Electron app. Without arguments, shows curr
 
 **`ping`** — sends a heartbeat to confirm the user is still working. Saves accumulated time as a check-in and resets the 15-minute check-in timer (so the popup doesn't appear). Useful for automation — e.g., Claude Code can call `top5 focus ping` periodically to suppress check-in prompts.
 
+### Focus blocker — pliki konfiguracyjne (edycja przez model)
+
+Focus blokuje rozpraszacze (strony WWW w Arc + aplikacje macOS) na czas sesji focus. Konfigurację **edytuje się bezpośrednio w plikach YAML** (nie ma na to komendy CLI). Dwa pliki w `~/.mycc`:
+
+**`~/.mycc/top5-focus-blocks.yaml`** — grupy i meta. **Ten plik edytuje model/użytkownik ręcznie; aplikacja go NIE nadpisuje** (komentarze są bezpieczne).
+
+```yaml
+groups:                       # nazwane grupy rozpraszaczy
+  social:
+    label: Social media
+    sites: [x.com, reddit.com, linkedin.com]   # domeny — match po hostname (domena + subdomeny); BEZ http:// i ścieżek
+    apps: []                                    # nazwy procesów macOS (np. "Slack")
+  discord:
+    label: Discord
+    apps: [Discord]
+    sites: []
+metas:                        # zestawy łączące grupy + ewentualne dodatkowe pojedyncze sites/apps
+  deep-work:
+    label: Deep work
+    groups: [social, discord]
+    sites: []                 # dodatkowe domeny doklejane do mety
+    apps: []                  # dodatkowe apki
+```
+
+- **Dodanie grupy / mety / pozycji** = edycja tego pliku. Po zapisaniu zmiany są widoczne przy następnym starcie focusa (plik czytany na żywo, bez restartu apki).
+- `sites` dopasowuje po hostname: `reddit.com` łapie `reddit.com` i `www.reddit.com`. Nie wpisuj `https://` ani ścieżek.
+- `apps` to dokładna nazwa procesu na wierzchu (jak w Monitorze aktywności).
+
+**`~/.mycc/top5-focus-tasks.yaml`** — stan zarządzany przez aplikację (zwykle NIE ruszasz go ręcznie):
+
+```yaml
+defaultMeta: deep-work        # która meta jest domyślna (pre-fill przy 1. odpaleniu focusa dla nowego taska)
+byTask:                       # zapamiętany wybór blokad per zadanie (klucz = taskId)
+  abc123: { groups: [social], sites: [youtube.com], apps: [] }
+```
+
+Flow w aplikacji: start focusa → 1. raz dla taska otwiera panel (ikona 🔒 w pasku focusa), pre-wypełniony domyślną metą; kolejne razy stosuje zapamiętany wybór od razu. W panelu można wybrać metę/grupy, dorzucić pojedyncze strony/apki na ten task i ustawić metę jako domyślną. **Tworzenie/edycja grup i meta — tylko przez `top5-focus-blocks.yaml`.** Snooze („Daj mi 3 min") odblokowuje pozycję na 3 minuty.
+
 ### Repeating tasks
 
 ```bash

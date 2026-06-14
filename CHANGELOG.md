@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.108.0] - 2026-06-14
+
+### Added
+
+- **Focus blocker** — sesja focus blokuje wybrane rozpraszacze: strony w Arc (podmieniane na stronę blokady z nazwą bieżącego zadania) oraz aplikacje macOS (chowane, z małym popupem). Grupy i gotowe zestawy ("Wszystko", "Sociale + Discord", "Nic") konfigurujesz w `~/.mycc/top5-focus-blocks.yaml`; przy starcie focusa wybierasz zestaw (ikona 🔒 w pasku), a wybór jest pamiętany per zadanie. Snooze „Daj mi 3 min" ma rosnący cooldown, żeby utrudnić ciągłe odblokowywanie.
+
 ## [1.107.1] - 2026-06-05
 
 ### Fixed

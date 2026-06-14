@@ -6,6 +6,7 @@ import type { IpcMain } from 'electron'
 import { showWindowVisible } from './window-utils'
 import { randomUUID } from 'crypto'
 import { appendCheckIn, appendOperation, getAppData, loadCheckIns, setAppDataKey } from './store'
+import { onFocusStart, onFocusStop } from './focus-blocker'
 import { STANDALONE_PROJECT_ID } from '../shared/constants'
 
 let focusWindow: BrowserWindow | null = null
@@ -262,6 +263,9 @@ export function enterFocusMode(options?: { resumeStartedAt?: number }): { error:
 
   appendOperation({ type: isResume ? 'focus_resumed' : 'focus_started', ...focusTaskInfo })
 
+  // Activate distraction blocking for this task (saved selection, or default meta on first launch).
+  onFocusStart(getAppData().config.focusTaskId, focusTaskInfo.taskTitle)
+
   startCheckInTimer()
   return undefined
 }
@@ -287,6 +291,7 @@ export function exitFocusMode(): { error: string } | undefined {
 
   clearCheckInTimer()
   closeCheckInPopup()
+  onFocusStop()
 
   if (focusMenuWindow && !focusMenuWindow.isDestroyed()) {
     focusMenuWindow.close()
@@ -393,6 +398,9 @@ export function registerFocusHandlers(
     const { config } = getAppData()
     setAppDataKey('config', { ...config, focusProjectId: projectId, focusTaskId: taskId })
     focusTaskInfo = resolveFocusTask()
+
+    // Re-activate blocking for the new task (its saved selection, or default).
+    onFocusStart(taskId, focusTaskInfo.taskTitle)
 
     // Reset check-in timer for the new task
     startCheckInTimer()

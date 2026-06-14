@@ -137,6 +137,25 @@ declare global {
       energyPauseUntil: (isoTimestamp: string) => Promise<import('../../shared/types').EnergyTrackerConfig>
       energyResume: () => Promise<import('../../shared/types').EnergyTrackerConfig>
       energySkip: () => Promise<void>
+      getFocusBlockState: (taskId: string) => Promise<{
+        selection: { groups: string[]; sites: string[]; apps: string[] }
+        isSaved: boolean
+        groups: { key: string; label: string }[]
+        metas: { key: string; label: string; groups: string[]; sites: string[]; apps: string[] }[]
+        defaultMeta: string | null
+      } | null>
+      saveFocusBlockSelection: (
+        taskId: string,
+        selection: { groups: string[]; sites: string[]; apps: string[] },
+        setDefaultMeta?: string
+      ) => Promise<{
+        selection: { groups: string[]; sites: string[]; apps: string[] }
+        isSaved: boolean
+        groups: { key: string; label: string }[]
+        metas: { key: string; label: string; groups: string[]; sites: string[]; apps: string[] }[]
+        defaultMeta: string | null
+      } | null>
+      snoozeFocusApp: (appName: string) => Promise<void>
       energySubmit: (payload: { energy: 1 | 2 | 3; mood: 1 | 2 | 3; hungry: boolean; hadCoffee: boolean; note?: string }) => Promise<{ ok: true } | { error: string }>
       onReloadData: (callback: () => void) => () => void
       onShortcutAction: (callback: (data: ShortcutActionPayload) => void) => () => void

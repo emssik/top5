@@ -131,6 +131,13 @@ export const api = {
   energyPauseUntil: (isoTimestamp: string): Promise<EnergyTrackerConfig> => ipcRenderer.invoke('energy-pause-until', isoTimestamp),
   energyResume: (): Promise<EnergyTrackerConfig> => ipcRenderer.invoke('energy-resume'),
   energySkip: () => ipcRenderer.invoke('energy-skip'),
+  getFocusBlockState: (taskId: string) => ipcRenderer.invoke('focus-blocker-state', taskId),
+  saveFocusBlockSelection: (
+    taskId: string,
+    selection: { groups: string[]; sites: string[]; apps: string[] },
+    setDefaultMeta?: string
+  ) => ipcRenderer.invoke('focus-blocker-save', taskId, selection, setDefaultMeta),
+  snoozeFocusApp: (appName: string) => ipcRenderer.invoke('focus-blocker-snooze-app', appName),
   energySubmit: (payload: { energy: 1 | 2 | 3; mood: 1 | 2 | 3; hungry: boolean; hadCoffee: boolean; note?: string }) => ipcRenderer.invoke('energy-submit', payload),
   onCheckInRespond: (callback: (response: 'yes' | 'a_little' | 'no') => void) => {
     const handler = (_event: IpcRendererEvent, response: 'yes' | 'a_little' | 'no') => callback(response)

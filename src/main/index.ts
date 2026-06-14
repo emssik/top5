@@ -11,6 +11,7 @@ import { showWindowVisible } from './window-utils'
 import { existsSync, readFileSync, writeFileSync } from 'fs'
 import { registerNudgeHandlers, startNudgeMonitor, stopNudgeMonitor } from './nudge'
 import { registerEnergyHandlers, startEnergyScheduler, stopEnergyScheduler } from './energy-tracker'
+import { registerFocusBlockerHandlers, stopFocusBlocker, pruneFocusTasks } from './focus-blocker'
 import { getRepeatingTaskProposals, dateKey } from '../shared/schedule'
 import { getScheduledHabits } from '../shared/habit-schedule'
 import type { QuickTask } from '../shared/types'
@@ -264,12 +265,22 @@ app.whenReady().then(() => {
   registerQuickAddHandlers(ipcMain)
   registerNudgeHandlers(ipcMain)
   registerEnergyHandlers(ipcMain)
+  registerFocusBlockerHandlers(ipcMain)
   registerGlobalShortcut(globalShortcut, () => mainWindow)
   createWindow()
   registerLocalShortcuts(mainWindow!)
 
   startNudgeMonitor()
   startEnergyScheduler()
+
+  // GC focus-blocker per-task configs for tasks that no longer exist (deleted
+  // tasks/projects). Completed tasks still exist, so they keep their config.
+  const liveTaskIds = new Set<string>()
+  for (const project of startupData.projects) {
+    for (const task of project.tasks) liveTaskIds.add(task.id)
+  }
+  for (const qt of startupData.quickTasks) liveTaskIds.add(qt.id)
+  pruneFocusTasks(liveTaskIds)
 
   // Start HTTP API server (if enabled in config)
   import('./api/server').then(({ startApiServer }) =>
@@ -374,4 +385,5 @@ app.on('before-quit', () => {
   ;(app as unknown as Record<string, unknown>).isQuitting = true
   stopNudgeMonitor()
   stopEnergyScheduler()
+  stopFocusBlocker()
 })
