@@ -23,7 +23,14 @@ import type { GameGateConfig } from '../shared/types'
 const SESSION_TICK_MS = 5_000 // precise burn + warning while playing
 const IDLE_TICK_MS = 10_000 // slower sweep to kill a game that tries to come up
 const LOW_WARN_SEC = 600 // warn 10 min before tokens run out
-const GAME_PROCESS_MATCH = '/CrossOver' // matches every CrossOver / wine process path
+// Two markers cover the whole bottle:
+//  - 'Applications/CrossOver' → native macOS processes (main app, wineserver,
+//    wine wrapper, Steam Menu Helper) whose path lives under ~/Applications.
+//  - 'CX_GRAPHICS_BACKEND' → the Windows/wine processes (steamwebhelper.exe, the
+//    game itself) whose command line is windowsy ("C:\...") and carries no macOS
+//    path, but which all inherit this CrossOver env var. This is the marker that
+//    catches the Steam helper "services" the path match alone would leave behind.
+const GAME_PROCESS_MATCHES = ['Applications/CrossOver', 'CX_GRAPHICS_BACKEND']
 
 let scheduledTimeout: ReturnType<typeof setTimeout> | null = null
 let lowWarned = false
@@ -51,12 +58,13 @@ function effectiveBalanceSec(cfg: GameGateConfig): number {
   return Math.min(cfg.tokenBalanceSec, Math.max(0, cfg.tokenBalanceSec - elapsed))
 }
 
-// Kill every CrossOver/wine process. -f matches the full command line; every
-// bottle process carries "/CrossOver" in its path (main app, wineserver, wine
-// wrapper, Steam helper), so this takes the whole thing down. exit 1 = nothing
-// running → ignored.
+// Kill every CrossOver/wine process. -f matches the full command line; each
+// marker catches one half of the bottle (native macOS + windowsy wine procs).
+// exit 1 = nothing running → ignored.
 function killGame(): void {
-  execFile('pkill', ['-f', GAME_PROCESS_MATCH], () => {})
+  for (const match of GAME_PROCESS_MATCHES) {
+    execFile('pkill', ['-f', match], () => {})
+  }
 }
 
 function showLowWarning(remainingSec: number): void {

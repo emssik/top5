@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.109.1] - 2026-07-20
+
+### Fixed
+
+- Bramka gry zamyka teraz cały bottle CrossOver — łącznie z procesami pomocniczymi Steama i samą grą. Wcześniej blokada trafiała tylko w natywne procesy macOS, a windowsowe procesy wine (np. `steamwebhelper.exe`) zostawały wiszące jako osierocone usługi.
+
 ## [1.109.0] - 2026-07-20
 
 ### Added
