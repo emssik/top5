@@ -301,6 +301,17 @@ export interface EnergyTrackerConfig {
   lastFirstActivityDate: string | null
 }
 
+// Gamified game-time gate: CrossOver (game) stays killed unless you have
+// "tokens" earned from focus time. tokenBalanceSec = frozen balance in seconds
+// of game time. During an open session sessionStartedAt is set and the live
+// balance = tokenBalanceSec - elapsed (not decremented until the session stops).
+export interface GameGateConfig {
+  enabled: boolean
+  tokenBalanceSec: number
+  earnRatio: number // game-seconds earned per focus-second (0.5 = 1h focus → 30 min game)
+  sessionStartedAt: string | null
+}
+
 export interface LockedTaskRef {
   kind: 'quick' | 'pinned'
   quickTaskId?: string
@@ -346,6 +357,7 @@ export interface AppData {
   dismissedRepeating: Record<string, string[]>
   apiConfig?: ApiConfigPublic
   energyTracker?: EnergyTrackerConfig
+  gameGate?: GameGateConfig
   nextQuickTaskNumber?: number
   winsLock?: WinsLockState
   habits?: Habit[]

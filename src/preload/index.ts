@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer, webFrame } from 'electron'
 import type { IpcRendererEvent } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
-import type { AppConfig, CycleRole, FocusCheckIn, OperationLogEntry, Project, QuickTask, RepeatingTask, ApiConfig, EnergyTrackerConfig, LockedTaskRef, WinsLockState, WinEntry, StreakStats, Habit, HabitTodayEntry } from '../shared/types'
+import type { AppConfig, CycleRole, FocusCheckIn, OperationLogEntry, Project, QuickTask, RepeatingTask, ApiConfig, EnergyTrackerConfig, GameGateConfig, LockedTaskRef, WinsLockState, WinEntry, StreakStats, Habit, HabitTodayEntry } from '../shared/types'
 
 interface ShortcutActionPayload {
   action: string
@@ -25,6 +25,7 @@ export const api = {
   launchBrowser: (url: string) => ipcRenderer.invoke('launch-browser', url),
   openExternal: (url: string) => ipcRenderer.invoke('open-external', url),
   enterFocusMode: () => ipcRenderer.invoke('enter-focus-mode'),
+  focusOnTask: (projectId: string, taskId: string) => ipcRenderer.invoke('focus-on-task', projectId, taskId),
   exitFocusMode: () => ipcRenderer.invoke('exit-focus-mode'),
   getFocusUnsavedMs: () => ipcRenderer.invoke('get-focus-unsaved-ms'),
   saveFocusCheckIn: (checkIn: FocusCheckIn) => ipcRenderer.invoke('save-focus-checkin', checkIn),
@@ -131,6 +132,10 @@ export const api = {
   energyPauseUntil: (isoTimestamp: string): Promise<EnergyTrackerConfig> => ipcRenderer.invoke('energy-pause-until', isoTimestamp),
   energyResume: (): Promise<EnergyTrackerConfig> => ipcRenderer.invoke('energy-resume'),
   energySkip: () => ipcRenderer.invoke('energy-skip'),
+  getGameGateConfig: (): Promise<GameGateConfig> => ipcRenderer.invoke('get-game-gate-config'),
+  gameSetEnabled: (enabled: boolean): Promise<GameGateConfig> => ipcRenderer.invoke('game-set-enabled', enabled),
+  gameStartSession: (): Promise<GameGateConfig> => ipcRenderer.invoke('game-start-session'),
+  gameStopSession: (): Promise<GameGateConfig> => ipcRenderer.invoke('game-stop-session'),
   getFocusBlockState: (taskId: string) => ipcRenderer.invoke('focus-blocker-state', taskId),
   saveFocusBlockSelection: (
     taskId: string,

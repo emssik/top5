@@ -11,6 +11,7 @@ import QuickTasksView from './QuickTasksView'
 import ProjectEditor from './ProjectEditor'
 import ProjectCodeMigration from './ProjectCodeMigration'
 import TodayView from './TodayView'
+import TodayHeader from './TodayHeader'
 import ProjectDetailView from './ProjectDetailView'
 import RepeatView from './RepeatView'
 import InlineStatsView from './InlineStatsView'
@@ -259,6 +260,8 @@ export default function Dashboard() {
 
       <div className="main-panel-wrap">
         <div className="dashboard-titlebar" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties} />
+
+        {activeView === 'today' && !selectedProject && <TodayHeader />}
 
         <div className="main">
           {restoreError && (

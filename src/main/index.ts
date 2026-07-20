@@ -12,6 +12,7 @@ import { existsSync, readFileSync, writeFileSync } from 'fs'
 import { registerNudgeHandlers, startNudgeMonitor, stopNudgeMonitor } from './nudge'
 import { registerEnergyHandlers, startEnergyScheduler, stopEnergyScheduler } from './energy-tracker'
 import { registerFocusBlockerHandlers, stopFocusBlocker, pruneFocusTasks } from './focus-blocker'
+import { registerGameGateHandlers, startGameGate, stopGameGate } from './game-gate'
 import { getRepeatingTaskProposals, dateKey } from '../shared/schedule'
 import { getScheduledHabits } from '../shared/habit-schedule'
 import type { QuickTask } from '../shared/types'
@@ -266,12 +267,14 @@ app.whenReady().then(() => {
   registerNudgeHandlers(ipcMain)
   registerEnergyHandlers(ipcMain)
   registerFocusBlockerHandlers(ipcMain)
+  registerGameGateHandlers(ipcMain)
   registerGlobalShortcut(globalShortcut, () => mainWindow)
   createWindow()
   registerLocalShortcuts(mainWindow!)
 
   startNudgeMonitor()
   startEnergyScheduler()
+  startGameGate()
 
   // GC focus-blocker per-task configs for tasks that no longer exist (deleted
   // tasks/projects). Completed tasks still exist, so they keep their config.
@@ -386,4 +389,5 @@ app.on('before-quit', () => {
   stopNudgeMonitor()
   stopEnergyScheduler()
   stopFocusBlocker()
+  stopGameGate()
 })

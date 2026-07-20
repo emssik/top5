@@ -50,6 +50,7 @@ import type {
   EnergyCheckIn,
   EnergyRating,
   EnergyTrackerConfig,
+  GameGateConfig,
   LockedTaskRef,
   WinsLockState,
   WinEntry,
@@ -58,7 +59,7 @@ import type {
 import { STANDALONE_PROJECT_ID } from '../shared/constants'
 
 // Re-export types for convenience
-export type { Task, RepeatSchedule, RepeatingTask, QuickTask, ProjectColor, ProjectLink, Project, AppConfig, FocusCheckIn, OperationLogEntry, AppData, ApiConfig, ApiConfigPublic, EnergyCheckIn, EnergyRating, EnergyTrackerConfig, LockedTaskRef, WinsLockState, WinEntry, StreakStats }
+export type { Task, RepeatSchedule, RepeatingTask, QuickTask, ProjectColor, ProjectLink, Project, AppConfig, FocusCheckIn, OperationLogEntry, AppData, ApiConfig, ApiConfigPublic, EnergyCheckIn, EnergyRating, EnergyTrackerConfig, GameGateConfig, LockedTaskRef, WinsLockState, WinEntry, StreakStats }
 
 const defaultData: AppData = {
   projects: [],
@@ -180,6 +181,13 @@ const DEFAULT_ENERGY_TRACKER_CONFIG: EnergyTrackerConfig = {
   lastFirstActivityDate: null
 }
 
+const DEFAULT_GAME_GATE_CONFIG: GameGateConfig = {
+  enabled: false,
+  tokenBalanceSec: 0,
+  earnRatio: 0.5,
+  sessionStartedAt: null
+}
+
 // --- Daily backup ---
 
 const BACKUP_DIR = join(CONFIG_DIR, 'backups')
@@ -253,6 +261,23 @@ function normalizeEnergyTrackerConfig(value: unknown): EnergyTrackerConfig {
     intervalMaxMin,
     pausedUntil,
     lastFirstActivityDate
+  }
+}
+
+function normalizeGameGateConfig(value: unknown): GameGateConfig {
+  if (!isRecord(value)) return { ...DEFAULT_GAME_GATE_CONFIG }
+  const balanceRaw = typeof value.tokenBalanceSec === 'number' && Number.isFinite(value.tokenBalanceSec) ? value.tokenBalanceSec : 0
+  const ratioRaw = typeof value.earnRatio === 'number' && Number.isFinite(value.earnRatio) && value.earnRatio > 0 ? value.earnRatio : DEFAULT_GAME_GATE_CONFIG.earnRatio
+  let sessionStartedAt: string | null = null
+  if (typeof value.sessionStartedAt === 'string') {
+    const t = Date.parse(value.sessionStartedAt)
+    if (!Number.isNaN(t)) sessionStartedAt = value.sessionStartedAt
+  }
+  return {
+    enabled: typeof value.enabled === 'boolean' ? value.enabled : DEFAULT_GAME_GATE_CONFIG.enabled,
+    tokenBalanceSec: Math.max(0, Math.round(balanceRaw)),
+    earnRatio: ratioRaw,
+    sessionStartedAt
   }
 }
 
@@ -686,6 +711,51 @@ export function saveEnergyTrackerConfig(config: EnergyTrackerConfig): EnergyTrac
   return normalized
 }
 
+// --- GameGate config ---
+
+let cachedGameGateConfig: GameGateConfig | null = null
+
+function loadGameGateConfig(): GameGateConfig {
+  if (cachedGameGateConfig) return cachedGameGateConfig
+  if (!existsSync(DATA_FILE)) {
+    cachedGameGateConfig = { ...DEFAULT_GAME_GATE_CONFIG }
+    return cachedGameGateConfig
+  }
+  try {
+    const raw = readFileSync(DATA_FILE, 'utf-8')
+    const parsed = yaml.load(raw) as any
+    cachedGameGateConfig = normalizeGameGateConfig(parsed?.gameGate)
+  } catch {
+    cachedGameGateConfig = { ...DEFAULT_GAME_GATE_CONFIG }
+  }
+  return cachedGameGateConfig
+}
+
+function saveGameGateConfigToFile(config: GameGateConfig): void {
+  cachedGameGateConfig = config
+  let parsed: any = {}
+  if (existsSync(DATA_FILE)) {
+    try {
+      parsed = yaml.load(readFileSync(DATA_FILE, 'utf-8')) ?? {}
+    } catch {
+      parsed = {}
+    }
+  }
+  parsed.gameGate = config
+  mkdirSync(CONFIG_DIR, { recursive: true })
+  writeFileSync(DATA_FILE, yaml.dump(parsed, { lineWidth: 120, noRefs: true }), 'utf-8')
+}
+
+export function getGameGateConfig(): GameGateConfig {
+  return loadGameGateConfig()
+}
+
+export function saveGameGateConfig(config: GameGateConfig): GameGateConfig {
+  const normalized = normalizeGameGateConfig(config)
+  saveGameGateConfigToFile(normalized)
+  return normalized
+}
+
 // --- Operation log ---
 
 export function appendOperation(entry: Omit<OperationLogEntry, 'id' | 'timestamp'>): void {
@@ -901,7 +971,8 @@ function saveData(data: AppData): void {
   const toSave: any = { ...data }
   delete toSave.apiConfig // Don't save the public version; full apiConfig is managed separately
   delete toSave.energyTracker // Managed separately via saveEnergyTrackerConfigToFile
-  // Merge with existing apiConfig + energyTracker in file
+  delete toSave.gameGate // Managed separately via saveGameGateConfigToFile
+  // Merge with existing apiConfig + energyTracker + gameGate in file
   if (existsSync(DATA_FILE)) {
     try {
       const existing = yaml.load(readFileSync(DATA_FILE, 'utf-8')) as any
@@ -910,6 +981,9 @@ function saveData(data: AppData): void {
       }
       if (existing?.energyTracker) {
         toSave.energyTracker = existing.energyTracker
+      }
+      if (existing?.gameGate) {
+        toSave.gameGate = existing.gameGate
       }
     } catch {
       // ignore
@@ -955,7 +1029,7 @@ export function setData(key: keyof AppData, value: AppData[keyof AppData]): void
 
 export function getAppData(): AppData {
   const data = getData()
-  return { ...data, apiConfig: getApiConfigPublic(), energyTracker: getEnergyTrackerConfig() }
+  return { ...data, apiConfig: getApiConfigPublic(), energyTracker: getEnergyTrackerConfig(), gameGate: getGameGateConfig() }
 }
 
 export function setAppDataKey(key: keyof AppData, value: AppData[keyof AppData]): void {

@@ -18,6 +18,7 @@ export type {
   EnergyCheckIn,
   EnergyRating,
   EnergyTrackerConfig,
+  GameGateConfig,
   NudgeTask,
   LockedTaskRef,
   WinsLockState,
@@ -54,6 +55,7 @@ declare global {
       openExternal: (url: string) => Promise<void>
       openDevTools: () => Promise<void>
       enterFocusMode: () => Promise<void>
+      focusOnTask: (projectId: string, taskId: string) => Promise<{ error: string } | undefined>
       exitFocusMode: () => Promise<void>
       getFocusUnsavedMs: () => Promise<number>
       saveFocusCheckIn: (checkIn: import('../../shared/types').FocusCheckIn) => Promise<import('../../shared/types').FocusCheckIn[]>
@@ -137,6 +139,10 @@ declare global {
       energyPauseUntil: (isoTimestamp: string) => Promise<import('../../shared/types').EnergyTrackerConfig>
       energyResume: () => Promise<import('../../shared/types').EnergyTrackerConfig>
       energySkip: () => Promise<void>
+      getGameGateConfig: () => Promise<import('../../shared/types').GameGateConfig>
+      gameSetEnabled: (enabled: boolean) => Promise<import('../../shared/types').GameGateConfig>
+      gameStartSession: () => Promise<import('../../shared/types').GameGateConfig>
+      gameStopSession: () => Promise<import('../../shared/types').GameGateConfig>
       getFocusBlockState: (taskId: string) => Promise<{
         selection: { groups: string[]; sites: string[]; apps: string[] }
         isSaved: boolean

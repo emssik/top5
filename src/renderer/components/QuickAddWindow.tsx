@@ -4,6 +4,7 @@ import type { Project, ProjectColor, QuickTask, RepeatSchedule, RepeatingTask, A
 import { PROJECT_COLORS, projectColorValue, firstAvailableProjectColor } from '../utils/projects'
 import { sortWeekdays, dateKey } from '../../shared/schedule'
 import { buildQuickAddSchedule } from '../../shared/quick-add'
+import { STANDALONE_PROJECT_ID } from '../../shared/constants'
 
 type Mode = 'task' | 'project' | 'repeat'
 type ScheduleType = 'daily' | 'weekdays' | 'weekly' | 'interval' | 'monthly' | 'lastDay' | 'afterDone'
@@ -77,14 +78,15 @@ export default function QuickAddWindow() {
     }) as RepeatSchedule
   }, [scheduleType, weekdays, intervalDays, monthlyDay, afterDoneDays])
 
-  const handleSubmit = useCallback(async (): Promise<boolean> => {
+  const handleSubmit = useCallback(async (): Promise<{ ok: boolean; focusRef?: { projectId: string; taskId: string } }> => {
     const title = inputValue.trim()
     if (!title) {
       inputRef.current?.focus()
-      return false
+      return { ok: false }
     }
 
     let msg = ''
+    let focusRef: { projectId: string; taskId: string } | undefined
     try {
       if (mode === 'task') {
         if (selectedProjectId) {
@@ -102,6 +104,13 @@ export default function QuickAddWindow() {
             }
             await window.api.saveProject({ ...project, tasks: [...project.tasks, newTask] })
             msg = `Task added to ${project.name}`
+            focusRef = { projectId: project.id, taskId: newTask.id }
+          } else {
+            // Selected project vanished (deleted while window open) — don't close
+            // as if saved; surface it and keep the typed text.
+            setToast('Projekt już nie istnieje')
+            setTimeout(() => setToast(null), 2500)
+            return { ok: false }
           }
         } else {
           const data = await window.api.getAppData()
@@ -118,6 +127,7 @@ export default function QuickAddWindow() {
           }
           await window.api.saveQuickTask(task)
           msg = `Quick task added: "${title}"`
+          focusRef = { projectId: STANDALONE_PROJECT_ID, taskId: task.id }
         }
       } else if (mode === 'project') {
         const data = await window.api.getAppData()
@@ -162,12 +172,28 @@ export default function QuickAddWindow() {
       setToast(msg)
       setTimeout(() => setToast(null), 2500)
       inputRef.current?.focus()
-      return true
+      return { ok: true, focusRef }
     } catch (err) {
       console.error('Quick add failed:', err)
-      return false
+      return { ok: false }
     }
   }, [inputValue, mode, selectedProjectId, pinToToday, inProgress, dueDate, color, description, firstTask, buildSchedule])
+
+  // Save the task then immediately start focus on it, and close the window.
+  const handleSubmitAndFocus = useCallback(async () => {
+    const res = await handleSubmit()
+    if (res.ok && res.focusRef) {
+      const r = await window.api.focusOnTask(res.focusRef.projectId, res.focusRef.taskId)
+      if (r?.error) {
+        // Task was saved, but focus didn't start (e.g. already in focus) — keep
+        // the window open and tell the user instead of closing on a silent fail.
+        setToast('Nie udało się uruchomić focusa')
+        setTimeout(() => setToast(null), 2500)
+      } else {
+        window.api.closeQuickAddWindow()
+      }
+    }
+  }, [handleSubmit])
 
   const switchMode = useCallback((next: Mode) => {
     setMode(next)
@@ -186,7 +212,11 @@ export default function QuickAddWindow() {
         const tag = (e.target as HTMLElement).tagName
         if (tag === 'TEXTAREA') return
         e.preventDefault()
-        handleSubmit().then((ok) => { if (ok) window.api.closeQuickAddWindow() })
+        if (e.shiftKey && mode === 'task') {
+          handleSubmitAndFocus()
+        } else {
+          handleSubmit().then((res) => { if (res.ok) window.api.closeQuickAddWindow() })
+        }
         return
       }
 
@@ -254,7 +284,7 @@ export default function QuickAddWindow() {
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [mode, projects, selectedProjectId, handleSubmit, switchMode])
+  }, [mode, projects, selectedProjectId, handleSubmit, handleSubmitAndFocus, switchMode])
 
   const selectedProject = selectedProjectId ? projects.find((p) => p.id === selectedProjectId) : null
 
@@ -381,18 +411,35 @@ export default function QuickAddWindow() {
               add & close
             </span>
           </div>
-          <button
-            className="px-[14px] py-[5px] rounded-[7px] text-xs font-medium flex items-center gap-[5px] transition-all"
-            style={{
-              background: 'rgba(59,130,246,0.15)',
-              color: '#60a5fa',
-              border: '1px solid rgba(59,130,246,0.3)'
-            }}
-            onClick={() => handleSubmit()}
-          >
-            {mode === 'project' ? 'Create' : 'Add'}
-            <kbd className="text-[9px] px-[3px] rounded-sm" style={{ background: 'rgba(59,130,246,0.2)' }}>{'\u23CE'}</kbd>
-          </button>
+          <div className="flex items-center gap-[8px]">
+            {mode === 'task' && (
+              <button
+                className="px-[12px] py-[5px] rounded-[7px] text-xs font-medium flex items-center gap-[5px] transition-all"
+                style={{
+                  background: 'rgba(34,197,94,0.14)',
+                  color: 'var(--pc-green)',
+                  border: '1px solid rgba(34,197,94,0.3)'
+                }}
+                onClick={() => handleSubmitAndFocus()}
+                title="Dodaj zadanie i od razu uruchom focus"
+              >
+                {'\uD83C\uDFAF'} Dodaj i focus
+                <kbd className="text-[9px] px-[3px] rounded-sm" style={{ background: 'rgba(34,197,94,0.2)' }}>{'\u2318\u21E7\u23CE'}</kbd>
+              </button>
+            )}
+            <button
+              className="px-[14px] py-[5px] rounded-[7px] text-xs font-medium flex items-center gap-[5px] transition-all"
+              style={{
+                background: 'rgba(59,130,246,0.15)',
+                color: '#60a5fa',
+                border: '1px solid rgba(59,130,246,0.3)'
+              }}
+              onClick={() => handleSubmit()}
+            >
+              {mode === 'project' ? 'Create' : 'Add'}
+              <kbd className="text-[9px] px-[3px] rounded-sm" style={{ background: 'rgba(59,130,246,0.2)' }}>{'\u23CE'}</kbd>
+            </button>
+          </div>
         </div>
       </div>
   )

@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.109.0] - 2026-07-20
+
+### Added
+
+- **Kontrolowane granie („tokeny gry")** — gra uruchamiana przez CrossOver jest zablokowana, dopóki nie zbierzesz czasu gry pracą w focusie (1 h focusu = 30 min gry). Zebrane tokeny wydajesz otwierając sesję gry (pasek 🎮 w nagłówku „Dzisiaj"), a gdy się kończą — na 10 minut przed końcem dostajesz ostrzeżenie, po czym gra zostaje zamknięta. Włączasz w Ustawieniach → „Gra (tokeny)"; sen systemu i zamknięcie aplikacji nie spalają już zebranego czasu.
+- **„Dodaj i focus"** — w oknie dodawania zadania (tryb Task) nowy przycisk 🎯 oraz skrót ⌘⇧⏎: zapisuje zadanie i od razu uruchamia na nim focus, bez szukania go na liście.
+
+### Changed
+
+- Today: nagłówek (zegar + pasek gry) jest przyklejony na górze i nie przewija się już razem z listą zadań.
+
 ## [1.108.0] - 2026-06-14
 
 ### Added

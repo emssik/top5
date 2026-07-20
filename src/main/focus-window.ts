@@ -7,6 +7,7 @@ import { showWindowVisible } from './window-utils'
 import { randomUUID } from 'crypto'
 import { appendCheckIn, appendOperation, getAppData, loadCheckIns, setAppDataKey } from './store'
 import { onFocusStart, onFocusStop } from './focus-blocker'
+import { addGameTokens } from './game-gate'
 import { STANDALONE_PROJECT_ID } from '../shared/constants'
 
 let focusWindow: BrowserWindow | null = null
@@ -282,6 +283,15 @@ export function exitFocusMode(): { error: string } | undefined {
         .reduce((sum, c) => sum + (c.minutes ?? (c.response === 'yes' ? 15 : c.response === 'a_little' ? 7 : 0)), 0)
     : 0
   appendOperation({ type: 'focus_ended', ...focusTaskInfo, details: `${reportedMinutes}min` })
+  // Earn game tokens from the elapsed focus time (game-gate decides if enabled).
+  // Cap the start at process launch: a session resumed after a restart carries a
+  // focusStartedAt from before the app was even running, and the closed-app gap
+  // must not be credited as focus.
+  if (focusStartedAt) {
+    const appStartedAt = Date.now() - process.uptime() * 1000
+    const earnFrom = Math.max(focusStartedAt, appStartedAt)
+    addGameTokens((Date.now() - earnFrom) / 1000)
+  }
   focusStartedAt = 0
   focusTaskInfo = {}
 
@@ -376,6 +386,21 @@ export function registerFocusHandlers(
   _getMainWindow = getMainWindow
 
   ipcMain.handle('enter-focus-mode', () => enterFocusMode())
+
+  // Set focus target then enter — used by quick-add's "add & focus" (project id is
+  // STANDALONE_PROJECT_ID for quick tasks). Same shape as nudge-start-focus.
+  ipcMain.handle('focus-on-task', (_event, projectId: string, taskId: string) => {
+    if (focusWindow && !focusWindow.isDestroyed()) return { error: 'already_in_focus' }
+    if (typeof projectId !== 'string' || typeof taskId !== 'string') return { error: 'invalid_args' }
+    const { config } = getAppData()
+    setAppDataKey('config', { ...config, focusProjectId: projectId, focusTaskId: taskId })
+    const result = enterFocusMode()
+    if (result?.error) {
+      // rollback focus target on failure
+      setAppDataKey('config', { ...getAppData().config, focusProjectId: null, focusTaskId: null })
+    }
+    return result
+  })
 
   ipcMain.handle('exit-focus-mode', () => exitFocusMode())
 

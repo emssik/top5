@@ -70,24 +70,6 @@ function formatCountdown(deadline: string): string {
   return `${mins}m`
 }
 
-function TodayClock() {
-  const [now, setNow] = useState(new Date())
-
-  useEffect(() => {
-    const interval = setInterval(() => setNow(new Date()), 1000)
-    return () => clearInterval(interval)
-  }, [])
-
-  const label = useMemo(() => {
-    const days = ['Niedziela', 'Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota']
-    const time = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    return `${days[now.getDay()]}, ${time}`
-    // re-render only when the displayed minute changes
-  }, [now.getDay(), Math.floor(now.getTime() / 60000)])
-
-  return <div className="today-clock">{label}</div>
-}
-
 function CycleRoleBadge({ role, onClick }: { role: CycleRole; onClick?: (e: ReactMouseEvent) => void }) {
   return (
     <span
@@ -1253,8 +1235,6 @@ export default function TodayView({ onSelectView }: { onSelectView?: (view: stri
         setLinksMenu({ x: e.clientX, y: e.clientY })
       }}
     >
-      <TodayClock />
-
       {linksMenu && (
         <ProjectLinksMenu
           projects={projects}

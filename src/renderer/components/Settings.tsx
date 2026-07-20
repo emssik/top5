@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useProjects } from '../hooks/useProjects'
-import type { ApiConfig, EnergyTrackerConfig } from '../types'
+import type { ApiConfig, EnergyTrackerConfig, GameGateConfig } from '../types'
 import { pauseUntilIso, type EnergyPauseKind } from '../utils/energyPause'
 
 interface Props {
@@ -36,6 +36,8 @@ export default function Settings({ open, onClose }: Props) {
   const [energyConfig, setEnergyConfig] = useState<EnergyTrackerConfig | null>(null)
   const [energyMin, setEnergyMin] = useState(60)
   const [energyMax, setEnergyMax] = useState(120)
+  const [showGame, setShowGame] = useState(false)
+  const [gameConfig, setGameConfig] = useState<GameGateConfig | null>(null)
 
   useEffect(() => {
     setQuickTasksLimit(config.quickTasksLimit ?? 5)
@@ -54,6 +56,7 @@ export default function Settings({ open, onClose }: Props) {
         setEnergyMin(cfg.intervalMinMin)
         setEnergyMax(cfg.intervalMaxMin)
       })
+      window.api.getGameGateConfig().then(setGameConfig)
     }
   }, [open])
 
@@ -88,6 +91,12 @@ export default function Settings({ open, onClose }: Props) {
     const next = await window.api.saveEnergyTrackerConfig({ ...energyConfig, enabled: !energyConfig.enabled })
     setEnergyConfig(next)
   }, [energyConfig])
+
+  const handleToggleGame = useCallback(async () => {
+    if (!gameConfig) return
+    const next = await window.api.gameSetEnabled(!gameConfig.enabled)
+    setGameConfig(next)
+  }, [gameConfig])
 
   const handleSaveEnergyInterval = useCallback(async () => {
     if (!energyConfig) return
@@ -387,6 +396,41 @@ export default function Settings({ open, onClose }: Props) {
                 <div className="modal-row">
                   <label />
                   <span className="value" style={{ fontSize: 11, opacity: 0.5 }}>energy.jsonl</span>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        <div style={{ marginTop: 16, borderTop: '1px solid var(--c-border-subtle)', paddingTop: 12 }}>
+          <div className={`done-toggle ${showGame ? 'open' : ''}`} onClick={() => setShowGame((v) => !v)} style={{ fontWeight: 600, color: 'var(--c-text-heading)' }}>
+            <span>Gra (tokeny)</span>
+            <span className="chevron">▸</span>
+          </div>
+          <div className={`done-list ${showGame ? 'open' : ''}`}>
+            {gameConfig && (
+              <>
+                <div className="modal-row">
+                  <label>Status</label>
+                  <button
+                    className={`form-btn ${gameConfig.enabled ? 'form-btn-primary' : 'form-btn-secondary'}`}
+                    style={{ flex: 'none', padding: '4px 14px', fontSize: 12 }}
+                    onClick={handleToggleGame}
+                  >
+                    {gameConfig.enabled ? 'Enabled' : 'Disabled'}
+                  </button>
+                </div>
+                <div className="modal-row">
+                  <label>Zapas</label>
+                  <span className="value" style={{ fontSize: 12 }}>{Math.round(gameConfig.tokenBalanceSec / 60)} min gry</span>
+                </div>
+                <div className="modal-row">
+                  <label>Przelicznik</label>
+                  <span className="value" style={{ fontSize: 12 }}>1 h focusu = {Math.round(gameConfig.earnRatio * 60)} min gry</span>
+                </div>
+                <div className="modal-row">
+                  <label />
+                  <span className="value" style={{ fontSize: 11, opacity: 0.5 }}>blokuje CrossOver bez tokenów</span>
                 </div>
               </>
             )}
