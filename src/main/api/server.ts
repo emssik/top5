@@ -10,6 +10,7 @@ import { registerNoteRoutes } from './routes/notes'
 import { registerFocusRoutes } from './routes/focus'
 import { registerTodayRoutes } from './routes/today'
 import { registerHabitRoutes } from './routes/habits'
+import { registerDumpRoutes } from './routes/dump'
 
 let server: FastifyInstance | null = null
 
@@ -38,6 +39,7 @@ function createServer(): FastifyInstance {
   registerFocusRoutes(fastify)
   registerTodayRoutes(fastify)
   registerHabitRoutes(fastify)
+  registerDumpRoutes(fastify)
 
   return fastify
 }

@@ -54,6 +54,15 @@ export function dateKey(date: Date): string {
   return `${y}-${m}-${d}`
 }
 
+// Day rolls over at 6:00 local time, not midnight — so working past midnight
+// stays in the same (logical) day.
+// Calendar arithmetic, not "minus 6h in ms" — that is off by an hour on DST days.
+export function logicalDateKey(now: Date = new Date()): string {
+  const d = new Date(now)
+  if (d.getHours() < 6) d.setDate(d.getDate() - 1)
+  return dateKey(d)
+}
+
 function dayStart(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate())
 }

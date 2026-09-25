@@ -1984,6 +1984,43 @@ body {
   color: var(--c-text-muted);
 }
 
+/* Zrzut (dump.md) */
+.dump-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.dump-textarea {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  padding: 12px 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--c-border-subtle);
+  border-radius: 8px;
+  color: var(--c-text-primary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  resize: none;
+  outline: none;
+}
+
+.dump-textarea:focus {
+  border-color: var(--c-border);
+}
+
+.dump-textarea::placeholder {
+  color: var(--c-text-muted);
+}
+
+.dump-bar-btn {
+  flex: 0 0 auto;
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
 /* 5 Wins */
 .wins-lock-bar {
   display: flex;

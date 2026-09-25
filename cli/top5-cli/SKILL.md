@@ -5,7 +5,8 @@ description: >
   Use when the user asks to: list projects, list tasks in a project, show task details,
   add tasks, delete tasks, mark tasks as done/undone, manage quick tasks, set due dates,
   create task notes, start/stop focus mode, send a focus heartbeat/ping, manage repeating tasks,
-  or list habits (read-only — what recurring habits the user keeps and their current streak).
+  or list habits (read-only — what recurring habits the user keeps and their current streak),
+  or read / clean up / append to the "Zrzut" plain-text dump (`top5 dump`).
   Triggers: "top5", "projects list", "add task", "delete task", "remove task", "mark done",
   "quick tasks", "task note", "show my tasks", "show task", "task details",
   "what projects do I have", "focus", "start focus", "stop focus", "focus ping", "heartbeat",
@@ -23,7 +24,8 @@ description: >
   "cycle role", "cycle-role", "12w", "12wy", "12 week year", "moscow", "must should could",
   "cycle reset", "close cycle", "end of cycle", "zamknij cykl", "reset cyklu", "must", "should", "could",
   "cycle reorder", "reorder cycle", "12w reorder", "przesuń w cyklu", "kolejność cyklu", "uporządkuj 12w",
-  "sub-task", "subtask", "parent", "parent code", "kotwica", "podzadanie", "pod kotwicą", "anchor".
+  "sub-task", "subtask", "parent", "parent code", "kotwica", "podzadanie", "pod kotwicą", "anchor",
+  "zrzut", "dump", "brain dump", "uporządkuj zrzut", "posprzątaj zrzut", "rozbij zrzut na projekty", "dopisz do zrzutu".
 ---
 
 # top5-cli
@@ -473,6 +475,36 @@ top5 12w --tree --json                  # children attached as `children` arrays
 
 **When to suggest using this:** the user is working with 12WY (`/biz`, MoSCoW, anchors) and wants to break down an anchor into smaller actionable pieces. Anchor stays in `top5 12w` for tracking; sub-tasks live as regular tasks in the project but render with the `12WY` badge so the user knows they belong to the cycle.
 
+### Zrzut (dump)
+
+Plain-text scratchpad from the app's "Zrzut" tab (`dump.md` next to `data.yaml`) — the user
+dumps everything to do there, without projects. Convention: `- ` = open, `+ ` = done; done
+lines sit at the end of the file under `## Zrobione` as `+ YYYY-MM-DD text` (⌘D in the app). An item may span several lines: plain-text lines (no `- `/`+ `/`#` prefix) directly below an item line belong to it — keep them together when reorganizing.
+
+```bash
+top5 dump                          # raw text on stdout (no decoration)
+top5 dump --json                   # {"text": "...", "mtime": 1727251234567}
+top5 dump --append "kupić toner"   # add one open line (above "## Zrobione"); "- " added if missing
+cat new.md | top5 dump --set       # replace whole text from stdin (mtime read right before saving)
+cat new.md | top5 dump --set --base-mtime 1727251234567   # strict: only if unchanged since that read
+```
+
+`mtime` = integer ms (or `null` when the file doesn't exist). On conflict (the user edited the
+file in the meantime) the API returns **409**, nothing is saved, and the CLI exits with code 1:
+`Conflict — dump.md changed since it was read`. Re-read and redo — never force.
+
+**Workflow: clean up / split the dump into projects**
+
+1. `top5 dump --json > /tmp/dump.json` — keep `text` and `mtime`.
+2. Reorganize the text (dedupe, group, rephrase). Where the user wants it, create real tasks with
+   `top5 add <CODE> "..."` / `top5 qt add "..."` (look up codes with `top5 projects` first —
+   never guess) and drop those lines from the dump or mark them `+ `.
+3. Keep the `## Zrobione` section intact (history) unless the user asks to trim it.
+4. Write the new text to a file, then save with strict protection:
+   `top5 dump --set --base-mtime <mtime from step 1> < /tmp/dump.new.md`. Don't pipe a shell variable —
+   variables don't survive between separate commands, and an empty stdin is refused.
+5. On 409: the user typed something meanwhile — re-read (step 1) and apply your changes again.
+
 ### Health check
 
 ```bash
@@ -597,3 +629,4 @@ top5 rt rm 3                # delete definition
 | Timeout (>5s)        | `Request timed out`                    |
 | Already in focus     | `already_in_focus` (409)               |
 | Not in focus (stop)  | `not_in_focus` (409)                   |
+| Dump changed (--set) | `Conflict — dump.md changed …` (409)   |

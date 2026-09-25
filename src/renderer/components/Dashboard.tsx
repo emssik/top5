@@ -17,6 +17,7 @@ import RepeatView from './RepeatView'
 import InlineStatsView from './InlineStatsView'
 import CycleView from './CycleView'
 import { HabitsView } from './habits/HabitsView'
+import DumpView from './DumpView'
 
 export default function Dashboard() {
   const { projects, config, saveConfig, saveProject, archiveProject, unarchiveProject, unsuspendProject, suspendProject, reorderProjects, moveTaskToProject } = useProjects()
@@ -274,6 +275,7 @@ export default function Dashboard() {
           {activeView === 'cycle' && <CycleView />}
           {activeView === 'repeat' && <RepeatView />}
           {activeView === 'habits' && <HabitsView />}
+          {activeView === 'dump' && <DumpView />}
           {activeView === 'stats' && <InlineStatsView />}
 
           {selectedProject && (

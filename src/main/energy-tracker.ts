@@ -11,21 +11,13 @@ import {
   notifyAllWindows
 } from './store'
 import type { EnergyCheckIn, EnergyTrackerConfig } from '../shared/types'
-import { dateKey } from '../shared/schedule'
+import { logicalDateKey } from '../shared/schedule'
 
 const IDLE_THRESHOLD_S = 120
 const IDLE_RECHECK_MS = 60_000
 const FIRST_ACTIVITY_IDLE_THRESHOLD_S = 60
 const FIRST_CHECKIN_MIN_MS = 5 * 60_000
 const FIRST_CHECKIN_MAX_MS = 15 * 60_000
-const DAY_START_HOUR = 6
-
-// Day rolls over at 6:00 local time, not midnight — so working past midnight
-// stays in the same day for first-activity detection.
-function currentLogicalDay(): string {
-  const shifted = new Date(Date.now() - DAY_START_HOUR * 60 * 60_000)
-  return dateKey(shifted)
-}
 
 let scheduledTimeout: ReturnType<typeof setTimeout> | null = null
 let energyWindow: BrowserWindow | null = null
@@ -124,7 +116,7 @@ function tick(): void {
     return
   }
 
-  const today = currentLogicalDay()
+  const today = logicalDateKey()
   const idleSeconds = powerMonitor.getSystemIdleTime()
 
   // First activity of the day → schedule the first check-in 5-15 min later
@@ -158,7 +150,7 @@ export function startEnergyScheduler(): void {
   if (scheduledTimeout) return
   const config = getEnergyTrackerConfig()
   if (!config.enabled) return
-  const today = currentLogicalDay()
+  const today = logicalDateKey()
   if (config.lastFirstActivityDate !== today) {
     scheduledTimeout = setTimeout(tick, IDLE_RECHECK_MS)
   } else {

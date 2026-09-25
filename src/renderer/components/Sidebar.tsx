@@ -268,6 +268,7 @@ export default function Sidebar({
       <div className="sidebar-section">
         <SidebarItem active={activeView === 'today'} icon="▶" label={todayTime ? `Today (${todayTime})` : 'Today'} onClick={() => onSelectView('today')} />
         <SidebarItem active={activeView === 'cycle'} icon="◷" label={cycleLabel} onClick={() => onSelectView('cycle')} />
+        <SidebarItem active={activeView === 'dump'} icon="✎" label="Zrzut" onClick={() => onSelectView('dump')} />
         <SidebarItem icon="👁" label="Clean view" onClick={onToggleCleanView} />
         <SidebarItem icon="📝" label="Quick notes" onClick={onToggleNotes} />
       </div>

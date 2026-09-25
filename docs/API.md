@@ -471,6 +471,44 @@ Returns all non-archived habits as today-summary entries (schedule, today status
 
 ---
 
+### Dump („Zrzut")
+
+Plain-text scratchpad stored as `dump.md` next to `data.yaml` (missing file = empty text). Convention: `- ` = open line, `+ ` = done line; done lines live at the end of the file under `## Zrobione` as `+ YYYY-MM-DD text`. The app doesn't interpret the text beyond that.
+
+Writes are guarded by `mtime` (optimistic lock): `mtime` is the file's modification time in **integer milliseconds**, or `null` when the file doesn't exist yet. Every successful write notifies the UI to reload.
+
+#### `GET /dump`
+
+**Response:** `{ ok, data: { text: string, mtime: number | null } }`
+
+#### `PUT /dump`
+
+Replaces the whole text — only if the file's current `mtime` equals `baseMtime` (the value from your last read).
+
+**Body:**
+
+```json
+{ "text": "- a\n- b\n", "baseMtime": 1727251234567 }
+```
+
+`baseMtime` is required in practice: omitted or `null` means "the file must not exist yet".
+
+**Response:** `{ ok, data: { text, mtime } }` — the new `mtime` to use for the next write.
+
+**Errors:** `409` `{ ok: false, error: "conflict" }` when the file changed since `baseMtime` (nothing is saved — re-read, re-apply, retry). `400` `invalid` if `text` is not a string or `baseMtime` is not a number/null; `400` `too_large` if `text` exceeds 1 MB (UTF-8).
+
+#### `POST /dump/append`
+
+Adds one line at the end of the open list — directly above `## Zrobione` (before the blank lines separating it), or at the end of the file if there's no such header. Additive, so no `baseMtime`.
+
+**Body:** `{ "line": "zadzwonić do księgowej" }` — `- ` is prepended unless the line already starts with `- ` or `+ `.
+
+**Response:** `{ ok, data: { text, mtime } }`
+
+**Errors:** `400` `invalid` if `line` is not a string, is empty, or contains a newline; `400` `too_large` if the result would exceed 1 MB.
+
+---
+
 ## Data types
 
 ### Project

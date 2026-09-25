@@ -31,6 +31,7 @@ import * as taskNotesService from './service/task-notes'
 import * as myccService from './service/mycc'
 import * as taskImageService from './service/task-images'
 import * as habitService from './service/habits'
+import * as dumpService from './service/dump'
 import { isSafeFilename } from '../shared/filename'
 import { getFocusWindow, stopFocusForCompletedTask } from './focus-window'
 import type {
@@ -545,7 +546,8 @@ function dailyBackup(): void {
 
   // Collect files to backup and check if anything changed since last backup
   const WINS_FILE = join(CONFIG_DIR, 'wins.jsonl')
-  const filesToBackup = [DATA_FILE, CHECKINS_FILE, OPERATIONS_FILE, WINS_FILE, ENERGY_FILE].filter((f) => existsSync(f))
+  const DUMP_FILE = join(CONFIG_DIR, 'dump.md')
+  const filesToBackup = [DATA_FILE, CHECKINS_FILE, OPERATIONS_FILE, WINS_FILE, ENERGY_FILE, DUMP_FILE].filter((f) => existsSync(f))
   if (filesToBackup.length === 0) return
 
   // Hash current content
@@ -1140,6 +1142,10 @@ export function registerStoreHandlers(ipcMain: IpcMain): void {
   ipcMain.handle('save-quick-notes', (_event, notes: string) => {
     setData('quickNotes', notes)
   })
+
+  ipcMain.handle('get-dump', () => dumpService.getDump())
+
+  ipcMain.handle('save-dump', (_event, text: unknown, baseMtime: unknown) => dumpService.saveDump(text, baseMtime))
 
   ipcMain.handle('save-config', (_event, config: unknown) => {
     if (!isValidAppConfig(config)) return

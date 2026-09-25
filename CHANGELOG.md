@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.110.0] - 2026-09-25
+
+### Added
+
+- **Zakładka „Zrzut"** — zwykły notatnik do szybkiego wyrzucenia z głowy wszystkiego, co jest do zrobienia, bez rozbijania na projekty. Linie `- ` to rzeczy otwarte, `+ ` zrobione; licznik w nagłówku pokazuje ile jest jednych i drugich. **⌘D** na zadaniu oznacza je jako zrobione (ląduje na końcu pod „## Zrobione" z datą) albo przywraca zrobione do listy. Zadanie może mieć kilka linii — zwykły tekst pod linią `- ` jest jego częścią i przenosi się razem z nią. Zapis automatyczny; gdy plik zmieni się z zewnątrz, aplikacja nie nadpisze Twojego tekstu, tylko zapyta, którą wersję zostawić.
+- Zrzut jest dostępny przez API (`/api/v1/dump`) i CLI (`top5 dump`, `--set`, `--append`), więc zewnętrzny model może go pobrać, uporządkować i odesłać.
+
+### Fixed
+
+- Tracker energii nie myli już dnia o godzinę w dni zmiany czasu (dzień nadal zaczyna się o 6:00).
+
 ## [1.109.1] - 2026-07-20
 
 ### Fixed

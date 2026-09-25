@@ -47,6 +47,8 @@ declare global {
       suspendProject: (id: string) => Promise<import('../../shared/types').Project[]>
       unsuspendProject: (id: string) => Promise<{ projects: import('../../shared/types').Project[] } | { error: string }>
       saveQuickNotes: (notes: string) => Promise<void>
+      getDump: () => Promise<import('../../shared/dump').DumpState>
+      saveDump: (text: string, baseMtime: number | null) => Promise<import('../../shared/dump').DumpState | import('../../shared/dump').DumpError>
       saveConfig: (config: import('../../shared/types').AppConfig) => Promise<void>
       launchVscode: (path: string) => Promise<void>
       launchIterm: (path: string, tabName?: string) => Promise<void>

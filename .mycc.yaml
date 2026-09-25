@@ -11,6 +11,7 @@ context:
     data.yaml       — projects/tasks data (iCloud sync)
     checkins.jsonl  — focus check-in journal
     energy.jsonl    — energy/mood/hunger check-in journal
+    dump.md         — "Zrzut" plain-text scratchpad (UI tab + /api/v1/dump)
   testing: |
     npm run test       — schedule unit tests (tsc + node --test)
     npm run test:api   — HTTP API tests (vitest, 66 tests, Electron mocked)
