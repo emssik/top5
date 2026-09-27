@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { rmSync, writeFileSync, utimesSync } from 'fs'
 import { join } from 'path'
 import { setupTestEnv, getTestServer, getTestApiKey, getTestDir } from './setup'
-import { toggleDumpLines, countDumpLines } from '../../src/shared/dump'
+import { toggleDumpLines, countDumpLines, dumpItemTitle } from '../../src/shared/dump'
 
 setupTestEnv()
 
@@ -96,5 +96,26 @@ describe('Dump API', () => {
     const server = await getTestServer()
     const res = await server.inject({ method: 'GET', url: '/api/v1/dump' })
     expect(res.statusCode).toBe(401)
+  })
+})
+
+describe('dump ↔ quick task link (⌘F)', () => {
+  it('finds the title of the open item under the cursor', () => {
+    const text = '- a\n- zadzwonić\ndo X\n+ 2026-01-01 b\n# note\n'
+    expect(dumpItemTitle(text, text.indexOf('do X'))).toBe('zadzwonić')
+    expect(dumpItemTitle(text, text.indexOf('+ 2026'))).toBeNull()
+    expect(dumpItemTitle(text, text.indexOf('# note'))).toBeNull()
+  })
+
+  it('completing a quick task ticks off the dump item with the same title', async () => {
+    const server = await getTestServer()
+    writeFileSync(join(getTestDir(), 'dump.md'), '- a\n- zadzwonić\ndo X\n')
+    const id = 'qt-dump-link'
+    const task = { id, title: 'zadzwonić', completed: false, createdAt: new Date().toISOString(), completedAt: null, order: 0 }
+    const created = await server.inject({ method: 'POST', url: '/api/v1/quick-tasks', headers: auth, payload: task })
+    expect(created.statusCode).toBe(201)
+    await server.inject({ method: 'POST', url: `/api/v1/quick-tasks/${id}/complete`, headers: auth })
+    const res = await server.inject({ method: 'GET', url: '/api/v1/dump', headers: auth })
+    expect(res.json().data.text).toMatch(/^- a\n\n## Zrobione\n\+ \d{4}-\d{2}-\d{2} zadzwonić\ndo X\n$/)
   })
 })

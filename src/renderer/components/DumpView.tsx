@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { countDumpLines, toggleDumpLines } from '../../shared/dump'
+import { nanoid } from 'nanoid'
+import { countDumpLines, dumpItemTitle, toggleDumpLines } from '../../shared/dump'
 import { logicalDateKey } from '../../shared/schedule'
+import { STANDALONE_PROJECT_ID } from '../../shared/constants'
 
 const SAVE_DEBOUNCE_MS = 500
 
@@ -93,8 +95,39 @@ export default function DumpView() {
     timerRef.current = setTimeout(() => void save(), SAVE_DEBOUNCE_MS)
   }
 
+  // ⌘F: focus on the item under the cursor — reuse the open quick task with the same
+  // title, or create one. The line stays; completing the task ticks it off (main process).
+  const focusOnItem = async (el: HTMLTextAreaElement) => {
+    const title = dumpItemTitle(el.value, el.selectionStart)
+    if (!title) return
+    const busy = 'Trwa już inny focus — zakończ go i spróbuj ponownie.'
+    try {
+      await save()
+      const { quickTasks, config } = await window.api.getAppData()
+      // Don't create a quick task we can't focus on anyway.
+      if (config.focusTaskId) return setError(busy)
+      // Repeating instances are skipped: completing them never ticks the dump line.
+      let id = quickTasks.find((t) => !t.completed && !t.repeatingTaskId && t.title.trim() === title)?.id
+      if (!id) {
+        id = nanoid()
+        await window.api.saveQuickTask({ id, title, completed: false, createdAt: new Date().toISOString(), completedAt: null, order: 0 })
+      }
+      const result = await window.api.focusOnTask(STANDALONE_PROJECT_ID, id)
+      if (result?.error) setError(result.error === 'already_in_focus' ? busy : 'Nie udało się uruchomić focusa.')
+    } catch (err) {
+      setError(`Nie udało się uruchomić focusa: ${err instanceof Error ? err.message : String(err)}`)
+    }
+  }
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (!e.metaKey || e.shiftKey || e.altKey || e.ctrlKey || e.key.toLowerCase() !== 'd') return
+    if (!e.metaKey || e.shiftKey || e.altKey || e.ctrlKey) return
+    const key = e.key.toLowerCase()
+    if (key === 'f') {
+      e.preventDefault()
+      void focusOnItem(e.currentTarget)
+      return
+    }
+    if (key !== 'd') return
     e.preventDefault()
     const el = e.currentTarget
     const result = toggleDumpLines(el.value, el.selectionStart, el.selectionEnd, logicalDateKey())
@@ -166,7 +199,7 @@ export default function DumpView() {
         onChange={(e) => handleChange(e.target.value)}
         onKeyDown={handleKeyDown}
         onBlur={() => void save()}
-        placeholder={'- rzecz do zrobienia\n\n⌘D — oznacz linię jako zrobioną / przywróć'}
+        placeholder={'- rzecz do zrobienia\n\n⌘D — oznacz jako zrobione / przywróć\n⌘F — focus na zadaniu (tworzy quick task)'}
         spellCheck={false}
       />
     </div>

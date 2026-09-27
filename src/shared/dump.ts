@@ -56,6 +56,35 @@ function itemRange(lines: string[], i: number): [number, number] {
   return [start, end]
 }
 
+// Title of the open item starting at line i (its first line without `- `), or null
+// when line i isn't the head of an open item. Links a dump item to a quick task (⌘F).
+function openItemTitle(lines: string[], i: number): string | null {
+  const t = lines[i].trim()
+  if (t === '' || t.startsWith('#') || isDone(lines[i])) return null
+  // Plain text right below an item / other plain text continues it — not a head. O(1), no itemRange scan.
+  if (!isOpen(lines[i]) && i > 0 && (isContinuation(lines[i - 1]) || isOpen(lines[i - 1]) || isDone(lines[i - 1]))) return null
+  return (isOpen(lines[i]) ? t.slice(2) : t).trim() || null
+}
+
+// ⌘F: title of the open item under the cursor.
+export function dumpItemTitle(text: string, pos: number): string | null {
+  const lines = text.split('\n')
+  const i = text.slice(0, pos).split('\n').length - 1
+  return openItemTitle(lines, itemRange(lines, i)[0])
+}
+
+// Marks the first open item titled `title` as done (same as ⌘D); null when there's none.
+// ponytail: powiązanie po tekście — zmiana tytułu linii/taska je zrywa; ukryty identyfikator w linii, jeśli zacznie boleć
+export function completeDumpItem(text: string, title: string, date: string): string | null {
+  const lines = text.split('\n')
+  let pos = 0
+  for (let i = 0; i < lines.length; i++) {
+    if (openItemTitle(lines, i) === title.trim()) return toggleDumpLines(text, pos, pos, date)?.text ?? null
+    pos += lines[i].length + 1
+  }
+  return null
+}
+
 /**
  * ⌘D: toggles every item touched by the selection [selStart, selEnd] — the whole
  * item, including its continuation lines.

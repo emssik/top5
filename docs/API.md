@@ -473,7 +473,7 @@ Returns all non-archived habits as today-summary entries (schedule, today status
 
 ### Dump („Zrzut")
 
-Plain-text scratchpad stored as `dump.md` next to `data.yaml` (missing file = empty text). Convention: `- ` = open line, `+ ` = done line; done lines live at the end of the file under `## Zrobione` as `+ YYYY-MM-DD text`. The app doesn't interpret the text beyond that.
+Plain-text scratchpad stored as `dump.md` next to `data.yaml` (missing file = empty text). Convention: `- ` = open line, `+ ` = done line; done lines live at the end of the file under `## Zrobione` as `+ YYYY-MM-DD text`. Lines starting with `#` are comments / headers — not items (not counted, skipped by ⌘D). The app doesn't interpret the text beyond that. Side effect: completing a quick task (`POST /quick-tasks/:id/complete`, UI, focus window) moves the first open dump item whose first line equals the task title under `## Zrobione` — the ⌘F link (repeating quick tasks excluded).
 
 Writes are guarded by `mtime` (optimistic lock): `mtime` is the file's modification time in **integer milliseconds**, or `null` when the file doesn't exist yet. Every successful write notifies the UI to reload.
 

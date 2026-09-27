@@ -1,7 +1,8 @@
 import { readFileSync, writeFileSync, renameSync, statSync, utimesSync } from 'fs'
 import { join } from 'path'
 import { getConfigDir } from '../store'
-import { appendOpenLine } from '../../shared/dump'
+import { appendOpenLine, completeDumpItem } from '../../shared/dump'
+import { logicalDateKey } from '../../shared/schedule'
 import type { DumpState, DumpError } from '../../shared/dump'
 
 // "Zrzut" — a single plain-text file next to data.yaml. Every write is guarded by
@@ -58,4 +59,15 @@ export function appendDumpLine(line: unknown): DumpState | DumpError {
   const text = appendOpenLine(getDump().text, line.trim())
   if (Buffer.byteLength(text, 'utf-8') > MAX_DUMP_BYTES) return { error: 'too_large' }
   return writeDump(text)
+}
+
+// A quick task started from the dump (⌘F) was completed — tick off its dump line.
+// Never throws: completing the task must not fail because of the dump.
+export function completeDumpItemByTitle(title: string): void {
+  try {
+    const text = completeDumpItem(getDump().text, title, logicalDateKey())
+    if (text !== null && Buffer.byteLength(text, 'utf-8') <= MAX_DUMP_BYTES) writeDump(text)
+  } catch (err) {
+    console.error('[dump] failed to mark item done:', err)
+  }
 }

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.111.0] - 2026-09-27
+
+### Added
+
+- **⌘F w Zrzucie** — uruchamia focus na zadaniu pod kursorem: tworzy quick task o tej samej nazwie (albo używa istniejącego, jeśli już jest). Linia zostaje w zrzucie, a gdy zamkniesz quick task, sama przenosi się do „## Zrobione” z datą.
+
 ## [1.110.0] - 2026-09-25
 
 ### Added

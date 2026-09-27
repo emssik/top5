@@ -479,7 +479,7 @@ top5 12w --tree --json                  # children attached as `children` arrays
 
 Plain-text scratchpad from the app's "Zrzut" tab (`dump.md` next to `data.yaml`) — the user
 dumps everything to do there, without projects. Convention: `- ` = open, `+ ` = done; done
-lines sit at the end of the file under `## Zrobione` as `+ YYYY-MM-DD text` (⌘D in the app). An item may span several lines: plain-text lines (no `- `/`+ `/`#` prefix) directly below an item line belong to it — keep them together when reorganizing.
+lines sit at the end of the file under `## Zrobione` as `+ YYYY-MM-DD text` (⌘D in the app). An item may span several lines: plain-text lines (no `- `/`+ `/`#` prefix) directly below an item line belong to it — keep them together when reorganizing. Lines starting with `#` are the user's comments/section headers (`## Zrobione` is one of them) — not tasks: never turn them into tasks or mark them done; keep them where they are unless asked. A `#` line ends the item above it. ⌘F in the app starts focus on an item via a quick task with the same title (the line stays); completing that quick task (`top5 qt done` too) ticks the dump line off automatically. So when reorganizing, don't reword lines that already have a same-titled open quick task — that breaks the link.
 
 ```bash
 top5 dump                          # raw text on stdout (no decoration)

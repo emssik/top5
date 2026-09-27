@@ -8,6 +8,7 @@ import {
   taskTimeMinutesToday,
   isValidQuickTask
 } from '../store'
+import { completeDumpItemByTitle } from './dump'
 
 type ServiceError = { error: 'not_found' | 'validation' }
 
@@ -62,11 +63,14 @@ export function completeQuickTask(id: string): QuickTask[] | ServiceError {
   const quickTasks = [...data.quickTasks]
   const task = quickTasks.find((t) => t.id === id)
   if (!task) return { error: 'not_found' }
+  const wasCompleted = task.completed
   task.completed = true
   task.completedAt = new Date().toISOString()
   task.inProgress = false
   setData('quickTasks', quickTasks)
   const mins = taskTimeMinutes(task.id)
+  // Re-completing (e.g. a repeated API call) must not tick off another same-titled dump item.
+  if (!wasCompleted && !task.repeatingTaskId) completeDumpItemByTitle(task.title)
   appendOperation({ type: 'quick_task_completed', taskTitle: task.title, taskCode: formatQuickTaskId(task.taskNumber) || undefined, ...(mins > 0 && { details: `${mins}min` }) })
   // Update repeating task stats
   if (task.repeatingTaskId) {
