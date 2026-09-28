@@ -283,15 +283,9 @@ export function exitFocusMode(): { error: string } | undefined {
         .reduce((sum, c) => sum + (c.minutes ?? (c.response === 'yes' ? 15 : c.response === 'a_little' ? 7 : 0)), 0)
     : 0
   appendOperation({ type: 'focus_ended', ...focusTaskInfo, details: `${reportedMinutes}min` })
-  // Earn game tokens from the elapsed focus time (game-gate decides if enabled).
-  // Cap the start at process launch: a session resumed after a restart carries a
-  // focusStartedAt from before the app was even running, and the closed-app gap
-  // must not be credited as focus.
-  if (focusStartedAt) {
-    const appStartedAt = Date.now() - process.uptime() * 1000
-    const earnFrom = Math.max(focusStartedAt, appStartedAt)
-    addGameTokens((Date.now() - earnFrom) / 1000)
-  }
+  // Earn game tokens from the reported (check-in) minutes, not wall-clock time —
+  // a focus left running for hours must not credit hours of play.
+  addGameTokens(reportedMinutes * 60)
   focusStartedAt = 0
   focusTaskInfo = {}
 

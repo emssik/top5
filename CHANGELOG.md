@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Czas gry z focusa** — tokeny naliczają się z minut zatwierdzonych w check-inach (tych samych co w „Focus ended (N min)”), a nie z tego, jak długo focus był włączony. Wcześniej focus zostawiony na kilka godzin dawał kilka godzin gry.
+
 ## [1.111.0] - 2026-09-27
 
 ### Added
