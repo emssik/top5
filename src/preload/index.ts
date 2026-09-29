@@ -20,6 +20,7 @@ export const api = {
   saveQuickNotes: (notes: string) => ipcRenderer.invoke('save-quick-notes', notes),
   getDump: () => ipcRenderer.invoke('get-dump'),
   saveDump: (text: string, baseMtime: number | null) => ipcRenderer.invoke('save-dump', text, baseMtime),
+  mailToDump: () => ipcRenderer.invoke('mail-to-dump'),
   saveConfig: (config: AppConfig) => ipcRenderer.invoke('save-config', config),
   launchVscode: (path: string) => ipcRenderer.invoke('launch-vscode', path),
   launchIterm: (path: string, tabName?: string) => ipcRenderer.invoke('launch-iterm', path, tabName),

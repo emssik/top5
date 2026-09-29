@@ -7,7 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.112.0] - 2026-09-29
+
+### Added
+
+- **Zadania z maili do siebie** — top5 przegląda Gmaila (IMAP, hasło aplikacji w `[mailtodump]` w `~/.agents-tools/config.toml`) przy starcie i co 30 min, a maile wysłane wyłącznie do siebie ocenia `claude -p` (sonnet). Zadania dopisuje na koniec Zrzutu, a przetworzone maile oznacza etykietą `top5-zrzucone`, więc nic nie wpada dwa razy. Maile do innych osób z Tobą w kopii są pomijane. Przycisk **✉ Sprawdź maile** w Zrzucie uruchamia to od razu.
+
 ### Fixed
+
+- **Zrzut: brak konfliktu przy dopisku z zewnątrz** — gdy w trakcie pisania coś dopisze linie do zrzutu (maile, `top5 dump --append`, API), okno dołącza je do Twojego tekstu, zamiast pokazywać pasek konfliktu, w którym jeden wybór kasował dopisane zadania.
 
 - **Czas gry z focusa** — tokeny naliczają się z minut zatwierdzonych w check-inach (tych samych co w „Focus ended (N min)”), a nie z tego, jak długo focus był włączony. Wcześniej focus zostawiony na kilka godzin dawał kilka godzin gry.
 

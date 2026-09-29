@@ -13,6 +13,7 @@ import { registerNudgeHandlers, startNudgeMonitor, stopNudgeMonitor } from './nu
 import { registerEnergyHandlers, startEnergyScheduler, stopEnergyScheduler } from './energy-tracker'
 import { registerFocusBlockerHandlers, stopFocusBlocker, pruneFocusTasks } from './focus-blocker'
 import { registerGameGateHandlers, startGameGate, stopGameGate } from './game-gate'
+import { registerMailToDumpHandlers, startMailToDump } from './mail-to-dump'
 import { getRepeatingTaskProposals, dateKey } from '../shared/schedule'
 import { getScheduledHabits } from '../shared/habit-schedule'
 import type { QuickTask } from '../shared/types'
@@ -268,6 +269,7 @@ app.whenReady().then(() => {
   registerEnergyHandlers(ipcMain)
   registerFocusBlockerHandlers(ipcMain)
   registerGameGateHandlers(ipcMain)
+  registerMailToDumpHandlers(ipcMain)
   registerGlobalShortcut(globalShortcut, () => mainWindow)
   createWindow()
   registerLocalShortcuts(mainWindow!)
@@ -275,6 +277,7 @@ app.whenReady().then(() => {
   startNudgeMonitor()
   startEnergyScheduler()
   startGameGate()
+  startMailToDump()
 
   // GC focus-blocker per-task configs for tasks that no longer exist (deleted
   // tasks/projects). Completed tasks still exist, so they keep their config.

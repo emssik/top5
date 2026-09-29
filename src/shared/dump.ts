@@ -6,6 +6,8 @@ export const DONE_HEADER = '## Zrobione'
 // mtime = file mtime in integer ms, null when dump.md doesn't exist yet.
 export type DumpState = { text: string; mtime: number | null }
 export type DumpError = { error: 'invalid' | 'too_large' | 'conflict' }
+// Result of pulling tasks from self-sent mails (src/main/mail-to-dump.ts).
+export type MailToDumpResult = { ok: true; added: number } | { ok: false; error: string }
 
 const isOpen = (line: string): boolean => line.trimStart().startsWith('- ')
 const isDone = (line: string): boolean => line.trimStart().startsWith('+ ')
@@ -35,6 +37,20 @@ export function appendOpenLine(text: string, line: string): string {
   const entry = /^[-+] /.test(line) ? line : `- ${line}`
   lines.splice(openInsertIndex(lines), 0, entry)
   return lines.join('\n')
+}
+
+// Save conflict (409): if the file only gained open lines since `base` (mail sync, API/CLI
+// append), returns `mine` with those lines appended the same way; null = a real conflict.
+export function mergeExternalAppends(base: string, theirs: string, mine: string): string | null {
+  const baseLines = base.split('\n')
+  const added: string[] = []
+  let i = 0
+  for (const line of theirs.split('\n')) {
+    if (i < baseLines.length && line === baseLines[i]) i++
+    else added.push(line)
+  }
+  if (i < baseLines.length || !added.every(isOpen)) return null
+  return added.reduce((text, line) => appendOpenLine(text, line.trim()), mine)
 }
 
 // A line that continues the item above it (plain text, not a new item / header / blank).
