@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { rmSync, writeFileSync, utimesSync } from 'fs'
 import { join } from 'path'
 import { setupTestEnv, getTestServer, getTestApiKey, getTestDir } from './setup'
-import { toggleDumpLines, countDumpLines, dumpItemTitle } from '../../src/shared/dump'
+import { toggleDumpLines, countDumpLines, dumpItemTitle, moveDumpItems, addOpenLines } from '../../src/shared/dump'
 
 setupTestEnv()
 
@@ -10,10 +10,10 @@ const auth = { authorization: `Bearer ${getTestApiKey()}` }
 const D = '2026-09-25'
 
 describe('toggleDumpLines (⌘D)', () => {
-  it('completes an open line: moves it under a new ## Zrobione header', () => {
+  it('completes an open line: moves it under a new ## Done header', () => {
     const text = '- a\n- b\n- c\n'
     const r = toggleDumpLines(text, 4, 4, D)!
-    expect(r.text).toBe(`- a\n- c\n\n## Zrobione\n+ ${D} b\n`)
+    expect(r.text).toBe(`- a\n- c\n\n## Done\n+ ${D} b\n`)
     expect(r.cursor).toBe(4) // start of "- c", which took b's place
   })
 
@@ -32,12 +32,51 @@ describe('toggleDumpLines (⌘D)', () => {
   it('handles a multi-line selection, skipping blanks and headings', () => {
     const text = '- a\n\n- b\n- c\n'
     const r = toggleDumpLines(text, 0, text.indexOf('- c'), D)! // ends at column 0 of "- c"
-    expect(r.text).toBe(`\n- c\n\n## Zrobione\n+ ${D} a\n+ ${D} b\n`)
+    expect(r.text).toBe(`\n- c\n\n## Done\n+ ${D} a\n+ ${D} b\n`)
     expect(toggleDumpLines('\n## Zrobione\n', 0, 12, D)).toBeNull()
+  })
+
+  it('completes into an existing ## Done section', () => {
+    const text = `## Inbox\n\n- a\n\n## Done\n+ 2026-01-01 x\n`
+    expect(toggleDumpLines(text, text.indexOf('- a'), text.indexOf('- a'), D)!.text).toBe(`## Inbox\n\n## Done\n+ 2026-01-01 x\n+ ${D} a\n`)
   })
 
   it('counts open / done lines', () => {
     expect(countDumpLines('- a\n  - b\n+ c\ntext\n## Zrobione')).toEqual({ open: 2, done: 1 })
+  })
+})
+
+describe('dump sections', () => {
+  const doc = `## Now\n\n- n1\n\n## Next\n\n## Inbox\n\n- i1\n  szczegół\n- i2\n\n## Done\n+ ${D} d1\n`
+
+  it('adds new lines on top of ## Inbox, one blank line below the header', () => {
+    expect(addOpenLines(doc, ['x', 'y'])).toBe(doc.replace('## Inbox\n\n', '## Inbox\n\n- x\n- y\n'))
+    expect(addOpenLines('## Inbox\n\n## Done\n', ['x'])).toBe('## Inbox\n\n- x\n\n## Done\n')
+    expect(addOpenLines('## Inbox\n- a\n', ['x'])).toBe('## Inbox\n\n- x\n- a\n')
+    // No Inbox: above ## Done, entries kept in order.
+    expect(addOpenLines('- a\n\n## Zrobione\n', ['x', 'y'])).toBe('- a\n- x\n- y\n\n## Zrobione\n')
+  })
+
+  it('⌘1 moves an item with its continuation to the end of ## Now, caret stays in place', () => {
+    const r = moveDumpItems(doc, doc.indexOf('szczegół'), doc.indexOf('szczegół'), 'Now')!
+    expect(r.text).toBe(`## Now\n\n- n1\n- i1\n  szczegół\n\n## Next\n\n## Inbox\n\n- i2\n\n## Done\n+ ${D} d1\n`)
+    expect(r.text.slice(r.cursor).startsWith('- i2')).toBe(true)
+  })
+
+  it('⌘2 into an empty ## Next adds a blank line; a done item is reopened', () => {
+    const r = moveDumpItems(doc, doc.indexOf('+ '), doc.indexOf('+ '), 'Next')!
+    expect(r.text).toBe(`## Now\n\n- n1\n\n## Next\n\n- d1\n\n## Inbox\n\n- i1\n  szczegół\n- i2\n\n## Done\n`)
+  })
+
+  it('⌘3 moves an item to the top of ## Inbox', () => {
+    const r = moveDumpItems(doc, doc.indexOf('- n1'), doc.indexOf('- n1'), 'Inbox')!
+    expect(r.text).toBe(`## Now\n\n## Next\n\n## Inbox\n\n- n1\n- i1\n  szczegół\n- i2\n\n## Done\n+ ${D} d1\n`)
+  })
+
+  it('no-op when the item is already there or the section is missing', () => {
+    expect(moveDumpItems(doc, 10, 10, 'Now')).toBeNull()
+    expect(moveDumpItems('- a\n', 0, 0, 'Now')).toBeNull()
+    expect(moveDumpItems('## Next.js\n- a\n', 12, 12, 'Next')).toBeNull()
   })
 })
 
@@ -116,6 +155,6 @@ describe('dump ↔ quick task link (⌘F)', () => {
     expect(created.statusCode).toBe(201)
     await server.inject({ method: 'POST', url: `/api/v1/quick-tasks/${id}/complete`, headers: auth })
     const res = await server.inject({ method: 'GET', url: '/api/v1/dump', headers: auth })
-    expect(res.json().data.text).toMatch(/^- a\n\n## Zrobione\n\+ \d{4}-\d{2}-\d{2} zadzwonić\ndo X\n$/)
+    expect(res.json().data.text).toMatch(/^- a\n\n## Done\n\+ \d{4}-\d{2}-\d{2} zadzwonić\ndo X\n$/)
   })
 })

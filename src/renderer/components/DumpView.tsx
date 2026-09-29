@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { nanoid } from 'nanoid'
-import { countDumpLines, dumpItemTitle, mergeExternalAppends, toggleDumpLines } from '../../shared/dump'
+import { type DumpSection, countDumpLines, dumpItemTitle, findDumpItem, mergeExternalAppends, moveDumpItems, toggleDumpLines } from '../../shared/dump'
 import { logicalDateKey } from '../../shared/schedule'
 import { STANDALONE_PROJECT_ID } from '../../shared/constants'
 
 const SAVE_DEBOUNCE_MS = 500
 const MAIL_CHECKING = 'Sprawdzam maile…'
+// ⌘1 / ⌘2 / ⌘3 → index 0–2.
+const SECTIONS: DumpSection[] = ['Now', 'Next', 'Inbox']
 
 // Module-level so both survive leaving the tab / toggling clean view:
 // - conflictDraft: text the user couldn't save because dump.md changed underneath (409); null = no conflict.
@@ -97,7 +99,7 @@ export default function DumpView() {
       .then(async () => {
         if (!dirtyRef.current || conflictDraft !== null) return
         let sent = textRef.current
-        // Mail sync appends line by line, so the save after a merge can 409 again — a few retries.
+        // Mail sync appends mail by mail, so the save after a merge can 409 again — a few retries.
         for (let attempt = 0; ; attempt++) {
           const result = await window.api.saveDump(sent, baseMtimeRef.current)
           if (!('error' in result)) {
@@ -126,12 +128,33 @@ export default function DumpView() {
     return saveChain
   }, [mergeExternal])
 
-  const applyText = (value: string) => {
+  const applyText = useCallback((value: string) => {
     textRef.current = value
     dirtyRef.current = true
     if (conflictDraft !== null) conflictDraft = value
     setText(value)
-  }
+  }, [])
+
+  // ⌘D / ⌘1–3 / ⌘F: replace the text, put the caret, save right away.
+  const applyEdit = useCallback((result: { text: string; cursor: number } | null) => {
+    const el = areaRef.current
+    if (!result || !el) return
+    el.value = result.text
+    el.setSelectionRange(result.cursor, result.cursor)
+    applyText(result.text)
+    void save()
+  }, [applyText, save])
+
+  // ⌘1–3 are the "project 1–3" shortcuts, caught in main (before-input-event) before the
+  // textarea sees them — so they arrive here as select-project. Dashboard skips them while we're focused.
+  useEffect(() => {
+    return window.api.onShortcutAction((data) => {
+      const el = areaRef.current
+      if (data.action !== 'select-project' || !el || document.activeElement !== el) return
+      const section = SECTIONS[data.index ?? -1]
+      if (section) applyEdit(moveDumpItems(el.value, el.selectionStart, el.selectionEnd, section))
+    })
+  }, [applyEdit])
 
   const handleChange = (value: string) => {
     applyText(value)
@@ -157,7 +180,10 @@ export default function DumpView() {
         await window.api.saveQuickTask({ id, title, completed: false, createdAt: new Date().toISOString(), completedAt: null, order: 0 })
       }
       const result = await window.api.focusOnTask(STANDALONE_PROJECT_ID, id)
-      if (result?.error) setError(result.error === 'already_in_focus' ? busy : 'Nie udało się uruchomić focusa.')
+      if (result?.error) return setError(result.error === 'already_in_focus' ? busy : 'Nie udało się uruchomić focusa.')
+      // Focused item → `## Now`. Looked up by title: the text may have changed during the awaits.
+      const pos = findDumpItem(textRef.current, title)
+      if (pos !== null) applyEdit(moveDumpItems(textRef.current, pos, pos, 'Now'))
     } catch (err) {
       setError(`Nie udało się uruchomić focusa: ${err instanceof Error ? err.message : String(err)}`)
     }
@@ -171,16 +197,17 @@ export default function DumpView() {
       void focusOnItem(e.currentTarget)
       return
     }
+    const el = e.currentTarget
+    const section = SECTIONS[Number(key) - 1]
+    if (section) {
+      e.preventDefault()
+      if (!e.repeat) applyEdit(moveDumpItems(el.value, el.selectionStart, el.selectionEnd, section))
+      return
+    }
     if (key !== 'd') return
     e.preventDefault()
-    const el = e.currentTarget
-    const result = toggleDumpLines(el.value, el.selectionStart, el.selectionEnd, logicalDateKey())
-    if (!result) return
-    // ponytail: ⌘D jest sam swoim cofnięciem; natywne ⌘Z po ⌘D nie działa — własny undo-stack jeśli zacznie przeszkadzać
-    el.value = result.text
-    el.setSelectionRange(result.cursor, result.cursor)
-    applyText(result.text)
-    void save()
+    // ponytail: ⌘D jest sam swoim cofnięciem; natywne ⌘Z po ⌘D/⌘1–3 nie działa — własny undo-stack jeśli zacznie przeszkadzać
+    applyEdit(toggleDumpLines(el.value, el.selectionStart, el.selectionEnd, logicalDateKey()))
   }
 
   // Pull tasks from self-sent mails now (main also does it every 30 min). Main appends to
@@ -269,7 +296,7 @@ export default function DumpView() {
         onChange={(e) => handleChange(e.target.value)}
         onKeyDown={handleKeyDown}
         onBlur={() => void save()}
-        placeholder={'- rzecz do zrobienia\n\n⌘D — oznacz jako zrobione / przywróć\n⌘F — focus na zadaniu (tworzy quick task)'}
+        placeholder={'- rzecz do zrobienia\n\n⌘D — oznacz jako zrobione / przywróć\n⌘1 / ⌘2 / ⌘3 — przenieś do ## Now / ## Next / na górę ## Inbox\n⌘F — focus na zadaniu (tworzy quick task, przenosi do ## Now)'}
         spellCheck={false}
       />
     </div>

@@ -479,12 +479,12 @@ top5 12w --tree --json                  # children attached as `children` arrays
 
 Plain-text scratchpad from the app's "Zrzut" tab (`dump.md` next to `data.yaml`) — the user
 dumps everything to do there, without projects. Convention: `- ` = open, `+ ` = done; done
-lines sit at the end of the file under `## Zrobione` as `+ YYYY-MM-DD text` (⌘D in the app). An item may span several lines: plain-text lines (no `- `/`+ `/`#` prefix) directly below an item line belong to it — keep them together when reorganizing. Lines starting with `#` are the user's comments/section headers (`## Zrobione` is one of them) — not tasks: never turn them into tasks or mark them done; keep them where they are unless asked. A `#` line ends the item above it. ⌘F in the app starts focus on an item via a quick task with the same title (the line stays); completing that quick task (`top5 qt done` too) ticks the dump line off automatically. So when reorganizing, don't reword lines that already have a same-titled open quick task — that breaks the link.
+lines sit at the end of the file under `## Done` (older files: `## Zrobione`) as `+ YYYY-MM-DD text` (⌘D in the app). Sections: `## Now` (doing now), `## Next` (soon), `## Inbox` (new lines land on top — mail, `--append`), `## Done`. ⌘1 / ⌘2 in the app move an item to the end of Now / Next, ⌘3 to the top of Inbox; ⌘F moves it to Now. An item may span several lines: plain-text lines (no `- `/`+ `/`#` prefix) directly below an item line belong to it — keep them together when reorganizing. Lines starting with `#` are the user's comments/section headers (`## Done` and the other sections are among them) — not tasks: never turn them into tasks or mark them done; keep them where they are unless asked. A `#` line ends the item above it. ⌘F in the app starts focus on an item via a quick task with the same title (the line stays); completing that quick task (`top5 qt done` too) ticks the dump line off automatically. So when reorganizing, don't reword lines that already have a same-titled open quick task — that breaks the link.
 
 ```bash
 top5 dump                          # raw text on stdout (no decoration)
 top5 dump --json                   # {"text": "...", "mtime": 1727251234567}
-top5 dump --append "kupić toner"   # add one open line (above "## Zrobione"); "- " added if missing
+top5 dump --append "kupić toner"   # add one open line on top of "## Inbox"; "- " added if missing
 cat new.md | top5 dump --set       # replace whole text from stdin (mtime read right before saving)
 cat new.md | top5 dump --set --base-mtime 1727251234567   # strict: only if unchanged since that read
 ```
@@ -499,7 +499,7 @@ file in the meantime) the API returns **409**, nothing is saved, and the CLI exi
 2. Reorganize the text (dedupe, group, rephrase). Where the user wants it, create real tasks with
    `top5 add <CODE> "..."` / `top5 qt add "..."` (look up codes with `top5 projects` first —
    never guess) and drop those lines from the dump or mark them `+ `.
-3. Keep the `## Zrobione` section intact (history) unless the user asks to trim it.
+3. Keep the sections (`## Now`/`## Next`/`## Inbox`/`## Done`) and the `## Done` history intact unless the user asks to trim it.
 4. Write the new text to a file, then save with strict protection:
    `top5 dump --set --base-mtime <mtime from step 1> < /tmp/dump.new.md`. Don't pipe a shell variable —
    variables don't survive between separate commands, and an empty stdin is refused.

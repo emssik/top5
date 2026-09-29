@@ -20,7 +20,7 @@ export function register(program: Command): void {
     .description('Show the "Zrzut" text (dump.md) — raw text on stdout, --json for {text, mtime}')
     .option('--set', 'Replace the whole text with stdin (pass --base-mtime to guard against concurrent edits)')
     .option('--base-mtime <ms>', 'With --set: mtime you read earlier (strict protection; default = current mtime right before saving)')
-    .option('--append <line>', 'Append a line to the end of the open list (adds "- " if missing)')
+    .option('--append <line>', 'Add a line on top of "## Inbox" (no Inbox: end of the open list; adds "- " if missing)')
     .addHelpText('after', `
 Examples:
   top5 dump > dump.md                                  # read raw text

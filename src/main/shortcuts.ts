@@ -110,7 +110,8 @@ export function registerLocalShortcuts(win: BrowserWindow): void {
     for (const { parsed, handler } of bindings) {
       if (matchesInput(input, parsed)) {
         event.preventDefault()
-        handler()
+        // A held key fires once — otherwise holding ⌘1 in the dump would move item after item.
+        if (!input.isAutoRepeat) handler()
         return
       }
     }

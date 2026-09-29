@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync, renameSync, statSync, utimesSync } from 'fs'
 import { join } from 'path'
 import { getConfigDir } from '../store'
-import { appendOpenLine, completeDumpItem } from '../../shared/dump'
+import { addOpenLines, completeDumpItem } from '../../shared/dump'
 import { logicalDateKey } from '../../shared/schedule'
 import type { DumpState, DumpError } from '../../shared/dump'
 
@@ -56,7 +56,12 @@ export function saveDump(text: unknown, baseMtime: unknown): DumpState | DumpErr
 // Additive — no baseMtime needed; the read-modify-write is synchronous in main.
 export function appendDumpLine(line: unknown): DumpState | DumpError {
   if (typeof line !== 'string' || line.trim() === '' || /[\r\n]/.test(line)) return { error: 'invalid' }
-  const text = appendOpenLine(getDump().text, line.trim())
+  return appendDumpLines([line.trim()])
+}
+
+// Several single-line entries as one block, in order (mail: one write per mail).
+export function appendDumpLines(lines: string[]): DumpState | DumpError {
+  const text = addOpenLines(getDump().text, lines)
   if (Buffer.byteLength(text, 'utf-8') > MAX_DUMP_BYTES) return { error: 'too_large' }
   return writeDump(text)
 }

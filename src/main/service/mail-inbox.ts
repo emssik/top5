@@ -92,7 +92,7 @@ function classify(mails: Mail[]): Promise<Record<string, string[]>> {
 }
 
 // Returns the appended lines. dryRun: read-only mailbox, nothing appended or labelled.
-export async function pullMailTasks(append: (line: string) => void, dryRun = false): Promise<string[]> {
+export async function pullMailTasks(append: (lines: string[]) => void, dryRun = false): Promise<string[]> {
   const cfg = readConfig()
   const { label } = cfg
   const client = new ImapFlow({
@@ -159,13 +159,11 @@ export async function pullMailTasks(append: (line: string) => void, dryRun = fal
       for (const mail of mails) {
         const found = tasks[mail.id]
         if (!found) continue // model skipped it — no label, retried next run
-        for (const task of found) {
-          // One line; a leading `- `/`+ ` marker is dropped (appendOpenLine adds `- `, `+ ` = done).
-          const line = task.replace(/\s+/g, ' ').trim().replace(/^[-+] /, '')
-          if (!line) continue
-          if (!dryRun) append(line)
-          added.push(line)
-        }
+        // One line per task; a leading `- `/`+ ` marker is dropped (addOpenLines adds `- `, `+ ` = done).
+        const lines = found.map((task) => task.replace(/\s+/g, ' ').trim().replace(/^[-+] /, '')).filter(Boolean)
+        // One block per mail, in the mail's order — with or without an Inbox section.
+        if (lines.length > 0 && !dryRun) append(lines)
+        added.push(...lines)
         // imapflow returns false instead of throwing when STORE fails — an unlabelled mail would be appended again every run.
         if (!dryRun && !(await addLabel(Number(mail.id)))) {
           throw new Error(`Gmail: nie udało się dodać etykiety ${label}`)

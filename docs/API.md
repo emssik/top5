@@ -473,7 +473,7 @@ Returns all non-archived habits as today-summary entries (schedule, today status
 
 ### Dump („Zrzut")
 
-Plain-text scratchpad stored as `dump.md` next to `data.yaml` (missing file = empty text). Convention: `- ` = open line, `+ ` = done line; done lines live at the end of the file under `## Zrobione` as `+ YYYY-MM-DD text`. Lines starting with `#` are comments / headers — not items (not counted, skipped by ⌘D). The app doesn't interpret the text beyond that. Side effect: completing a quick task (`POST /quick-tasks/:id/complete`, UI, focus window) moves the first open dump item whose first line equals the task title under `## Zrobione` — the ⌘F link (repeating quick tasks excluded).
+Plain-text scratchpad stored as `dump.md` next to `data.yaml` (missing file = empty text). Convention: `- ` = open line, `+ ` = done line; done lines live at the end of the file under `## Done` (legacy name `## Zrobione` also recognized) as `+ YYYY-MM-DD text`. Optional sections `## Now`, `## Next`, `## Inbox` — new lines go on top of `## Inbox`; in the app ⌘1 / ⌘2 move an item to the end of `## Now` / `## Next`, ⌘3 to the top of `## Inbox`, ⌘F (focus) moves it to `## Now`. Lines starting with `#` are comments / headers — not items (not counted, skipped by ⌘D). The app doesn't interpret the text beyond that. Side effect: completing a quick task (`POST /quick-tasks/:id/complete`, UI, focus window) moves the first open dump item whose first line equals the task title under `## Done` — the ⌘F link (repeating quick tasks excluded).
 
 Writes are guarded by `mtime` (optimistic lock): `mtime` is the file's modification time in **integer milliseconds**, or `null` when the file doesn't exist yet. Every successful write notifies the UI to reload.
 
@@ -499,7 +499,7 @@ Replaces the whole text — only if the file's current `mtime` equals `baseMtime
 
 #### `POST /dump/append`
 
-Adds one line at the end of the open list — directly above `## Zrobione` (before the blank lines separating it), or at the end of the file if there's no such header. Additive, so no `baseMtime`.
+Adds one line on top of `## Inbox` (one blank line below the header). Without an Inbox section: at the end of the open list — directly above `## Done` (before the blank lines separating it), or at the end of the file if there's no such header. Additive, so no `baseMtime`. Tasks from self-sent mails are added the same way.
 
 **Body:** `{ "line": "zadzwonić do księgowej" }` — `- ` is prepended unless the line already starts with `- ` or `+ `.
 

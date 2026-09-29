@@ -1,7 +1,9 @@
 // "Zrzut" (dump.md) text helpers — pure, shared by the renderer (⌘D, counter)
 // and the main-process service (API append). Convention: `- ` open, `+ ` done.
+// Optional sections: `## Now`, `## Next`, `## Inbox` (new lines land on top), `## Done`.
 
-export const DONE_HEADER = '## Zrobione'
+export const DONE_HEADER = '## Done'
+export type DumpSection = 'Now' | 'Next' | 'Inbox'
 
 // mtime = file mtime in integer ms, null when dump.md doesn't exist yet.
 export type DumpState = { text: string; mtime: number | null }
@@ -11,7 +13,9 @@ export type MailToDumpResult = { ok: true; added: number } | { ok: false; error:
 
 const isOpen = (line: string): boolean => line.trimStart().startsWith('- ')
 const isDone = (line: string): boolean => line.trimStart().startsWith('+ ')
-const isHeader = (line: string): boolean => line.trim() === DONE_HEADER
+// `## Zrobione` = the done header from before the sections.
+const isHeader = (line: string): boolean => /^##\s+(Done|Zrobione)(\s|$)/i.test(line.trim())
+const isSectionHeader = (line: string): boolean => /^##\s/.test(line.trim())
 
 export function countDumpLines(text: string): { open: number; done: number } {
   let open = 0
@@ -32,26 +36,61 @@ function openInsertIndex(lines: string[]): number {
   return i
 }
 
-export function appendOpenLine(text: string, line: string): string {
+// Header index of section `name` and the index where it ends (next `## ` header / EOF); null = no section.
+function sectionBounds(lines: string[], name: string): [number, number] | null {
+  const re = new RegExp(`^##\\s+${name}(\\s|$)`, 'i')
+  const h = lines.findIndex((l) => re.test(l.trim()))
+  if (h === -1) return null
+  let n = h + 1
+  while (n < lines.length && !isSectionHeader(lines[n])) n++
+  return [h, n]
+}
+
+// Inserts `block` at the top / end of section `name`, one blank line below the header.
+// Returns [index, number of lines inserted], null when there's no such section.
+function insertInSection(lines: string[], name: string, block: string[], where: 'top' | 'end'): [number, number] | null {
+  const bounds = sectionBounds(lines, name)
+  if (!bounds) return null
+  const [h, n] = bounds
+  const blank = (k: number): boolean => lines[k].trim() === ''
+  let i = h + 1
+  if (where === 'top') {
+    while (i < n && blank(i)) i++
+    if (i === n) i = h + 1
+  } else {
+    i = n
+    while (i > h + 1 && blank(i - 1)) i--
+  }
+  const inserted = i === h + 1 ? ['', ...block] : block
+  lines.splice(i, 0, ...inserted)
+  return [i, inserted.length]
+}
+
+// New lines (mail, API/CLI append): top of `## Inbox`, or the end of the open list when there's no Inbox.
+export function addOpenLines(text: string, entries: string[]): string {
   const lines = text.split('\n')
-  const entry = /^[-+] /.test(line) ? line : `- ${line}`
-  lines.splice(openInsertIndex(lines), 0, entry)
+  const block = entries.map((line) => (/^[-+] /.test(line) ? line : `- ${line}`))
+  if (!insertInSection(lines, 'Inbox', block, 'top')) lines.splice(openInsertIndex(lines), 0, ...block)
   return lines.join('\n')
 }
 
 // Save conflict (409): if the file only gained open lines since `base` (mail sync, API/CLI
-// append), returns `mine` with those lines appended the same way; null = a real conflict.
+// append), returns `mine` with those lines added the same way; null = a real conflict.
 export function mergeExternalAppends(base: string, theirs: string, mine: string): string | null {
   const baseLines = base.split('\n')
   const added: string[] = []
   let i = 0
   for (const line of theirs.split('\n')) {
     if (i < baseLines.length && line === baseLines[i]) i++
-    else added.push(line)
+    // Blank lines come with the first line in an empty Inbox — addOpenLines re-adds them.
+    else if (line.trim() !== '') added.push(line)
   }
   if (i < baseLines.length || !added.every(isOpen)) return null
-  return added.reduce((text, line) => appendOpenLine(text, line.trim()), mine)
+  return added.length ? addOpenLines(mine, added.map((line) => line.trim())) : mine
 }
+
+// Index of the line that holds text position `pos`.
+const lineAt = (text: string, pos: number): number => text.slice(0, pos).split('\n').length - 1
 
 // A line that continues the item above it (plain text, not a new item / header / blank).
 const isContinuation = (line: string): boolean => {
@@ -85,40 +124,31 @@ function openItemTitle(lines: string[], i: number): string | null {
 // ⌘F: title of the open item under the cursor.
 export function dumpItemTitle(text: string, pos: number): string | null {
   const lines = text.split('\n')
-  const i = text.slice(0, pos).split('\n').length - 1
-  return openItemTitle(lines, itemRange(lines, i)[0])
+  return openItemTitle(lines, itemRange(lines, lineAt(text, pos))[0])
 }
 
 // Marks the first open item titled `title` as done (same as ⌘D); null when there's none.
 // ponytail: powiązanie po tekście — zmiana tytułu linii/taska je zrywa; ukryty identyfikator w linii, jeśli zacznie boleć
 export function completeDumpItem(text: string, title: string, date: string): string | null {
+  const pos = findDumpItem(text, title)
+  return pos === null ? null : toggleDumpLines(text, pos, pos, date)?.text ?? null
+}
+
+// Position of the first open item titled `title`; null when there's none.
+export function findDumpItem(text: string, title: string): number | null {
   const lines = text.split('\n')
   let pos = 0
   for (let i = 0; i < lines.length; i++) {
-    if (openItemTitle(lines, i) === title.trim()) return toggleDumpLines(text, pos, pos, date)?.text ?? null
+    if (openItemTitle(lines, i) === title.trim()) return pos
     pos += lines[i].length + 1
   }
   return null
 }
 
-/**
- * ⌘D: toggles every item touched by the selection [selStart, selEnd] — the whole
- * item, including its continuation lines.
- * Open (`- x` or plain text) → removed and appended at the end of the file as
- * `+ <date> x` under `## Zrobione` (header created if missing).
- * Done (`+ <date> x` / `+ x`) → `- x`, moved to the end of the open list.
- * Returns null when there is nothing to toggle.
- */
-export function toggleDumpLines(
-  text: string,
-  selStart: number,
-  selEnd: number,
-  date: string
-): { text: string; cursor: number } | null {
-  const lines = text.split('\n')
-  const lineAt = (pos: number): number => text.slice(0, pos).split('\n').length - 1
-  const first = lineAt(selStart)
-  let last = lineAt(selEnd)
+// Items ([start, end] line ranges) touched by the selection [selStart, selEnd].
+function selectedItems(text: string, lines: string[], selStart: number, selEnd: number): [number, number][] {
+  const first = lineAt(text, selStart)
+  let last = lineAt(text, selEnd)
   // Selection ending at column 0 of the next line doesn't include that line.
   if (selEnd > selStart && text[selEnd - 1] === '\n') last--
 
@@ -129,6 +159,75 @@ export function toggleDumpLines(
     const range = itemRange(lines, i)
     if (items.length === 0 || items[items.length - 1][0] !== range[0]) items.push(range)
   }
+  return items
+}
+
+const reopen = (line: string): string => line.replace(/^(\s*)\+ (?:\d{4}-\d{2}-\d{2}\s+)?/, '$1- ')
+
+// Drops the moved lines; a blank line doubled by the removal goes too (the file's final newline stays).
+function withoutLines(lines: string[], moved: Set<number>): string[] {
+  const out: string[] = []
+  lines.forEach((line, i) => {
+    if (moved.has(i)) return
+    const doubled = line.trim() === '' && moved.has(i - 1) && i < lines.length - 1 && out.length > 0 && out[out.length - 1].trim() === ''
+    if (!doubled) out.push(line)
+  })
+  return out
+}
+
+function cursorAt(lines: string[], line: number): number {
+  let cursor = 0
+  for (let i = 0; i < Math.min(line, lines.length - 1); i++) cursor += lines[i].length + 1
+  return cursor
+}
+
+/**
+ * ⌘1 / ⌘2 / ⌘3 (and ⌘F → Now): moves every item touched by the selection to the end of
+ * `## Now` / `## Next`, or the top of `## Inbox`; a done item is reopened. Items already in that section stay put.
+ * Returns null when the section doesn't exist or there is nothing to move.
+ */
+export function moveDumpItems(
+  text: string,
+  selStart: number,
+  selEnd: number,
+  section: DumpSection
+): { text: string; cursor: number } | null {
+  const lines = text.split('\n')
+  const bounds = sectionBounds(lines, section)
+  if (!bounds) return null
+  const items = selectedItems(text, lines, selStart, selEnd).filter(([start]) => start < bounds[0] || start >= bounds[1])
+  if (items.length === 0) return null
+
+  const block: string[] = []
+  const moved = new Set<number>()
+  for (const [start, end] of items) {
+    block.push(isDone(lines[start]) ? reopen(lines[start]) : lines[start], ...lines.slice(start + 1, end + 1))
+    for (let i = start; i <= end; i++) moved.add(i)
+  }
+  const result = withoutLines(lines, moved)
+  // Cursor stays where the first moved item was — the next item to sort through.
+  let cursorLine = items[0][0]
+  const [at, count] = insertInSection(result, section, block, section === 'Inbox' ? 'top' : 'end')!
+  if (at <= cursorLine) cursorLine += count
+  return { text: result.join('\n'), cursor: cursorAt(result, cursorLine) }
+}
+
+/**
+ * ⌘D: toggles every item touched by the selection [selStart, selEnd] — the whole
+ * item, including its continuation lines.
+ * Open (`- x` or plain text) → removed and appended at the end of the file as
+ * `+ <date> x` under `## Done` (header created if missing).
+ * Done (`+ <date> x` / `+ x`) → `- x`, moved to the end of the open list.
+ * Returns null when there is nothing to toggle.
+ */
+export function toggleDumpLines(
+  text: string,
+  selStart: number,
+  selEnd: number,
+  date: string
+): { text: string; cursor: number } | null {
+  const lines = text.split('\n')
+  const items = selectedItems(text, lines, selStart, selEnd)
   if (items.length === 0) return null
 
   const reopened: string[] = []
@@ -140,13 +239,13 @@ export function toggleDumpLines(
     const rest = lines.slice(start + 1, end + 1)
     for (let i = start; i <= end; i++) moved.add(i)
     if (isDone(line)) {
-      reopened.push(`${indent}- ${line.slice(2).replace(/^\d{4}-\d{2}-\d{2}\s+/, '')}`, ...rest)
+      reopened.push(reopen(lines[start]), ...rest)
     } else {
       completed.push(`${indent}+ ${date} ${isOpen(line) ? line.slice(2) : line}`, ...rest)
     }
   }
 
-  const result = lines.filter((_, i) => !moved.has(i))
+  const result = withoutLines(lines, moved)
   // Cursor lands on the line that took the place of the first moved one.
   let cursorLine = items[0][0]
 
@@ -167,8 +266,5 @@ export function toggleDumpLines(
     if (trailingNewline) result.push('')
   }
 
-  cursorLine = Math.min(cursorLine, result.length - 1)
-  let cursor = 0
-  for (let i = 0; i < cursorLine; i++) cursor += result[i].length + 1
-  return { text: result.join('\n'), cursor }
+  return { text: result.join('\n'), cursor: cursorAt(result, cursorLine) }
 }

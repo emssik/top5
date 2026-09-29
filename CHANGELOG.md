@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.113.0] - 2026-09-29
+
+### Added
+
+- **Zrzut: sekcje Now / Next / Inbox / Done** — w edytorze ⌘1 przenosi zadanie na koniec `## Now`, ⌘2 na koniec `## Next`, ⌘3 na górę `## Inbox` (całe zadanie z opisem, także kilka zaznaczonych). Focus na zadaniu (⌘F) sam przenosi je do `## Now`. Poza Zrzutem ⌘1–3 dalej przełączają projekty.
+
+### Changed
+
+- **Nowe zadania trafiają na górę `## Inbox`** — z maili, z `top5 dump --append` i z API, z pustą linią pod nagłówkiem; zadania z jednego maila w swojej kolejności i jednym zapisem. Bez sekcji Inbox — jak dotąd, nad sekcją zrobionych.
+- **Sekcja zrobionych nazywa się `## Done`** — tworzona przy pierwszym ⌘D; stary nagłówek `## Zrobione` nadal działa.
+
 ## [1.112.0] - 2026-09-29
 
 ### Added

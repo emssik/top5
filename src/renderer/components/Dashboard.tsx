@@ -149,6 +149,8 @@ export default function Dashboard() {
 
   const handleShortcutAction = useCallback((data: { action: string; index?: number }) => {
     if (data.action === 'select-project' && data.index !== undefined) {
+      // In the dump editor ⌘1–3 move the item to Now / Next / Inbox (DumpView handles them).
+      if (data.index <= 2 && document.activeElement?.classList.contains('dump-textarea')) return
       if (data.index >= 0 && data.index < activeProjects.length) {
         setActiveView(`project-${activeProjects[data.index].id}`)
       }
