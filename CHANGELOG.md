@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.113.1] - 2026-10-04
+
+### Fixed
+
+- **Zrzut: maile przy starcie z Docka** — ✉ nie kończy się już „claude -p: Not logged in”. top5 odczytuje `CLAUDE_CODE_OAUTH_TOKEN` z `~/.zshrc`, bo aplikacja uruchomiona z Docka nie dziedziczy zmiennych z powłoki.
+
 ## [1.113.0] - 2026-09-29
 
 ### Added
