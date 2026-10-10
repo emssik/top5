@@ -475,6 +475,8 @@ Returns all non-archived habits as today-summary entries (schedule, today status
 
 Plain-text scratchpad stored as `dump.md` next to `data.yaml` (missing file = empty text). Convention: `- ` = open line, `+ ` = done line; done lines live at the end of the file under `## Done` (legacy name `## Zrobione` also recognized) as `+ YYYY-MM-DD text`. Optional sections `## Now`, `## Next`, `## Inbox` — new lines go on top of `## Inbox`; in the app ⌘1 / ⌘2 move an item to the end of `## Now` / `## Next`, ⌘3 to the top of `## Inbox`, ⌘F (focus) moves it to `## Now`. Lines starting with `#` are comments / headers — not items (not counted, skipped by ⌘D). The app doesn't interpret the text beyond that. Side effect: completing a quick task (`POST /quick-tasks/:id/complete`, UI, focus window) moves the first open dump item whose first line equals the task title under `## Done` — the ⌘F link (repeating quick tasks excluded).
 
+**Project tags:** an item may carry `#KOD` tags (project code, case-insensitive) — `#` preceded by a space/tab, never at the start of the line, never in a `#` comment line; the tag ends at whitespace or punctuation. The app colours them, and ⌘P / typing ` #` inserts them. Tools and models must not remove or rewrite tags when editing the text. The dump↔quick-task title match (above) ignores tags: `- Oferta #ATD` matches a task titled `Oferta`. Lines starting with `↻ ` (after `- ` / `+ date `) were turned into repeating tasks by ⌘R (`pon śr pt: Tytuł`) — they are already done and must stay as they are.
+
 Writes are guarded by `mtime` (optimistic lock): `mtime` is the file's modification time in **integer milliseconds**, or `null` when the file doesn't exist yet. Every successful write notifies the UI to reload.
 
 #### `GET /dump`

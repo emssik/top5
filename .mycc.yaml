@@ -98,3 +98,7 @@ actions:
   - name: clean
     cmd: "npm run clean"
     pane: 3
+
+ems-delegate:
+  test: "npm test && npm run test:api"
+  typecheck: "npm run typecheck"

@@ -1,9 +1,18 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { nanoid } from 'nanoid'
-import { type DumpSection, countDumpLines, dumpItemTitle, findDumpItem, mergeExternalAppends, moveDumpItems, toggleDumpLines } from '../../shared/dump'
+import {
+  type DumpSection, countDumpLines, countSectionOpen, dumpItemTitle, findDumpItem, findDumpSectionHeaders, findDumpTags, mergeExternalAppends,
+  moveDumpItems, projectTagTrigger, setDumpItemTag, stripDumpTags, toggleDumpLines
+} from '../../shared/dump'
+import { parseRepeatLine } from '../../shared/dump-repeat'
 import { logicalDateKey } from '../../shared/schedule'
 import { STANDALONE_PROJECT_ID } from '../../shared/constants'
+import { useProjects } from '../hooks/useProjects'
+import { projectColorValue } from '../utils/projects'
+import type { Project, RepeatingTask } from '../types'
+import DumpProjectPicker from './DumpProjectPicker'
+import DumpTodayStrip from './DumpTodayStrip'
 
 const SAVE_DEBOUNCE_MS = 500
 const MAIL_CHECKING = 'Sprawdzam maile…'
@@ -17,6 +26,11 @@ const SECTIONS: DumpSection[] = ['Now', 'Next', 'Inbox']
 let conflictDraft: string | null = null
 let saveChain: Promise<void> = Promise.resolve()
 
+const REPEAT_HELP = 'Nie rozumiem harmonogramu. Formy: "codziennie: X", "pon śr pt: X" (też "dni robocze:"), "co 3 dni: X", "15 dnia: X", "koniec miesiąca: X".'
+
+// The caret-position state of the project picker: ` #query` typed in the text, or ⌘P on an item.
+type Picker = { mode: 'inline'; start: number; query: string } | { mode: 'item'; pos: number; query: string }
+
 export default function DumpView() {
   const [text, setText] = useState(conflictDraft ?? '')
   const [conflict, setConflict] = useState(conflictDraft !== null)
@@ -25,6 +39,8 @@ export default function DumpView() {
   // conflict and "Nadpisz moją wersją" would replace the whole file with those few chars.
   const [loaded, setLoaded] = useState(conflictDraft !== null)
   const [mailStatus, setMailStatus] = useState<string | null>(null)
+  const [picker, setPicker] = useState<Picker | null>(null)
+  const { projects, config } = useProjects()
 
   // Refs, not state: the debounced save must see the latest values, not a closure snapshot.
   const textRef = useRef(text)
@@ -32,10 +48,72 @@ export default function DumpView() {
   // File text as of baseMtime — lets a 409 tell "lines were only appended" from a real conflict.
   const baseTextRef = useRef<string | null>(null)
   const areaRef = useRef<HTMLTextAreaElement>(null)
+  const highlightRef = useRef<HTMLDivElement>(null)
   const dirtyRef = useRef(conflictDraft !== null)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Latest ⌘R handler for the IPC listener below (registered once, so no stale closure).
+  const repeatRef = useRef<(el: HTMLTextAreaElement) => Promise<void>>(async () => {})
+  // One ⌘R at a time: a second press during the await would pass the duplicate check again.
+  const repeatBusyRef = useRef(false)
 
   const counts = useMemo(() => countDumpLines(text), [text])
+  const nowOpen = useMemo(() => countSectionOpen(text, 'Now'), [text])
+  const nowLimit = config.quickTasksLimit ?? 5
+  const codes = useMemo(() => projects.flatMap((p) => (p.code ? [p.code] : [])), [projects])
+  // New quick / repeating tasks never get an archived project (old lines may still carry its tag).
+  const projectByCode = (code: string) => projects.find((p) => !p.archivedAt && (p.code ?? '').toLowerCase() === code.toLowerCase())
+  // Archived projects too: their tags in old lines keep their colour.
+  const headers = useMemo(() => findDumpSectionHeaders(text), [text])
+  const tagged = useMemo(() => {
+    const byCode = new Map(projects.map((p) => [(p.code ?? '').toLowerCase(), p]))
+    const tags = findDumpTags(text, codes)
+    // text[from,to) with tags highlighted; a tag never crosses a line, so it never straddles a header boundary.
+    const render = (from: number, to: number): React.ReactNode[] => {
+      const parts: React.ReactNode[] = []
+      let at = from
+      for (const tag of tags) {
+        if (tag.start < from || tag.end > to) continue
+        parts.push(text.slice(at, tag.start))
+        parts.push(<span key={tag.start} className="dump-tag" style={{ color: projectColorValue(byCode.get(tag.code.toLowerCase())?.color) }}>{text.slice(tag.start, tag.end)}</span>)
+        at = tag.end
+      }
+      parts.push(text.slice(at, to))
+      return parts
+    }
+    // Header lines are their own elements: their offsetTop (wrap-proof) drives the sticky section bar.
+    const parts: React.ReactNode[] = []
+    let at = 0
+    headers.forEach((h, i) => {
+      parts.push(...render(at, h.start))
+      parts.push(<span key={`h${h.start}`} data-dump-header={i}>{render(h.start, h.end)}</span>)
+      at = h.end
+    })
+    parts.push(...render(at, text.length))
+    return parts
+  }, [text, projects, codes, headers])
+
+  // Section bar: the last header at/above the visible text top, shown once its line scrolled out.
+  const [stickyTitle, setStickyTitle] = useState<string | null>(null)
+  const updateSticky = useCallback(() => {
+    const area = areaRef.current
+    const hl = highlightRef.current
+    if (!area || !hl) return
+    const padTop = parseFloat(getComputedStyle(hl).paddingTop)
+    let title: string | null = null
+    hl.querySelectorAll<HTMLElement>('[data-dump-header]').forEach((el) => {
+      if (el.offsetTop > area.scrollTop + padTop) return
+      title = el.offsetTop < area.scrollTop ? headers[Number(el.dataset.dumpHeader)]?.title ?? null : null
+    })
+    setStickyTitle(title)
+  }, [headers])
+  useLayoutEffect(() => {
+    updateSticky()
+    const editor = areaRef.current?.parentElement
+    if (!editor) return
+    const ro = new ResizeObserver(updateSticky)
+    ro.observe(editor)
+    return () => ro.disconnect()
+  }, [updateSticky, tagged])
 
   const load = useCallback(async () => {
     await saveChain
@@ -150,14 +228,20 @@ export default function DumpView() {
   useEffect(() => {
     return window.api.onShortcutAction((data) => {
       const el = areaRef.current
-      if (data.action !== 'select-project' || !el || document.activeElement !== el) return
+      if (!el || document.activeElement !== el) return
+      // ⌘R also arrives from main (see shortcuts.ts) — a packaged build never delivers it as a keydown.
+      if (data.action === 'dump-repeat') return void repeatRef.current(el)
+      if (data.action !== 'select-project') return
       const section = SECTIONS[data.index ?? -1]
       if (section) applyEdit(moveDumpItems(el.value, el.selectionStart, el.selectionEnd, section))
     })
   }, [applyEdit])
 
-  const handleChange = (value: string) => {
+  const handleChange = (el: HTMLTextAreaElement) => {
+    const value = el.value
     applyText(value)
+    const trigger = projectTagTrigger(value, el.selectionStart)
+    setPicker((cur) => (trigger ? { mode: 'inline', ...trigger } : cur?.mode === 'item' ? cur : null))
     if (timerRef.current) clearTimeout(timerRef.current)
     timerRef.current = setTimeout(() => void save(), SAVE_DEBOUNCE_MS)
   }
@@ -165,8 +249,12 @@ export default function DumpView() {
   // ⌘F: focus on the item under the cursor — reuse the open quick task with the same
   // title, or create one. The line stays; completing the task ticks it off (main process).
   const focusOnItem = async (el: HTMLTextAreaElement) => {
-    const title = dumpItemTitle(el.value, el.selectionStart)
+    const raw = dumpItemTitle(el.value, el.selectionStart)
+    const title = raw ? stripDumpTags(raw, codes) : ''
     if (!title) return
+    // `- ` back in front: a tag right at the title's start (`- #ATD Oferta`) is a tag in the line.
+    const tag = findDumpTags(`- ${raw}`, codes)[0]
+    const projectId = tag ? projectByCode(tag.code)?.id : undefined
     const busy = 'Trwa już inny focus — zakończ go i spróbuj ponownie.'
     try {
       await save()
@@ -177,7 +265,7 @@ export default function DumpView() {
       let id = quickTasks.find((t) => !t.completed && !t.repeatingTaskId && t.title.trim() === title)?.id
       if (!id) {
         id = nanoid()
-        await window.api.saveQuickTask({ id, title, completed: false, createdAt: new Date().toISOString(), completedAt: null, order: 0 })
+        await window.api.saveQuickTask({ id, title, completed: false, createdAt: new Date().toISOString(), completedAt: null, order: 0, projectId })
       }
       const result = await window.api.focusOnTask(STANDALONE_PROJECT_ID, id)
       if (result?.error) return setError(result.error === 'already_in_focus' ? busy : 'Nie udało się uruchomić focusa.')
@@ -189,12 +277,113 @@ export default function DumpView() {
     }
   }
 
+  // Replaces the textarea content through the browser's editing stack (native ⌘Z keeps working):
+  // only the differing middle is selected and re-inserted.
+  const replaceText = (el: HTMLTextAreaElement, next: string, cursor: number) => {
+    const old = el.value
+    // Nothing to change (⌘P with the tag already there): execCommand('delete') on an empty selection would eat a char.
+    if (old === next) {
+      el.focus()
+      el.setSelectionRange(cursor, cursor)
+      return
+    }
+    let p = 0
+    while (p < old.length && p < next.length && old[p] === next[p]) p++
+    let s = 0
+    while (s < old.length - p && s < next.length - p && old[old.length - 1 - s] === next[next.length - 1 - s]) s++
+    el.focus()
+    el.setSelectionRange(p, old.length - s)
+    const middle = next.slice(p, next.length - s)
+    const ok = middle ? document.execCommand('insertText', false, middle) : document.execCommand('delete')
+    if (!ok || el.value !== next) {
+      applyEdit({ text: next, cursor })
+      return
+    }
+    el.setSelectionRange(cursor, cursor)
+    void save()
+  }
+
+  const pickProject = (project: Project) => {
+    const el = areaRef.current
+    if (el && picker?.mode === 'inline') {
+      const caret = el.selectionStart
+      // Re-read from the caret, not picker.start — the caret may sit behind a different ` #` by now.
+      const trigger = projectTagTrigger(el.value, caret)
+      const insert = `#${project.code ?? ''} `
+      if (trigger) replaceText(el, el.value.slice(0, trigger.start) + insert + el.value.slice(caret), trigger.start + insert.length)
+    } else if (el && picker?.mode === 'item') {
+      const result = setDumpItemTag(el.value, picker.pos, project.code ?? '', codes)
+      if (result) replaceText(el, result.text, result.cursor)
+      else el.focus()
+    }
+    // Last: the edit's input event re-opens the inline picker when the caret ends right behind the new tag.
+    setPicker(null)
+  }
+
+  const closePicker = () => {
+    setPicker(null)
+    areaRef.current?.focus()
+  }
+
+  // ⌘R: `pon śr pt: Tytuł` → repeating task first, THEN the line becomes `↻ …` and is ticked off.
+  const repeatFromItem = async (el: HTMLTextAreaElement) => {
+    const line = dumpItemTitle(el.value, el.selectionStart)
+    const parsed = line ? parseRepeatLine(line, codes) : null
+    if (!line || !parsed) return setError(REPEAT_HELP)
+    const project = parsed.projectCode ? projectByCode(parsed.projectCode) : undefined
+    const { repeatingTasks, saveRepeatingTask } = useProjects.getState()
+    if (repeatingTasks.some((t) => t.title.trim().toLowerCase() === parsed.title.toLowerCase())) return setError('Takie zadanie cykliczne już istnieje')
+    const task: RepeatingTask = {
+      id: nanoid(),
+      title: parsed.title,
+      schedule: parsed.schedule,
+      createdAt: new Date().toISOString(),
+      lastCompletedAt: null,
+      order: repeatingTasks.length,
+      acceptedCount: 0,
+      dismissedCount: 0,
+      completedCount: 0,
+      startDate: null,
+      endDate: null,
+      link: null,
+      projectId: project?.id ?? null
+    }
+    try {
+      await saveRepeatingTask(task)
+    } catch (err) {
+      return setError(`Nie udało się utworzyć zadania cyklicznego: ${err instanceof Error ? err.message : String(err)}`)
+    }
+    // Main rejects an invalid task silently (returns the old list) — don't tick the line off then.
+    if (!useProjects.getState().repeatingTasks.some((t) => t.id === task.id)) return setError('Nie udało się utworzyć zadania cyklicznego.')
+    setError(null)
+    // Looked up again: the text may have changed during the await.
+    const pos = findDumpItem(textRef.current, line)
+    if (pos === null) return
+    const marker = /^\s*(?:- )?/.exec(textRef.current.slice(pos))![0].length
+    const marked = textRef.current.slice(0, pos + marker) + '↻ ' + textRef.current.slice(pos + marker)
+    applyEdit(toggleDumpLines(marked, pos, pos, logicalDateKey()))
+  }
+  repeatRef.current = async (el) => {
+    if (repeatBusyRef.current) return
+    repeatBusyRef.current = true
+    try {
+      await repeatFromItem(el)
+    } finally {
+      repeatBusyRef.current = false
+    }
+  }
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (!e.metaKey || e.shiftKey || e.altKey || e.ctrlKey) return
     const key = e.key.toLowerCase()
     if (key === 'f') {
       e.preventDefault()
       void focusOnItem(e.currentTarget)
+      return
+    }
+    if (key === 'p') {
+      e.preventDefault()
+      setPicker({ mode: 'item', pos: e.currentTarget.selectionStart, query: '' })
       return
     }
     const el = e.currentTarget
@@ -265,6 +454,7 @@ export default function DumpView() {
         <span>Zrzut</span>
         <span style={{ marginLeft: 'auto', textTransform: 'none', letterSpacing: 0 }}>
           {mailStatus && <span style={{ opacity: 0.6, marginRight: 10 }}>{mailStatus}</span>}
+          <span className={nowOpen > nowLimit ? 'dump-now-over' : undefined} style={{ marginRight: 10 }}>Now {nowOpen}/{nowLimit}</span>
           {counts.open} otwartych / {counts.done} zrobionych
         </span>
         <button
@@ -287,18 +477,42 @@ export default function DumpView() {
       )}
       {error && !conflict && <div className="restore-error" role="alert">{error}</div>}
 
-      <textarea
-        ref={areaRef}
-        className="dump-textarea"
-        aria-label="Zrzut — lista rzeczy do zrobienia"
-        value={text}
-        readOnly={!loaded}
-        onChange={(e) => handleChange(e.target.value)}
-        onKeyDown={handleKeyDown}
-        onBlur={() => void save()}
-        placeholder={'- rzecz do zrobienia\n\n⌘D — oznacz jako zrobione / przywróć\n⌘1 / ⌘2 / ⌘3 — przenieś do ## Now / ## Next / na górę ## Inbox\n⌘F — focus na zadaniu (tworzy quick task, przenosi do ## Now)'}
-        spellCheck={false}
-      />
+      <DumpTodayStrip />
+
+      <div className="dump-editor">
+        <div ref={highlightRef} className="dump-layer dump-highlight" aria-hidden="true">{tagged}{'\u200b'}</div>
+        <textarea
+          ref={areaRef}
+          className="dump-layer dump-textarea"
+          aria-label="Zrzut — lista rzeczy do zrobienia"
+          value={text}
+          readOnly={!loaded}
+          onChange={(e) => handleChange(e.target)}
+          onKeyDown={handleKeyDown}
+          onScroll={(e) => { if (highlightRef.current) highlightRef.current.scrollTop = e.currentTarget.scrollTop; updateSticky() }}
+          onSelect={(e) => {
+            // Caret moved away from this ` #query` (incl. behind another tag) → the inline picker is stale.
+            if (picker?.mode === 'inline' && projectTagTrigger(e.currentTarget.value, e.currentTarget.selectionStart)?.start !== picker.start) setPicker(null)
+          }}
+          onBlur={() => {
+            // The inline picker listens for keys on window — it must not outlive the textarea's focus.
+            setPicker((cur) => (cur?.mode === 'inline' ? null : cur))
+            void save()
+          }}
+          placeholder={'- rzecz do zrobienia #KOD\n\n⌘D — oznacz jako zrobione / przywróć\n⌘1 / ⌘2 / ⌘3 — przenieś do ## Now / ## Next / na górę ## Inbox\n⌘F — focus na zadaniu (tworzy quick task, przenosi do ## Now)\n# po spacji / ⌘P — tag projektu\n⌘R — "pon śr pt: Tytuł" → zadanie cykliczne'}
+          spellCheck={false}
+        />
+        {stickyTitle && <div className="dump-sticky" aria-hidden="true"><span>{stickyTitle}</span></div>}
+        {picker && (
+          <DumpProjectPicker
+            projects={projects.filter((p) => !p.archivedAt && p.code)}
+            query={picker.query}
+            onQueryChange={picker.mode === 'item' ? (query) => setPicker({ ...picker, query }) : undefined}
+            onPick={pickProject}
+            onClose={closePicker}
+          />
+        )}
+      </div>
     </div>
   )
 }

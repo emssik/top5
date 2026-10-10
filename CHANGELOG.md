@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.114.0] - 2026-10-10
+
+### Added
+
+- **Zrzut jako główny widok** — tagi projektów `#KOD` w kolorze projektu, lista projektów po ` #` w środku linii lub ⌘P, ⌘R zamienia linię typu `pon śr pt: Tytuł` w zadanie cykliczne, zwijany pasek „Dziś” (focus, zadania cykliczne, nawyki), licznik `Now x/limit`, przypięta belka z nazwą bieżącej sekcji `##` przy przewijaniu.
+- **Zrzut w czystym widoku** — aplikacja zapamiętuje ostatni widok i otwiera go po starcie; w czystym widoku pokazuje Zrzut, jeśli był ostatnim widokiem.
+
+### Fixed
+
+- **⌘R w zbudowanej aplikacji** — skrót trafia do Zrzutu (wcześniej połykało go zabezpieczenie przed przeładowaniem okna).
+- **⌘1–5 w czystym widoku** — nie przełączają już na projekt i nie chowają Zrzutu.
+
 ## [1.113.1] - 2026-10-04
 
 ### Fixed

@@ -1,0 +1,7 @@
+1. Shared helpers: tagi, countSectionOpen, dopasowanie bez tagów — src/shared/dump.ts (task)
+2. parseRepeatLine — src/shared/dump-repeat.ts (task)
+3. Testy — tests/dump-tags.test.ts + package.json (task)
+4. DumpView: warstwa podświetlenia, trigger ` #`, ⌘P/⌘R/⌘F, licznik Now — src/renderer/components/DumpView.tsx:261 (task)
+5. DumpProjectPicker, DumpTodayStrip — nowe komponenty; useTaskList (hooks/useTaskList.ts:75), getScheduledHabits (CleanViewHabitsSection.tsx:15) (task)
+6. Dashboard: top5.lastView + dump w clean view — Dashboard.tsx:26,239 (task)
+7. CSS (good-css), docs/API.md, cli/top5-cli/SKILL.md (task)

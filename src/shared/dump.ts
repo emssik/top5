@@ -121,6 +121,73 @@ function openItemTitle(lines: string[], i: number): string | null {
   return (isOpen(lines[i]) ? t.slice(2) : t).trim() || null
 }
 
+// `#KOD` tags: `#` + code after a space/tab, never at the start of the line (that's a comment/header).
+// A tag in a title is `#` + letter first, so `#123` (issue numbers) stays plain text.
+const TAG_RE = /[ \t]#(\p{L}[\p{L}\p{N}]*)/gu
+export type DumpTag = { start: number; end: number; code: string }
+
+// Tags of known project `codes` (case-insensitive); `code` is the spelling from `codes`.
+export function findDumpTags(text: string, codes: string[]): DumpTag[] {
+  const byLower = new Map(codes.map((c) => [c.toLowerCase(), c]))
+  const tags: DumpTag[] = []
+  let offset = 0
+  for (const line of text.split('\n')) {
+    if (!line.trimStart().startsWith('#')) {
+      for (const m of line.matchAll(TAG_RE)) {
+        const code = byLower.get(m[1].toLowerCase())
+        if (code) tags.push({ start: offset + m.index + 1, end: offset + m.index + m[0].length, code })
+      }
+    }
+    offset += line.length + 1
+  }
+  return tags
+}
+
+const HASHTAG_RE = /(^|[ \t]+)#(\p{L}[\p{L}\p{N}]*)/gu
+
+// Title without its project tags (`codes`, case-insensitive); other hashtags (`#pilne`) stay.
+// A title may start with a tag (`- #ATD Oferta` → `#ATD Oferta`); callers never pass `#` comment lines.
+export function stripDumpTags(title: string, codes: string[]): string {
+  const known = new Set(codes.map((c) => c.toLowerCase()))
+  return title.replace(HASHTAG_RE, (all, _lead, word: string) => (known.has(word.toLowerCase()) ? '' : all)).trim()
+}
+
+// dump↔quick-task matching key: main doesn't know the project codes, so every hashtag is dropped
+// on both sides — `- Napraw #pilne #ATD` ↔ task `Napraw #pilne` (⌘F keeps non-project hashtags).
+const matchKey = (title: string): string => title.replace(HASHTAG_RE, '').trim()
+const hashtags = (title: string): string[] => [...title.matchAll(HASHTAG_RE)].map((m) => m[2].toLowerCase())
+
+// ⌘P: puts `#code` at the end of the first line of the item under `pos` (replacing its tags).
+export function setDumpItemTag(text: string, pos: number, code: string, codes: string[]): { text: string; cursor: number } | null {
+  const lines = text.split('\n')
+  const first = itemRange(lines, lineAt(text, pos))[0]
+  const line = lines[first]
+  if (line.trim() === '' || line.trimStart().startsWith('#')) return null
+  const indent = line.slice(0, line.length - line.trimStart().length)
+  const next = `${indent}${stripDumpTags(line.trimEnd(), codes)} #${code}`
+  const start = cursorAt(lines, first)
+  const oldEnd = start + line.length
+  lines[first] = next
+  const newEnd = start + next.length
+  return { text: lines.join('\n'), cursor: pos >= oldEnd ? pos + newEnd - oldEnd : Math.min(pos, newEnd) }
+}
+
+// Picker trigger: caret right behind ` #query` in a line that isn't a comment / header.
+export function projectTagTrigger(text: string, caret: number): { start: number; query: string } | null {
+  const lineStart = text.lastIndexOf('\n', caret - 1) + 1
+  const before = text.slice(lineStart, caret)
+  const m = /[ \t]#([\p{L}\p{N}]*)$/u.exec(before)
+  if (!m || before.trimStart().startsWith('#')) return null
+  return { start: lineStart + m.index + 1, query: m[1] }
+}
+
+// Open items in `## <section>`.
+export function countSectionOpen(text: string, section: DumpSection): number {
+  const lines = text.split('\n')
+  const bounds = sectionBounds(lines, section)
+  return bounds ? lines.slice(bounds[0] + 1, bounds[1]).filter(isOpen).length : 0
+}
+
 // ⌘F: title of the open item under the cursor.
 export function dumpItemTitle(text: string, pos: number): string | null {
   const lines = text.split('\n')
@@ -136,10 +203,16 @@ export function completeDumpItem(text: string, title: string, date: string): str
 
 // Position of the first open item titled `title`; null when there's none.
 export function findDumpItem(text: string, title: string): number | null {
+  const want = matchKey(title)
+  // A tags-only title would match every tags-only item.
+  if (!want) return null
+  // The title's own hashtags must be on the line too: task `Napraw #jutro` ≠ line `- Napraw #pilne`.
+  const wantTags = hashtags(title)
   const lines = text.split('\n')
   let pos = 0
   for (let i = 0; i < lines.length; i++) {
-    if (openItemTitle(lines, i) === title.trim()) return pos
+    const t = openItemTitle(lines, i)
+    if (t !== null && matchKey(t) === want && wantTags.every((tag) => hashtags(t).includes(tag))) return pos
     pos += lines[i].length + 1
   }
   return null
@@ -267,4 +340,18 @@ export function toggleDumpLines(
   }
 
   return { text: result.join('\n'), cursor: cursorAt(result, cursorLine) }
+}
+
+export type DumpSectionHeader = { start: number; end: number; title: string }
+
+/** `## Title` lines (exactly `## ` at column 0, non-empty title), in text order. */
+export function findDumpSectionHeaders(text: string): DumpSectionHeader[] {
+  const headers: DumpSectionHeader[] = []
+  let start = 0
+  for (const line of text.split('\n')) {
+    const title = line.startsWith('## ') ? line.slice(3).trim() : ''
+    if (title) headers.push({ start, end: start + line.length, title })
+    start += line.length + 1
+  }
+  return headers
 }

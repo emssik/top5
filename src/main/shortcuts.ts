@@ -106,6 +106,13 @@ export function registerLocalShortcuts(win: BrowserWindow): void {
     }
   }
 
+  // ⌘R = "line → repeating task" in the dump. Forwarded like ⌘1–3: in a packaged build
+  // optimizer.watchWindowShortcuts swallows ⌘R (no reload), so the textarea never sees it.
+  bindings.push({
+    parsed: { meta: true, ctrl: false, shift: false, alt: false, key: 'r' },
+    handler: () => win.webContents.send('shortcut-action', { action: 'dump-repeat' })
+  })
+
   win.webContents.on('before-input-event', (event, input) => {
     for (const { parsed, handler } of bindings) {
       if (matchesInput(input, parsed)) {

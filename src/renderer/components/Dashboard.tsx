@@ -24,7 +24,9 @@ export default function Dashboard() {
   const cleanView = config.cleanView ?? false
   const activeProjectsLimit = config.activeProjectsLimit ?? 5
 
-  const [activeView, setActiveView] = useState('today')
+  const [activeView, setActiveView] = useState(() => {
+    try { return localStorage.getItem('top5.lastView') || 'today' } catch { return 'today' }
+  })
   const [showNotes, setShowNotes] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [restoreError, setRestoreError] = useState<string | null>(null)
@@ -80,6 +82,11 @@ export default function Dashboard() {
   }, [cleanView])
 
   useEffect(() => {
+    try { localStorage.setItem('top5.lastView', activeView) } catch { /* ignore */ }
+  }, [activeView])
+
+  useEffect(() => {
+    // App renders Dashboard only after loadData, so `projects` is already the real list here.
     if (!activeView.startsWith('project-')) return
     const projectId = activeView.slice('project-'.length)
     const exists = projects.some((project) => project.id === projectId && !project.archivedAt)
@@ -151,6 +158,8 @@ export default function Dashboard() {
     if (data.action === 'select-project' && data.index !== undefined) {
       // In the dump editor ⌘1–3 move the item to Now / Next / Inbox (DumpView handles them).
       if (data.index <= 2 && document.activeElement?.classList.contains('dump-textarea')) return
+      // Clean view has no project views — switching would only hide the dump (it follows activeView).
+      if (cleanView) return
       if (data.index >= 0 && data.index < activeProjects.length) {
         setActiveView(`project-${activeProjects[data.index].id}`)
       }
@@ -160,7 +169,7 @@ export default function Dashboard() {
     if (data.action === 'toggle-quick-notes') {
       setShowNotes((value) => !value)
     }
-  }, [activeProjects])
+  }, [activeProjects, cleanView])
 
   useEffect(() => {
     const cleanup = window.api.onShortcutAction(handleShortcutAction)
@@ -210,7 +219,15 @@ export default function Dashboard() {
             fullWidth
           />
         )}
-        <div className="h-7 flex-shrink-0 flex items-center justify-end px-3" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}>
+        <div className="h-7 flex-shrink-0 flex items-center justify-end gap-1 px-3" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}>
+          <button
+            onClick={() => setActiveView(activeView === 'dump' ? 'today' : 'dump')}
+            className="opacity-0 group-hover/window:opacity-100 transition-opacity p-1 rounded hover:opacity-60 text-[13px] leading-none"
+            title={activeView === 'dump' ? 'Zadania' : 'Zrzut'}
+            style={{ WebkitAppRegion: 'no-drag', fontFamily: 'system-ui' } as React.CSSProperties}
+          >
+            {activeView === 'dump' ? '☰' : '✎'}
+          </button>
           <button
             onClick={toggleCleanView}
             className="opacity-0 group-hover/window:opacity-100 transition-opacity p-1 rounded hover:opacity-60"
@@ -222,9 +239,15 @@ export default function Dashboard() {
         </div>
 
         <div className="flex-1 overflow-auto px-5 pb-3">
-          <CleanViewHeader />
-          <QuickTasksView cleanView />
-          <CleanViewHabitsSection />
+          {activeView === 'dump' ? (
+            <DumpView />
+          ) : (
+            <>
+              <CleanViewHeader />
+              <QuickTasksView cleanView />
+              <CleanViewHabitsSection />
+            </>
+          )}
         </div>
       </div>
     )
