@@ -342,15 +342,14 @@ export function toggleDumpLines(
   return { text: result.join('\n'), cursor: cursorAt(result, cursorLine) }
 }
 
-export type DumpSectionHeader = { start: number; end: number; title: string }
+export type DumpSectionHeader = { start: number; end: number }
 
 /** `## Title` lines (exactly `## ` at column 0, non-empty title), in text order. */
 export function findDumpSectionHeaders(text: string): DumpSectionHeader[] {
   const headers: DumpSectionHeader[] = []
   let start = 0
   for (const line of text.split('\n')) {
-    const title = line.startsWith('## ') ? line.slice(3).trim() : ''
-    if (title) headers.push({ start, end: start + line.length, title })
+    if (line.startsWith('## ') && line.slice(3).trim()) headers.push({ start, end: start + line.length })
     start += line.length + 1
   }
   return headers

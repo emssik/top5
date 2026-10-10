@@ -1986,6 +1986,9 @@ body {
 
 /* Zrzut (dump.md) */
 .dump-view {
+  /* Section bar = top pad + one line + bottom pad; the textarea's scroll-padding reuses them. */
+  --dump-bar-top: 6px;
+  --dump-bar-bottom: 16px;
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -2041,6 +2044,8 @@ body {
   caret-color: var(--c-text-primary);
   resize: none;
   outline: none;
+  /* A caret scrolled into view lands below the section bar, not under it. */
+  scroll-padding-top: calc(var(--dump-bar-top) + 1lh + var(--dump-bar-bottom));
 }
 
 .dump-textarea::placeholder {
@@ -2056,17 +2061,24 @@ body {
   pointer-events: none;
 }
 
-.dump-sticky span {
-  display: block;
-  padding: 4px 14px;
-  border-bottom: 1px solid var(--c-border-subtle);
+.dump-sticky:not([data-on]) {
+  visibility: hidden;
+}
+
+/* Same font, size and left padding as .dump-layer: the label lands exactly on the header line.
+   The last 12px fade to transparent, so text slides softly under the bar instead of being cut. */
+.dump-sticky-bar {
+  --dump-sticky-bg: var(--bg-card);
+  padding: var(--dump-bar-top) 14px var(--dump-bar-bottom);
   border-radius: 7px 0 0 0;
-  background: var(--bg-card);
+  background: linear-gradient(var(--dump-sticky-bg) calc(100% - 12px), transparent);
   color: var(--c-text-primary);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 13px;
-  font-weight: 600;
   line-height: 1.6;
+  /* Wraps like .dump-layer (same content width), so a long header is covered line for line. */
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
 }
 
 .dump-now-over {
@@ -2212,6 +2224,120 @@ body {
   flex: 0 0 auto;
   padding: 4px 10px;
   font-size: 12px;
+}
+
+.dump-sidebar-btn {
+  margin: -2px 0 -2px -4px;
+  padding: 2px 4px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .dump-sidebar-btn:hover {
+    color: var(--c-text-primary);
+    background: var(--c-border-subtle);
+  }
+}
+
+.dump-sidebar-btn:focus-visible {
+  outline: 2px solid var(--c-border);
+  outline-offset: 1px;
+}
+
+.dump-sidebar-btn:active {
+  opacity: 0.6;
+}
+
+/* Writer layout (main window): one surface, a centered text column, larger type — like iA Writer.
+   The editor spans the full panel so its scrollbar sits at the window edge; both layers centre the
+   text with the same padding, so the highlight layer and the textarea stay aligned. */
+.dump-writer {
+  --dump-col: 680px;
+  --dump-bar-top: 10px;
+  --dump-bar-bottom: 18px;
+  /* cqw = editor width, so layers and the sticky bar (inside a scrollbar-gutter box) centre identically */
+  --dump-gutter: max(24px, calc((100cqw - var(--dump-col)) / 2));
+  height: calc(100% + 24px);
+  margin: 0 -32px -24px;
+}
+
+.dump-writer > :not(.dump-editor) {
+  width: min(100% - 48px, var(--dump-col));
+  margin-inline: auto;
+}
+
+.dump-writer .dump-editor {
+  container-type: inline-size;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+
+/* One rule for both: the sticky bar must use the layers' exact font to land on the header line. */
+.dump-writer :is(.dump-layer, .dump-sticky-bar) {
+  font-family: 'iA Writer Mono S', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 16px;
+  line-height: 1.85;
+}
+
+.dump-writer .dump-layer {
+  padding: 24px var(--dump-gutter) 40vh;
+}
+
+/* Bold keeps the advance width in a monospace font, so the caret stays aligned. */
+.dump-writer [data-dump-header] {
+  font-weight: 700;
+}
+
+.dump-writer .dump-sticky-bar {
+  --dump-sticky-bg: var(--bg-base);
+  padding-inline: var(--dump-gutter);
+  border-radius: 0;
+  font-weight: 700;
+}
+
+/* The picker sits at the text column's right edge, not the window's. */
+.dump-writer .dump-picker {
+  right: var(--dump-gutter);
+}
+
+.dump-writer .dump-strip {
+  margin-bottom: 4px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.dump-writer .dump-strip.has-new {
+  border-left: 3px solid var(--pc-amber);
+}
+
+.dump-writer .dump-strip-head,
+.dump-writer .dump-strip-body {
+  padding-inline: 0;
+}
+
+.dump-writer .dump-strip.has-new :is(.dump-strip-head, .dump-strip-body) {
+  padding-left: 10px;
+}
+
+.dump-writer .section-label .dump-bar-btn {
+  padding: 2px 0 2px 8px;
+  border: 0;
+  background: transparent;
+  color: var(--c-text-muted);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .dump-writer .section-label .dump-bar-btn:hover:not(:disabled) {
+    color: var(--c-text-primary);
+  }
 }
 
 /* 5 Wins */

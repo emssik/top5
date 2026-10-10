@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.115.0] - 2026-10-10
+
+### Added
+
+- **Zrzut w stylu iA Writer** — jedna płaszczyzna bez ramek, wyśrodkowana kolumna tekstu, większa czcionka, pogrubione nagłówki `##`; Zrzut otwiera się bez listy projektów (☰ w nagłówku ją pokazuje).
+
+### Changed
+
+- **Belka sekcji przy przewijaniu** — pokazuje całą linię `## X` dokładnie w miejscu nagłówka; przy kolejnej sekcji płynnie zanika zamiast nachodzić na nagłówek, kursor nie chowa się już pod belką, długie nagłówki się zawijają.
+
 ## [1.114.0] - 2026-10-10
 
 ### Added

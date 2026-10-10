@@ -27,6 +27,9 @@ export default function Dashboard() {
   const [activeView, setActiveView] = useState(() => {
     try { return localStorage.getItem('top5.lastView') || 'today' } catch { return 'today' }
   })
+  // The dump opens without the sidebar; ☰ in its header shows it until the view changes.
+  const [dumpSidebar, setDumpSidebar] = useState(false)
+  const hideSidebar = activeView === 'dump' && !dumpSidebar
   const [showNotes, setShowNotes] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [restoreError, setRestoreError] = useState<string | null>(null)
@@ -83,6 +86,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     try { localStorage.setItem('top5.lastView', activeView) } catch { /* ignore */ }
+    setDumpSidebar(false)
   }, [activeView])
 
   useEffect(() => {
@@ -255,6 +259,8 @@ export default function Dashboard() {
 
   return (
     <div className="h-screen app-shell">
+      {/* Hidden, not unmounted: Sidebar's ensureCycleStart side effect must keep running in the dump. */}
+      <div className={hideSidebar ? 'hidden' : 'contents'}>
       <Sidebar
         activeView={activeView}
         activeProjects={activeProjects}
@@ -283,6 +289,7 @@ export default function Dashboard() {
         onMoveTaskToProject={moveTaskToProject}
         activeProjectsLimit={activeProjectsLimit}
       />
+      </div>
 
       <div className="main-panel-wrap">
         <div className="dashboard-titlebar" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties} />
@@ -300,7 +307,7 @@ export default function Dashboard() {
           {activeView === 'cycle' && <CycleView />}
           {activeView === 'repeat' && <RepeatView />}
           {activeView === 'habits' && <HabitsView />}
-          {activeView === 'dump' && <DumpView />}
+          {activeView === 'dump' && <DumpView sidebarHidden={hideSidebar} onToggleSidebar={() => setDumpSidebar((shown) => !shown)} />}
           {activeView === 'stats' && <InlineStatsView />}
 
           {selectedProject && (

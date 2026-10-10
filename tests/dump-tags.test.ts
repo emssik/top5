@@ -109,9 +109,9 @@ test('parseRepeatLine tolerates stray commas between days', () => {
 
 import { findDumpSectionHeaders } from '../src/shared/dump'
 
-test('findDumpSectionHeaders lists `## ` lines with trimmed titles', () => {
-  assert.deepEqual(findDumpSectionHeaders('## Now\n- a\n## Next\n'), [{ start: 0, end: 6, title: 'Now' }, { start: 11, end: 18, title: 'Next' }])
-  assert.deepEqual(findDumpSectionHeaders('## Inbox  '), [{ start: 0, end: 10, title: 'Inbox' }])
+test('findDumpSectionHeaders lists `## ` lines (whole line, trailing spaces included)', () => {
+  assert.deepEqual(findDumpSectionHeaders('## Now\n- a\n## Next\n'), [{ start: 0, end: 6 }, { start: 11, end: 18 }])
+  assert.deepEqual(findDumpSectionHeaders('## Inbox  '), [{ start: 0, end: 10 }])
 })
 
 test('findDumpSectionHeaders ignores other lines', () => {

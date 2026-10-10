@@ -31,7 +31,8 @@ const REPEAT_HELP = 'Nie rozumiem harmonogramu. Formy: "codziennie: X", "pon śr
 // The caret-position state of the project picker: ` #query` typed in the text, or ⌘P on an item.
 type Picker = { mode: 'inline'; start: number; query: string } | { mode: 'item'; pos: number; query: string }
 
-export default function DumpView() {
+// `onToggleSidebar`: the main window hides its sidebar in the dump; ☰ brings it back (clean view passes nothing).
+export default function DumpView({ sidebarHidden, onToggleSidebar }: { sidebarHidden?: boolean; onToggleSidebar?: () => void }) {
   const [text, setText] = useState(conflictDraft ?? '')
   const [conflict, setConflict] = useState(conflictDraft !== null)
   const [error, setError] = useState<string | null>(null)
@@ -92,20 +93,42 @@ export default function DumpView() {
     return parts
   }, [text, projects, codes, headers])
 
-  // Section bar: the last header at/above the visible text top, shown once its line scrolled out.
-  const [stickyTitle, setStickyTitle] = useState<string | null>(null)
+  // Section bar: draws the current `## X` line exactly where the header itself would sit at the top.
+  // As the next header comes up the label fades out before they could overlap; the next header then
+  // scrolls into the slot alone and the bar takes it over in place — no stacking, no jump. Updated on the DOM directly (scroll fires often; no React state per frame).
+  const stickyRef = useRef<HTMLDivElement>(null)
+  const stickyLabelRef = useRef<HTMLSpanElement>(null)
   const updateSticky = useCallback(() => {
-    const area = areaRef.current
     const hl = highlightRef.current
-    if (!area || !hl) return
-    const padTop = parseFloat(getComputedStyle(hl).paddingTop)
-    let title: string | null = null
-    hl.querySelectorAll<HTMLElement>('[data-dump-header]').forEach((el) => {
-      if (el.offsetTop > area.scrollTop + padTop) return
-      title = el.offsetTop < area.scrollTop ? headers[Number(el.dataset.dumpHeader)]?.title ?? null : null
-    })
-    setStickyTitle(title)
-  }, [headers])
+    const sticky = stickyRef.current
+    const label = stickyLabelRef.current
+    const bar = sticky?.firstElementChild as HTMLElement | null
+    if (!hl || !sticky || !label || !bar) return
+    // Rects, not offsetTop: offsetTop rounds to whole px and the line heights are fractional. The highlight
+    // layer and the sticky box share their top edge; both are non-empty inline spans in the same font,
+    // so equal y = pixel-identical position (a header right at the slot is simply drawn over itself).
+    const top = sticky.getBoundingClientRect().top
+    const labelTop = label.getBoundingClientRect().top - top
+    let current: HTMLElement | null = null
+    let nextY: number | null = null
+    for (const el of hl.querySelectorAll<HTMLElement>('[data-dump-header]')) {
+      const y = el.getBoundingClientRect().top - top
+      if (y <= labelTop) current = el
+      else { nextY = y; break }
+    }
+    if (!current) { delete sticky.dataset.on; return }
+    const h = headers[Number(current.dataset.dumpHeader)]
+    // Unchanged text is not rewritten: a new text node would force a layout on every scroll event.
+    const title = h ? text.slice(h.start, h.end) : '​'
+    if (label.textContent !== title) label.textContent = title
+    // Fully gone by the time the next header would touch the label's glyphs (no overlapping text).
+    const clear = labelTop + label.offsetHeight
+    const fade = nextY === null ? 1 : (nextY - clear) / Math.max(1, bar.offsetHeight - clear)
+    label.style.opacity = String(Math.min(1, Math.max(0, fade)))
+    // The background stays opaque (no dimmed text showing through) but ends just above the next header.
+    bar.style.clipPath = nextY !== null && nextY < bar.offsetHeight ? `inset(0 0 ${bar.offsetHeight - Math.max(0, nextY - 4)}px 0)` : ''
+    sticky.dataset.on = ''
+  }, [headers, text])
   useLayoutEffect(() => {
     updateSticky()
     const editor = areaRef.current?.parentElement
@@ -447,10 +470,16 @@ export default function DumpView() {
     }
   }, [load, save])
 
+  const sidebarLabel = sidebarHidden ? 'Pokaż projekty' : 'Ukryj projekty'
   return (
-    <div className="dump-view">
+    // Main window (has the ☰ toggle) gets the writer layout; clean view keeps its own look.
+    <div className={onToggleSidebar ? 'dump-view dump-writer' : 'dump-view'}>
       <div className="section-label" style={{ marginBottom: 12 }}>
-        <span style={{ opacity: 0.5 }}>✎</span>
+        {onToggleSidebar ? (
+          <button className="dump-sidebar-btn" onClick={onToggleSidebar} title={sidebarLabel} aria-label={sidebarLabel}>☰</button>
+        ) : (
+          <span style={{ opacity: 0.5 }}>✎</span>
+        )}
         <span>Zrzut</span>
         <span style={{ marginLeft: 'auto', textTransform: 'none', letterSpacing: 0 }}>
           {mailStatus && <span style={{ opacity: 0.6, marginRight: 10 }}>{mailStatus}</span>}
@@ -502,7 +531,7 @@ export default function DumpView() {
           placeholder={'- rzecz do zrobienia #KOD\n\n⌘D — oznacz jako zrobione / przywróć\n⌘1 / ⌘2 / ⌘3 — przenieś do ## Now / ## Next / na górę ## Inbox\n⌘F — focus na zadaniu (tworzy quick task, przenosi do ## Now)\n# po spacji / ⌘P — tag projektu\n⌘R — "pon śr pt: Tytuł" → zadanie cykliczne'}
           spellCheck={false}
         />
-        {stickyTitle && <div className="dump-sticky" aria-hidden="true"><span>{stickyTitle}</span></div>}
+        <div ref={stickyRef} className="dump-sticky" aria-hidden="true"><div className="dump-sticky-bar"><span ref={stickyLabelRef}>{'\u200b'}</span></div></div>
         {picker && (
           <DumpProjectPicker
             projects={projects.filter((p) => !p.archivedAt && p.code)}
