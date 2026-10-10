@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.116.0] - 2026-10-10
+
+### Added
+
+- **Wcięcia w Zrzucie jak w iA Writer** — nowy edytor (CodeMirror): zawinięte linie punktu zaczynają się pod tekstem po `- `, `## ` nagłówka wystaje na lewy margines, a notatki pod punktem (np. adresy hostów) są wcięte pod jego tekst.
+- **⌘Z cofa komendy Zrzutu** — ⌘D, ⌘1–3, ⌘R i wstawienie tagu z listy projektów można teraz cofnąć.
+
+### Changed
+
+- **Zrobione na górze `## Done`** — ⌘D (i ukończenie powiązanego szybkiego zadania) wstawia punkt na samą górę sekcji Done, najnowsze są pierwsze.
+
+### Fixed
+
+- Zrzut z końcami linii CRLF — komendy nie trafiają już w złą linię.
+- ⌘Z po „Wczytaj z pliku” nie przywraca odrzuconych zmian.
+
 ## [1.115.0] - 2026-10-10
 
 ### Added

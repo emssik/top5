@@ -161,7 +161,7 @@ export default function Dashboard() {
   const handleShortcutAction = useCallback((data: { action: string; index?: number }) => {
     if (data.action === 'select-project' && data.index !== undefined) {
       // In the dump editor ⌘1–3 move the item to Now / Next / Inbox (DumpView handles them).
-      if (data.index <= 2 && document.activeElement?.classList.contains('dump-textarea')) return
+      if (data.index <= 2 && document.activeElement?.closest('.dump-editor')) return
       // Clean view has no project views — switching would only hide the dump (it follows activeView).
       if (cleanView) return
       if (data.index >= 0 && data.index < activeProjects.length) {

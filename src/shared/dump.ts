@@ -288,8 +288,8 @@ export function moveDumpItems(
 /**
  * ⌘D: toggles every item touched by the selection [selStart, selEnd] — the whole
  * item, including its continuation lines.
- * Open (`- x` or plain text) → removed and appended at the end of the file as
- * `+ <date> x` under `## Done` (header created if missing).
+ * Open (`- x` or plain text) → removed and put on top of `## Done` as `+ <date> x`
+ * (header created at the end of the file if missing).
  * Done (`+ <date> x` / `+ x`) → `- x`, moved to the end of the open list.
  * Returns null when there is nothing to toggle.
  */
@@ -329,14 +329,21 @@ export function toggleDumpLines(
   }
 
   if (completed.length > 0) {
-    const trailingNewline = text.endsWith('\n')
-    while (result.length > 0 && result[result.length - 1].trim() === '') result.pop()
-    if (!result.some(isHeader)) {
+    const h = result.findIndex(isHeader)
+    if (h === -1) {
+      const trailingNewline = text.endsWith('\n')
+      while (result.length > 0 && result[result.length - 1].trim() === '') result.pop()
       if (result.length > 0) result.push('')
-      result.push(DONE_HEADER)
+      result.push(DONE_HEADER, ...completed)
+      if (trailingNewline) result.push('')
+    } else {
+      // Newest on top: above the first line of the section, keeping the blank lines under the header.
+      let at = h + 1
+      while (at < result.length && result[at].trim() === '') at++
+      if (at === result.length || isSectionHeader(result[at])) at = h + 1
+      result.splice(at, 0, ...completed)
+      if (at <= cursorLine) cursorLine += completed.length
     }
-    result.push(...completed)
-    if (trailingNewline) result.push('')
   }
 
   return { text: result.join('\n'), cursor: cursorAt(result, cursorLine) }
@@ -353,4 +360,14 @@ export function findDumpSectionHeaders(text: string): DumpSectionHeader[] {
     start += line.length + 1
   }
   return headers
+}
+
+// Wrap alignment of one line, in characters: item = continuation indent, header = how far the `## ` hangs
+// into the margin, plain = the line's own leading whitespace (wrapped text keeps its indent).
+export type DumpLineHang = { kind: 'header' | 'item' | 'plain'; hang: number }
+
+export function dumpLineHang(line: string): DumpLineHang {
+  if (line.startsWith('## ') && line.slice(3).trim()) return { kind: 'header', hang: 3 }
+  const indent = line.length - line.trimStart().length
+  return /^[-+] /.test(line.slice(indent)) ? { kind: 'item', hang: indent + 2 } : { kind: 'plain', hang: indent }
 }

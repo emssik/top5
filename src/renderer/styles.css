@@ -1986,7 +1986,7 @@ body {
 
 /* Zrzut (dump.md) */
 .dump-view {
-  /* Section bar = top pad + one line + bottom pad; the textarea's scroll-padding reuses them. */
+  /* Section bar = top pad + one line + bottom pad. */
   --dump-bar-top: 6px;
   --dump-bar-bottom: 16px;
   display: flex;
@@ -2007,27 +2007,37 @@ body {
   border-color: var(--c-border);
 }
 
-/* The highlight div and the textarea must lay text out identically (same box, font, wrapping). */
-.dump-layer {
+/* CodeMirror fills the card. The `.cm-editor` prefix outranks CodeMirror's own base theme. */
+.dump-cm {
   position: absolute;
   inset: 0;
-  margin: 0;
-  padding: 12px 14px;
-  border: 0;
+}
+
+.dump-cm .cm-editor {
+  height: 100%;
+  /* The card border (.dump-editor:focus-within) is the focus indicator. */
+  outline: none;
+}
+
+.dump-cm .cm-editor .cm-scroller {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 13px;
   line-height: 1.6;
-  white-space: pre-wrap;
-  overflow-wrap: break-word;
   scrollbar-gutter: stable;
-  tab-size: 8;
 }
 
-.dump-highlight {
-  /* hidden, not clip: scrolled by script (textarea onScroll) and needs the same scrollbar gutter */
-  overflow: hidden;
+.dump-cm .cm-editor .cm-content {
+  padding: 12px 14px;
   color: var(--c-text-primary);
-  pointer-events: none;
+  caret-color: var(--c-text-primary);
+}
+
+.dump-cm .cm-editor .cm-line {
+  padding: 0;
+}
+
+.dump-cm .cm-editor .cm-placeholder {
+  color: var(--c-text-muted);
 }
 
 .dump-tag {
@@ -2035,21 +2045,16 @@ body {
   background: color-mix(in oklch, currentColor 15%, transparent);
 }
 
-.dump-textarea {
-  width: 100%;
-  height: 100%;
-  overflow-y: auto;
-  background: transparent;
-  color: transparent;
-  caret-color: var(--c-text-primary);
-  resize: none;
-  outline: none;
-  /* A caret scrolled into view lands below the section bar, not under it. */
-  scroll-padding-top: calc(var(--dump-bar-top) + 1lh + var(--dump-bar-bottom));
+/* Hanging indent (--hang set per line from dumpLineHang): wrapped lines start --hang in, the first one stays put.
+   --shift moves an item's note lines under the item's text. */
+.dump-cm .cm-editor .cm-line.dump-hang,
+.dump-sticky-bar .dump-hang {
+  padding-left: calc(var(--shift, 0ch) + var(--hang));
+  text-indent: calc(-1 * var(--hang));
 }
 
-.dump-textarea::placeholder {
-  color: var(--c-text-muted);
+.dump-sticky-bar .dump-hang {
+  --hang: 3ch;
 }
 
 /* Section bar: the outer box reserves the scrollbar gutter so the bar stops short of the scrollbar. */
@@ -2065,7 +2070,7 @@ body {
   visibility: hidden;
 }
 
-/* Same font, size and left padding as .dump-layer: the label lands exactly on the header line.
+/* Same font, size and left padding as the editor text: the label lands exactly on the header line.
    The last 12px fade to transparent, so text slides softly under the bar instead of being cut. */
 .dump-sticky-bar {
   --dump-sticky-bg: var(--bg-card);
@@ -2076,7 +2081,7 @@ body {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 13px;
   line-height: 1.6;
-  /* Wraps like .dump-layer (same content width), so a long header is covered line for line. */
+  /* Wraps like the editor text (same content width), so a long header is covered line for line. */
   white-space: pre-wrap;
   overflow-wrap: break-word;
 }
@@ -2255,14 +2260,15 @@ body {
 }
 
 /* Writer layout (main window): one surface, a centered text column, larger type — like iA Writer.
-   The editor spans the full panel so its scrollbar sits at the window edge; both layers centre the
-   text with the same padding, so the highlight layer and the textarea stay aligned. */
+   The editor spans the full panel so its scrollbar sits at the window edge; the text and the sticky
+   bar centre with the same gutter. */
 .dump-writer {
   --dump-col: 680px;
   --dump-bar-top: 10px;
   --dump-bar-bottom: 18px;
-  /* cqw = editor width, so layers and the sticky bar (inside a scrollbar-gutter box) centre identically */
-  --dump-gutter: max(24px, calc((100cqw - var(--dump-col)) / 2));
+  /* cqw = editor width, so text and the sticky bar (inside a scrollbar-gutter box) centre identically.
+     The minimum leaves room for a header's `## ` (3ch, resolved in the editor's font) hanging into it. */
+  --dump-gutter: max(calc(3ch + 8px), calc((100cqw - var(--dump-col)) / 2));
   height: calc(100% + 24px);
   margin: 0 -32px -24px;
 }
@@ -2279,19 +2285,21 @@ body {
   border-radius: 0;
 }
 
-/* One rule for both: the sticky bar must use the layers' exact font to land on the header line. */
-.dump-writer :is(.dump-layer, .dump-sticky-bar) {
+/* One rule for both: the sticky bar must use the editor's exact font to land on the header line. */
+.dump-writer :is(.dump-cm .cm-editor .cm-scroller, .dump-sticky-bar) {
   font-family: 'iA Writer Mono S', ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 16px;
   line-height: 1.85;
 }
 
-.dump-writer .dump-layer {
+.dump-writer .dump-cm .cm-editor .cm-content {
   padding: 24px var(--dump-gutter) 40vh;
 }
 
-/* Bold keeps the advance width in a monospace font, so the caret stays aligned. */
-.dump-writer [data-dump-header] {
+/* Header: the `## ` hangs into the left margin, so the title lines up with the item bullets.
+   Bold keeps the advance width in a monospace font, so the caret stays aligned. */
+.dump-writer .dump-hang-header {
+  margin-left: calc(-1 * var(--hang));
   font-weight: 700;
 }
 
@@ -2299,7 +2307,6 @@ body {
   --dump-sticky-bg: var(--bg-base);
   padding-inline: var(--dump-gutter);
   border-radius: 0;
-  font-weight: 700;
 }
 
 /* The picker sits at the text column's right edge, not the window's. */

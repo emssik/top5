@@ -119,3 +119,19 @@ test('findDumpSectionHeaders ignores other lines', () => {
   assert.deepEqual(findDumpSectionHeaders('## \n##Now\n'), [])
   assert.deepEqual(findDumpSectionHeaders(''), [])
 })
+
+import { dumpLineHang } from '../src/shared/dump'
+
+test('dumpLineHang: headers, items and plain lines', () => {
+  assert.deepEqual(dumpLineHang('## Now'), { kind: 'header', hang: 3 })
+  assert.deepEqual(dumpLineHang('## '), { kind: 'plain', hang: 0 })
+  assert.deepEqual(dumpLineHang('### Pod'), { kind: 'plain', hang: 0 })
+  assert.deepEqual(dumpLineHang('- dokumenty dla Ani'), { kind: 'item', hang: 2 })
+  assert.deepEqual(dumpLineHang('+ ↻ zrobione'), { kind: 'item', hang: 2 })
+  assert.deepEqual(dumpLineHang('  - podpunkt'), { kind: 'item', hang: 4 })
+  assert.deepEqual(dumpLineHang('  detal pod punktem'), { kind: 'plain', hang: 2 })
+  assert.deepEqual(dumpLineHang('# komentarz'), { kind: 'plain', hang: 0 })
+  assert.deepEqual(dumpLineHang('zwykły tekst'), { kind: 'plain', hang: 0 })
+  assert.deepEqual(dumpLineHang(''), { kind: 'plain', hang: 0 })
+  assert.deepEqual(dumpLineHang('-bez spacji'), { kind: 'plain', hang: 0 })
+})

@@ -17,10 +17,10 @@ describe('toggleDumpLines (⌘D)', () => {
     expect(r.cursor).toBe(4) // start of "- c", which took b's place
   })
 
-  it('appends to an existing done section; plain text is treated as open', () => {
+  it('puts the newest on top of an existing done section; plain text is treated as open', () => {
     const text = `plain\n- a\n\n## Zrobione\n+ 2026-01-01 x\n`
     const r = toggleDumpLines(text, 0, 0, D)!
-    expect(r.text).toBe(`- a\n\n## Zrobione\n+ 2026-01-01 x\n+ ${D} plain\n`)
+    expect(r.text).toBe(`- a\n\n## Zrobione\n+ ${D} plain\n+ 2026-01-01 x\n`)
   })
 
   it('reopens a done line: strips the date, moves it above the header', () => {
@@ -38,7 +38,15 @@ describe('toggleDumpLines (⌘D)', () => {
 
   it('completes into an existing ## Done section', () => {
     const text = `## Inbox\n\n- a\n\n## Done\n+ 2026-01-01 x\n`
-    expect(toggleDumpLines(text, text.indexOf('- a'), text.indexOf('- a'), D)!.text).toBe(`## Inbox\n\n## Done\n+ 2026-01-01 x\n+ ${D} a\n`)
+    expect(toggleDumpLines(text, text.indexOf('- a'), text.indexOf('- a'), D)!.text).toBe(`## Inbox\n\n## Done\n+ ${D} a\n+ 2026-01-01 x\n`)
+  })
+
+  it('keeps a blank line under ## Done and the caret on its line when Done is above it', () => {
+    const text = `## Done\n\n+ 2026-01-01 x\n\n## Inbox\n\n- a\n- b\n`
+    const r = toggleDumpLines(text, text.indexOf('- a'), text.indexOf('- a'), D)!
+    expect(r.text).toBe(`## Done\n\n+ ${D} a\n+ 2026-01-01 x\n\n## Inbox\n\n- b\n`)
+    expect(r.cursor).toBe(r.text.indexOf('- b'))
+    expect(toggleDumpLines('## Done\n\n## Inbox\n- a\n', 18, 18, D)!.text).toBe(`## Done\n+ ${D} a\n\n## Inbox\n`)
   })
 
   it('counts open / done lines', () => {

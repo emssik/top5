@@ -1,6 +1,6 @@
 {
   "name": "top5",
-  "version": "1.115.0",
+  "version": "1.116.0",
   "description": "Focus management app - limit yourself to 5 projects",
   "license": "MIT WITH Commons-Clause",
   "main": "./out/main/index.js",
@@ -16,6 +16,9 @@
     "postinstall": "electron-builder install-app-deps"
   },
   "dependencies": {
+    "@codemirror/commands": "^6.11.1",
+    "@codemirror/state": "^6.7.6",
+    "@codemirror/view": "^6.43.14",
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
     "@fastify/cors": "^11.2.0",
