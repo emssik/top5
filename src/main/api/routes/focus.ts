@@ -59,6 +59,8 @@ export function registerFocusRoutes(fastify: FastifyInstance): void {
     if ('error' in result) {
       return reply.status(409).send({ ok: false, error: result.error })
     }
+    // A saved check-in changes today's focus total shown in the windows.
+    if (result.saved) notifyAllWindows()
     return { ok: true, data: result }
   })
 

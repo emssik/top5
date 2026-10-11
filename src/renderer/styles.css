@@ -2278,6 +2278,29 @@ body {
   margin-inline: auto;
 }
 
+/* The bottom margin mirrors the top one (titlebar + .main padding + header line); the text sits centred in it. */
+.dump-footer {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  block-size: 72px;
+  font-size: 13px;
+  letter-spacing: 0.2px;
+  color: var(--c-text-muted);
+  white-space: nowrap;
+  overflow: clip;
+}
+
+/* min-inline-size: 0 lets the spans shrink so the ellipsis can show. `hidden`, not `clip`:
+   the ellipsis with `clip` is only confirmed from Chromium 150 (Electron 41 ships 146). */
+.dump-footer > span {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .dump-writer .dump-editor {
   container-type: inline-size;
   background: transparent;

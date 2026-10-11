@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.118.0] - 2026-10-11
+
+### Added
+
+- **Stopka w Zrzucie** — na dole widoku Zrzut (okno główne) jest teraz margines jak u góry, a w nim dzień tygodnia z datą, godzina i łączny czas focusa od 6:00.
+
+### Fixed
+
+- Ping focusa przez API/CLI (`top5 focus ping`) od razu odświeża czas focusa w oknach aplikacji.
+
 ## [1.117.0] - 2026-10-11
 
 ### Added

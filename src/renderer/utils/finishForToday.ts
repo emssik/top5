@@ -25,8 +25,13 @@ function lastRolloverMs(): number {
 
 /** Minutes worked on a task within the current logical day (since the last 06:00). */
 export function minutesWorkedToday(checkIns: FocusCheckIn[], taskId: string): number {
+  return minutesFocusedToday(checkIns.filter((c) => c.taskId === taskId))
+}
+
+/** Minutes focused on any task within the current logical day (since the last 06:00). */
+export function minutesFocusedToday(checkIns: FocusCheckIn[]): number {
   const since = lastRolloverMs()
   return checkIns
-    .filter((c) => c.taskId === taskId && Date.parse(c.timestamp) >= since)
+    .filter((c) => Date.parse(c.timestamp) >= since)
     .reduce((sum, c) => sum + checkInMinutes(c), 0)
 }

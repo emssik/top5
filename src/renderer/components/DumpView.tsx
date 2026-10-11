@@ -9,6 +9,8 @@ import { logicalDateKey } from '../../shared/schedule'
 import { STANDALONE_PROJECT_ID } from '../../shared/constants'
 import { useProjects } from '../hooks/useProjects'
 import { projectColorValue } from '../utils/projects'
+import { formatCheckInTime } from '../utils/checkInTime'
+import { minutesFocusedToday } from '../utils/finishForToday'
 import type { Project, RepeatingTask } from '../types'
 import DumpEditor, { type DumpEditorHandle } from './DumpEditor'
 import DumpProjectPicker from './DumpProjectPicker'
@@ -30,6 +32,25 @@ const REPEAT_HELP = 'Nie rozumiem harmonogramu. Formy: "codziennie: X", "pon śr
 
 // The caret-position state of the project picker: ` #query` typed in the text, or ⌘P on an item.
 type Picker = { mode: 'inline'; start: number; query: string } | { mode: 'item'; pos: number; query: string }
+
+// Own component: the minute tick must not re-render the editor.
+function DumpFooter() {
+  const [now, setNow] = useState(() => new Date())
+  const focusCheckIns = useProjects((s) => s.focusCheckIns)
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 15_000)
+    return () => clearInterval(id)
+  }, [])
+  // "niedziela, 11 października" — Intl gives the genitive month; only the first letter is capitalised.
+  const date = now.toLocaleDateString('pl', { weekday: 'long', day: 'numeric', month: 'long' })
+  const time = now.toLocaleTimeString('pl', { hour: '2-digit', minute: '2-digit' })
+  return (
+    <div className="dump-footer">
+      <span>{date[0].toUpperCase() + date.slice(1)} · {time}</span>
+      <span>Focus dziś: {formatCheckInTime(minutesFocusedToday(focusCheckIns))}</span>
+    </div>
+  )
+}
 
 // `onToggleSidebar`: the main window hides its sidebar in the dump; ☰ brings it back (clean view passes nothing).
 export default function DumpView({ sidebarHidden, onToggleSidebar }: { sidebarHidden?: boolean; onToggleSidebar?: () => void }) {
@@ -435,6 +456,7 @@ export default function DumpView({ sidebarHidden, onToggleSidebar }: { sidebarHi
           />
         )}
       </div>
+      {onToggleSidebar && <DumpFooter />}
     </div>
   )
 }
