@@ -2,7 +2,7 @@ import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react'
 import { Annotation, Compartment, EditorState, Prec, type Range, StateEffect, StateField, type Text, Transaction } from '@codemirror/state'
 import { Decoration, type DecorationSet, EditorView, keymap, placeholder as placeholderExt } from '@codemirror/view'
 import { defaultKeymap, history, historyKeymap, isolateHistory } from '@codemirror/commands'
-import { dumpLineHang, findDumpSectionHeaders, findDumpTags } from '../../shared/dump'
+import { dumpLineHang, findDumpSectionHeaders, findDumpTags, formatDumpPaste } from '../../shared/dump'
 
 export type DumpEditorHandle = {
   selection(): { from: number; to: number }
@@ -46,7 +46,7 @@ function decorate(doc: Text, codes: string[], tagColor: (code: string) => string
     // A blank or `#` line (comment, header) ends the item — same rule as itemRange in shared/dump.
     if (kind === 'item') itemHang = hang
     else if (!t || t.startsWith('#')) itemHang = 0
-    const shift = kind === 'plain' ? Math.max(0, itemHang - hang) : 0
+    const shift = kind === 'plain' ? Math.max(0, itemHang - (line.text.length - line.text.trimStart().length)) : 0
     if (kind !== 'plain' || hang || shift) ranges.push(Decoration.line({ class: `dump-hang dump-hang-${kind}`, attributes: { style: `--hang:${hang}ch;--shift:${shift}ch` } }).range(line.from))
   }
   for (const tag of findDumpTags(doc.toString(), codes)) {
@@ -54,6 +54,41 @@ function decorate(doc: Text, codes: string[], tagColor: (code: string) => string
     ranges.push(Decoration.mark({ class: 'dump-tag', attributes: color ? { style: `color:${color}` } : undefined }).range(tag.start, tag.end))
   }
   return Decoration.set(ranges, true)
+}
+
+// Enter in a `* ` sub-point starts the next one; Enter on an empty `* ` ends the list (drops the star).
+function continueSubPoint(view: EditorView): boolean {
+  const { head, empty } = view.state.selection.main
+  const line = view.state.doc.lineAt(head)
+  const marker = /^\s*\* /.exec(line.text)
+  if (!empty || !marker || head < line.from + marker[0].length) return false
+  const ended = !line.text.trim().slice(1).trim()
+  view.dispatch(ended
+    ? { changes: { from: line.from, to: line.to }, userEvent: 'delete' }
+    : { ...view.state.replaceSelection(`\n${marker[0]}`), scrollIntoView: true, userEvent: 'input' })
+  return true
+}
+
+// ⌘V of several lines: pasted as is first, then reshaped by formatDumpPaste as a separate undo step,
+// so ⌘Z right after the paste brings back the raw text.
+function pasteAsSubPoints(e: ClipboardEvent, view: EditorView): boolean {
+  // The doc keeps LF only, so the raw paste's length must be counted without CR.
+  const pasted = (e.clipboardData?.getData('text/plain') ?? '').replace(/\r\n?/g, '\n')
+  const { from, to } = view.state.selection.main
+  const line = view.state.doc.lineAt(from)
+  if (view.state.readOnly || to > line.to) return false
+  const formatted = formatDumpPaste(line.text.slice(0, from - line.from), line.text.slice(to - line.from), pasted)
+  if (formatted === null) return false
+  e.preventDefault()
+  view.dispatch({ changes: { from, to, insert: pasted }, userEvent: 'input.paste' })
+  view.dispatch({
+    changes: { from, to: from + pasted.length, insert: formatted },
+    selection: { anchor: from + formatted.length },
+    scrollIntoView: true,
+    userEvent: 'input.paste',
+    annotations: isolateHistory.of('before')
+  })
+  return true
 }
 
 const DumpEditor = forwardRef<DumpEditorHandle, DumpEditorProps>(function DumpEditor(props, ref) {
@@ -151,11 +186,12 @@ const DumpEditor = forwardRef<DumpEditorHandle, DumpEditorProps>(function DumpEd
         extensions: [
           Prec.highest(EditorView.domEventHandlers({
             keydown: (e) => p.current.onKeyDown(e),
-            blur: () => void p.current.onBlur()
+            blur: () => void p.current.onBlur(),
+            paste: pasteAsSubPoints
           })),
           // Also routes the Edit menu's Undo / Redo roles (native historyUndo / historyRedo) to this history.
           historyRef.current.of(history()),
-          keymap.of([...defaultKeymap, ...historyKeymap]),
+          keymap.of([{ key: 'Enter', run: continueSubPoint }, ...defaultKeymap, ...historyKeymap]),
           EditorView.lineWrapping,
           EditorView.contentAttributes.of({ 'aria-label': 'Zrzut — lista rzeczy do zrobienia' }),
           // The textarea's tab width (CodeMirror defaults to 4).

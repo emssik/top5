@@ -369,5 +369,33 @@ export type DumpLineHang = { kind: 'header' | 'item' | 'plain'; hang: number }
 export function dumpLineHang(line: string): DumpLineHang {
   if (line.startsWith('## ') && line.slice(3).trim()) return { kind: 'header', hang: 3 }
   const indent = line.length - line.trimStart().length
-  return /^[-+] /.test(line.slice(indent)) ? { kind: 'item', hang: indent + 2 } : { kind: 'plain', hang: indent }
+  if (/^[-+] /.test(line.slice(indent))) return { kind: 'item', hang: indent + 2 }
+  // `* x` = a sub-point inside an item (a note, not a task): wraps under its text, not its star.
+  return { kind: 'plain', hang: line.startsWith('* ', indent) ? indent + 2 : indent }
+}
+
+const LIST_MARKER = /^\s*(?:[-*•+]|\d+[.)])\s+/
+
+/**
+ * ⌘V of several lines into the dump, as the text to insert instead of `pasted`; null = paste as is.
+ * `before` / `after` = the caret line's text before / after the pasted range. Blank lines are dropped
+ * (a blank line would end the item) and foreign list markers become `* ` sub-points:
+ * - on an empty line: first line → a new `- ` item, the rest → its sub-points (text already in dump form,
+ *   starting with `- ` / `+ ` / `#`, is pasted as is — e.g. a block of items moved between sections);
+ * - after an empty `* `: first line fills it, the rest → sub-points at the same level;
+ * - at the end of a `- ` / `+ ` item or a `* ` sub-point: every line → a sub-point under it.
+ * ponytail: nested lists are flattened to one level; keep relative indents if that starts to matter.
+ */
+export function formatDumpPaste(before: string, after: string, pasted: string): string | null {
+  const lines = pasted.split(/\r\n?|\n/).map((l) => l.trimEnd()).filter((l) => l.trim())
+  if (lines.length < 2 || after.trim()) return null
+  const point = (l: string) => l.replace(LIST_MARKER, '').trim()
+  const indent = before.length - before.trimStart().length
+  const pad = before.slice(0, indent)
+  const subs = (rest: string[], at: string) => rest.map((l) => `\n${at}* ${point(l)}`).join('')
+  if (!before.trim()) return /^([-+] |#)/.test(lines[0].trimStart()) ? null : `- ${point(lines[0])}${subs(lines.slice(1), `${pad}  `)}`
+  if (before.trim() === '*') return `${before.endsWith(' ') ? '' : ' '}${point(lines[0])}${subs(lines.slice(1), pad)}`
+  if (/^[-+] /.test(before.slice(indent))) return subs(lines, `${pad}  `)
+  if (before.startsWith('* ', indent)) return subs(lines, pad)
+  return null
 }

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.117.0] - 2026-10-11
+
+### Added
+
+- **Podpunkty `* ` w zadaniach Zrzutu** — linie `* …` pod zadaniem zawijają się pod swoim tekstem, Enter od razu zaczyna kolejny podpunkt (Enter na pustym `* ` kończy listę), a wklejenie kilku linii (⌘V) zamienia je w zadanie z podpunktami; ⌘Z zaraz po wklejeniu przywraca surowy tekst.
+
 ## [1.116.0] - 2026-10-10
 
 ### Added

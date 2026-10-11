@@ -135,3 +135,33 @@ test('dumpLineHang: headers, items and plain lines', () => {
   assert.deepEqual(dumpLineHang(''), { kind: 'plain', hang: 0 })
   assert.deepEqual(dumpLineHang('-bez spacji'), { kind: 'plain', hang: 0 })
 })
+
+import { formatDumpPaste } from '../src/shared/dump'
+
+test('dumpLineHang: `* ` sub-points wrap under their text', () => {
+  assert.deepEqual(dumpLineHang('  * Funkcje wykonawcze'), { kind: 'plain', hang: 4 })
+  assert.deepEqual(dumpLineHang('* punkt'), { kind: 'plain', hang: 2 })
+  assert.deepEqual(dumpLineHang('*bez spacji'), { kind: 'plain', hang: 0 })
+})
+
+test('formatDumpPaste: several lines become an item with `* ` sub-points', () => {
+  const list = 'Książki do przeczytania\n\n- Funkcje wykonawcze\n* Wielkie problemy\r\n1. Zabawa w uważność\n'
+  // Empty line: a new item, its sub-points two spaces in.
+  assert.equal(formatDumpPaste('', '', list), '- Książki do przeczytania\n  * Funkcje wykonawcze\n  * Wielkie problemy\n  * Zabawa w uważność')
+  assert.equal(formatDumpPaste('  ', '', 'a\nb'), '- a\n    * b')
+  // End of an item line: every line under it.
+  assert.equal(formatDumpPaste('- Książki', '', 'a\n• b'), '\n  * a\n  * b')
+  assert.equal(formatDumpPaste('  + 2026-10-10 x', '', 'a\nb'), '\n    * a\n    * b')
+  // Empty `* ` (after Enter in a sub-point) and the end of a sub-point: same level.
+  assert.equal(formatDumpPaste('  * ', '', 'a\nb'), 'a\n  * b')
+  assert.equal(formatDumpPaste('  * jest', '', 'a\nb'), '\n  * a\n  * b')
+})
+
+test('formatDumpPaste: pasted as is', () => {
+  assert.equal(formatDumpPaste('', '', 'jedna linia\n\n'), null)
+  assert.equal(formatDumpPaste('- x', 'reszta', 'a\nb'), null) // middle of a line
+  assert.equal(formatDumpPaste('', '', '- a\n  detal\n- b'), null) // already dump text
+  assert.equal(formatDumpPaste('', '', '## Now\n- a'), null)
+  assert.equal(formatDumpPaste('## Now', '', 'a\nb'), null)
+  assert.equal(formatDumpPaste('zwykły tekst', '', 'a\nb'), null)
+})
