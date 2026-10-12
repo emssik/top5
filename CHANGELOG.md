@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.120.0] - 2026-10-12
+
+### Added
+
+- **Zwijanie punktów w Zrzucie** — punkt z podpunktami lub notatkami można zwinąć do pierwszej linii (znacznik ▸/▾ po lewej, ⌘⌥[ / ⌘⌥], klik w „⋯ N” rozwija); zwinięte punkty zostają zwinięte po restarcie i po przeniesieniu ⌘1–3.
+
+### Changed
+
+- Zrzut w oknie głównym nie pokazuje paska przewijania.
+
+### Fixed
+
+- ⌘Z w Zrzucie nie przestaje działać po odświeżeniu danych z zewnątrz (CLI, API), gdy tekst pliku się nie zmienił.
+
 ## [1.119.0] - 2026-10-12
 
 ### Added

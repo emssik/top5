@@ -2040,6 +2040,58 @@ body {
   color: var(--c-text-muted);
 }
 
+/* Fold markers live in the left padding: the gutter has no width of its own, so the text column stays put.
+   Folded items always show ▸; ▾ appears only on the hovered line (dump-fold-hover set from DumpEditor). */
+.dump-cm .cm-editor .cm-gutters {
+  width: 0;
+  border: 0;
+  background: transparent;
+}
+
+.dump-cm .cm-editor .cm-foldGutter,
+.dump-cm .cm-editor .cm-foldGutter .cm-gutterElement {
+  position: relative;
+  width: 0;
+  overflow: visible;
+}
+
+.dump-fold {
+  position: absolute;
+  left: max(0px, calc(var(--dump-gutter, 14px) - 2ch));
+  width: 1.5ch;
+  text-align: center;
+  color: var(--c-text-muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+.dump-fold-open {
+  opacity: 0;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .dump-fold:hover {
+    color: var(--c-text-primary);
+  }
+}
+
+.dump-fold-open:is(.dump-fold-hover *, :hover) {
+  opacity: 1;
+}
+
+/* After the rule above (same specificity): a pressed ▾ is always hovered too. */
+.dump-fold:active {
+  opacity: 0.6;
+}
+
+.dump-cm .cm-editor .cm-foldPlaceholder {
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  color: var(--c-text-muted);
+  cursor: pointer;
+}
+
 .dump-tag {
   border-radius: 3px;
   background: color-mix(in oklch, currentColor 15%, transparent);
@@ -2317,6 +2369,12 @@ body {
 
 .dump-writer .dump-cm .cm-editor .cm-content {
   padding: 24px var(--dump-gutter) 40vh;
+}
+
+/* No visible scrollbar (wheel / trackpad still scroll). Both boxes at once, so the sticky bar's
+   reserved gutter keeps matching the editor's and the two stay aligned. */
+.dump-writer :is(.dump-cm .cm-editor .cm-scroller, .dump-sticky) {
+  scrollbar-width: none;
 }
 
 /* Lines outside the section shown in the sticky bar: still legible, clearly secondary (tags dim with the line). */

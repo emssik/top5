@@ -2,7 +2,8 @@ import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react'
 import { Annotation, Compartment, EditorState, Prec, type Range, StateEffect, StateField, type Text, Transaction } from '@codemirror/state'
 import { Decoration, type DecorationSet, EditorView, keymap, placeholder as placeholderExt } from '@codemirror/view'
 import { defaultKeymap, history, historyKeymap, isolateHistory } from '@codemirror/commands'
-import { dumpCurrentSection, dumpLineHang, findDumpSectionHeaders, findDumpTags, formatDumpPaste } from '../../shared/dump'
+import { codeFolding, foldEffect, foldGutter, foldKeymap, foldService, foldedRanges, unfoldEffect } from '@codemirror/language'
+import { dumpCurrentSection, dumpFoldEnd, dumpLineHang, findDumpSectionHeaders, findDumpTags, formatDumpPaste } from '../../shared/dump'
 
 export type DumpEditorHandle = {
   selection(): { from: number; to: number }
@@ -54,6 +55,94 @@ function decorate(doc: Text, codes: string[], tagColor: (code: string) => string
     ranges.push(Decoration.mark({ class: 'dump-tag', attributes: color ? { style: `color:${color}` } : undefined }).range(tag.start, tag.end))
   }
   return Decoration.set(ranges, true)
+}
+
+// Folded items survive a restart: trimmed head-line texts of all folded items, as a JSON array.
+const FOLD_KEY = 'top5.dump.folded'
+
+function readFolded(): Set<string> {
+  try {
+    const parsed: unknown = JSON.parse(localStorage.getItem(FOLD_KEY) ?? '[]')
+    return new Set(Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === 'string') : [])
+  } catch {
+    return new Set()
+  }
+}
+
+// The fold of the item on 0-based line `i`, or null. The head line stays visible: the fold starts at its end.
+function foldAt(doc: Text, i: number): { from: number; to: number } | null {
+  const end = dumpFoldEnd((n) => (n < doc.lines ? doc.line(n + 1).text : null), i)
+  return end === null ? null : { from: doc.line(i + 1).to, to: doc.line(end + 1).to }
+}
+
+// Trimmed first lines of the folded items.
+function foldedHeads(state: EditorState): Set<string> {
+  const heads = new Set<string>()
+  foldedRanges(state).between(0, state.doc.length, (from) => void heads.add(state.doc.lineAt(from).text.trim()))
+  return heads
+}
+
+// Folds the stored items whose first line isn't folded yet: a fold already there stays as it is (no second,
+// overlapping one; an identical first line elsewhere stays open). Never over the caret.
+function storedFolds(state: EditorState, stored = readFolded()): StateEffect<unknown>[] {
+  if (!stored.size) return []
+  const { doc } = state
+  const folded = foldedHeads(state)
+  const caret = state.selection.main.head
+  const effects: StateEffect<unknown>[] = []
+  for (let i = 0; i < doc.lines; i++) {
+    const head = doc.line(i + 1).text.trim()
+    const range = stored.has(head) && !folded.has(head) && foldAt(doc, i)
+    if (range && !(range.from < caret && caret < range.to)) effects.push(foldEffect.of(range))
+  }
+  return effects
+}
+
+// Hides the ▾ markers of the hovered row. After a scroll / edit the gutter element under it may stand for another line.
+const clearHover = (view: EditorView) => view.dom.querySelectorAll('.dump-fold-hover').forEach((el) => el.classList.remove('dump-fold-hover'))
+
+// Enter at either end of a folded item's first line: the new line goes below the hidden lines. CodeMirror would
+// put it between them and the head, so they would end up under whatever gets typed there.
+function enterPastFold(view: EditorView): boolean {
+  const { head, empty } = view.state.selection.main
+  let from = -1
+  let to = -1
+  if (empty && !view.state.readOnly) {
+    foldedRanges(view.state).between(head, head, (a, b) => {
+      if (a === head || b === head) { from = a; to = b }
+    })
+  }
+  if (to < 0) return false
+  const text = view.state.doc.lineAt(from).text
+  const insert = `\n${text.slice(0, text.length - text.trimStart().length)}`
+  view.dispatch({ changes: { from: to, insert }, selection: { anchor: to + insert.length }, scrollIntoView: true, userEvent: 'input' })
+  return true
+}
+
+// The fold ending at `pos` (folds always end at a line end), or null.
+function foldEndingAt(state: EditorState, pos: number): { from: number; to: number } | null {
+  let fold: { from: number; to: number } | null = null
+  foldedRanges(state).between(pos, pos, (from, to) => { if (to === pos) fold = { from, to } })
+  return fold
+}
+
+// A caret right after ` ⋯ N` sits at the end of the last hidden line, so typing there would edit that line.
+// It goes to the end of the first line instead — where it looks like it is.
+const caretBeforeFold = EditorState.transactionFilter.of((tr) => {
+  const { head, empty } = tr.newSelection.main
+  if (!tr.selection || !empty || tr.newSelection.ranges.length > 1) return tr
+  const fold = foldEndingAt(tr.state, head)
+  return fold ? [tr, { selection: { anchor: fold.from }, sequential: true }] : tr
+})
+
+// Backspace at the start of the line below a folded item would join that line to the last hidden line:
+// the item unfolds instead, so it's clear what the next Backspace joins.
+function unfoldAbove(view: EditorView): boolean {
+  const { head, empty } = view.state.selection.main
+  const fold = empty && head > 0 && view.state.doc.lineAt(head).from === head ? foldEndingAt(view.state, head - 1) : null
+  if (!fold) return false
+  view.dispatch({ effects: unfoldEffect.of(fold) })
+  return true
 }
 
 // Enter in a `* ` sub-point starts the next one; Enter on an empty `* ` ends the list (drops the star).
@@ -114,6 +203,15 @@ const DumpEditor = forwardRef<DumpEditorHandle, DumpEditorProps>(function DumpEd
     view.dispatch({ changes: old === next ? undefined : { from: a, to: old.length - z, insert: next.slice(a, next.length - z) }, ...tr })
   }
 
+  // Runs a host edit, then folds again the stored items it unfolded (an item moved by ⌘1–3, external text).
+  // The stored set is read first: the edit's update rewrites it from the folds that survived.
+  const keepingFolds = (edit: () => void) => {
+    const stored = readFolded()
+    edit()
+    const view = viewRef.current
+    if (view) view.dispatch({ effects: storedFolds(view.state, stored) })
+  }
+
   useImperativeHandle(ref, () => ({
     selection: () => {
       const { from, to } = viewRef.current!.state.selection.main
@@ -123,20 +221,21 @@ const DumpEditor = forwardRef<DumpEditorHandle, DumpEditorProps>(function DumpEd
     focus: () => viewRef.current?.focus(),
     replace: (next, cursor) => {
       // Isolated: CodeMirror would otherwise merge it with typing / another command made within 500 ms.
-      swap(next, { annotations: [fromHost.of(true), isolateHistory.of('full')], selection: { anchor: cursor, head: cursor }, scrollIntoView: true })
+      keepingFolds(() => swap(next, { annotations: [fromHost.of(true), isolateHistory.of('full')], selection: { anchor: cursor, head: cursor }, scrollIntoView: true }))
       viewRef.current?.focus()
     },
     load: (next, selection, forgetHistory) => {
       const view = viewRef.current
-      if (view && forgetHistory) {
+      // Same text (a reload after any data change): nothing replaced, so ⌘Z keeps the user's own edits.
+      if (view && forgetHistory && view.state.doc.toString() !== next) {
         view.dispatch({ effects: historyRef.current.reconfigure([]) })
         view.dispatch({ effects: historyRef.current.reconfigure(history()) })
       }
       const clamp = (n: number) => Math.min(n, next.length)
-      swap(next, {
+      keepingFolds(() => swap(next, {
         annotations: [fromHost.of(true), Transaction.addToHistory.of(false)],
         selection: selection && { anchor: clamp(selection.from), head: clamp(selection.to) }
-      })
+      }))
     }
   }), [])
 
@@ -174,6 +273,7 @@ const DumpEditor = forwardRef<DumpEditorHandle, DumpEditorProps>(function DumpEd
       },
       provide: (f) => EditorView.decorations.from(f, (v) => v.deco)
     })
+    let written = ''
     let applied: number | null | undefined
     let want: number | null = null
     let pending = 0
@@ -226,7 +326,40 @@ const DumpEditor = forwardRef<DumpEditorHandle, DumpEditorProps>(function DumpEd
           })),
           // Also routes the Edit menu's Undo / Redo roles (native historyUndo / historyRedo) to this history.
           historyRef.current.of(history()),
-          keymap.of([{ key: 'Enter', run: continueSubPoint }, ...defaultKeymap, ...historyKeymap]),
+          keymap.of([{ key: 'Enter', run: enterPastFold }, { key: 'Enter', run: continueSubPoint }, { key: 'Backspace', run: unfoldAbove }, ...defaultKeymap, ...historyKeymap, ...foldKeymap]),
+          caretBeforeFold,
+          foldService.of((state, from) => foldAt(state.doc, state.doc.lineAt(from).number - 1)),
+          codeFolding({
+            preparePlaceholder: (state, range) => state.doc.lineAt(range.to).number - state.doc.lineAt(range.from).number,
+            placeholderDOM: (_view, onclick, hidden) => {
+              const el = document.createElement('span')
+              el.className = 'cm-foldPlaceholder'
+              el.textContent = ` ⋯ ${hidden}`
+              el.title = 'Rozwiń'
+              el.onclick = onclick
+              return el
+            }
+          }),
+          foldGutter({
+            markerDOM: (open) => {
+              const el = document.createElement('span')
+              el.className = open ? 'dump-fold dump-fold-open' : 'dump-fold'
+              el.textContent = open ? '▾' : '▸'
+              el.title = open ? 'Zwiń' : 'Rozwiń'
+              return el
+            }
+          }),
+          // Unfolded markers show only on the hovered line: the gutter is outside the line, so the row is matched by Y.
+          // ponytail: loops over the visible gutter elements per mousemove; fine for a viewport of ~50 rows.
+          EditorView.domEventHandlers({
+            mousemove: (e, v) => {
+              for (const el of v.dom.querySelectorAll<HTMLElement>('.cm-foldGutter .cm-gutterElement')) {
+                const r = el.getBoundingClientRect()
+                el.classList.toggle('dump-fold-hover', e.clientY >= r.top && e.clientY < r.bottom)
+              }
+            },
+            mouseleave: (_e, v) => clearHover(v)
+          }),
           EditorView.lineWrapping,
           EditorView.contentAttributes.of({ 'aria-label': 'Zrzut — lista rzeczy do zrobienia' }),
           // The textarea's tab width (CodeMirror defaults to 4).
@@ -247,13 +380,25 @@ const DumpEditor = forwardRef<DumpEditorHandle, DumpEditorProps>(function DumpEd
               if (!echo) p.current.onChange(text, caret)
             }
             if ((u.docChanged || u.selectionSet) && !echo) p.current.onSelectionChange(caret)
+            if (u.docChanged) clearHover(u.view)
+            if (u.docChanged || foldedRanges(u.startState) !== foldedRanges(u.state)) {
+              const json = JSON.stringify([...foldedHeads(u.state)])
+              if (json !== written) {
+                written = json
+                try { localStorage.setItem(FOLD_KEY, json) } catch { /* no storage = no persistence */ }
+              }
+            }
             if (u.docChanged || u.geometryChanged || u.viewportChanged) updateSticky(u.view)
           })
         ]
       })
     })
     viewRef.current = view
-    const onScroll = () => updateSticky(view)
+    view.dispatch({ effects: storedFolds(view.state) })
+    const onScroll = () => {
+      clearHover(view)
+      updateSticky(view)
+    }
     view.scrollDOM.addEventListener('scroll', onScroll, { passive: true })
     updateSticky(view)
     return () => {

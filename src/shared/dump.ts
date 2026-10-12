@@ -408,3 +408,12 @@ export function formatDumpPaste(before: string, after: string, pasted: string): 
   if (before.startsWith('* ', indent)) return subs(lines, pad)
   return null
 }
+
+// Index of the last line folded under item head i (line(n) = text of line n, null past the end); null = not foldable.
+export function dumpFoldEnd(line: (n: number) => string | null, i: number): number | null {
+  const head = line(i)
+  if (head === null || !(isOpen(head) || isDone(head))) return null
+  let end = i
+  for (let t = line(end + 1); t !== null && isContinuation(t); t = line(end + 1)) end++
+  return end === i ? null : end
+}

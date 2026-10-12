@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { completeDumpItem, countSectionOpen, dumpCurrentSection, findDumpItem, findDumpTags, projectTagTrigger, setDumpItemTag, stripDumpTags } from '../src/shared/dump'
+import { completeDumpItem, countSectionOpen, dumpCurrentSection, dumpFoldEnd, findDumpItem, findDumpTags, projectTagTrigger, setDumpItemTag, stripDumpTags } from '../src/shared/dump'
 import { parseRepeatLine } from '../src/shared/dump-repeat'
 
 const CODES = ['ATD', 'BIZ']
@@ -178,4 +178,27 @@ test('dumpCurrentSection: before first header, no headers, clamp, not-a-header',
   assert.deepEqual(dumpCurrentSection('## Now\n- a', 999), { from: 0, to: 10 })
   assert.deepEqual(dumpCurrentSection('## Now\n- a\n##Next\n- b', 16), { from: 0, to: 21 })
   assert.deepEqual(dumpCurrentSection('intro\n## Now\n- a', 8), { from: 6, to: 16 })
+})
+
+const foldEnd = (lines: string[], i: number) => dumpFoldEnd((n) => lines[n] ?? null, i)
+
+test('dumpFoldEnd folds an item with sub-points or notes', () => {
+  assert.equal(foldEnd(['- Ogarnąć chrzciny', '  * zaświadczenie', '  * spotkanie 5.11', ''], 0), 2)
+  assert.equal(foldEnd(['- aplikacja do serwerów', '  potencjalne problemy', '  face', '- Zadzwonić'], 0), 2)
+  assert.equal(foldEnd(['+ 2026-10-01 zrobione', '  * notatka'], 0), 1)
+  assert.equal(foldEnd(['    - wcięty', '      * pod'], 0), 1)
+})
+
+test('dumpFoldEnd stops at headers and comments', () => {
+  assert.equal(foldEnd(['- x', '  * a', '## Next'], 0), 1)
+  assert.equal(foldEnd(['- x', '  * a', '# komentarz'], 0), 1)
+})
+
+test('dumpFoldEnd is null where nothing can be folded', () => {
+  assert.equal(foldEnd(['- Zadzwonić', '- UODO'], 0), null)
+  assert.equal(foldEnd(['- Zadzwonić'], 0), null)
+  assert.equal(foldEnd(['## Now', '- x'], 0), null)
+  assert.equal(foldEnd(['- x', '  * a'], 1), null)
+  assert.equal(foldEnd(['luźny tekst', 'dalszy'], 0), null)
+  assert.equal(foldEnd(['- x', '  * a'], 5), null)
 })
