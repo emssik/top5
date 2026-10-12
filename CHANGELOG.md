@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.119.0] - 2026-10-12
+
+### Added
+
+- **Wyróżnienie aktywnej sekcji w Zrzucie** — sekcja, której nagłówek widać w przyklejonym pasku u góry, ma pełny kontrast, a reszta tekstu jest przygaszona; przewinięcie do następnej sekcji przenosi wyróżnienie (tylko okno główne).
+
+### Fixed
+
+- Czas focusa „dziś” w pasku bocznym i w widoku czystym liczony tak samo jak w stopce Zrzutu (dzień od 6:00 czasu lokalnego, zamiast daty UTC).
+
 ## [1.118.0] - 2026-10-11
 
 ### Added

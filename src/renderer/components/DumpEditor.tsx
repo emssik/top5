@@ -2,7 +2,7 @@ import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react'
 import { Annotation, Compartment, EditorState, Prec, type Range, StateEffect, StateField, type Text, Transaction } from '@codemirror/state'
 import { Decoration, type DecorationSet, EditorView, keymap, placeholder as placeholderExt } from '@codemirror/view'
 import { defaultKeymap, history, historyKeymap, isolateHistory } from '@codemirror/commands'
-import { dumpLineHang, findDumpSectionHeaders, findDumpTags, formatDumpPaste } from '../../shared/dump'
+import { dumpCurrentSection, dumpLineHang, findDumpSectionHeaders, findDumpTags, formatDumpPaste } from '../../shared/dump'
 
 export type DumpEditorHandle = {
   selection(): { from: number; to: number }
@@ -151,6 +151,33 @@ const DumpEditor = forwardRef<DumpEditorHandle, DumpEditorProps>(function DumpEd
       provide: (f) => EditorView.decorations.from(f)
     })
 
+    // Everything outside the section shown in the sticky bar (before any header reaches it: the first one) gets
+    // `dump-dim` (styled in the writer layout only). Set from updateSticky, deferred out of the update listener.
+    const setActive = StateEffect.define<number | null>()
+    const dim = Decoration.line({ class: 'dump-dim' })
+    // On an edit the active header is mapped and the dimming recomputed in the same transaction, so new lines
+    // (Enter, paste) are dimmed right away instead of flashing at full contrast for a frame.
+    const focus = StateField.define<{ at: number | null; deco: DecorationSet }>({
+      create: () => ({ at: null, deco: Decoration.none }),
+      update: (value, tr) => {
+        const e = tr.effects.find((x) => x.is(setActive))
+        if (!e && !tr.docChanged) return value
+        const at = e ? e.value : value.at === null ? null : tr.changes.mapPos(value.at)
+        const section = at === null ? null : dumpCurrentSection(tr.newDoc.toString(), at)
+        if (!section) return { at, deco: Decoration.none }
+        const ranges: Range<Decoration>[] = []
+        for (let n = 1; n <= tr.newDoc.lines; n++) {
+          const { from } = tr.newDoc.line(n)
+          if (from < section.from || from >= section.to) ranges.push(dim.range(from))
+        }
+        return { at, deco: Decoration.set(ranges) }
+      },
+      provide: (f) => EditorView.decorations.from(f, (v) => v.deco)
+    })
+    let applied: number | null | undefined
+    let want: number | null = null
+    let pending = 0
+
     // Section bar: draws the current `## X` line exactly where the header itself would sit at the top.
     // As the next header comes up the label fades out before they could overlap; the next header then
     // scrolls into the slot alone and the bar takes it over in place — no stacking, no jump.
@@ -165,6 +192,14 @@ const DumpEditor = forwardRef<DumpEditorHandle, DumpEditorProps>(function DumpEd
         const y = view.lineBlockAt(h.start).top + top
         if (y <= labelTop) current = h
         else { nextY = y; break }
+      }
+      want = (current ?? headers[0])?.start ?? null
+      if (want !== applied && !pending) {
+        pending = requestAnimationFrame(() => {
+          pending = 0
+          applied = want
+          view.dispatch({ effects: setActive.of(want) })
+        })
       }
       if (!current) { delete sticky.dataset.on; return }
       // Unchanged text is not rewritten: a new text node would force a layout on every scroll event.
@@ -199,6 +234,7 @@ const DumpEditor = forwardRef<DumpEditorHandle, DumpEditorProps>(function DumpEd
           placeholderExt(p.current.placeholder),
           readOnlyRef.current.of(EditorState.readOnly.of(p.current.readOnly)),
           tags,
+          focus,
           // A caret scrolled into view lands below the section bar, not under it.
           EditorView.scrollMargins.of(() => ({ top: bar.offsetHeight })),
           EditorView.updateListener.of((u) => {
@@ -207,6 +243,7 @@ const DumpEditor = forwardRef<DumpEditorHandle, DumpEditorProps>(function DumpEd
             if (u.docChanged) {
               const text = u.state.doc.toString()
               headers = findDumpSectionHeaders(text)
+              applied = u.state.field(focus).at
               if (!echo) p.current.onChange(text, caret)
             }
             if ((u.docChanged || u.selectionSet) && !echo) p.current.onSelectionChange(caret)
@@ -220,6 +257,7 @@ const DumpEditor = forwardRef<DumpEditorHandle, DumpEditorProps>(function DumpEd
     view.scrollDOM.addEventListener('scroll', onScroll, { passive: true })
     updateSticky(view)
     return () => {
+      cancelAnimationFrame(pending)
       view.scrollDOM.removeEventListener('scroll', onScroll)
       view.destroy()
       viewRef.current = null

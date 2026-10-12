@@ -362,6 +362,15 @@ export function findDumpSectionHeaders(text: string): DumpSectionHeader[] {
   return headers
 }
 
+// The section around `pos`: from its `## ` header (or 0 before the first one) to the next header / EOF.
+export function dumpCurrentSection(text: string, pos: number): { from: number; to: number } | null {
+  const headers = findDumpSectionHeaders(text)
+  if (!headers.length) return null
+  const p = Math.min(Math.max(pos, 0), text.length)
+  const i = headers.findLastIndex((h) => h.start <= p)
+  return { from: i < 0 ? 0 : headers[i].start, to: headers[i + 1]?.start ?? (i < 0 ? headers[0].start : text.length) }
+}
+
 // Wrap alignment of one line, in characters: item = continuation indent, header = how far the `## ` hangs
 // into the margin, plain = the line's own leading whitespace (wrapped text keeps its indent).
 export type DumpLineHang = { kind: 'header' | 'item' | 'plain'; hang: number }

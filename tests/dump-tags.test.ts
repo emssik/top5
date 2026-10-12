@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { completeDumpItem, countSectionOpen, findDumpItem, findDumpTags, projectTagTrigger, setDumpItemTag, stripDumpTags } from '../src/shared/dump'
+import { completeDumpItem, countSectionOpen, dumpCurrentSection, findDumpItem, findDumpTags, projectTagTrigger, setDumpItemTag, stripDumpTags } from '../src/shared/dump'
 import { parseRepeatLine } from '../src/shared/dump-repeat'
 
 const CODES = ['ATD', 'BIZ']
@@ -164,4 +164,18 @@ test('formatDumpPaste: pasted as is', () => {
   assert.equal(formatDumpPaste('', '', '## Now\n- a'), null)
   assert.equal(formatDumpPaste('## Now', '', 'a\nb'), null)
   assert.equal(formatDumpPaste('zwykły tekst', '', 'a\nb'), null)
+})
+test('dumpCurrentSection: section containing pos, up to the next header', () => {
+  const t = '## Now\n- a\n\n## Next\n- b\n'
+  assert.deepEqual(dumpCurrentSection(t, 8), { from: 0, to: 12 })
+  assert.deepEqual(dumpCurrentSection(t, 0), { from: 0, to: 12 })
+  assert.deepEqual(dumpCurrentSection(t, 15), { from: 12, to: 24 })
+})
+
+test('dumpCurrentSection: before first header, no headers, clamp, not-a-header', () => {
+  assert.deepEqual(dumpCurrentSection('intro\n## Now\n- a', 2), { from: 0, to: 6 })
+  assert.equal(dumpCurrentSection('- a\n- b', 3), null)
+  assert.deepEqual(dumpCurrentSection('## Now\n- a', 999), { from: 0, to: 10 })
+  assert.deepEqual(dumpCurrentSection('## Now\n- a\n##Next\n- b', 16), { from: 0, to: 21 })
+  assert.deepEqual(dumpCurrentSection('intro\n## Now\n- a', 8), { from: 6, to: 16 })
 })

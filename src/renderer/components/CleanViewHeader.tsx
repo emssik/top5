@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
-import type { FocusCheckIn } from '../types'
-import { checkInMinutes, formatCheckInTime } from '../utils/checkInTime'
-import { dateKey } from '../../shared/schedule'
+import { formatCheckInTime } from '../utils/checkInTime'
+import { minutesFocusedToday } from '../utils/finishForToday'
 
 export default function CleanViewHeader() {
   const [now, setNow] = useState(new Date())
@@ -13,14 +12,7 @@ export default function CleanViewHeader() {
   }, [])
 
   useEffect(() => {
-    const load = async () => {
-      const checkIns: FocusCheckIn[] = await window.api.getFocusCheckIns()
-      const todayStr = dateKey(new Date())
-      const total = checkIns
-        .filter((c) => c.timestamp.startsWith(todayStr))
-        .reduce((sum, c) => sum + checkInMinutes(c), 0)
-      setTodayMinutes(total)
-    }
+    const load = async () => setTodayMinutes(minutesFocusedToday(await window.api.getFocusCheckIns()))
     load()
     const interval = setInterval(load, 60_000)
     return () => clearInterval(interval)

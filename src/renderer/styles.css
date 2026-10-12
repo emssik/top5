@@ -2319,6 +2319,17 @@ body {
   padding: 24px var(--dump-gutter) 40vh;
 }
 
+/* Lines outside the section shown in the sticky bar: still legible, clearly secondary (tags dim with the line). */
+.dump-writer .dump-dim {
+  opacity: 0.5;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .dump-writer .dump-cm .cm-editor .cm-line {
+    transition: opacity 0.15s ease-out;
+  }
+}
+
 /* Header: the `## ` hangs into the left margin, so the title lines up with the item bullets.
    Bold keeps the advance width in a monospace font, so the caret stays aligned. */
 .dump-writer .dump-hang-header {

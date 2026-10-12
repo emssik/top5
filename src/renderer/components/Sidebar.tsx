@@ -1,9 +1,9 @@
 import { useState, useMemo } from 'react'
 import type { Project } from '../types'
 import { projectColorValue } from '../utils/projects'
-import { checkInMinutes, formatCheckInTime } from '../utils/checkInTime'
+import { formatCheckInTime } from '../utils/checkInTime'
+import { minutesFocusedToday } from '../utils/finishForToday'
 import { useProjects } from '../hooks/useProjects'
-import { dateKey } from '../../shared/schedule'
 import { computeCycleRange } from '../../shared/cycle'
 import { ensureCycleStart, getStoredCycleStart } from '../utils/cycleStart'
 
@@ -105,10 +105,7 @@ export default function Sidebar({
   const themeLabel = theme === 'light' ? 'Dark mode' : 'Light mode'
   const focusCheckIns = useProjects((s) => s.focusCheckIns)
   const todayTime = useMemo(() => {
-    const today = dateKey(new Date())
-    const mins = focusCheckIns
-      .filter((c) => c.timestamp.startsWith(today))
-      .reduce((sum, c) => sum + checkInMinutes(c), 0)
+    const mins = minutesFocusedToday(focusCheckIns)
     return mins > 0 ? formatCheckInTime(mins) : ''
   }, [focusCheckIns])
 
