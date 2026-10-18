@@ -37,7 +37,7 @@ function openInsertIndex(lines: string[]): number {
 }
 
 // Header index of section `name` and the index where it ends (next `## ` header / EOF); null = no section.
-function sectionBounds(lines: string[], name: string): [number, number] | null {
+export function sectionBounds(lines: string[], name: string): [number, number] | null {
   const re = new RegExp(`^##\\s+${name}(\\s|$)`, 'i')
   const h = lines.findIndex((l) => re.test(l.trim()))
   if (h === -1) return null
@@ -90,7 +90,7 @@ export function mergeExternalAppends(base: string, theirs: string, mine: string)
 }
 
 // Index of the line that holds text position `pos`.
-const lineAt = (text: string, pos: number): number => text.slice(0, pos).split('\n').length - 1
+export const lineAt = (text: string, pos: number): number => text.slice(0, pos).split('\n').length - 1
 
 // A line that continues the item above it (plain text, not a new item / header / blank).
 const isContinuation = (line: string): boolean => {
@@ -100,7 +100,7 @@ const isContinuation = (line: string): boolean => {
 
 // Item = `- x` / `+ x` line plus the plain-text lines right below it. Plain text with
 // no item above (e.g. at the top of the file) forms an item on its own.
-function itemRange(lines: string[], i: number): [number, number] {
+export function itemRange(lines: string[], i: number): [number, number] {
   let start = i
   if (isContinuation(lines[i])) {
     while (start > 0 && isContinuation(lines[start - 1])) start--
@@ -113,7 +113,7 @@ function itemRange(lines: string[], i: number): [number, number] {
 
 // Title of the open item starting at line i (its first line without `- `), or null
 // when line i isn't the head of an open item. Links a dump item to a quick task (⌘F).
-function openItemTitle(lines: string[], i: number): string | null {
+export function openItemTitle(lines: string[], i: number): string | null {
   const t = lines[i].trim()
   if (t === '' || t.startsWith('#') || isDone(lines[i])) return null
   // Plain text right below an item / other plain text continues it — not a head. O(1), no itemRange scan.
@@ -148,13 +148,23 @@ const HASHTAG_RE = /(^|[ \t]+)#(\p{L}[\p{L}\p{N}]*)/gu
 // Title without its project tags (`codes`, case-insensitive); other hashtags (`#pilne`) stay.
 // A title may start with a tag (`- #ATD Oferta` → `#ATD Oferta`); callers never pass `#` comment lines.
 export function stripDumpTags(title: string, codes: string[]): string {
+  return stripDumpDates(stripTags(title, codes))
+}
+
+// `@YYYY-MM-DD` (dump-dates.ts) with the whitespace before it; the token ends at whitespace / end of line.
+export const DATE_TOKEN_RE = /[ \t]+@\d{4}-\d{2}-\d{2}(?=\s|$)/g
+
+// Item title without its date tokens — also one at the title's start (`- @2026-10-17 X` → `X`).
+export const stripDumpDates = (title: string): string => title.replace(/(^|[ \t]+)@\d{4}-\d{2}-\d{2}(?=\s|$)/g, '').trim()
+
+const stripTags = (title: string, codes: string[]): string => {
   const known = new Set(codes.map((c) => c.toLowerCase()))
   return title.replace(HASHTAG_RE, (all, _lead, word: string) => (known.has(word.toLowerCase()) ? '' : all)).trim()
 }
 
 // dump↔quick-task matching key: main doesn't know the project codes, so every hashtag is dropped
 // on both sides — `- Napraw #pilne #ATD` ↔ task `Napraw #pilne` (⌘F keeps non-project hashtags).
-const matchKey = (title: string): string => title.replace(HASHTAG_RE, '').trim()
+const matchKey = (title: string): string => stripDumpDates(title).replace(HASHTAG_RE, '').trim()
 const hashtags = (title: string): string[] => [...title.matchAll(HASHTAG_RE)].map((m) => m[2].toLowerCase())
 
 // ⌘P: puts `#code` at the end of the first line of the item under `pos` (replacing its tags).
@@ -164,7 +174,7 @@ export function setDumpItemTag(text: string, pos: number, code: string, codes: s
   const line = lines[first]
   if (line.trim() === '' || line.trimStart().startsWith('#')) return null
   const indent = line.slice(0, line.length - line.trimStart().length)
-  const next = `${indent}${stripDumpTags(line.trimEnd(), codes)} #${code}`
+  const next = `${indent}${stripTags(line.trimEnd(), codes)} #${code}`
   const start = cursorAt(lines, first)
   const oldEnd = start + line.length
   lines[first] = next
@@ -248,7 +258,7 @@ function withoutLines(lines: string[], moved: Set<number>): string[] {
   return out
 }
 
-function cursorAt(lines: string[], line: number): number {
+export function cursorAt(lines: string[], line: number): number {
   let cursor = 0
   for (let i = 0; i < Math.min(line, lines.length - 1); i++) cursor += lines[i].length + 1
   return cursor

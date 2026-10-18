@@ -4,8 +4,8 @@ import { findDumpTags, stripDumpTags } from './dump'
 
 export type RepeatLine = { title: string; schedule: RepeatScheduleLike; projectCode: string | null }
 
-// 0 = Sunday … 6 = Saturday.
-const DAYS = new Map([['pon', 1], ['wt', 2], ['śr', 3], ['sr', 3], ['czw', 4], ['pt', 5], ['sob', 6], ['nd', 0]])
+// 0 = Sunday … 6 = Saturday. Also the weekday words of `@date` (dump-dates.ts).
+export const DAYS = new Map([['pon', 1], ['wt', 2], ['śr', 3], ['sr', 3], ['czw', 4], ['pt', 5], ['sob', 6], ['nd', 0]])
 
 function parseSchedule(prefix: string): RepeatScheduleLike | null {
   if (prefix === 'codziennie') return { type: 'daily' }

@@ -1,0 +1,1 @@
+existing lines changed or removed in tests/dump-dates.test.ts — the task allows only appending to it

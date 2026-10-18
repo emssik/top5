@@ -4,6 +4,7 @@ import {
   type DumpSection, countDumpLines, countSectionOpen, dumpItemTitle, findDumpItem, findDumpTags, mergeExternalAppends,
   moveDumpItems, projectTagTrigger, setDumpItemTag, stripDumpTags, toggleDumpLines
 } from '../../shared/dump'
+import { datedDumpItems, dumpDateAt, dumpDateTrigger, itemDumpDate, setDumpItemDate, type DatedDumpItem } from '../../shared/dump-dates'
 import { parseRepeatLine } from '../../shared/dump-repeat'
 import { logicalDateKey } from '../../shared/schedule'
 import { STANDALONE_PROJECT_ID } from '../../shared/constants'
@@ -13,6 +14,7 @@ import { formatCheckInTime } from '../utils/checkInTime'
 import { minutesFocusedToday } from '../utils/finishForToday'
 import type { Project, RepeatingTask } from '../types'
 import DumpEditor, { type DumpEditorHandle } from './DumpEditor'
+import DumpDatePicker from './DumpDatePicker'
 import DumpProjectPicker from './DumpProjectPicker'
 import DumpTodayStrip from './DumpTodayStrip'
 
@@ -30,8 +32,10 @@ let saveChain: Promise<void> = Promise.resolve()
 
 const REPEAT_HELP = 'Nie rozumiem harmonogramu. Formy: "codziennie: X", "pon śr pt: X" (też "dni robocze:"), "co 3 dni: X", "15 dnia: X", "koniec miesiąca: X".'
 
-// The caret-position state of the project picker: ` #query` typed in the text, or ⌘P on an item.
-type Picker = { mode: 'inline'; start: number; query: string } | { mode: 'item'; pos: number; query: string }
+// The one open picker: project (` #query` typed in the text, or ⌘P on an item) or date (` @query`, or ⌘T).
+type Picker = { kind: 'project' | 'date' } & ({ mode: 'inline'; start: number; query: string } | { mode: 'item'; pos: number; query: string; base?: string } | { mode: 'token'; start: number; query: string; base: string })
+
+const triggerOf = (kind: Picker['kind'], text: string, caret: number) => (kind === 'project' ? projectTagTrigger : dumpDateTrigger)(text, caret)
 
 // Own component: the minute tick must not re-render the editor.
 function DumpFooter() {
@@ -62,6 +66,8 @@ export default function DumpView({ sidebarHidden, onToggleSidebar }: { sidebarHi
   const [loaded, setLoaded] = useState(conflictDraft !== null)
   const [mailStatus, setMailStatus] = useState<string | null>(null)
   const [picker, setPicker] = useState<Picker | null>(null)
+  // Start of the date token whose picker was dismissed; cleared once the caret leaves it.
+  const dismissedRef = useRef<number | null>(null)
   const { projects, config } = useProjects()
 
   // Refs, not state: the debounced save must see the latest values, not a closure snapshot.
@@ -77,6 +83,7 @@ export default function DumpView({ sidebarHidden, onToggleSidebar }: { sidebarHi
   // One ⌘R at a time: a second press during the await would pass the duplicate check again.
   const repeatBusyRef = useRef(false)
 
+  const dated = useMemo(() => datedDumpItems(text), [text])
   const counts = useMemo(() => countDumpLines(text), [text])
   const nowOpen = useMemo(() => countSectionOpen(text, 'Now'), [text])
   const nowLimit = config.quickTasksLimit ?? 5
@@ -198,8 +205,24 @@ export default function DumpView({ sidebarHidden, onToggleSidebar }: { sidebarHi
     if (!result || !ed) return
     ed.replace(result.text, result.cursor)
     applyText(result.text)
+    // Host edits never reach onSelectionChange: a caret-bound picker (inline / token) would stay over another item.
+    setPicker((cur) => (cur?.mode === 'item' ? cur : null))
     void save()
   }, [applyText, save])
+
+  // Strip actions work on the current text: the render that built `item` may be stale.
+  const withCurrent = (item: DatedDumpItem, fn: (pos: number) => { text: string; cursor: number } | null) => {
+    const same = datedDumpItems(textRef.current).filter((d) => d.title === item.title && d.date === item.date)
+    // Same title + date twice: the clicked copy, while the text hasn't moved.
+    const cur = same.find((d) => d.pos === item.pos) ?? same[0]
+    if (!cur) return
+    const result = fn(cur.pos)
+    if (!result) return setError('Brak sekcji ## Now w zrzucie.')
+    applyEdit(result)
+  }
+  const acceptDated = (item: DatedDumpItem) => withCurrent(item, (pos) => moveDumpItems(textRef.current, pos, pos, 'Now'))
+  const rescheduleDated = (item: DatedDumpItem, date: string | null) =>
+    withCurrent(item, (pos) => setDumpItemDate(textRef.current, pos, date))
 
   // ⌘1–3 are the "project 1–3" shortcuts, caught in main (before-input-event) before the
   // editor sees them — so they arrive here as select-project. Dashboard skips them while we're focused.
@@ -219,8 +242,9 @@ export default function DumpView({ sidebarHidden, onToggleSidebar }: { sidebarHi
 
   const handleChange = (value: string, caret: number) => {
     applyText(value)
-    const trigger = projectTagTrigger(value, caret)
-    setPicker((cur) => (trigger ? { mode: 'inline', ...trigger } : cur?.mode === 'item' ? cur : null))
+    const project = projectTagTrigger(value, caret)
+    const date = project ? null : dumpDateTrigger(value, caret)
+    setPicker((cur) => (project ? { kind: 'project', mode: 'inline', ...project } : date ? { kind: 'date', mode: 'inline', ...date } : cur?.mode === 'item' ? cur : null))
     if (timerRef.current) clearTimeout(timerRef.current)
     timerRef.current = setTimeout(() => void save(), SAVE_DEBOUNCE_MS)
   }
@@ -273,7 +297,29 @@ export default function DumpView({ sidebarHidden, onToggleSidebar }: { sidebarHi
     setPicker(null)
   }
 
+  const pickDate = (date: string | null) => {
+    const ed = editorRef.current
+    const text = textRef.current
+    if (ed && picker?.mode === 'inline') {
+      const caret = ed.selection().from
+      const trigger = dumpDateTrigger(text, caret)
+      // The whole typed ` @word` goes (incl. its rest behind the caret, but not a glued `#KOD`); the date lands at the end of the item's first line.
+      if (trigger) applyEdit(setDumpItemDate(text.slice(0, trigger.start - 1) + text.slice(caret).replace(/^[\p{L}\p{N}+.-]*/u, ''), trigger.start - 1, date))
+    } else if (ed && picker?.mode === 'token') {
+      const result = date && setDumpItemDate(text, ed.selection().from, date)
+      // Not reopened until the caret has left the (moved) token.
+      if (result) { dismissedRef.current = dumpDateAt(result.text, result.cursor)?.start ?? null; applyEdit(result) }
+      else ed.focus()
+    } else if (ed && picker?.mode === 'item') {
+      const result = setDumpItemDate(text, picker.pos, date)
+      if (result) applyEdit(result)
+      else ed.focus()
+    }
+    setPicker(null)
+  }
+
   const closePicker = () => {
+    if (picker?.mode === 'token') dismissedRef.current = picker.start
     setPicker(null)
     editorRef.current?.focus()
   }
@@ -328,12 +374,23 @@ export default function DumpView({ sidebarHidden, onToggleSidebar }: { sidebarHi
 
   const handleKeyDown = (e: KeyboardEvent): boolean => {
     const ed = editorRef.current
+    // Backspace right behind `@YYYY-MM-DD` removes the whole date (and its leading space) in one go.
+    if (ed && e.key === 'Backspace' && !e.metaKey && !e.shiftKey && !e.altKey && !e.ctrlKey) {
+      const { from, to } = ed.selection()
+      const text = textRef.current
+      const token = from === to ? dumpDateAt(text, from - 1) : null
+      if (token?.end !== from) return false
+      e.preventDefault()
+      applyEdit({ text: text.slice(0, token.start - 1) + text.slice(token.end), cursor: token.start - 1 })
+      return true
+    }
     if (!ed || !e.metaKey || e.shiftKey || e.altKey || e.ctrlKey) return false
     const key = e.key.toLowerCase()
     const { from, to } = ed.selection()
     const section = SECTIONS[Number(key) - 1]
     if (key === 'f') void focusOnItem()
-    else if (key === 'p') setPicker({ mode: 'item', pos: from, query: '' })
+    else if (key === 'p') setPicker({ kind: 'project', mode: 'item', pos: from, query: '' })
+    else if (key === 't') { if (setDumpItemDate(textRef.current, from, null)) setPicker({ kind: 'date', mode: 'item', pos: from, query: '', base: itemDumpDate(textRef.current, from) }) }
     else if (section) { if (!e.repeat) applyEdit(moveDumpItems(textRef.current, from, to, section)) }
     else if (key === 'd') applyEdit(toggleDumpLines(textRef.current, from, to, logicalDateKey()))
     else return false
@@ -424,29 +481,52 @@ export default function DumpView({ sidebarHidden, onToggleSidebar }: { sidebarHi
       )}
       {error && !conflict && <div className="restore-error" role="alert">{error}</div>}
 
-      <DumpTodayStrip />
+      <DumpTodayStrip dated={dated} onAcceptDated={acceptDated} onRescheduleDated={rescheduleDated} />
 
       <div className="dump-editor">
         <DumpEditor
           ref={editorRef}
           value={text}
           readOnly={!loaded}
-          placeholder={'- rzecz do zrobienia #KOD\n\n⌘D — oznacz jako zrobione / przywróć\n⌘1 / ⌘2 / ⌘3 — przenieś do ## Now / ## Next / na górę ## Inbox\n⌘F — focus na zadaniu (tworzy quick task, przenosi do ## Now)\n# po spacji / ⌘P — tag projektu\n⌘R — "pon śr pt: Tytuł" → zadanie cykliczne'}
+          placeholder={'- rzecz do zrobienia #KOD\n\n⌘D — oznacz jako zrobione / przywróć\n⌘1 / ⌘2 / ⌘3 — przenieś do ## Now / ## Next / na górę ## Inbox\n⌘F — focus na zadaniu (tworzy quick task, przenosi do ## Now)\n# po spacji / ⌘P — tag projektu\n@jutro / ⌘T — data (pojawi się w „Dziś” dzień wcześniej)\n⌘R — "pon śr pt: Tytuł" → zadanie cykliczne'}
           codes={codes}
           tagColor={tagColor}
           onChange={handleChange}
           onSelectionChange={(caret) => {
-            // Caret moved away from this ` #query` (incl. behind another tag) → the inline picker is stale.
-            if (picker?.mode === 'inline' && projectTagTrigger(textRef.current, caret)?.start !== picker.start) setPicker(null)
+            // Caret moved away from this ` #query` / ` @query` (incl. behind another tag) → the inline picker is stale.
+            // Caret strictly inside a date token (nothing selected) → the token picker, unless dismissed.
+            const text = textRef.current
+            const sel = editorRef.current?.selection()
+            const token = sel && sel.from === sel.to ? dumpDateAt(text, caret) : null
+            if (token?.start !== dismissedRef.current) dismissedRef.current = null
+            setPicker((cur) => {
+              if (cur?.mode === 'inline') return triggerOf(cur.kind, text, caret)?.start === cur.start ? cur : null
+              if (cur?.mode === 'item') return cur
+              if (cur?.mode === 'token' && token?.start === cur.start) return cur
+              return token && token.start !== dismissedRef.current ? { kind: 'date', mode: 'token', query: '', start: token.start, base: token.date } : null
+            })
           }}
           onKeyDown={handleKeyDown}
           onBlur={() => {
             // The inline picker listens for keys on window — it must not outlive the editor's focus.
-            setPicker((cur) => (cur?.mode === 'inline' ? null : cur))
+            setPicker((cur) => (cur?.mode === 'item' ? cur : null))
             void save()
           }}
         />
-        {picker && (
+        {picker?.kind === 'date' && (
+          <DumpDatePicker
+            // A new token = a fresh picker (highlight back on row 0), also when the caret jumps straight from another token.
+            key={picker.mode === 'token' ? picker.start : picker.mode}
+            query={picker.query}
+            mode={picker.mode}
+            base={picker.mode === 'inline' ? undefined : picker.base}
+            onQueryChange={picker.mode === 'item' ? (query) => setPicker({ ...picker, query }) : undefined}
+            onPick={pickDate}
+            onClose={closePicker}
+            onRemove={picker.mode === 'item' && picker.base ? () => pickDate(null) : undefined}
+          />
+        )}
+        {picker?.kind === 'project' && (
           <DumpProjectPicker
             projects={projects.filter((p) => !p.archivedAt && p.code)}
             query={picker.query}

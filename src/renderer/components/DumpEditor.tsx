@@ -3,7 +3,9 @@ import { Annotation, Compartment, EditorState, Prec, type Range, StateEffect, St
 import { Decoration, type DecorationSet, EditorView, keymap, placeholder as placeholderExt } from '@codemirror/view'
 import { defaultKeymap, history, historyKeymap, isolateHistory } from '@codemirror/commands'
 import { codeFolding, foldEffect, foldGutter, foldKeymap, foldService, foldedRanges, unfoldEffect } from '@codemirror/language'
-import { dumpCurrentSection, dumpFoldEnd, dumpLineHang, findDumpSectionHeaders, findDumpTags, formatDumpPaste } from '../../shared/dump'
+import { dumpCurrentSection, dumpFoldEnd, dumpLineHang, findDumpSectionHeaders, findDumpTags, formatDumpPaste, openItemTitle } from '../../shared/dump'
+import { findDumpDates } from '../../shared/dump-dates'
+import { logicalDateKey } from '../../shared/schedule'
 
 export type DumpEditorHandle = {
   selection(): { from: number; to: number }
@@ -34,7 +36,7 @@ export type DumpEditorProps = {
 const fromHost = Annotation.define<boolean>()
 const refresh = StateEffect.define<null>()
 
-// Hanging indents (line decorations driven by dumpLineHang) + project tag colours.
+// Hanging indents (line decorations driven by dumpLineHang) + project tag colours + `@date` tokens.
 // ponytail: rebuilt for the whole doc on every change — fine for a dump (≤1 MB cap); viewport-only plugin if typing lags.
 function decorate(doc: Text, codes: string[], tagColor: (code: string) => string | undefined): DecorationSet {
   const ranges: Range<Decoration>[] = []
@@ -50,7 +52,15 @@ function decorate(doc: Text, codes: string[], tagColor: (code: string) => string
     const shift = kind === 'plain' ? Math.max(0, itemHang - (line.text.length - line.text.trimStart().length)) : 0
     if (kind !== 'plain' || hang || shift) ranges.push(Decoration.line({ class: `dump-hang dump-hang-${kind}`, attributes: { style: `--hang:${hang}ch;--shift:${shift}ch` } }).range(line.from))
   }
-  for (const tag of findDumpTags(doc.toString(), codes)) {
+  const text = doc.toString()
+  const lines = text.split('\n')
+  const today = logicalDateKey()
+  for (const t of findDumpDates(text)) {
+    // Overdue = before today on an open item's line (done lines keep the plain date style).
+    const overdue = t.date < today && openItemTitle(lines, doc.lineAt(t.start).number - 1) !== null
+    ranges.push(Decoration.mark({ class: overdue ? 'dump-date dump-date-overdue' : 'dump-date' }).range(t.start, t.end))
+  }
+  for (const tag of findDumpTags(text, codes)) {
     const color = tagColor(tag.code)
     ranges.push(Decoration.mark({ class: 'dump-tag', attributes: color ? { style: `color:${color}` } : undefined }).range(tag.start, tag.end))
   }

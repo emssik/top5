@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Daty w Zrzucie** — punkt może mieć datę `@YYYY-MM-DD` w pierwszej linii. Wpisanie ` @` albo ⌘T otwiera wybór daty (`jutro`, `+2d`, `+1w`, `pt`, `20.10`…); przy zmianie istniejącej daty `+2d` liczy się od niej, a wybór otwiera się sam, gdy kursor stanie w dacie. Daty są podświetlone, zaległe na czerwono.
+- Pasek „Dziś” nad Zrzutem pokazuje punkty z datą: dzień wcześniej jako zapowiedź, od dnia terminu z ✓ (przenosi do `## Now`) i ✕ (przełożenie terminu).
+
 ## [1.120.0] - 2026-10-12
 
 ### Added

@@ -100,5 +100,7 @@ actions:
     pane: 3
 
 ems-delegate:
+  setup: 'ln -s ../../../node_modules node_modules && ln -s ../../../../cli/node_modules cli/node_modules'
+  install: "npm ci && npm ci --prefix cli"
   test: "npm test && npm run test:api"
   typecheck: "npm run typecheck"

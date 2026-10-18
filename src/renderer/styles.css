@@ -766,7 +766,9 @@ body {
   white-space: nowrap;
 }
 
-.due-date-badge.overdue {
+/* Overdue `@date` in the dump editor too; two classes so it beats `.dump-date`, defined further down. */
+.due-date-badge.overdue,
+.dump-date.dump-date-overdue {
   background: rgba(239, 68, 68, 0.15);
   color: #f87171;
 }
@@ -2142,6 +2144,12 @@ body {
   color: var(--pc-red);
 }
 
+.dump-date {
+  border-radius: 3px;
+  background: color-mix(in oklch, currentColor 10%, transparent);
+  color: var(--c-text-secondary);
+}
+
 .dump-picker {
   position: absolute;
   top: 8px;
@@ -2212,10 +2220,15 @@ body {
   color: var(--c-text-secondary);
 }
 
+.dump-picker-parse,
 .dump-picker-empty {
   padding: 6px 8px;
   font-size: 13px;
   color: var(--c-text-muted);
+}
+
+.dump-picker-parse {
+  color: var(--c-text-secondary);
 }
 
 .dump-strip {
@@ -2264,6 +2277,18 @@ body {
   gap: 10px;
   font-size: 13px;
   color: var(--c-text-secondary);
+}
+
+.dump-strip-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* In flow, not absolute: the body scrolls and would clip it. */
+.dump-strip-group .due-date-dismiss-popover {
+  position: static;
+  align-self: flex-end;
 }
 
 .dump-strip-title {
