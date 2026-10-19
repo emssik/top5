@@ -12,6 +12,8 @@ import { join } from 'node:path'
 // password), since (YYYY-MM-DD, older mail is ignored), label (default top5-zrzucone).
 // A processed mail gets the label only after its tasks were appended, so a failure
 // retries it next run (risk: a duplicate, never a lost task). Non-task mails get it too.
+// A mail with tasks goes to Trash after append + label (a failed move never brings it back);
+// mails without tasks, unparseable ones and mails to others keep only the label.
 // No Electron imports — runnable from a plain Node script for testing.
 
 type Config = { user: string; app_password: string; since: string; label: string }
@@ -111,7 +113,7 @@ async function classify(mails: Mail[]): Promise<Record<string, string[]>> {
   })
 }
 
-// Returns the appended lines. dryRun: read-only mailbox, nothing appended or labelled.
+// Returns the appended lines. dryRun: read-only mailbox, nothing appended, labelled or moved.
 export async function pullMailTasks(append: (lines: string[]) => void, dryRun = false): Promise<string[]> {
   const cfg = readConfig()
   const { label } = cfg
@@ -132,6 +134,8 @@ export async function pullMailTasks(append: (lines: string[]) => void, dryRun = 
     // "All Mail" has a localized name ([Gmail]/Wszystkie) — find it by its special-use flag.
     const allMail = boxes.find((b) => b.specialUse === '\\All')
     if (!allMail) throw new Error('nie znaleziono folderu \\All w Gmailu')
+    const trash = boxes.find((b) => b.specialUse === '\\Trash')
+    if (!trash && !dryRun) throw new Error('nie znaleziono folderu \\Trash w Gmailu')
     if (!dryRun && !boxes.some((b) => b.path === label)) await client.mailboxCreate(label)
 
     const addLabel = (uid: number) => client.messageFlagsAdd(uid, [label], { uid: true, useLabels: true })
@@ -176,6 +180,7 @@ export async function pullMailTasks(append: (lines: string[]) => void, dryRun = 
       if (mails.length === 0) return added
 
       const tasks = await classify(mails)
+      let notMoved = 0
       for (const mail of mails) {
         const found = tasks[mail.id]
         if (!found) continue // model skipped it — no label, retried next run
@@ -188,7 +193,10 @@ export async function pullMailTasks(append: (lines: string[]) => void, dryRun = 
         if (!dryRun && !(await addLabel(Number(mail.id)))) {
           throw new Error(`Gmail: nie udało się dodać etykiety ${label}`)
         }
+        // Label is already in place, so a failed move can't make the mail come back. messageMove returns false on failure.
+        if (!dryRun && lines.length > 0 && !(await client.messageMove(Number(mail.id), trash!.path, { uid: true }).catch(() => false))) notMoved++
       }
+      if (notMoved > 0) throw new Error(`Gmail: nie udało się przenieść maili (${notMoved}) do Kosza`)
     } finally {
       lock.release()
     }
