@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { completeDumpItem, findDumpItem, stripDumpTags } from '../src/shared/dump'
-import { datedDumpItems, dumpDateAt, dumpDateTrigger, findDumpDates, parseDumpDate, setDumpItemDate } from '../src/shared/dump-dates'
+import { datedDumpItems, dropDumpDate, dumpDateAt, dumpDateTrigger, findDumpDates, parseDumpDate, setDumpItemDate } from '../src/shared/dump-dates'
 
 const today = '2026-10-16' // a Friday
 
@@ -43,6 +43,8 @@ test('setDumpItemDate', () => {
   assert.equal(setDumpItemDate('- Zadzwoń #ATD', 3, '2026-10-17')?.text, '- Zadzwoń #ATD @2026-10-17')
   assert.equal(setDumpItemDate('- Zadzwoń @2026-10-17 #ATD', 0, '2026-10-20')?.text, '- Zadzwoń #ATD @2026-10-20')
   assert.equal(setDumpItemDate('- Zadzwoń @2026-10-17', 0, null)?.text, '- Zadzwoń')
+  assert.equal(setDumpItemDate('- @2026-10-17', 0, null)?.text, '- ')
+  assert.equal(setDumpItemDate('- @2026-10-17', 0, '2026-10-20')?.text, '- @2026-10-20')
   assert.equal(setDumpItemDate('- Zadzwoń\n  szczegóły', 12, '2026-10-17')?.text, '- Zadzwoń @2026-10-17\n  szczegóły')
   assert.equal(setDumpItemDate('\n## Now', 0, '2026-10-17'), null)
   assert.equal(setDumpItemDate('# k', 1, '2026-10-17'), null)
@@ -115,4 +117,11 @@ test('review fixes: no throw / garbage, head lines only, date at title start', (
   assert.equal(dumpDateAt(t, t.indexOf('@2026-10-20') + 3), null)
   assert.equal(stripDumpTags('@2026-10-17 Zadzwoń', []), 'Zadzwoń')
   assert.equal(findDumpItem('- @2026-10-17 Zadzwoń', 'Zadzwoń'), 0)
+})
+
+test('dropDumpDate keeps the marker of a date-only item', () => {
+  const drop = (t: string) => dropDumpDate(t, dumpDateAt(t, t.length - 1)!)
+  assert.deepEqual(drop('- a @2026-10-17'), { text: '- a', cursor: 3 })
+  assert.deepEqual(drop('- x\n- @2026-10-17'), { text: '- x\n- ', cursor: 6 })
+  assert.deepEqual(drop('  + @2026-10-17'), { text: '  + ', cursor: 4 })
 })

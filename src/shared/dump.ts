@@ -147,6 +147,7 @@ const HASHTAG_RE = /(^|[ \t]+)#(\p{L}[\p{L}\p{N}]*)/gu
 
 // Title without its project tags (`codes`, case-insensitive); other hashtags (`#pilne`) stay.
 // A title may start with a tag (`- #ATD Oferta` → `#ATD Oferta`); callers never pass `#` comment lines.
+// Also drops `@YYYY-MM-DD` dates: like project tags, they are item metadata, not part of the title.
 export function stripDumpTags(title: string, codes: string[]): string {
   return stripDumpDates(stripTags(title, codes))
 }

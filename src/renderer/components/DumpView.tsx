@@ -4,7 +4,7 @@ import {
   type DumpSection, countDumpLines, countSectionOpen, dumpItemTitle, findDumpItem, findDumpTags, mergeExternalAppends,
   moveDumpItems, projectTagTrigger, setDumpItemTag, stripDumpTags, toggleDumpLines
 } from '../../shared/dump'
-import { datedDumpItems, dumpDateAt, dumpDateTrigger, itemDumpDate, setDumpItemDate, type DatedDumpItem } from '../../shared/dump-dates'
+import { datedDumpItems, dropDumpDate, dumpDateAt, dumpDateTrigger, itemDumpDate, setDumpItemDate, type DatedDumpItem } from '../../shared/dump-dates'
 import { parseRepeatLine } from '../../shared/dump-repeat'
 import { logicalDateKey } from '../../shared/schedule'
 import { STANDALONE_PROJECT_ID } from '../../shared/constants'
@@ -381,7 +381,7 @@ export default function DumpView({ sidebarHidden, onToggleSidebar }: { sidebarHi
       const token = from === to ? dumpDateAt(text, from - 1) : null
       if (token?.end !== from) return false
       e.preventDefault()
-      applyEdit({ text: text.slice(0, token.start - 1) + text.slice(token.end), cursor: token.start - 1 })
+      applyEdit(dropDumpDate(text, token))
       return true
     }
     if (!ed || !e.metaKey || e.shiftKey || e.altKey || e.ctrlKey) return false

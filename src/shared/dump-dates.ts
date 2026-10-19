@@ -88,13 +88,24 @@ export function itemDumpDate(text: string, pos: number): string | undefined {
   return lineDates(lines[itemRange(lines, lineAt(text, pos))[0]])[0]?.date
 }
 
+// A date-only item (`- @date`) keeps its `- ` / `+ ` marker when the date goes: a bare `-` is no longer an item.
+const BARE_MARKER = /^[ \t]*[-+]$/
+
+// Backspace right behind a token: drops it with its leading space (but not the marker's space).
+export function dropDumpDate(text: string, t: DumpDateToken): { text: string; cursor: number } {
+  const lineStart = text.lastIndexOf('\n', t.start - 1) + 1
+  const from = BARE_MARKER.test(text.slice(lineStart, t.start - 1)) ? t.start : t.start - 1
+  return { text: text.slice(0, from) + text.slice(t.end), cursor: from }
+}
+
 // Puts `@date` at the end of the first line of the item under `pos` (replacing its dates); null date = remove.
 export function setDumpItemDate(text: string, pos: number, date: string | null): { text: string; cursor: number } | null {
   const lines = text.split('\n')
   const first = itemRange(lines, lineAt(text, pos))[0]
   const line = lines[first]
   if (line.trim() === '' || line.trimStart().startsWith('#')) return null
-  const next = line.replace(DATE_TOKEN_RE, '').trimEnd() + (date ? ` @${date}` : '')
+  const stripped = line.replace(DATE_TOKEN_RE, '').trimEnd()
+  const next = date ? `${stripped} @${date}` : BARE_MARKER.test(stripped) ? `${stripped} ` : stripped
   const start = cursorAt(lines, first)
   const oldEnd = start + line.length
   lines[first] = next
