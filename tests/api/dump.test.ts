@@ -166,3 +166,20 @@ describe('dump ↔ quick task link (⌘F)', () => {
     expect(res.json().data.text).toMatch(/^- a\n\n## Done\n\+ \d{4}-\d{2}-\d{2} zadzwonić\ndo X\n$/)
   })
 })
+
+describe('addOpenLines with a section', () => {
+  it('Now / Next: end of that section', () => {
+    expect(addOpenLines('## Now\n\n- a\n\n## Next\n\n## Inbox\n', ['b'], 'Now')).toBe('## Now\n\n- a\n- b\n\n## Next\n\n## Inbox\n')
+    expect(addOpenLines('## Now\n\n## Next\n\n- a\n\n## Inbox\n', ['b', 'c'], 'Next')).toBe('## Now\n\n## Next\n\n- a\n- b\n- c\n\n## Inbox\n')
+    expect(addOpenLines('## Now\n\n## Next\n\n## Inbox\n', ['b'], 'Next')).toBe('## Now\n\n## Next\n\n- b\n\n## Inbox\n')
+  })
+
+  it('Inbox: top of ## Inbox', () => {
+    expect(addOpenLines('## Now\n\n## Inbox\n\n- a\n', ['b'], 'Inbox')).toBe('## Now\n\n## Inbox\n\n- b\n- a\n')
+  })
+
+  it('missing section falls back to top of Inbox, then to the end of the open list', () => {
+    expect(addOpenLines('## Inbox\n\n- a\n', ['b'], 'Now')).toBe('## Inbox\n\n- b\n- a\n')
+    expect(addOpenLines('- a\n\n## Zrobione\n', ['b'], 'Next')).toBe('- a\n- b\n\n## Zrobione\n')
+  })
+})

@@ -3,7 +3,7 @@ import { join } from 'path'
 import { getConfigDir } from '../store'
 import { addOpenLines, completeDumpItem } from '../../shared/dump'
 import { logicalDateKey } from '../../shared/schedule'
-import type { DumpState, DumpError } from '../../shared/dump'
+import type { DumpSection, DumpState, DumpError } from '../../shared/dump'
 
 // "Zrzut" — a single plain-text file next to data.yaml. Every write is guarded by
 // mtime (optimistic lock) so the UI and an external model can't overwrite each other.
@@ -59,9 +59,9 @@ export function appendDumpLine(line: unknown): DumpState | DumpError {
   return appendDumpLines([line.trim()])
 }
 
-// Several single-line entries as one block, in order (mail: one write per mail).
-export function appendDumpLines(lines: string[]): DumpState | DumpError {
-  const text = addOpenLines(getDump().text, lines)
+// Several single-line entries as one block, in order (mail: one write per mail and section).
+export function appendDumpLines(lines: string[], section?: DumpSection): DumpState | DumpError {
+  const text = addOpenLines(getDump().text, lines, section)
   if (Buffer.byteLength(text, 'utf-8') > MAX_DUMP_BYTES) return { error: 'too_large' }
   return writeDump(text)
 }

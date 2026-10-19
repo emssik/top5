@@ -501,7 +501,7 @@ Replaces the whole text — only if the file's current `mtime` equals `baseMtime
 
 #### `POST /dump/append`
 
-Adds one line on top of `## Inbox` (one blank line below the header). Without an Inbox section: at the end of the open list — directly above `## Done` (before the blank lines separating it), or at the end of the file if there's no such header. Additive, so no `baseMtime`. Tasks from self-sent mails are added the same way.
+Adds one line on top of `## Inbox` (one blank line below the header). Without an Inbox section: at the end of the open list — directly above `## Done` (before the blank lines separating it), or at the end of the file if there's no such header. Additive, so no `baseMtime`. Tasks from self-sent mails are added the same way, except that a leading `1 ` / `2 ` in a task sends it to the end of `## Now` / `## Next` (missing section → as above).
 
 **Body:** `{ "line": "zadzwonić do księgowej" }` — `- ` is prepended unless the line already starts with `- ` or `+ `.
 

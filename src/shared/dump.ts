@@ -46,15 +46,15 @@ export function sectionBounds(lines: string[], name: string): [number, number] |
   return [h, n]
 }
 
-// Inserts `block` at the top / end of section `name`, one blank line below the header.
+// Inserts `block` at the end of `## Now` / `## Next` or the top of `## Inbox`, one blank line below the header.
 // Returns [index, number of lines inserted], null when there's no such section.
-function insertInSection(lines: string[], name: string, block: string[], where: 'top' | 'end'): [number, number] | null {
+function insertInSection(lines: string[], name: DumpSection, block: string[]): [number, number] | null {
   const bounds = sectionBounds(lines, name)
   if (!bounds) return null
   const [h, n] = bounds
   const blank = (k: number): boolean => lines[k].trim() === ''
   let i = h + 1
-  if (where === 'top') {
+  if (name === 'Inbox') {
     while (i < n && blank(i)) i++
     if (i === n) i = h + 1
   } else {
@@ -66,11 +66,13 @@ function insertInSection(lines: string[], name: string, block: string[], where: 
   return [i, inserted.length]
 }
 
-// New lines (mail, API/CLI append): top of `## Inbox`, or the end of the open list when there's no Inbox.
-export function addOpenLines(text: string, entries: string[]): string {
+// New lines (mail, API/CLI append): end of `## Now` / `## Next` or top of `## Inbox` (the default); a missing
+// section → top of `## Inbox`, or the end of the open list when there's no Inbox either.
+export function addOpenLines(text: string, entries: string[], section: DumpSection = 'Inbox'): string {
   const lines = text.split('\n')
   const block = entries.map((line) => (/^[-+] /.test(line) ? line : `- ${line}`))
-  if (!insertInSection(lines, 'Inbox', block, 'top')) lines.splice(openInsertIndex(lines), 0, ...block)
+  const placed = insertInSection(lines, section, block) || insertInSection(lines, 'Inbox', block)
+  if (!placed) lines.splice(openInsertIndex(lines), 0, ...block)
   return lines.join('\n')
 }
 
@@ -86,6 +88,7 @@ export function mergeExternalAppends(base: string, theirs: string, mine: string)
     else if (line.trim() !== '') added.push(line)
   }
   if (i < baseLines.length || !added.every(isOpen)) return null
+  // ponytail: wiersze z maila (Now/Next) lądują tu na górze Inboxa — zachowanie sekcji, jeśli zacznie przeszkadzać
   return added.length ? addOpenLines(mine, added.map((line) => line.trim())) : mine
 }
 
@@ -291,7 +294,7 @@ export function moveDumpItems(
   const result = withoutLines(lines, moved)
   // Cursor stays where the first moved item was — the next item to sort through.
   let cursorLine = items[0][0]
-  const [at, count] = insertInSection(result, section, block, section === 'Inbox' ? 'top' : 'end')!
+  const [at, count] = insertInSection(result, section, block)!
   if (at <= cursorLine) cursorLine += count
   return { text: result.join('\n'), cursor: cursorAt(result, cursorLine) }
 }
