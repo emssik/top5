@@ -1,6 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Readable } from 'node:stream'
-import { pullMailTasks } from '../../src/main/service/mail-inbox'
+import { pullMailTasks, parseMailTask } from '../../src/main/service/mail-inbox'
+import { addOpenLines } from '../../src/shared/dump'
 
 const h = vi.hoisted(() => {
   // Skips the zsh token lookup in claudeEnv.
@@ -34,8 +35,8 @@ vi.mock('node:child_process', () => ({
   })
 }))
 
-const raw = (to: string, cc?: string, body = 'tresc'): Buffer =>
-  Buffer.from(`From: me@x.pl\r\nTo: ${to}\r\n${cc ? `Cc: ${cc}\r\n` : ''}Subject: nota\r\n\r\n${body}\r\n`)
+const raw = (to: string, cc?: string, body = 'tresc', sent?: Date): Buffer =>
+  Buffer.from(`From: me@x.pl\r\nTo: ${to}\r\n${cc ? `Cc: ${cc}\r\n` : ''}${sent ? `Date: ${sent.toUTCString()}\r\n` : ''}Subject: nota\r\n\r\n${body}\r\n`)
 
 const BOXES = [
   { path: '[Gmail]/Wszystkie', specialUse: '\\All' },
@@ -170,6 +171,87 @@ describe('pullMailTasks', () => {
     const append = setup({ 7: raw('me@x.pl') }, { boxes: [BOXES[0], BOXES[2]] })
     h.tasks = { 7: ['a'] }
     await expect(pullMailTasks(append)).rejects.toThrow(/\\Trash/)
+    expect(append).not.toHaveBeenCalled()
+  })
+})
+
+describe('parseMailTask', () => {
+  const D = '2026-10-19'
+  const p = (t: string, day = D) => parseMailTask(t, day)
+
+  it('picks the section from a leading digit and removes it', () => {
+    expect(p('1 zatankować samochód @2d #priv')).toEqual({ text: 'zatankować samochód @2026-10-21 #priv', section: 'Now' })
+    expect(p('2 oddzwonić')).toEqual({ text: 'oddzwonić', section: 'Next' })
+    expect(p('3 kupić mleko')).toEqual({ text: 'kupić mleko', section: 'Inbox' })
+    expect(p('kupić mleko')).toEqual({ text: 'kupić mleko', section: 'Inbox' })
+  })
+
+  it('treats anything but a single digit 1-3 and a space as plain text', () => {
+    for (const t of ['1. kupić mleko', '1) kupić mleko', '12 jajek', '4 x', '1x', '1']) {
+      expect(p(t)).toEqual({ text: t, section: 'Inbox' })
+    }
+  })
+
+  it('resolves relative dates from the sent day', () => {
+    expect(p('x @0d').text).toBe('x @2026-10-19')
+    expect(p('x @1w').text).toBe('x @2026-10-26')
+    expect(p('x @2d', '2026-12-31').text).toBe('x @2027-01-02')
+    expect(p('x @1m', '2026-01-31').text).toBe('x @2026-02-28')
+    expect(p('x @1m', '2028-01-31').text).toBe('x @2028-02-29')
+    expect(p('x @2m', '2026-12-15').text).toBe('x @2027-02-15')
+    expect(p('x @13m', '2026-10-19').text).toBe('x @2027-11-19')
+    expect(p('@1d x @1d').text).toBe('@2026-10-20 x @2026-10-20')
+  })
+
+  it('leaves other @ tokens and #KOD alone', () => {
+    for (const t of ['x @2026-10-21', 'x @jutro', 'x @2x', 'x @2D', 'mail@2d.pl', 'x @2dni', 'x #priv']) {
+      expect(p(t)).toEqual({ text: t, section: 'Inbox' })
+    }
+  })
+})
+
+describe('pullMailTasks markers', () => {
+  const sentAt = (h: number, m = 0) => new Date(2026, 9, 19, h, m)
+  const run = async (sent: Date | undefined, tasks: string[], dump: string) => {
+    setup({ 7: raw('me@x.pl', undefined, 'tresc', sent) })
+    h.tasks = { 7: tasks }
+    const append = vi.fn((lines: string[], section: string) => {
+      dump = addOpenLines(dump, lines, section as 'Now')
+    })
+    const added = await pullMailTasks(append)
+    return { dump, added, append }
+  }
+  afterEach(() => vi.useRealTimers())
+
+  it('puts a dated task at the end of ## Now', async () => {
+    const r = await run(sentAt(12), ['1 zatankować samochód @2d #priv'], '## Now\n\n- a\n\n## Next\n\n## Inbox\n\n- i\n')
+    expect(r.dump).toBe('## Now\n\n- a\n- zatankować samochód @2026-10-21 #priv\n\n## Next\n\n## Inbox\n\n- i\n')
+  })
+
+  it('splits one mail between sections, in order Now, Next, Inbox', async () => {
+    const r = await run(sentAt(12), ['3 c', '1 a', 'd', '2 b'], '## Now\n\n## Next\n\n## Inbox\n\n- i\n')
+    expect(r.append.mock.calls).toEqual([[['a'], 'Now'], [['b'], 'Next'], [['c', 'd'], 'Inbox']])
+    expect(r.added).toEqual(['a', 'b', 'c', 'd'])
+    expect(r.dump).toBe('## Now\n\n- a\n\n## Next\n\n- b\n\n## Inbox\n\n- c\n- d\n- i\n')
+  })
+
+  it('counts a mail sent at 01:30 as the previous day', async () => {
+    const r = await run(sentAt(1, 30), ['x @0d'], '## Inbox\n')
+    expect(r.dump).toBe('## Inbox\n\n- x @2026-10-18\n')
+  })
+
+  it('uses today (logical day) when the mail has no Date header', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(2026, 5, 10, 3, 0))
+    const r = await run(undefined, ['x @1d'], '## Inbox\n')
+    expect(r.dump).toBe('## Inbox\n\n- x @2026-06-10\n')
+  })
+
+  it('dryRun returns the final lines without appending', async () => {
+    setup({ 7: raw('me@x.pl', undefined, 'tresc', sentAt(12)) })
+    h.tasks = { 7: ['2 b @1d'] }
+    const append = vi.fn()
+    expect(await pullMailTasks(append, true)).toEqual(['b @2026-10-20'])
     expect(append).not.toHaveBeenCalled()
   })
 })

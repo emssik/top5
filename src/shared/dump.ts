@@ -66,11 +66,13 @@ function insertInSection(lines: string[], name: string, block: string[], where: 
   return [i, inserted.length]
 }
 
-// New lines (mail, API/CLI append): top of `## Inbox`, or the end of the open list when there's no Inbox.
-export function addOpenLines(text: string, entries: string[]): string {
+// New lines (mail, API/CLI append): end of `## Now` / `## Next` or top of `## Inbox` (the default); a missing
+// section → top of `## Inbox`, or the end of the open list when there's no Inbox either.
+export function addOpenLines(text: string, entries: string[], section: DumpSection = 'Inbox'): string {
   const lines = text.split('\n')
   const block = entries.map((line) => (/^[-+] /.test(line) ? line : `- ${line}`))
-  if (!insertInSection(lines, 'Inbox', block, 'top')) lines.splice(openInsertIndex(lines), 0, ...block)
+  const placed = insertInSection(lines, section, block, section === 'Inbox' ? 'top' : 'end') || insertInSection(lines, 'Inbox', block, 'top')
+  if (!placed) lines.splice(openInsertIndex(lines), 0, ...block)
   return lines.join('\n')
 }
 
@@ -86,6 +88,7 @@ export function mergeExternalAppends(base: string, theirs: string, mine: string)
     else if (line.trim() !== '') added.push(line)
   }
   if (i < baseLines.length || !added.every(isOpen)) return null
+  // ponytail: wiersze z maila (Now/Next) lądują tu na górze Inboxa — zachowanie sekcji, jeśli zacznie przeszkadzać
   return added.length ? addOpenLines(mine, added.map((line) => line.trim())) : mine
 }
 
