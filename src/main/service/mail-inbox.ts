@@ -12,6 +12,9 @@ import { join } from 'node:path'
 // password), since (YYYY-MM-DD, older mail is ignored), label (default top5-zrzucone).
 // A processed mail gets the label only after its tasks were appended, so a failure
 // retries it next run (risk: a duplicate, never a lost task). Non-task mails get it too.
+// A mail with tasks goes to Trash after append + label (a failed move never brings it back);
+// mails without tasks, unparseable ones, mails to others, mails with attachments and mails whose
+// body was cut for the model (it never saw the rest) keep only the label.
 // No Electron imports — runnable from a plain Node script for testing.
 
 type Config = { user: string; app_password: string; since: string; label: string }
@@ -25,6 +28,7 @@ const CLAUDE = join(homedir(), '.local/bin/claude')
 // and fail forever. The rest waits for the next run.
 // ponytail: stały limit — batche po N w pętli, jeśli zaległości zaczną się ciągnąć
 const MAX_MAILS_PER_RUN = 20
+const MAX_BODY = 4000
 
 const SCHEMA = {
   type: 'object',
@@ -111,7 +115,7 @@ async function classify(mails: Mail[]): Promise<Record<string, string[]>> {
   })
 }
 
-// Returns the appended lines. dryRun: read-only mailbox, nothing appended or labelled.
+// Returns the appended lines. dryRun: read-only mailbox, nothing appended, labelled or moved.
 export async function pullMailTasks(append: (lines: string[]) => void, dryRun = false): Promise<string[]> {
   const cfg = readConfig()
   const { label } = cfg
@@ -132,6 +136,8 @@ export async function pullMailTasks(append: (lines: string[]) => void, dryRun = 
     // "All Mail" has a localized name ([Gmail]/Wszystkie) — find it by its special-use flag.
     const allMail = boxes.find((b) => b.specialUse === '\\All')
     if (!allMail) throw new Error('nie znaleziono folderu \\All w Gmailu')
+    const trash = boxes.find((b) => b.specialUse === '\\Trash')
+    if (!trash && !dryRun) throw new Error('nie znaleziono folderu \\Trash w Gmailu')
     if (!dryRun && !boxes.some((b) => b.path === label)) await client.mailboxCreate(label)
 
     const addLabel = (uid: number) => client.messageFlagsAdd(uid, [label], { uid: true, useLabels: true })
@@ -149,6 +155,7 @@ export async function pullMailTasks(append: (lines: string[]) => void, dryRun = 
       const uids = matched.slice(0, MAX_MAILS_PER_RUN)
 
       const mails: Mail[] = []
+      const keep = new Set<string>() // body seen only in part, or attachments the dump can't hold — never trashed
       const me = cfg.user.toLowerCase()
       // source = BODY.PEEK[] — doesn't mark mail as read
       for (const msg of await client.fetchAll(uids, { source: true, labels: true }, { uid: true })) {
@@ -167,7 +174,9 @@ export async function pullMailTasks(append: (lines: string[]) => void, dryRun = 
         // ponytail: aliasy (inne adresy Daniela) odpadają — lista adresów w [mailtodump], jeśli będzie potrzebna
         const recipients = [parsed.to, parsed.cc].flat().flatMap((a) => a?.value ?? []).map((v) => v.address?.toLowerCase())
         if (recipients.length > 0 && recipients.every((a) => a === me)) {
-          mails.push({ id: String(msg.uid), subject: parsed.subject ?? '', body: (parsed.text ?? '').trim().slice(0, 4000) })
+          const text = (parsed.text ?? '').trim()
+          mails.push({ id: String(msg.uid), subject: parsed.subject ?? '', body: text.slice(0, MAX_BODY) })
+          if (text.length > MAX_BODY || parsed.attachments.length > 0) keep.add(String(msg.uid))
         } else if (!dryRun) {
           // Labelled so it isn't fetched again every run.
           await addLabel(msg.uid)
@@ -176,19 +185,28 @@ export async function pullMailTasks(append: (lines: string[]) => void, dryRun = 
       if (mails.length === 0) return added
 
       const tasks = await classify(mails)
+      let notMoved = 0
       for (const mail of mails) {
         const found = tasks[mail.id]
         if (!found) continue // model skipped it — no label, retried next run
         // One line per task; a leading `- `/`+ ` marker is dropped (addOpenLines adds `- `, `+ ` = done).
         const lines = found.map((task) => task.replace(/\s+/g, ' ').trim().replace(/^[-+] /, '')).filter(Boolean)
-        // One block per mail, in the mail's order — with or without an Inbox section.
-        if (lines.length > 0 && !dryRun) append(lines)
         added.push(...lines)
+        if (dryRun) continue
+        // One block per mail, in the mail's order — with or without an Inbox section.
+        if (lines.length > 0) append(lines)
         // imapflow returns false instead of throwing when STORE fails — an unlabelled mail would be appended again every run.
-        if (!dryRun && !(await addLabel(Number(mail.id)))) {
-          throw new Error(`Gmail: nie udało się dodać etykiety ${label}`)
-        }
+        if (!(await addLabel(Number(mail.id)))) throw new Error(`Gmail: nie udało się dodać etykiety ${label}`)
+        if (lines.length === 0 || keep.has(mail.id)) continue
+        // Label is already in place, so a failed move can't make the mail come back. messageMove returns false on failure.
+        // ponytail: nieudany move nie jest ponawiany (etykieta ukrywa mail) — druga etykieta „do kosza" + ponowienie, jeśli zacznie się zdarzać
+        const moved = await client.messageMove(Number(mail.id), trash!.path, { uid: true }).catch((err: unknown) => {
+          console.error(`[mail-inbox] Kosz, mail ${mail.id}:`, err)
+          return false
+        })
+        if (!moved) notMoved++
       }
+      if (notMoved > 0) throw new Error(`Gmail: nie udało się przenieść maili (${notMoved}) do Kosza`)
     } finally {
       lock.release()
     }
