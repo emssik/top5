@@ -103,4 +103,5 @@ ems-delegate:
   setup: 'ln -s ../../../node_modules node_modules && ln -s ../../../../cli/node_modules cli/node_modules'
   install: "npm ci && npm ci --prefix cli"
   test: "npm test && npm run test:api"
+  test_related: "npx vitest related --run --passWithNoTests {files} && ~/.claude/skills/ems-delegate/scripts/delegate related 'set -- {tests}; js=; for t; do case $t in tests/*/*) ;; tests/*.test.ts) js=$js\ .tmp-tests/${t%.ts}.js ;; esac; done; [ -z ${js:+x} ] && exit 0; rm -rf .tmp-tests && npx tsc -p tsconfig.tests.json && node --test $js; c=$?; rm -rf .tmp-tests; exit $c' {files}"
   typecheck: "npm run typecheck"
