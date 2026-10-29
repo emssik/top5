@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Znaczniki w mailach do Zrzutu** — cyfra na początku zadania wybiera sekcję (`1` → koniec `## Now`, `2` → koniec `## Next`, `3` lub brak → góra `## Inbox`), `@2d` / `@1w` / `@3m` zamienia się na datę liczoną od dnia wysłania maila, `#KOD` zostaje w treści. Jeden mail może rozłożyć zadania na kilka sekcji.
 
+### Changed
+
+- Zadania z maili: token `CLAUDE_CODE_OAUTH_TOKEN` jest czytany z Pęku kluczy macOS zamiast z `~/.zshrc` (interaktywny zsh) — szybciej i bez wiszenia na promptach z `.zshrc`.
+
 ## [1.121.0] - 2026-10-19
 
 ### Added

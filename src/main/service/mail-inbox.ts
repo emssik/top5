@@ -1,8 +1,7 @@
 import { ImapFlow } from 'imapflow'
 import { simpleParser } from 'mailparser'
 import { parse } from 'smol-toml'
-import { execFile } from 'node:child_process'
-import { promisify } from 'node:util'
+import { execFile, execFileSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { homedir, tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -74,26 +73,24 @@ function readConfig(): Config {
   return { user: cfg.user, app_password: cfg.app_password, since, label }
 }
 
-// Launched from the Dock the app gets launchd's env, not ~/.zshrc — and that's where
-// CLAUDE_CODE_OAUTH_TOKEN lives, so claude -p says "Not logged in". Read it from an
-// interactive zsh on every classify (~5 s, only when there's mail) — not stored in process.env,
-// so a rotated token is picked up without a restart and other child processes don't get it.
-// Markers because .zshrc may print its own stuff to stdout. Not found → claude runs with the
-// app's env and reports its own error (keychain login / API key still work).
-// ponytail: source całego .zshrc — pole `claude_token` w [mailtodump], jeśli zsh -i zacznie sprawiać kłopoty
-async function claudeEnv(): Promise<NodeJS.ProcessEnv> {
+// Launched from the Dock the app gets launchd's env, not ~/.zshrc, so claude -p says "Not logged in"
+// without CLAUDE_CODE_OAUTH_TOKEN. Read it from the login keychain on every classify — not stored
+// in process.env, so a rotated token is picked up without a restart and other child processes don't
+// get it. No entry → claude runs with the app's env and reports its own error.
+function claudeEnv(): NodeJS.ProcessEnv {
   if (process.env.CLAUDE_CODE_OAUTH_TOKEN) return process.env
-  const run = promisify(execFile)('/bin/zsh', ['-ic', 'printf "@@T@@%s@@T@@" "$CLAUDE_CODE_OAUTH_TOKEN"'], { timeout: 15_000 })
-  // EOF on stdin — a prompt in .zshrc (compinit, read) would otherwise hang until the timeout.
-  run.child.stdin?.end()
-  const { stdout } = await run.catch(() => ({ stdout: '' }))
-  const token = stdout.match(/@@T@@(.*)@@T@@/)?.[1]
-  if (!token) console.error('[mail-inbox] brak CLAUDE_CODE_OAUTH_TOKEN w ~/.zshrc')
-  return token ? { ...process.env, CLAUDE_CODE_OAUTH_TOKEN: token } : process.env
+  try {
+    const token = execFileSync('/usr/bin/security', ['find-generic-password', '-s', 'CLAUDE_CODE_OAUTH_TOKEN', '-w'],
+      { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], timeout: 15_000 }).trim()
+    return { ...process.env, CLAUDE_CODE_OAUTH_TOKEN: token }
+  } catch {
+    console.error('[mail-inbox] brak CLAUDE_CODE_OAUTH_TOKEN w Pęku kluczy')
+    return process.env
+  }
 }
 
 async function classify(mails: Mail[]): Promise<Record<string, string[]>> {
-  const env = await claudeEnv()
+  const env = claudeEnv()
   // Mail content goes into the prompt and must not be able to run anything: no built-in tools,
   // no MCP servers, no user settings (hooks, plugins, auto-approvers). cwd outside the repo so
   // the project's CLAUDE.md isn't loaded.

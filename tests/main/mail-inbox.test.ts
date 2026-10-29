@@ -4,10 +4,12 @@ import { pullMailTasks, parseMailTask } from '../../src/main/service/mail-inbox'
 import { addOpenLines } from '../../src/shared/dump'
 
 const h = vi.hoisted(() => {
-  // Skips the zsh token lookup in claudeEnv.
+  // Skips the keychain lookup in claudeEnv, except in the tests that delete it.
   process.env.CLAUDE_CODE_OAUTH_TOKEN = 'test-token'
   return {
     calls: [] as string[],
+    keychain: vi.fn(),
+    claudeEnv: undefined as NodeJS.ProcessEnv | undefined,
     client: {} as Record<string, ReturnType<typeof vi.fn>>,
     tasks: {} as Record<string, string[]>
   }
@@ -24,10 +26,12 @@ vi.mock('node:fs', () => ({
   readFileSync: () => '[mailtodump]\nuser = "me@x.pl"\napp_password = "abcd efgh"\nsince = "2026-01-01"\n'
 }))
 vi.mock('node:child_process', () => ({
-  execFile: (_cmd: string, _args: string[], _opts: unknown, cb: (e: null, out: string, err: string) => void) => ({
+  execFileSync: h.keychain,
+  execFile: (_cmd: string, _args: string[], opts: { env: NodeJS.ProcessEnv }, cb: (e: null, out: string, err: string) => void) => ({
     stdin: {
       on: () => {},
       end: () => {
+        h.claudeEnv = opts.env
         const mails = Object.entries(h.tasks).map(([id, tasks]) => ({ id, tasks }))
         queueMicrotask(() => cb(null, JSON.stringify({ structured_output: { mails } }), ''))
       }
@@ -172,6 +176,45 @@ describe('pullMailTasks', () => {
     h.tasks = { 7: ['a'] }
     await expect(pullMailTasks(append)).rejects.toThrow(/\\Trash/)
     expect(append).not.toHaveBeenCalled()
+  })
+})
+
+describe('pullMailTasks token', () => {
+  afterEach(() => {
+    process.env.CLAUDE_CODE_OAUTH_TOKEN = 'test-token'
+    h.keychain.mockReset()
+    vi.restoreAllMocks()
+  })
+
+  it('takes the token from the keychain when the env has none', async () => {
+    delete process.env.CLAUDE_CODE_OAUTH_TOKEN
+    h.keychain.mockReturnValue('kc-token\n')
+    setup({ 7: raw('me@x.pl') })
+    h.tasks = { 7: [] }
+    await pullMailTasks(vi.fn())
+    expect(h.keychain).toHaveBeenCalledWith('/usr/bin/security', ['find-generic-password', '-s', 'CLAUDE_CODE_OAUTH_TOKEN', '-w'], expect.anything())
+    expect(h.claudeEnv?.CLAUDE_CODE_OAUTH_TOKEN).toBe('kc-token')
+    expect(process.env.CLAUDE_CODE_OAUTH_TOKEN).toBeUndefined()
+  })
+
+  it('runs claude without a token when the keychain has no entry', async () => {
+    delete process.env.CLAUDE_CODE_OAUTH_TOKEN
+    h.keychain.mockImplementation(() => {
+      throw new Error('exit 44')
+    })
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    setup({ 7: raw('me@x.pl') })
+    h.tasks = { 7: [] }
+    await pullMailTasks(vi.fn())
+    expect(h.claudeEnv).not.toHaveProperty('CLAUDE_CODE_OAUTH_TOKEN')
+  })
+
+  it('does not touch the keychain when the env has the token', async () => {
+    setup({ 7: raw('me@x.pl') })
+    h.tasks = { 7: [] }
+    await pullMailTasks(vi.fn())
+    expect(h.keychain).not.toHaveBeenCalled()
+    expect(h.claudeEnv?.CLAUDE_CODE_OAUTH_TOKEN).toBe('test-token')
   })
 })
 
