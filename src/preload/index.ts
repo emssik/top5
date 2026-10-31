@@ -100,6 +100,7 @@ export const api = {
   pasteImageToTask: (projectId: string, taskId: string) => ipcRenderer.invoke('paste-image-to-task', projectId, taskId),
   removeTaskImage: (projectId: string, taskId: string, filename: string) => ipcRenderer.invoke('remove-task-image', projectId, taskId, filename),
   openTaskImage: (filename: string) => ipcRenderer.invoke('open-task-image', filename),
+  openDumpPath: (path: string) => ipcRenderer.invoke('open-dump-path', path),
   saveHabit: (h: Habit) => ipcRenderer.invoke('save-habit', h),
   removeHabit: (id: string) => ipcRenderer.invoke('remove-habit', id),
   reorderHabits: (ids: string[]) => ipcRenderer.invoke('reorder-habits', ids),

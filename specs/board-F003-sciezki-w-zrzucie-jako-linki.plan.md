@@ -125,7 +125,7 @@ robocze OK). Styl komentarzy w kodzie: krótkie, po angielsku, jak w istniejący
   - [x] Bez cudzysłowu ścieżka kończy się na pierwszej spacji: `'/Users/x/My Doc.md'` → `path === '/Users/x/My'`.
   - [x] Niezamknięty cudzysłów `'"/a/b c'` → `[]`.
 
-### Step 2: `openableDumpPath` w `src/main/dump-path.ts` (backend, tdd)
+### Step 2: `openableDumpPath` w `src/main/dump-path.ts` (backend, tdd) [x]
 - **What:** Nowy plik bez importów Electrona: `export function openableDumpPath(raw: unknown, home = homedir()): string | null`.
 - **How:** Dokładnie wg Decision 2. Importy: `realpathSync`, `statSync` z `fs`, `extname`, `join` z `path`, `homedir` z `os`.
   Stała `BLOCKED_EXT = new Set([...])` z komentarzem, czemu (uruchamiają program / otwierają cel). `try/catch` wokół
@@ -137,16 +137,16 @@ robocze OK). Styl komentarzy w kodzie: krótkie, po angielsku, jak w istniejący
   więc w testach oczekiwana wartość = `realpathSync(...)`.
 - **Acceptance criteria** (`tests/main/dump-path.test.ts`, vitest, katalog z `mkdtempSync(join(tmpdir(), 'top5-dump-path-'))`,
   sprzątany w `afterAll`; `home` w wywołaniach = ten katalog):
-  - [ ] Zwykły plik `a.md` (0o644): `openableDumpPath(<tmp>/a.md)` i `openableDumpPath('~/a.md', tmp)` → `realpathSync(<tmp>/a.md)`.
-  - [ ] Nazwa ze spacją `My Doc.txt` → zwraca ścieżkę.
-  - [ ] Nieistniejący plik → `null`, bez wyjątku i bez `console.error` (spy na `console.error` nie wywołany).
-  - [ ] Katalog `sub/` → `null`; katalog `Foo.app/` → `null`.
-  - [ ] Plik `run` bez rozszerzenia z `chmod 0o755` → `null`; plik `a.md` z `0o744` → `null`.
-  - [ ] Pliki 0o644: `x.command`, `x.sh`, `X.SH`, `x.tool`, `x.terminal`, `x.jar`, `x.fileloc` → `null`.
-  - [ ] Symlink `link.md` → `x.command` → `null` (sprawdzane rozszerzenie ścieżki rzeczywistej).
-  - [ ] Wejście niezaufane: `'a.md'`, `'./a.md'`, `'~a.md'`, `''`, `123`, `null`, `'/x\0.md'` → `null`.
+  - [x] Zwykły plik `a.md` (0o644): `openableDumpPath(<tmp>/a.md)` i `openableDumpPath('~/a.md', tmp)` → `realpathSync(<tmp>/a.md)`.
+  - [x] Nazwa ze spacją `My Doc.txt` → zwraca ścieżkę.
+  - [x] Nieistniejący plik → `null`, bez wyjątku i bez `console.error` (spy na `console.error` nie wywołany).
+  - [x] Katalog `sub/` → `null`; katalog `Foo.app/` → `null`.
+  - [x] Plik `run` bez rozszerzenia z `chmod 0o755` → `null`; plik `a.md` z `0o744` → `null`.
+  - [x] Pliki 0o644: `x.command`, `x.sh`, `X.SH`, `x.tool`, `x.terminal`, `x.jar`, `x.fileloc` → `null`.
+  - [x] Symlink `link.md` → `x.command` → `null` (sprawdzane rozszerzenie ścieżki rzeczywistej).
+  - [x] Wejście niezaufane: `'a.md'`, `'./a.md'`, `'~a.md'`, `''`, `123`, `null`, `'/x\0.md'` → `null`.
 
-### Step 3: Kanał IPC `open-dump-path` (backend, solo — cienka ścieżka)
+### Step 3: Kanał IPC `open-dump-path` (backend, solo — cienka ścieżka) [x]
 - **What:** Handler w main, metoda mostu, typ.
 - **How:**
   - `src/main/launchers.ts` w `registerLauncherHandlers` obok `open-external` (`:120`):
@@ -158,9 +158,9 @@ robocze OK). Styl komentarzy w kodzie: krótkie, po angielsku, jak w istniejący
   na zewnątrz”, nie trzeba ruszać `store.ts`.
 - **Confidence: 9/10**
 - **Acceptance criteria:**
-  - [ ] `npm run typecheck` przechodzi; `grep -n "open-dump-path" src/main/launchers.ts src/preload/index.ts` daje po jednym trafieniu.
-  - [ ] Handler nie wywołuje `shell.openPath`, gdy `openableDumpPath` zwraca `null` (czytelne z kodu: jeden `if`).
-  - [ ] Nie zmieniono `webPreferences.sandbox` ani `store.ts`.
+  - [x] `npm run typecheck` przechodzi; `grep -n "open-dump-path" src/main/launchers.ts src/preload/index.ts` daje po jednym trafieniu.
+  - [x] Handler nie wywołuje `shell.openPath`, gdy `openableDumpPath` zwraca `null` (czytelne z kodu: jeden `if`).
+  - [x] Nie zmieniono `webPreferences.sandbox` ani `store.ts`.
 
 ### Step 4: Dekoracja, styl i Cmd+klik w `DumpEditor.tsx` (frontend, solo)
 - **What:** Ścieżki podkreślone; przy wciśniętym Cmd kursor `pointer` nad nimi; Cmd+klik otwiera, zwykły klik bez zmian.
