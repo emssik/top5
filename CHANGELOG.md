@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.122.0] - 2026-10-31
+
 ### Added
 
 - **Znaczniki w mailach do Zrzutu** — cyfra na początku zadania wybiera sekcję (`1` → koniec `## Now`, `2` → koniec `## Next`, `3` lub brak → góra `## Inbox`), `@2d` / `@1w` / `@3m` zamienia się na datę liczoną od dnia wysłania maila, `#KOD` zostaje w treści. Jeden mail może rozłożyć zadania na kilka sekcji.
