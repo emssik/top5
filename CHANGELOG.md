@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **Znaczniki w mailach do Zrzutu** — cyfra na początku zadania wybiera sekcję (`1` → koniec `## Now`, `2` → koniec `## Next`, `3` lub brak → góra `## Inbox`), `@2d` / `@1w` / `@3m` zamienia się na datę liczoną od dnia wysłania maila, `#KOD` zostaje w treści. Jeden mail może rozłożyć zadania na kilka sekcji.
+- **Ścieżki w Zrzucie jako linki** — bezwzględna ścieżka (`/…`, `~/…`, ze spacjami w `"…"` lub `` `…` ``) jest podkreślona, Cmd+klik otwiera plik w domyślnej aplikacji. Otwierają się tylko zwykłe, niewykonywalne pliki spoza listy zakazanych rozszerzeń (`.app`, `.sh`, `.command`, pliki lokalizacji Findera itd.).
 
 ### Changed
 

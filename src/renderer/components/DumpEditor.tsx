@@ -3,7 +3,7 @@ import { Annotation, Compartment, EditorState, Prec, type Range, StateEffect, St
 import { Decoration, type DecorationSet, EditorView, keymap, placeholder as placeholderExt } from '@codemirror/view'
 import { defaultKeymap, history, historyKeymap, isolateHistory } from '@codemirror/commands'
 import { codeFolding, foldEffect, foldGutter, foldKeymap, foldService, foldedRanges, unfoldEffect } from '@codemirror/language'
-import { dumpCurrentSection, dumpFoldEnd, dumpLineHang, findDumpSectionHeaders, findDumpTags, formatDumpPaste, openItemTitle } from '../../shared/dump'
+import { dumpCurrentSection, dumpFoldEnd, dumpLineHang, findDumpPaths, findDumpSectionHeaders, findDumpTags, formatDumpPaste, openItemTitle } from '../../shared/dump'
 import { findDumpDates } from '../../shared/dump-dates'
 import { logicalDateKey } from '../../shared/schedule'
 
@@ -64,6 +64,7 @@ function decorate(doc: Text, codes: string[], tagColor: (code: string) => string
     const color = tagColor(tag.code)
     ranges.push(Decoration.mark({ class: 'dump-tag', attributes: color ? { style: `color:${color}` } : undefined }).range(tag.start, tag.end))
   }
+  for (const m of findDumpPaths(text)) ranges.push(Decoration.mark({ class: 'dump-path', attributes: { 'data-path': m.path } }).range(m.start, m.end))
   return Decoration.set(ranges, true)
 }
 
@@ -332,7 +333,16 @@ const DumpEditor = forwardRef<DumpEditorHandle, DumpEditorProps>(function DumpEd
           Prec.highest(EditorView.domEventHandlers({
             keydown: (e) => p.current.onKeyDown(e),
             blur: () => void p.current.onBlur(),
-            paste: pasteAsSubPoints
+            paste: pasteAsSubPoints,
+            // ⌘+click on an underlined path opens it. Matched through the DOM element (not click coordinates),
+            // so a click past the end of the line is not taken for the last path.
+            mousedown: (e) => {
+              const path = e.metaKey && e.button === 0 && e.target instanceof Element ? e.target.closest('.dump-path')?.getAttribute('data-path') : null
+              if (!path) return false
+              e.preventDefault()
+              void window.api.openDumpPath(path)
+              return true
+            }
           })),
           // Also routes the Edit menu's Undo / Redo roles (native historyUndo / historyRedo) to this history.
           historyRef.current.of(history()),
@@ -363,6 +373,7 @@ const DumpEditor = forwardRef<DumpEditorHandle, DumpEditorProps>(function DumpEd
           // ponytail: loops over the visible gutter elements per mousemove; fine for a viewport of ~50 rows.
           EditorView.domEventHandlers({
             mousemove: (e, v) => {
+              host.classList.toggle('dump-cmd', e.metaKey)
               for (const el of v.dom.querySelectorAll<HTMLElement>('.cm-foldGutter .cm-gutterElement')) {
                 const r = el.getBoundingClientRect()
                 el.classList.toggle('dump-fold-hover', e.clientY >= r.top && e.clientY < r.bottom)
@@ -411,7 +422,15 @@ const DumpEditor = forwardRef<DumpEditorHandle, DumpEditorProps>(function DumpEd
     }
     view.scrollDOM.addEventListener('scroll', onScroll, { passive: true })
     updateSticky(view)
+    const onKey = (e: KeyboardEvent) => host.classList.toggle('dump-cmd', e.metaKey)
+    const onWindowBlur = () => host.classList.remove('dump-cmd')
+    window.addEventListener('keydown', onKey)
+    window.addEventListener('keyup', onKey)
+    window.addEventListener('blur', onWindowBlur)
     return () => {
+      window.removeEventListener('keydown', onKey)
+      window.removeEventListener('keyup', onKey)
+      window.removeEventListener('blur', onWindowBlur)
       cancelAnimationFrame(pending)
       view.scrollDOM.removeEventListener('scroll', onScroll)
       view.destroy()

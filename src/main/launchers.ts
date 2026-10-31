@@ -1,6 +1,7 @@
 import { spawn } from 'child_process'
 import { shell } from 'electron'
 import type { IpcMain } from 'electron'
+import { openableDumpPath } from './dump-path'
 
 const ALLOWED_BROWSER_PROTOCOLS = new Set(['http:', 'https:', 'mailto:'])
 const ALLOWED_OBSIDIAN_COMMANDS = new Set(['open', 'vault'])
@@ -121,5 +122,10 @@ export function registerLauncherHandlers(ipcMain: IpcMain): void {
     const normalizedUrl = normalizeExternalUrl(url)
     if (!normalizedUrl) return
     shell.openExternal(normalizedUrl)
+  })
+
+  ipcMain.handle('open-dump-path', async (_event, raw: unknown) => {
+    const real = await openableDumpPath(raw)
+    if (real) await shell.openPath(real)
   })
 }

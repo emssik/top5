@@ -146,6 +146,29 @@ export function findDumpTags(text: string, codes: string[]): DumpTag[] {
   return tags
 }
 
+// Absolute paths (`/…`, `~/…`) at the start of a word (line start, whitespace, `(`); `//` and a lone `/` are not paths.
+// Quoted (`"…"` or backticks, same line) may contain spaces; unquoted ends at whitespace, trailing `.,):` is cut off.
+const PATH_RE = /(?<![^\s(])(?:(["`])((?:\/|~\/)[^\s/][^\n]*?)\1|((?:\/|~\/)[^\s/][^\s"`]*))/g
+export type DumpPath = { start: number; end: number; path: string }
+
+export function findDumpPaths(text: string): DumpPath[] {
+  const paths: DumpPath[] = []
+  let offset = 0
+  for (const line of text.split('\n')) {
+    if (!line.trimStart().startsWith('#')) {
+      for (const m of line.matchAll(PATH_RE)) {
+        const quoted = m[2] !== undefined
+        const path = quoted ? m[2] : m[3].replace(/[.,):]+$/, '')
+        if (path === '/' || path === '~/') continue
+        const start = offset + m.index + (quoted ? 1 : 0)
+        paths.push({ start, end: start + path.length, path })
+      }
+    }
+    offset += line.length + 1
+  }
+  return paths
+}
+
 const HASHTAG_RE = /(^|[ \t]+)#(\p{L}[\p{L}\p{N}]*)/gu
 
 // Title without its project tags (`codes`, case-insensitive); other hashtags (`#pilne`) stay.

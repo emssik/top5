@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { completeDumpItem, countSectionOpen, dumpCurrentSection, dumpFoldEnd, findDumpItem, findDumpTags, projectTagTrigger, setDumpItemTag, stripDumpTags } from '../src/shared/dump'
+import { completeDumpItem, countSectionOpen, dumpCurrentSection, dumpFoldEnd, findDumpItem, findDumpPaths, findDumpTags, projectTagTrigger, setDumpItemTag, stripDumpTags } from '../src/shared/dump'
 import { parseRepeatLine } from '../src/shared/dump-repeat'
 
 const CODES = ['ATD', 'BIZ']
@@ -201,4 +201,35 @@ test('dumpFoldEnd is null where nothing can be folded', () => {
   assert.equal(foldEnd(['- x', '  * a'], 1), null)
   assert.equal(foldEnd(['luźny tekst', 'dalszy'], 0), null)
   assert.equal(foldEnd(['- x', '  * a'], 5), null)
+})
+
+const onePath = (text: string, path: string) => {
+  const r = findDumpPaths(text)
+  assert.equal(r.length, 1, text)
+  assert.equal(r[0].path, path, text)
+  assert.equal(text.slice(r[0].start, r[0].end), path, text)
+}
+
+test('findDumpPaths finds paths with offsets', () => {
+  assert.deepStrictEqual(findDumpPaths('- zobacz /Users/x/a.md'), [{ start: 9, end: 22, path: '/Users/x/a.md' }])
+  assert.deepStrictEqual(findDumpPaths('~/a/b.md'), [{ start: 0, end: 8, path: '~/a/b.md' }])
+  assert.deepStrictEqual(findDumpPaths('x\n~/a/b.md'), [{ start: 2, end: 10, path: '~/a/b.md' }])
+  assert.deepStrictEqual(findDumpPaths('/a.md /b.md'), [{ start: 0, end: 5, path: '/a.md' }, { start: 6, end: 11, path: '/b.md' }])
+  onePath('- #ATD /a.md', '/a.md')
+})
+
+test('findDumpPaths cuts trailing punctuation of unquoted paths', () => {
+  for (const t of ['plik /a/b.md.', '/a/b.md,', '(/a/b.md)', '/a/b.md:', '/a/b.md).']) onePath(t, '/a/b.md')
+  onePath('/Users/x/My Doc.md', '/Users/x/My')
+})
+
+test('findDumpPaths ignores non-paths, comments and unclosed quotes', () => {
+  for (const t of ['a/b/c.md', 'km/h', 'https://x.com/a', '1/2', 'samo / tu', '~/ ', '// koment', '~', '# /Users/x/a.md', '  ## nagłówek ~/a.md', '"/a/b c'])
+    assert.deepStrictEqual(findDumpPaths(t), [], t)
+})
+
+test('findDumpPaths handles quoted paths with spaces', () => {
+  assert.deepStrictEqual(findDumpPaths('otwórz "/Users/x/My Doc.md" teraz'), [{ start: 8, end: 26, path: '/Users/x/My Doc.md' }])
+  assert.deepStrictEqual(findDumpPaths('`~/a b/c.md`'), [{ start: 1, end: 11, path: '~/a b/c.md' }])
+  onePath('"/a/b c.md."', '/a/b c.md.')
 })

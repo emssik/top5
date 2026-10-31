@@ -121,6 +121,7 @@ declare global {
       pasteImageToTask: (projectId: string, taskId: string) => Promise<{ filename: string } | { error: string }>
       removeTaskImage: (projectId: string, taskId: string, filename: string) => Promise<import('../../shared/types').Project[]>
       openTaskImage: (filename: string) => Promise<void>
+      openDumpPath: (path: string) => Promise<void>
       saveHabit: (h: import('../../shared/types').Habit) => Promise<import('../../shared/types').Habit[]>
       removeHabit: (id: string) => Promise<import('../../shared/types').Habit[]>
       reorderHabits: (ids: string[]) => Promise<import('../../shared/types').Habit[]>
