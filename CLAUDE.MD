@@ -47,3 +47,5 @@ Zanim modyfikujesz obszar pokryty przez ADR — przeczytaj plik.
 - [ADR-0005](docs/adr/0005-habits-read-only-api-przez-rozszerzenie-today.md) — Habits read-only API przez rozszerzenie `/api/v1/today` + dedykowany `/api/v1/habits` (bez CRUD)
 - [ADR-0006](docs/adr/0006-habits-jedna-konfiguracja-ui-bez-tweaks.md) — Habits: jedna konfiguracja UI (list + heatmap + onepager + separate), bez Tweaks panelu
 - [ADR-0007](docs/adr/0007-habits-streak-liczony-w-pamieci-bez-cache.md) — Habits streak liczony w pamięci przy każdym odczycie, bez cache
+- [ADR-0008](docs/adr/0008-sciezki-w-zrzucie-tylko-bezwzgledne-spacje-w-cudzyslowie.md) — Ścieżki w Zrzucie: tylko bezwzględne (`/…`, `~/…`), spacje tylko w cudzysłowie/backtickach
+- [ADR-0009](docs/adr/0009-otwieranie-sciezek-z-zrzutu-decyzja-w-main-denylist.md) — Otwieranie ścieżek ze Zrzutu: decyzja w main, denylist (katalogi, bit `x`, rozszerzenia uruchamiające) po `realpath`

@@ -254,11 +254,15 @@ Independent tasks: 01 i 02 (rozłączne pliki, tryb tdd).
 
 ## Definition of Done
 
-- [ ] `npm test`, `npm run test:api`, `npm run typecheck` i `npm run build` przechodzą.
-- [ ] Wszystkie kryteria akceptacji kroków 1–4 spełnione.
-- [ ] Live run (krok 5) zaliczony.
-- [ ] Brak zmian w `webPreferences.sandbox`, HTTP API, `docs/API.md`, `cli/`; brak nowych zależności w `package.json`.
-- [ ] Kod zwalidowany na granicy zaufania tylko w main; renderer nie wywołuje `shell` ani `fs`.
+- [x] `npm test`, `npm run test:api`, `npm run typecheck` i `npm run build` przechodzą.
+- [x] Wszystkie kryteria akceptacji kroków 1–4 spełnione.
+- [ ] Live run (krok 5) zaliczony. — pominięty w przebiegu bez nadzoru (wymaga zbudowanej aplikacji i oceny wzrokowej), do sprawdzenia przez Daniela przy przyjęciu.
+- [x] Brak zmian w `webPreferences.sandbox`, HTTP API, `docs/API.md`, `cli/`; brak nowych zależności w `package.json`.
+- [x] Kod zwalidowany na granicy zaufania tylko w main; renderer nie wywołuje `shell` ani `fs`.
+
+Przegląd kodu Codex (`specs/board-F003-sciezki-w-zrzucie-jako-linki.codex-review.md`) — 1 uwaga, odrzucona:
+`"/" "/Users/x/a.pdf"` (samotne `/` w cudzysłowie przed drugą ścieżką w cudzysłowie) daje fałszywe trafienie — skrajny
+przypadek, skutek kosmetyczny (fałszywą ścieżkę i tak odrzuca main).
 
 ## Verification
 
