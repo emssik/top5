@@ -1,0 +1,1 @@
+existing lines changed or removed in tests/dump-tags.test.ts — the task allows only appending to it
