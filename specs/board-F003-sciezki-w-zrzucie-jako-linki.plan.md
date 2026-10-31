@@ -162,7 +162,7 @@ robocze OK). Styl komentarzy w kodzie: krótkie, po angielsku, jak w istniejący
   - [x] Handler nie wywołuje `shell.openPath`, gdy `openableDumpPath` zwraca `null` (czytelne z kodu: jeden `if`).
   - [x] Nie zmieniono `webPreferences.sandbox` ani `store.ts`.
 
-### Step 4: Dekoracja, styl i Cmd+klik w `DumpEditor.tsx` (frontend, solo)
+### Step 4: Dekoracja, styl i Cmd+klik w `DumpEditor.tsx` (frontend, solo) [x]
 - **What:** Ścieżki podkreślone; przy wciśniętym Cmd kursor `pointer` nad nimi; Cmd+klik otwiera, zwykły klik bez zmian.
 - **How:**
   - Import `findDumpPaths` w linii 6 obok `findDumpTags`.
@@ -195,10 +195,10 @@ robocze OK). Styl komentarzy w kodzie: krótkie, po angielsku, jak w istniejący
 - **Confidence: 8/10** — semantyka `domEventHandlers` (true = obsłużone) i `posAtDOM` znana; niepewność tylko co do
   tego, czy CodeMirror nie przejmie fokusu przed handlerem — sprawdza to krok 5.
 - **Acceptance criteria:**
-  - [ ] `npm run typecheck` i `npm run build` przechodzą.
-  - [ ] W DOM edytora ścieżka `/Users/x/a.md` jest w elemencie `.dump-path`; w linii `# /a.md` nie ma `.dump-path`.
-  - [ ] Handler `mousedown` zwraca `false` dla kliknięcia bez `metaKey`, dla prawego przycisku i dla kliknięcia poza `.dump-path`.
-  - [ ] Nasłuchy na `window` są zdejmowane przy odmontowaniu (widać w funkcji sprzątającej).
+  - [x] `npm run typecheck` i `npm run build` przechodzą.
+  - [x] W DOM edytora ścieżka `/Users/x/a.md` jest w elemencie `.dump-path`; w linii `# /a.md` nie ma `.dump-path`.
+  - [x] Handler `mousedown` zwraca `false` dla kliknięcia bez `metaKey`, dla prawego przycisku i dla kliknięcia poza `.dump-path`.
+  - [x] Nasłuchy na `window` są zdejmowane przy odmontowaniu (widać w funkcji sprzątającej).
 
 ### Step 5: Uruchomienie na żywo (planista albo Daniel, nie delegowany koder)
 - **What:** Sprawdzenie realnej ścieżki renderer → IPC → main → LaunchServices.

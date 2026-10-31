@@ -2099,6 +2099,17 @@ body {
   background: color-mix(in oklch, currentColor 15%, transparent);
 }
 
+.dump-path {
+  text-decoration-line: underline;
+  text-decoration-color: color-mix(in oklch, currentColor 40%, transparent);
+  text-underline-offset: 2px;
+}
+
+/* ⌘ held (class set by DumpEditor): the paths can be opened by a click. */
+.dump-cm.dump-cmd .dump-path {
+  cursor: pointer;
+}
+
 /* Hanging indent (--hang set per line from dumpLineHang): wrapped lines start --hang in, the first one stays put.
    --shift moves an item's note lines under the item's text. */
 .dump-cm .cm-editor .cm-line.dump-hang,
