@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Zadania z maili: token `CLAUDE_CODE_OAUTH_TOKEN` jest czytany z Pęku kluczy macOS zamiast z `~/.zshrc` (interaktywny zsh) — szybciej i bez wiszenia na promptach z `.zshrc`.
+- Zadania z maili: hasło aplikacji Google jest czytane z Pęku kluczy macOS (`MAILTODUMP_APP_PASSWORD`, albo zmienna środowiska o tej nazwie) zamiast z `app_password` w `~/.agents-tools/config.toml`. Brak wpisu kończy się błędem z gotową komendą `security add-generic-password`.
 
 ## [1.121.0] - 2026-10-19
 

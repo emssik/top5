@@ -4,8 +4,9 @@ import { pullMailTasks, parseMailTask } from '../../src/main/service/mail-inbox'
 import { addOpenLines } from '../../src/shared/dump'
 
 const h = vi.hoisted(() => {
-  // Skips the keychain lookup in claudeEnv, except in the tests that delete it.
+  // Skip the keychain lookups, except in the tests that delete these.
   process.env.CLAUDE_CODE_OAUTH_TOKEN = 'test-token'
+  process.env.MAILTODUMP_APP_PASSWORD = 'abcd efgh'
   return {
     calls: [] as string[],
     keychain: vi.fn(),
@@ -23,7 +24,7 @@ vi.mock('imapflow', () => ({
   }
 }))
 vi.mock('node:fs', () => ({
-  readFileSync: () => '[mailtodump]\nuser = "me@x.pl"\napp_password = "abcd efgh"\nsince = "2026-01-01"\n'
+  readFileSync: () => '[mailtodump]\nuser = "me@x.pl"\nsince = "2026-01-01"\n'
 }))
 vi.mock('node:child_process', () => ({
   execFileSync: h.keychain,
@@ -182,6 +183,7 @@ describe('pullMailTasks', () => {
 describe('pullMailTasks token', () => {
   afterEach(() => {
     process.env.CLAUDE_CODE_OAUTH_TOKEN = 'test-token'
+    process.env.MAILTODUMP_APP_PASSWORD = 'abcd efgh'
     h.keychain.mockReset()
     vi.restoreAllMocks()
   })
@@ -207,6 +209,23 @@ describe('pullMailTasks token', () => {
     h.tasks = { 7: [] }
     await pullMailTasks(vi.fn())
     expect(h.claudeEnv).not.toHaveProperty('CLAUDE_CODE_OAUTH_TOKEN')
+  })
+
+  it('takes the app password from the keychain when the env has none', async () => {
+    delete process.env.MAILTODUMP_APP_PASSWORD
+    h.keychain.mockReturnValue('kc-pass\n')
+    setup({ 7: raw('me@x.pl') })
+    h.tasks = { 7: [] }
+    await pullMailTasks(vi.fn())
+    expect(h.keychain).toHaveBeenCalledWith('/usr/bin/security', ['find-generic-password', '-s', 'MAILTODUMP_APP_PASSWORD', '-w'], expect.anything())
+  })
+
+  it('fails with the keychain command when the app password is missing', async () => {
+    delete process.env.MAILTODUMP_APP_PASSWORD
+    h.keychain.mockImplementation(() => {
+      throw new Error('exit 44')
+    })
+    await expect(pullMailTasks(vi.fn())).rejects.toThrow(/security add-generic-password -s MAILTODUMP_APP_PASSWORD/)
   })
 
   it('does not touch the keychain when the env has the token', async () => {

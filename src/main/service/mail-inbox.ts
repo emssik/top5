@@ -9,8 +9,9 @@ import type { DumpSection } from '../../shared/dump'
 import { dateKey, logicalDateKey } from '../../shared/schedule'
 
 // Mails Daniel sent to himself (Gmail over IMAP) → claude -p decides what is a task.
-// Config: [mailtodump] in ~/.agents-tools/config.toml — user, app_password (Google app
-// password), since (YYYY-MM-DD, older mail is ignored), label (default top5-zrzucone).
+// Config: [mailtodump] in ~/.agents-tools/config.toml — user, since (YYYY-MM-DD, older mail is
+// ignored), label (default top5-zrzucone). The Google app password is the MAILTODUMP_APP_PASSWORD
+// keychain entry (or env var), never the file.
 // A processed mail gets the label only after its tasks were appended, so a failure
 // retries it next run (risk: a duplicate, never a lost task). Non-task mails get it too.
 // A mail with tasks goes to Trash after append + label (a failed move never brings it back);
@@ -64,13 +65,27 @@ function readConfig(): Config {
   const cfg = all.mailtodump as Record<string, unknown> | undefined
   // Unquoted `since = 2026-09-01` is a TOML date (a Date object), not a string.
   const since = cfg?.since instanceof Date ? cfg.since.toISOString().slice(0, 10) : cfg?.since
-  if (typeof cfg?.user !== 'string' || typeof cfg.app_password !== 'string' || typeof since !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(since)) {
-    throw new Error('brak [mailtodump] (user, app_password, since = RRRR-MM-DD) w ~/.agents-tools/config.toml')
+  if (typeof cfg?.user !== 'string' || typeof since !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(since)) {
+    throw new Error('brak [mailtodump] (user, since = RRRR-MM-DD) w ~/.agents-tools/config.toml')
+  }
+  const app_password = process.env.MAILTODUMP_APP_PASSWORD || keychain('MAILTODUMP_APP_PASSWORD')
+  if (!app_password) {
+    throw new Error('brak MAILTODUMP_APP_PASSWORD w Pęku kluczy: security add-generic-password -s MAILTODUMP_APP_PASSWORD -a "$USER" -w')
   }
   const label = (typeof cfg.label === 'string' && cfg.label.trim()) || 'top5-zrzucone'
   // Goes unquoted into the Gmail query and into STORE (imapflow sends it as an IMAP atom).
   if (!/^[\w./-]+$/.test(label)) throw new Error(`label w [mailtodump]: tylko litery, cyfry i . _ / - (jest: ${label})`)
-  return { user: cfg.user, app_password: cfg.app_password, since, label }
+  return { user: cfg.user, app_password, since, label }
+}
+
+// Login keychain entry `name` (service = name), read on use; null when missing.
+function keychain(name: string): string | null {
+  try {
+    return execFileSync('/usr/bin/security', ['find-generic-password', '-s', name, '-w'],
+      { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], timeout: 15_000 }).trim() || null
+  } catch {
+    return null
+  }
 }
 
 // Launched from the Dock the app gets launchd's env, not ~/.zshrc, so claude -p says "Not logged in"
@@ -79,14 +94,10 @@ function readConfig(): Config {
 // get it. No entry → claude runs with the app's env and reports its own error.
 function claudeEnv(): NodeJS.ProcessEnv {
   if (process.env.CLAUDE_CODE_OAUTH_TOKEN) return process.env
-  try {
-    const token = execFileSync('/usr/bin/security', ['find-generic-password', '-s', 'CLAUDE_CODE_OAUTH_TOKEN', '-w'],
-      { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], timeout: 15_000 }).trim()
-    return { ...process.env, CLAUDE_CODE_OAUTH_TOKEN: token }
-  } catch {
-    console.error('[mail-inbox] brak CLAUDE_CODE_OAUTH_TOKEN w Pęku kluczy')
-    return process.env
-  }
+  const token = keychain('CLAUDE_CODE_OAUTH_TOKEN')
+  if (token) return { ...process.env, CLAUDE_CODE_OAUTH_TOKEN: token }
+  console.error('[mail-inbox] brak CLAUDE_CODE_OAUTH_TOKEN w Pęku kluczy')
+  return process.env
 }
 
 async function classify(mails: Mail[]): Promise<Record<string, string[]>> {
