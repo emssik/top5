@@ -11,6 +11,8 @@ export default defineConfig({
   test: {
     include: ['tests/api/**/*.test.ts', 'tests/main/**/*.test.ts'],
     globals: true,
-    testTimeout: 10000
+    testTimeout: 10000,
+    // max 2 workers: concurrent runs (gate, verifier, mutants) saturated the CPU
+    maxWorkers: 2
   }
 })

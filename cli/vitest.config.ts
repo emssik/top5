@@ -6,5 +6,8 @@ export default defineConfig({
     globals: true,
     root: '.',
     include: ['tests/**/*.test.ts'],
+    // Vitest 2: minWorkers must not exceed maxWorkers (default min = CPU count)
+    maxWorkers: 2,
+    minWorkers: 1,
   },
 })
