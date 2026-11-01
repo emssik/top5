@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.122.1] - 2026-11-01
+
+### Changed
+
+- Okienko z pytaniem, jakim zadaniem chcesz się zająć (nudge co 15 min aktywności), jest tymczasowo wstrzymane — nie wyskakuje. Kod został, powrót to odkomentowanie `startNudgeMonitor()` w `src/main/index.ts`.
+
 ## [1.122.0] - 2026-10-31
 
 ### Added
