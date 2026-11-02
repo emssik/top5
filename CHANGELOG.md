@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.122.3] - 2026-11-02
+
+### Changed
+
+- Wstrzymany nudge można włączyć z powrotem zmienną środowiskową `TOP5_NUDGE=1` — bez edycji kodu.
+
 ## [1.122.2] - 2026-11-02
 
 ### Changed

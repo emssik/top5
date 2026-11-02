@@ -9,7 +9,7 @@ import { registerGlobalShortcut, registerLocalShortcuts } from './shortcuts'
 import { registerQuickAddHandlers } from './quick-add-window'
 import { showWindowVisible } from './window-utils'
 import { existsSync, readFileSync, writeFileSync } from 'fs'
-import { registerNudgeHandlers, stopNudgeMonitor } from './nudge'
+import { registerNudgeHandlers, startNudgeMonitor, stopNudgeMonitor } from './nudge'
 import { registerEnergyHandlers, startEnergyScheduler, stopEnergyScheduler } from './energy-tracker'
 import { registerFocusBlockerHandlers, stopFocusBlocker, pruneFocusTasks } from './focus-blocker'
 import { registerGameGateHandlers, startGameGate, stopGameGate } from './game-gate'
@@ -274,9 +274,9 @@ app.whenReady().then(() => {
   createWindow()
   registerLocalShortcuts(mainWindow!)
 
-  // ponytail: nudge wstrzymany na prośbę Daniela (2026-11-01); odkomentuj, żeby wrócił.
+  // ponytail: nudge wstrzymany na prośbę Daniela (2026-11-01); TOP5_NUDGE=1 włącza go z powrotem.
   // Jeśli takie wstrzymywanie zacznie się powtarzać, dodać przełącznik w Settings.
-  // startNudgeMonitor()  (+ przywróć import w linii 12)
+  if (process.env.TOP5_NUDGE === '1') startNudgeMonitor()
   startEnergyScheduler()
   startGameGate()
   startMailToDump()
