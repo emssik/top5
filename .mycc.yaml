@@ -103,5 +103,8 @@ ems-delegate:
   setup: 'ln -s ../../../node_modules node_modules && ln -s ../../../../cli/node_modules cli/node_modules'
   install: "npm ci && npm ci --prefix cli"
   test: "npm test && npm run test:api"
-  test_related: "npx vitest related --run --passWithNoTests {files} && ~/.claude/skills/ems-delegate/scripts/delegate related 'set -- {tests}; js=; for t; do case $t in tests/*/*) ;; tests/*.test.ts) js=$js\ .tmp-tests/${t%.ts}.js ;; esac; done; [ -z ${js:+x} ] && exit 0; rm -rf .tmp-tests && npx tsc -p tsconfig.tests.json && node --test $js; c=$?; rm -rf .tmp-tests; exit $c' {files}"
+  test_related: "npx vitest related --run --passWithNoTests {files} && ~/.claude/skills/ems-delegate/scripts/delegate related 'set -- {tests}; js=; for t; do case $t in tests/*/*) ;; tests/*.test.ts) js=$js\ .tmp-tests/${t%.ts}.js ;; esac; done; [ -z ${js:+x} ] && exit 0; rm -rf .tmp-tests && npx tsc -p tsconfig.tests.json && node --test --test-concurrency=2 $js; c=$?; rm -rf .tmp-tests; exit $c' {files}"
   typecheck: "npm run typecheck"
+  coverage: "npx vitest run --coverage --coverage.reporter=lcovonly --coverage.reportsDirectory={out} && rm -rf .tmp-tests && npx tsc -p tsconfig.tests.json --sourceMap && node --enable-source-maps --test --test-concurrency=2 --experimental-test-coverage --test-coverage-exclude='tests/**' --test-coverage-exclude='.tmp-tests/tests/**' --test-reporter=dot --test-reporter-destination=stdout --test-reporter=lcov --test-reporter-destination={out}/node.info .tmp-tests/tests/*.test.js; c=$?; rm -rf .tmp-tests; exit $c"
+
+ems-devprepare: 2
